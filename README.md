@@ -1,5 +1,3 @@
-# The Joke Bot
+# [![CI](https://github.com/chris-gillatt/thejokebot/actions/workflows/post-joke.yml/badge.svg)](https://github.com/chris-gillatt/thejokebot/actions/workflows/post-joke.yml) The Joke Bot
 
-The Joke Bot; posts a random joke to Bluesky Account [@TheJokeBot](https://bsky.app/profile/thejokebot.bsky.social) twice a day.
-
-Based on the icanhazdadjoke api
+The Joke Bot; posts random jokes to Bluesky Account [@TheJokeBot](https://bsky.app/profile/thejokebot.bsky.social)
