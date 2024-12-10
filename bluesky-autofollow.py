@@ -1,19 +1,19 @@
-# bluesky_autofollow.py
-
-import os
-import sys
 from atproto import Client
+import os
 from colorama import Fore, Style
 
 
-def fetch_paginated_data(client_method, actor, key):
+def fetch_paginated_data(client_method, actor):
     """Fetch paginated data (followers or following)."""
     data = []
     cursor = None
     while True:
         response = client_method(actor=actor, cursor=cursor)
-        data.extend(response.get(key, []))
-        cursor = response.get('cursor')
+        if hasattr(response, 'followers'):
+            data.extend(response.followers)  # For followers
+        elif hasattr(response, 'follows'):
+            data.extend(response.follows)  # For follows
+        cursor = getattr(response, 'cursor', None)
         if not cursor:
             break
     return data
@@ -23,9 +23,9 @@ def main():
     username = "thejokebot.bsky.social"
     password = os.getenv('BLUESKY_PASSWORD')
 
-    if not username or not password:
-        print(f"{Fore.RED}Error: Missing BLUESKY_USERNAME or BLUESKY_PASSWORD in the environment.{Style.RESET_ALL}")
-        sys.exit(1)
+    if not password:
+        print(f"{Fore.RED}Error: Missing BLUESKY_PASSWORD in the environment.{Style.RESET_ALL}")
+        return
 
     client = Client()
 
@@ -35,19 +35,21 @@ def main():
         print(f"{Fore.GREEN}Successfully logged in to BlueSky.{Style.RESET_ALL}")
     except Exception as e:
         print(f"{Fore.RED}Login failed: {e}{Style.RESET_ALL}")
-        sys.exit(1)
+        return
 
     try:
         user_did = client.me['did']
-        print(f"{Fore.YELLOW}Fetching followers and following for user: {client.me['handle']}{Style.RESET_ALL}")
+        print(f"{Fore.YELLOW}Fetching followers and following for user: {username}{Style.RESET_ALL}")
 
         # Fetch followers and following
-        followers = fetch_paginated_data(client.get_followers, user_did, 'followers')
-        following = fetch_paginated_data(client.get_follows, user_did, 'follows')
+        followers = fetch_paginated_data(client.get_followers, user_did)
+        following = fetch_paginated_data(client.get_follows, user_did)
 
-        follower_dids = {follower['did'] for follower in followers}
-        following_map = {follow['did']: follow['uri'] for follow in following}
+        # Extract follower DIDs
+        follower_dids = {follower.did for follower in followers}
 
+        # Extract following DIDs and URIs for all followed users
+        following_map = {follow.did: follow.viewer.following for follow in following}
         following_dids = set(following_map.keys())
 
         # Follow back new followers
@@ -59,22 +61,24 @@ def main():
             client.follow(did)
             print(f"{Fore.GREEN}Followed {did}{Style.RESET_ALL}")
 
-        # Unfollow users who no longer follow you
-        to_unfollow = following_dids - follower_dids
+        # Unfollow users who no longer follow the bot
+        to_unfollow = {
+            did for did, uri in following_map.items() if did not in follower_dids
+        }
         print(f"{Fore.RED}Found {len(to_unfollow)} users to unfollow.{Style.RESET_ALL}")
 
         for i, did in enumerate(to_unfollow, start=1):
-            uri = following_map[did]
-            print(f"{Fore.YELLOW}({i}/{len(to_unfollow)}) Unfollowing {did} with URI {uri}...{Style.RESET_ALL}")
-            client.delete_follow(uri)
-            print(f"{Fore.GREEN}Unfollowed {did}{Style.RESET_ALL}")
+            uri = following_map.get(did)
+            if uri:
+                print(f"{Fore.YELLOW}({i}/{len(to_unfollow)}) Unfollowing {did}...{Style.RESET_ALL}")
+                client.delete_follow(uri)
+                print(f"{Fore.GREEN}Unfollowed {did}{Style.RESET_ALL}")
+            else:
+                print(f"{Fore.RED}No URI found for {did}, skipping...{Style.RESET_ALL}")
 
         print(f"{Fore.GREEN}Follow-back and unfollow actions completed! 🎉{Style.RESET_ALL}")
-    except KeyError as e:
-        print(f"{Fore.RED}Error: Missing expected data in API response: {e}{Style.RESET_ALL}")
     except Exception as e:
         print(f"{Fore.RED}An unexpected error occurred: {e}{Style.RESET_ALL}")
-        sys.exit(1)
 
 
 if __name__ == "__main__":
