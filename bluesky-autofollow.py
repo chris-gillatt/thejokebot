@@ -1,7 +1,9 @@
+# Mutually follow / unfollow others on Bluesky
+# Modified and enhanced from https://github.com/innotlab/bluesky-followback 
+
 from atproto import Client
 import os
 from colorama import Fore, Style
-
 
 def fetch_paginated_data(client_method, actor):
     """Fetch paginated data (followers or following)."""
@@ -17,7 +19,6 @@ def fetch_paginated_data(client_method, actor):
         if not cursor:
             break
     return data
-
 
 def main():
     username = "thejokebot.bsky.social"
@@ -61,7 +62,7 @@ def main():
             client.follow(did)
             print(f"{Fore.GREEN}Followed {did}{Style.RESET_ALL}")
 
-        # Unfollow users who no longer follow the bot
+        # Unfollow users who no longer follow us
         to_unfollow = {
             did for did, uri in following_map.items() if did not in follower_dids
         }
