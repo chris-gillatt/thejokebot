@@ -1,0 +1,28 @@
+name: post-joke
+
+# Controls when the workflow will run
+on:
+  schedule:
+    # * is a special character in YAML so you have to quote this string
+    # Don't run on the hour as these can get delayed.
+    - cron:  '15 7,19 * * *'
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v4
+      - name: post a joke
+        env:
+          BLUESKY_PASSWORD: ${{ secrets.BLUESKY_PASSWORD }}
+        # Runs a single command using the runners shell
+        run: ./post-joke.py
