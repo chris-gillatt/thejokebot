@@ -13,7 +13,7 @@ BLUESKY_USERNAME = "thejokebot.bsky.social"
 BLUESKY_PASSWORD = os.getenv("BLUESKY_PASSWORD")
 
 # Hashtags and emoji
-HASHTAGS = "#jokes #ItsAlwaysFunnyInSillydelphia 🥳"
+HASHTAGS = '#jokes'
 
 # Check password presence
 if not BLUESKY_PASSWORD:
