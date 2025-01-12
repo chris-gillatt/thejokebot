@@ -1,0 +1,26 @@
+name: bluesky-unfollow
+
+on:
+  schedule:
+    - cron: "0 12 * * 1"  # Runs 12:00 Mondays
+  workflow_dispatch:  
+
+jobs:
+  auto-follow:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Install dependencies
+      - name: Install dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          pip3 install atproto colorama python-dotenv
+
+      # Run the auto-follow script
+      - name: Run bluesky-unfollow
+        env:
+          BLUESKY_PASSWORD: ${{ secrets.BLUESKY_PASSWORD }}
+        run: python3 bluesky-unfollow.py
