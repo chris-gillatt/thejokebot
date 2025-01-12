@@ -1,8 +1,8 @@
-### File: bluesky-follow-back.py
+### File: bluesky_follow_back.py
 from atproto import Client
 import os
 from colorama import Fore, Style
-from bluesky-follower-utils import fetch_paginated_data
+from bluesky_follower_utils import fetch_paginated_data
 
 def follow_back():
     username = "thejokebot.bsky.social"

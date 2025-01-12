@@ -1,4 +1,4 @@
-name: bluesky-follow-back
+name: bluesky_follow_back
 
 on:
   schedule:
@@ -20,7 +20,7 @@ jobs:
           pip3 install atproto colorama python-dotenv
 
       # Run the auto-follow script
-      - name: Run bluesky-follow-back
+      - name: Run bluesky_follow_back
         env:
           BLUESKY_PASSWORD: ${{ secrets.BLUESKY_PASSWORD }}
-        run: python3 bluesky-follow-back.py
+        run: python3 bluesky_follow_back.py

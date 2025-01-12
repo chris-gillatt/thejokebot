@@ -1,4 +1,4 @@
-### File: bluesky-follower-utils.py
+### File: bluesky_follower_utils.py
 def fetch_paginated_data(client_method, actor):
     """Fetch paginated data (followers or following)."""
     data = []

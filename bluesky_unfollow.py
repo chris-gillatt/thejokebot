@@ -1,8 +1,8 @@
-### File: bluesky-unfollow.py
+### File: bluesky_unfollow.py
 from atproto import Client
 import os
 from colorama import Fore, Style
-from bluesky-follower-utils import fetch_paginated_data
+from bluesky_follower_utils import fetch_paginated_data
 
 def unfollow_users():
     username = "thejokebot.bsky.social"
