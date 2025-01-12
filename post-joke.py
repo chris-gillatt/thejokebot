@@ -12,8 +12,8 @@ HEADERS = {
 BLUESKY_USERNAME = "thejokebot.bsky.social"
 BLUESKY_PASSWORD = os.getenv("BLUESKY_PASSWORD")
 
-# Hashtags and emoji
-HASHTAGS = '#jokes'
+# Hashtags
+HASHTAGS = ["#jokes", "#dadjoke", "#funny"]
 
 # Check password presence
 if not BLUESKY_PASSWORD:
@@ -39,14 +39,35 @@ except requests.exceptions.RequestException as e:
     joke = get_fallback_joke()  # Use fallback joke
     print(f"Using fallback joke: {joke}")
 
-# Append hashtags and emoji to the joke
-joke_with_tags = f"{joke}\n\n{HASHTAGS}"
+# Combine joke and hashtags
+hashtags_string = " ".join(HASHTAGS)
+joke_with_tags = f"{joke}\n\n{hashtags_string}"
+
+# Calculate facets for hashtags
+joke_bytes = joke_with_tags.encode("UTF-8")
+facets = []
+current_offset = len(joke.encode("UTF-8")) + 2  # Offset starts after joke + 2 newlines
+
+for tag in HASHTAGS:
+    tag_bytes = tag.encode("UTF-8")
+    tag_start = current_offset
+    tag_end = tag_start + len(tag_bytes)
+    facets.append({
+        "index": {
+            "byteStart": tag_start,
+            "byteEnd": tag_end,
+        },
+        "features": [
+            {"$type": "app.bsky.richtext.facet#tag", "tag": tag[1:]}  # Remove `#` for the `tag` field
+        ],
+    })
+    current_offset = tag_end + 1  # Add 1 for the space between hashtags
 
 try:
     # Login to Bluesky and post joke
     client = Client()
     client.login(BLUESKY_USERNAME, BLUESKY_PASSWORD)
-    post = client.send_post(joke_with_tags)
+    post = client.send_post(text=joke_with_tags, facets=facets)
     print("Joke successfully posted!")
 except Exception as e:
     print(f"Failed to post joke: {e}")
