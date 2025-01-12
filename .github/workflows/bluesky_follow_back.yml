@@ -6,7 +6,7 @@ on:
   workflow_dispatch:  
 
 jobs:
-  auto-follow:
+  bluesky_follow_back:
     runs-on: ubuntu-latest
 
     steps:
@@ -19,7 +19,7 @@ jobs:
           python3 -m pip install --upgrade pip
           pip3 install atproto colorama python-dotenv
 
-      # Run the auto-follow script
+      # Run the bluesky_follow_back script
       - name: Run bluesky_follow_back
         env:
           BLUESKY_PASSWORD: ${{ secrets.BLUESKY_PASSWORD }}
