@@ -8,6 +8,9 @@ def unfollow_users():
     username = "thejokebot.bsky.social"
     password = os.getenv('BLUESKY_PASSWORD')
 
+    # List of usernames to ignore
+    ignorable_usernames = ["theonion"]
+
     if not password:
         print(f"{Fore.RED}Error: Missing BLUESKY_PASSWORD in the environment.{Style.RESET_ALL}")
         return
@@ -35,11 +38,22 @@ def unfollow_users():
         # Extract following DIDs and URIs
         following_map = {follow.did: follow.viewer.following for follow in following}
 
-        # Unfollow users who no longer follow us
+        # Map usernames to DIDs for ignorable accounts
+        ignorable_dids = set()
+        for ignorable_username in ignorable_usernames:
+            try:
+                profile = client.get_profile(ignorable_username)
+                ignorable_dids.add(profile['did'])
+                print(f"{Fore.GREEN}Resolved username {ignorable_username} to DID {profile['did']}{Style.RESET_ALL}")
+            except Exception as e:
+                print(f"{Fore.RED}Failed to resolve username {ignorable_username}: {e}{Style.RESET_ALL}")
+
+        # Unfollow users who no longer follow us, excluding ignorable accounts
         to_unfollow = {
-            did for did, uri in following_map.items() if did not in follower_dids
+            did for did, uri in following_map.items()
+            if did not in follower_dids and did not in ignorable_dids
         }
-        print(f"{Fore.RED}Found {len(to_unfollow)} users to unfollow.{Style.RESET_ALL}")
+        print(f"{Fore.RED}Found {len(to_unfollow)} users to unfollow (excluding ignorable accounts).{Style.RESET_ALL}")
 
         for i, did in enumerate(to_unfollow, start=1):
             uri = following_map.get(did)
