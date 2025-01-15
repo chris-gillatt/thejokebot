@@ -2,7 +2,7 @@ name: bluesky_unfollow
 
 on:
   schedule:
-    - cron: "0 12 * * 1"  # Runs 12:00 Mondays
+    - cron: "0 12 8-14 * 1"  # Runs on the 2nd Monday of each month
   workflow_dispatch:  
 
 jobs:
