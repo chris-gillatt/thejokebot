@@ -32,7 +32,8 @@ try:
     # Fetch joke from API
     response = requests.get(JOKE_API_URL, headers=HEADERS)
     response.raise_for_status()  # Ensure successful response
-    joke = response.text.strip()  # Strip whitespace
+    joke = response.content.decode("utf-8").strip()
+    print(f"Raw joke fetched: {repr(joke)}")  # Debugging raw joke
     print(f"Fetched joke: {joke}")
 except requests.exceptions.RequestException as e:
     print(f"Failed to fetch joke: {e}")
@@ -67,6 +68,7 @@ try:
     # Login to Bluesky and post joke
     client = Client()
     client.login(BLUESKY_USERNAME, BLUESKY_PASSWORD)
+    print(f"Final joke before posting: {repr(joke_with_tags)}")  # Debugging final joke
     post = client.send_post(text=joke_with_tags, facets=facets)
     print("Joke successfully posted!")
 except Exception as e:
