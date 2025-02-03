@@ -12,4 +12,4 @@ jobs:
       - uses: actions/checkout@v4
       - uses: gautamkrishnar/keepalive-workflow@v2
         with:
-          workflow_files: "bluesky_follow_back.yml,bluesky_post_joke.yml,bluesky_unfollow.yml"
+          workflow_files: "bluesky_follow_back.yml,bluesky_post_joke.yml,bluesky_unfollow.yml,bluesky_generate_followers.yml"

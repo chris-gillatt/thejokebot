@@ -18,7 +18,7 @@ jobs:
           python3 -m pip install --upgrade pip
           pip3 install requests atproto
 
-      - name: Run Joke Bot
+      - name: Run bluesky_post_joke
         env:
           BLUESKY_PASSWORD: ${{ secrets.BLUESKY_PASSWORD }}
         run: python3 bluesky_post_joke.py
