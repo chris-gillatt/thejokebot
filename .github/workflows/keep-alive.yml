@@ -1,9 +1,7 @@
-name: keep-alive
+name: Keepalive Workflow
 on:
   schedule:
-    - cron:  '15 1 * * *'
-  workflow_dispatch:
-    
+    - cron: "15 1 * * *"
 jobs:
   keepalive-job:
     name: Keepalive Workflow
@@ -13,3 +11,5 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: gautamkrishnar/keepalive-workflow@v2
+        with:
+          workflow_files: "bluesky_follow_back.yml,bluesky_post_joke.yml,bluesky_unfollow.yml"
