@@ -7,7 +7,7 @@ from datetime import datetime, timezone, timedelta
 from atproto import Client
 
 # Configurations
-TAGS = ["#followback", "#joke", "#humour", "#funny"]
+TAGS = ["#followback", "#dadjoke", "#jokes", "#funny"]
 TARGET_FOLLOW_COUNT = 60
 TAG_ALLOCATION = TARGET_FOLLOW_COUNT // len(TAGS)  # 15 per tag
 TIME_LIMIT = datetime.now(timezone.utc) - timedelta(days=5)
