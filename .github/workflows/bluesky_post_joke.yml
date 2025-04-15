@@ -22,3 +22,18 @@ jobs:
         env:
           BLUESKY_PASSWORD: ${{ secrets.BLUESKY_PASSWORD }}
         run: python3 bluesky_post_joke.py
+
+      - name: Update posted_jokes.txt
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          # Use the GitHub Bot user for Git and GitHub IAM.
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Update posted_jokes.txt to prevent frequent duplications
+          git add posted_jokes.txt
+          
+          # Commit and push
+          git commit -m "Update posted_jokes.txt; GH run: ${GITHUB_RUN_NUMBER}"
+          git push
