@@ -25,7 +25,7 @@ jobs:
 
       - name: Update posted_jokes.txt
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           # Use the GitHub Bot user for Git and GitHub IAM.
           git config user.name "github-actions[bot]"
