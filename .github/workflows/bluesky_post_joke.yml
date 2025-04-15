@@ -12,7 +12,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          
       - name: Install dependencies
         run: |
           python3 -m pip install --upgrade pip
@@ -24,8 +26,6 @@ jobs:
         run: python3 bluesky_post_joke.py
 
       - name: Update posted_jokes.txt
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           # Use the GitHub Bot user for Git and GitHub IAM.
           git config user.name "github-actions[bot]"
