@@ -11,6 +11,7 @@ TAGS = ["#followback", "#dadjoke", "#jokes", "#funny"]
 TARGET_FOLLOW_COUNT = 60
 TAG_ALLOCATION = TARGET_FOLLOW_COUNT // len(TAGS)  # 15 per tag
 TIME_LIMIT = datetime.now(timezone.utc) - timedelta(days=5)
+PUBLIC_SEARCH_URL = "https://public.api.bsky.app/xrpc/app.bsky.feed.searchPosts"
 
 # Logging setup
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -24,8 +25,6 @@ if not BLUESKY_USERNAME or not BLUESKY_PASSWORD:
 
 client = Client()
 client.login(BLUESKY_USERNAME, BLUESKY_PASSWORD)
-
-PUBLIC_SEARCH_URL = "https://public.api.bsky.app/xrpc/app.bsky.feed.searchPosts"
 
 def get_following_list():
     """Retrieve a list of users the bot is already following."""
@@ -59,67 +58,71 @@ def search_users_by_tag(tag, since):
         users = set()
         since_iso = since.strftime("%Y-%m-%dT%H:%M:%SZ")  # ISO format
         params = {"q": tag.lstrip("#"), "since": since_iso}
-        
+
         response = requests.get(PUBLIC_SEARCH_URL, params=params)
         response.raise_for_status()
         data = response.json()
-        
+
         if "posts" not in data:
             return []
 
         for post in data["posts"]:
             users.add(post["author"]["did"])
-        
+
         return list(users)
     
     except Exception as e:
         logging.error(f"Error searching users by tag {tag}: {e}")
         return []
 
-def follow_user(user):
-    """Follow a user on Bluesky with rate limit handling."""
+def follow_user(user_did):
+    """Follow a user on Bluesky using create_record with the correct data payload."""
     try:
-        uri = client.follow(user).uri  # Correct method from the docs
-        logging.info(f"Followed user: {user} - URI: {uri}")
+        data = {
+            "$type": "app.bsky.graph.follow",
+            "subject": user_did,
+            "createdAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        }
+        response = client.app.bsky.graph.follow.create(repo=client.me.did, record=data)
+        logging.info(f"Followed user: {user_did} - URI: {response.uri}")
         time.sleep(random.uniform(1, 2))  # Rate limiting
     except Exception as e:
-        logging.error(f"Error following user {user}: {e}")
+        logging.error(f"Error following user {user_did}: {e}")
         if "429" in str(e):
             logging.warning("Rate limit hit. Sleeping for 5 minutes.")
-            time.sleep(300)  # Sleep for 5 minutes on rate limit
+            time.sleep(300)
 
 def get_new_users_by_tag(tag, needed_count, following_list):
     """Search for users by tag and return a list of users not already followed."""
     found_users = search_users_by_tag(tag, since=TIME_LIMIT)
     new_users = [user for user in found_users if user not in following_list]
-    return new_users[:needed_count]  # Trim excess if necessary
+    return new_users[:needed_count]
 
 def main():
     logging.info("Starting follower generation script...")
-    following_list = get_following_list()  # Get list of current follows
+    following_list = get_following_list()
     new_follows = []
     tag_user_counts = {}
     remaining_slots = TARGET_FOLLOW_COUNT
-    
+
     for tag in TAGS:
         if remaining_slots <= 0:
             break
-        
+
         users = get_new_users_by_tag(tag, min(TAG_ALLOCATION, remaining_slots), following_list)
         tag_user_counts[tag] = len(users)
         new_follows.extend(users)
         remaining_slots -= len(users)
-    
+
     logging.info(f"User count per tag: {tag_user_counts}")
     if remaining_slots > 0:
         logging.warning(f"Not enough users found. Remaining slots: {remaining_slots}")
-    
+
     logging.info(f"Total users to follow: {len(new_follows)}")
-    
-    # Follow users (commented out for testing)
+
     for user in new_follows:
         follow_user(user)
-    
+
     logging.info("Follower generation script completed.")
 
 if __name__ == "__main__":
