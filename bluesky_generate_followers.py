@@ -4,14 +4,13 @@ import logging
 import os
 import requests
 from datetime import datetime, timezone, timedelta
-from atproto import Client
+from atproto import Client, models
 
 # Configurations
 TAGS = ["#followback", "#dadjoke", "#jokes", "#funny"]
 TARGET_FOLLOW_COUNT = 60
 TAG_ALLOCATION = TARGET_FOLLOW_COUNT // len(TAGS)  # 15 per tag
 TIME_LIMIT = datetime.now(timezone.utc) - timedelta(days=5)
-PUBLIC_SEARCH_URL = "https://public.api.bsky.app/xrpc/app.bsky.feed.searchPosts"
 
 # Logging setup
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -25,6 +24,8 @@ if not BLUESKY_USERNAME or not BLUESKY_PASSWORD:
 
 client = Client()
 client.login(BLUESKY_USERNAME, BLUESKY_PASSWORD)
+
+PUBLIC_SEARCH_URL = "https://public.api.bsky.app/xrpc/app.bsky.feed.searchPosts"
 
 def get_following_list():
     """Retrieve a list of users the bot is already following."""
@@ -47,7 +48,7 @@ def get_following_list():
             time.sleep(1)  # Respect API rate limits
 
         return list(following)
-    
+
     except Exception as e:
         logging.error(f"Error retrieving following list: {e}")
         return []
@@ -70,20 +71,22 @@ def search_users_by_tag(tag, since):
             users.add(post["author"]["did"])
 
         return list(users)
-    
+
     except Exception as e:
         logging.error(f"Error searching users by tag {tag}: {e}")
         return []
 
 def follow_user(user_did):
-    """Follow a user on Bluesky using create_record with the correct data payload."""
+    """Follow a user on Bluesky with rate limit handling."""
     try:
-        data = {
-            "$type": "app.bsky.graph.follow",
-            "subject": user_did,
-            "createdAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-        }
-        response = client.app.bsky.graph.follow.create(repo=client.me.did, record=data)
+        record = models.AppBskyGraphFollow.Main(
+            created_at=datetime.now(timezone.utc).isoformat(),
+            subject=user_did,
+        )
+        response = client.app.bsky.graph.follow.create(
+            repo=client.me.did,
+            data=record,
+        )
         logging.info(f"Followed user: {user_did} - URI: {response.uri}")
         time.sleep(random.uniform(1, 2))  # Rate limiting
     except Exception as e:
@@ -96,11 +99,11 @@ def get_new_users_by_tag(tag, needed_count, following_list):
     """Search for users by tag and return a list of users not already followed."""
     found_users = search_users_by_tag(tag, since=TIME_LIMIT)
     new_users = [user for user in found_users if user not in following_list]
-    return new_users[:needed_count]
+    return new_users[:needed_count]  # Trim excess if necessary
 
 def main():
     logging.info("Starting follower generation script...")
-    following_list = get_following_list()
+    following_list = get_following_list()  # Get list of current follows
     new_follows = []
     tag_user_counts = {}
     remaining_slots = TARGET_FOLLOW_COUNT
