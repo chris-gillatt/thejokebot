@@ -16,7 +16,7 @@ jobs:
       - name: Install dependencies
         run: |
           python3 -m pip install --upgrade pip
-          pip3 install requests atproto python-dotenv asyncio random 
+          pip3 install requests atproto python-dotenv asyncio
 
       - name: Run bluesky_generate_followers
         env:
