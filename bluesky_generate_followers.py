@@ -1,138 +1,87 @@
-import time
-import random
-import logging
 import os
-import requests
-from datetime import datetime, timezone, timedelta
-from atproto import Client
+from atproto import Client, models
+from atproto.exceptions import AtProtocolError
+from datetime import datetime
 
-# Configurations
-TAGS = ["#followback", "#dadjoke", "#jokes", "#funny"]
-TARGET_FOLLOW_COUNT = 60
-TAG_ALLOCATION = TARGET_FOLLOW_COUNT // len(TAGS)
-TIME_LIMIT = datetime.now(timezone.utc) - timedelta(days=5)
+# Config
+username = os.getenv("BLUESKY_USERNAME")
+password = os.getenv("BLUESKY_PASSWORD")
+hashtags = ["followback", "dadjoke", "jokes", "funny"]
+max_results_per_tag = 20
 
-# Logging setup
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
-# Load credentials from environment
-BLUESKY_USERNAME = os.getenv("BLUESKY_USERNAME", "thejokebot.bsky.social")
-BLUESKY_PASSWORD = os.getenv("BLUESKY_PASSWORD")
-
-if not BLUESKY_USERNAME or not BLUESKY_PASSWORD:
-    raise ValueError("Bluesky credentials not found. Set BLUESKY_USERNAME and BLUESKY_PASSWORD as environment variables.")
-
-# Initialise and login
 client = Client()
-client.login(BLUESKY_USERNAME, BLUESKY_PASSWORD)
-my_did = client.me.did
 
-# Public search API
-PUBLIC_SEARCH_URL = "https://public.api.bsky.app/xrpc/app.bsky.feed.searchPosts"
+def login():
+    print("Logging in...")
+    client.login(username, password)
+    print(f"Authenticated as {client.me.did}")
 
-def get_following_list():
-    """Retrieve a list of DIDs that the bot is already following."""
-    following = set()
-    cursor = None
-
+def search_hashtag_posts(hashtag):
     try:
+        print(f"Searching posts with hashtag #{hashtag}...")
+        query = f"#{hashtag}"
+        params = models.AppBskyFeedSearchPosts.Params(q=query, limit=max_results_per_tag)
+        result = client.app.bsky.feed.search_posts(params)
+        posts = result.posts or []
+        dids = list({post.author.did for post in posts if post.author and post.author.did})
+        print(f"Found {len(dids)} users for #{hashtag}")
+        return dids
+    except Exception as e:
+        print(f"Exception during search for #{hashtag}: {e}")
+        return []
+
+def get_following_dids():
+    try:
+        following = []
+        cursor = None
         while True:
-            result = client.app.bsky.graph.get_follows({
-                "actor": my_did,
-                "cursor": cursor
-            })
-
-            if hasattr(result, "follows"):
-                following.update([f.did for f in result.follows])
-
-            if not hasattr(result, "cursor") or not result.cursor:
+            params = models.AppBskyGraphGetFollows.Params(actor=client.me.did, limit=100, cursor=cursor)
+            result = client.app.bsky.graph.get_follows(params)
+            follows = result.follows or []
+            following.extend([user.did for user in follows])
+            if not result.cursor:
                 break
-
             cursor = result.cursor
-            time.sleep(1)  # Rate limit padding
-
+        return set(following)
     except Exception as e:
-        logging.error(f"Error fetching following list: {e}")
+        print(f"Could not fetch following list, proceeding without deduplication: {e}")
+        return set()
 
-    return list(following)
-
-def search_users_by_tag(tag, since_time):
-    """Use the public API to find DIDs of users who recently used the tag."""
-    users = set()
-    since_iso = since_time.strftime("%Y-%m-%dT%H:%M:%SZ")
-
-    try:
-        params = {
-            "q": tag.lstrip("#"),
-            "since": since_iso,
-            "limit": 100
-        }
-        response = requests.get(PUBLIC_SEARCH_URL, params=params)
-        response.raise_for_status()
-        posts = response.json().get("posts", [])
-
-        for post in posts:
-            users.add(post["author"]["did"])
-
-    except Exception as e:
-        logging.error(f"Error searching posts for tag '{tag}': {e}")
-
-    return list(users)
-
-def follow_user(target_did):
-    """Send a follow record manually using create_record()."""
-    try:
-        record = {
-            "$type": "app.bsky.graph.follow",
-            "subject": target_did,
-            "createdAt": datetime.now(timezone.utc).isoformat()
-        }
-
-        response = client.com.atproto.repo.create_record({
-            "repo": my_did,
-            "collection": "app.bsky.graph.follow",
-            "record": record
-        })
-
-        uri = response.uri
-        logging.info(f"Followed {target_did} → {uri}")
-        time.sleep(random.uniform(1.2, 2.5))
-
-    except Exception as e:
-        logging.error(f"Error following user {target_did}: {e}")
-        if "429" in str(e):
-            logging.warning("Rate limit hit — sleeping for 5 minutes")
-            time.sleep(300)
-
-def get_new_users_by_tag(tag, needed_count, following_list):
-    found = search_users_by_tag(tag, since=TIME_LIMIT)
-    return [u for u in found if u not in following_list][:needed_count]
+def follow_users(user_dids):
+    followed = 0
+    for did in user_dids:
+        try:
+            print(f"Following DID: {did}")
+            record = models.AppBskyGraphFollow.Record(
+                subject=did,
+                created_at=datetime.utcnow().isoformat() + 'Z'
+            )
+            client.app.bsky.graph.follow.create(
+                repo=client.me.did,
+                record=record
+            )
+            followed += 1
+        except AtProtocolError as e:
+            print(f"Failed to follow {did}: {e}")
+        except Exception as e:
+            print(f"Unexpected error trying to follow {did}: {e}")
+    return followed
 
 def main():
-    logging.info("Starting follower generation script...")
-    following = get_following_list()
-    new_follows = []
-    tag_counts = {}
-    remaining = TARGET_FOLLOW_COUNT
+    print("Starting follower generation script...")
+    login()
 
-    for tag in TAGS:
-        if remaining <= 0:
-            break
+    all_dids = set()
+    for tag in hashtags:
+        dids = search_hashtag_posts(tag)
+        all_dids.update(dids)
 
-        users = get_new_users_by_tag(tag, min(TAG_ALLOCATION, remaining), following)
-        tag_counts[tag] = len(users)
-        new_follows.extend(users)
-        remaining -= len(users)
+    following_dids = get_following_dids()
+    new_dids = [did for did in all_dids if did not in following_dids]
 
-    logging.info(f"User count per tag: {tag_counts}")
-    if remaining > 0:
-        logging.warning(f"Not enough users found. Remaining slots: {remaining}")
-    logging.info(f"Total users to follow: {len(new_follows)}")
-
-    for user in new_follows:
-        follow_user(user)
-
-    logging.info("Follower generation script completed.")
+    print(f"Total users to follow: {len(new_dids)}")
+    follow_users(new_dids)
+    print("Follower generation script completed.")
 
 if __name__ == "__main__":
     main()
