@@ -1,100 +1,113 @@
+import asyncio
 import os
+import random
 from atproto import Client, models
-from atproto.exceptions import AtProtocolError
-from datetime import datetime
+from atproto_client.models.app.bsky.feed.search_posts import Response as SearchResponse
 
-# Config
+# Load credentials from environment
 username = os.getenv("BLUESKY_USERNAME")
 password = os.getenv("BLUESKY_PASSWORD")
+
+# Limits
+soft_tag_limit = 15
+global_follow_limit = 60
 hashtags = ["followback", "dadjoke", "jokes", "funny"]
-max_results_per_tag = 20
 
 client = Client()
 
 def login():
-    print("Logging in...")
     client.login(username, password)
     print(f"Authenticated as {client.me.did}")
 
-def get_following_dids():
+def fetch_users_for_tag(tag: str):
+    print(f"Searching posts with hashtag #{tag}...")
     try:
-        following = []
-        cursor = None
-        while True:
-            params = models.AppBskyGraphGetFollows.Params(actor=client.me.did, limit=100, cursor=cursor)
-            result = client.app.bsky.graph.get_follows(params)
-            follows = result.follows or []
-            following.extend([user.did for user in follows])
-            if not result.cursor:
-                break
-            cursor = result.cursor
-        return set(following)
+        resp: SearchResponse = client.app.bsky.feed.search_posts({"q": f"#{tag}", "limit": 100})
+        users = [post.author.did for post in resp.posts]
+        print(f"Found {len(users)} users for #{tag}")
+        return users
+    except Exception as e:
+        print(f"Exception during search for #{tag}: {e}")
+        return []
+
+def get_following():
+    try:
+        resp = client.app.bsky.graph.get_follows({"actor": client.me.did, "limit": 100})
+        return {follow.did for follow in resp.follows}
     except Exception as e:
         print(f"Could not fetch following list, proceeding without deduplication: {e}")
         return set()
 
-def search_hashtag_posts(hashtag, already_following, already_seen):
+def follow(did: str):
     try:
-        print(f"Searching posts with hashtag #{hashtag}...")
-        query = f"#{hashtag}"
-        params = models.AppBskyFeedSearchPosts.Params(q=query, limit=50)
-        result = client.app.bsky.feed.search_posts(params)
-        posts = result.posts or []
-
-        new_dids = []
-        for post in posts:
-            did = post.author.did
-            if did not in already_following and did not in already_seen:
-                new_dids.append(did)
-                already_seen.add(did)
-            if len(new_dids) >= max_results_per_tag:
-                break
-
-        print(f"Found {len(new_dids)} new users for #{hashtag}")
-        return new_dids
-    except Exception as e:
-        print(f"Exception during search for #{hashtag}: {e}")
-        return []
-
-def follow_users(user_dids):
-    followed = 0
-    for did in user_dids:
-        try:
-            print(f"Following DID: {did}")
-            record = models.AppBskyGraphFollow.Record(
-                subject=did,
-                created_at=datetime.utcnow().isoformat() + 'Z'
-            )
-            client.app.bsky.graph.follow.create(
+        record = models.AppBskyGraphFollow.Record(
+            subject=did,
+            created_at=client.get_current_time_iso()
+        )
+        client.com.atproto.repo.create_record(
+            models.ComAtprotoRepoCreateRecord.Data(
                 repo=client.me.did,
-                record=record
+                collection="app.bsky.graph.follow",
+                record=record,
             )
-            followed += 1
-        except AtProtocolError as e:
-            print(f"Failed to follow {did}: {e}")
-        except Exception as e:
-            print(f"Unexpected error trying to follow {did}: {e}")
-    return followed
+        )
+        print(f"Following DID: {did}")
+    except Exception as e:
+        print(f"Unexpected error trying to follow {did}: {e}")
 
 def main():
     print("Starting follower generation script...")
     login()
 
-    already_following = get_following_dids()
-    already_seen = set()
-    new_follow_targets = []
+    already_following = get_following()
+
+    tag_users = {}
+    for tag in hashtags:
+        users = fetch_users_for_tag(tag)
+        eligible_users = [u for u in users if u not in already_following]
+        tag_users[tag] = eligible_users
+
+    print("\nEligible users before redistribution:")
+    for tag, users in tag_users.items():
+        print(f"  #{tag}: {len(users)} users")
+
+    selected_users = []
+    seen = set()
 
     for tag in hashtags:
-        tag_dids = search_hashtag_posts(tag, already_following, already_seen)
-        new_follow_targets.extend(tag_dids)
+        count = 0
+        for user in tag_users[tag]:
+            if user not in seen:
+                seen.add(user)
+                selected_users.append((tag, user))
+                count += 1
+                if count >= soft_tag_limit:
+                    break
 
-    total_after_filter = len(new_follow_targets)
-    print(f"\nSummary:")
-    print(f"- Total unique new users to follow: {total_after_filter}")
-    print(f"- Total already followed (skipped): {len(already_following & already_seen)}")
-    print(f"- Total duplicates across hashtags (skipped): {len(already_seen) - total_after_filter}")
+    if len(selected_users) < global_follow_limit:
+        additional_needed = global_follow_limit - len(selected_users)
+        overflow = []
+        for tag in hashtags:
+            for user in tag_users[tag]:
+                if user not in seen:
+                    seen.add(user)
+                    overflow.append((tag, user))
+        selected_users += overflow[:additional_needed]
 
-    follow_users(new_follow_targets)
+    selected_users = selected_users[:global_follow_limit]
+
+    print("\nFinal tag breakdown:")
+    tag_counts = {tag: 0 for tag in hashtags}
+    for tag, _ in selected_users:
+        tag_counts[tag] += 1
+    for tag in hashtags:
+        print(f"  #{tag}: {tag_counts[tag]} users")
+
+    print(f"Total users to follow: {len(selected_users)}\n")
+
+    for _, did in selected_users:
+        follow(did)
+
     print("Follower generation script completed.")
 
 if __name__ == "__main__":
