@@ -16,20 +16,6 @@ def login():
     client.login(username, password)
     print(f"Authenticated as {client.me.did}")
 
-def search_hashtag_posts(hashtag):
-    try:
-        print(f"Searching posts with hashtag #{hashtag}...")
-        query = f"#{hashtag}"
-        params = models.AppBskyFeedSearchPosts.Params(q=query, limit=max_results_per_tag)
-        result = client.app.bsky.feed.search_posts(params)
-        posts = result.posts or []
-        dids = list({post.author.did for post in posts if post.author and post.author.did})
-        print(f"Found {len(dids)} users for #{hashtag}")
-        return dids
-    except Exception as e:
-        print(f"Exception during search for #{hashtag}: {e}")
-        return []
-
 def get_following_dids():
     try:
         following = []
@@ -46,6 +32,29 @@ def get_following_dids():
     except Exception as e:
         print(f"Could not fetch following list, proceeding without deduplication: {e}")
         return set()
+
+def search_hashtag_posts(hashtag, already_following, already_seen):
+    try:
+        print(f"Searching posts with hashtag #{hashtag}...")
+        query = f"#{hashtag}"
+        params = models.AppBskyFeedSearchPosts.Params(q=query, limit=50)
+        result = client.app.bsky.feed.search_posts(params)
+        posts = result.posts or []
+
+        new_dids = []
+        for post in posts:
+            did = post.author.did
+            if did not in already_following and did not in already_seen:
+                new_dids.append(did)
+                already_seen.add(did)
+            if len(new_dids) >= max_results_per_tag:
+                break
+
+        print(f"Found {len(new_dids)} new users for #{hashtag}")
+        return new_dids
+    except Exception as e:
+        print(f"Exception during search for #{hashtag}: {e}")
+        return []
 
 def follow_users(user_dids):
     followed = 0
@@ -71,16 +80,21 @@ def main():
     print("Starting follower generation script...")
     login()
 
-    all_dids = set()
+    already_following = get_following_dids()
+    already_seen = set()
+    new_follow_targets = []
+
     for tag in hashtags:
-        dids = search_hashtag_posts(tag)
-        all_dids.update(dids)
+        tag_dids = search_hashtag_posts(tag, already_following, already_seen)
+        new_follow_targets.extend(tag_dids)
 
-    following_dids = get_following_dids()
-    new_dids = [did for did in all_dids if did not in following_dids]
+    total_after_filter = len(new_follow_targets)
+    print(f"\nSummary:")
+    print(f"- Total unique new users to follow: {total_after_filter}")
+    print(f"- Total already followed (skipped): {len(already_following & already_seen)}")
+    print(f"- Total duplicates across hashtags (skipped): {len(already_seen) - total_after_filter}")
 
-    print(f"Total users to follow: {len(new_dids)}")
-    follow_users(new_dids)
+    follow_users(new_follow_targets)
     print("Follower generation script completed.")
 
 if __name__ == "__main__":
