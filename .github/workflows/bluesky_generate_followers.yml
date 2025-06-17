@@ -21,4 +21,5 @@ jobs:
       - name: Run bluesky_generate_followers
         env:
           BLUESKY_PASSWORD: ${{ secrets.BLUESKY_PASSWORD }}
+          BLUESKY_USERNAME: ${{ vars.BLUESKY_USERNAME }}
         run: python3 bluesky_generate_followers.py
