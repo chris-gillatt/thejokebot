@@ -1,6 +1,7 @@
 import os
+import time
 from atproto import Client
-from bluesky_common import login_client
+from bluesky_common import login_client, get_runtime_controls
 from bluesky_follower_utils import fetch_paginated_data
 
 # Load credentials from environment
@@ -47,6 +48,14 @@ def follow(did: str):
 def main():
     print("Starting follower generation script...")
     login()
+    controls = get_runtime_controls()
+    dry_run = controls["dry_run"]
+    action_delay_seconds = controls["action_delay_seconds"]
+
+    if dry_run:
+        print("Dry-run mode enabled. Follow actions will not be executed.")
+    if action_delay_seconds > 0:
+        print(f"Action delay enabled: {action_delay_seconds:.2f}s between actions.")
 
     already_following = get_following()
 
@@ -94,8 +103,14 @@ def main():
 
     print(f"Total users to follow: {len(selected_users)}\n")
 
-    for _, did in selected_users:
-        follow(did)
+    for i, (_, did) in enumerate(selected_users, start=1):
+        if dry_run:
+            print(f"[DRY-RUN] Would follow DID: {did}")
+        else:
+            follow(did)
+
+        if action_delay_seconds > 0 and i < len(selected_users):
+            time.sleep(action_delay_seconds)
 
     print("Follower generation script completed.")
 

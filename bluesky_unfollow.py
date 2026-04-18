@@ -1,13 +1,24 @@
 ### File: bluesky_unfollow.py
+import time
 from colorama import Fore, Style
 from bluesky_follower_utils import fetch_paginated_data
-from bluesky_common import login_client
+from bluesky_common import login_client, get_runtime_controls
 
 def unfollow_users():
     # List of usernames to ignore
     ignorable_usernames = ["theonion"]
     client = None
     username = None
+    controls = get_runtime_controls()
+    dry_run = controls["dry_run"]
+    action_delay_seconds = controls["action_delay_seconds"]
+
+    if dry_run:
+        print(f"{Fore.YELLOW}Dry-run mode enabled. Unfollow actions will not be executed.{Style.RESET_ALL}")
+    if action_delay_seconds > 0:
+        print(
+            f"{Fore.YELLOW}Action delay enabled: {action_delay_seconds:.2f}s between actions.{Style.RESET_ALL}"
+        )
 
     try:
         print(f"{Fore.YELLOW}Logging in to BlueSky...{Style.RESET_ALL}")
@@ -58,8 +69,14 @@ def unfollow_users():
             uri = following_map.get(did)
             if uri:
                 print(f"{Fore.YELLOW}({i}/{len(to_unfollow)}) Unfollowing {did}...{Style.RESET_ALL}")
-                client.unfollow(uri)
-                print(f"{Fore.GREEN}Unfollowed {did}{Style.RESET_ALL}")
+                if dry_run:
+                    print(f"{Fore.YELLOW}[DRY-RUN] Would unfollow {did}{Style.RESET_ALL}")
+                else:
+                    client.unfollow(uri)
+                    print(f"{Fore.GREEN}Unfollowed {did}{Style.RESET_ALL}")
+
+                if action_delay_seconds > 0 and i < len(to_unfollow):
+                    time.sleep(action_delay_seconds)
             else:
                 print(f"{Fore.RED}No URI found for {did}, skipping...{Style.RESET_ALL}")
 

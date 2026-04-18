@@ -22,3 +22,40 @@ def login_client():
     client = Client()
     client.login(username, password)
     return client, username
+
+
+def get_bool_env(name, default=False):
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+
+    value = raw.strip().lower()
+    if value in {"1", "true", "yes", "on"}:
+        return True
+    if value in {"0", "false", "no", "off"}:
+        return False
+    return default
+
+
+def get_float_env(name, default=0.0, minimum=0.0):
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+
+    try:
+        value = float(raw.strip())
+    except ValueError:
+        return default
+
+    if value < minimum:
+        return minimum
+    return value
+
+
+def get_runtime_controls():
+    return {
+        "dry_run": get_bool_env("BLUESKY_DRY_RUN", default=False),
+        "action_delay_seconds": get_float_env(
+            "BLUESKY_ACTION_DELAY_SECONDS", default=0.0, minimum=0.0
+        ),
+    }
