@@ -63,11 +63,19 @@ Create a disciplined, low-risk development workflow that preserves core bot beha
 - Bluesky docs reference repository exists under `references/` as a shallow submodule.
 
 ## 12. Deferred Backlog (Post-Setup)
-- Full dependency and workflow normalisation.
-- Shared auth/config utility module.
-- API usage modernisation for follow/unfollow scripts.
-- Dry-run and additional test coverage for bot workflows.
-- Structured logging and stronger pagination/network safeguards.
+- Structured logging and stronger pagination/network safeguards (bounded retries).
+
+### 12.0 Explicit "Will Not Do" Decisions
+
+These were evaluated and deliberately ruled out. Do not revisit without a concrete operational reason.
+
+| Item | Decision | Reason |
+|---|---|---|
+| Migrate joke history to a database | Will not do | No operational problem justifies the migration risk or complexity. `posted_jokes.txt` is sufficient. |
+| Rewrite scripts as async | Will not do | No throughput or latency requirement that sync code cannot meet. |
+| Redesign workflow schedules | Will not do | Current cadence is working; change only if an operational problem emerges. |
+| Change or remove the joke source | Will not do | `icanhazdadjoke` is the established source; change is out of scope unless resilience work requires a fallback. |
+| Remove base64 encoding from `posted_jokes.txt` | Will not do | Encoding is intentional: (1) it prevents brittle comparison failures on special characters (commas, apostrophes, etc.) from uncontrolled joke API output; (2) it stops raw joke text appearing in GitHub search results. Do not revert to plain text. |
 
 ### 12.1 Unfollow Re-Engagement Guardrail (Deferred)
 
@@ -90,7 +98,31 @@ Implementation direction (future):
 Operational rule (effective now):
 - Do not run live unfollow automation as part of normal operations until this guardrail is implemented and tested.
 
+### 12.2 Multi-Provider Joke Source with Retry Handler (Deferred)
+
+Requirement summary:
+- The bot currently fetches jokes exclusively from `icanhazdadjoke`. If that API is unavailable, returns a 429/529, or gives an empty response, the bot falls back to a hardcoded static joke.
+- The static fallback is a last resort, not a real joke. A pool of real provider fallbacks is preferable.
+
+Why this matters:
+- API availability cannot be controlled; having a second (and third) source means the bot keeps posting real jokes even when one provider has an outage.
+- Different providers may offer different joke styles, adding variety without requiring a curated library.
+
+Implementation direction (future):
+1. Define a small provider interface: `fetch_joke() -> str | None` per provider module.
+2. Implement at least two additional providers (candidates: `official-joke-api.appspot.com`, `v2.jokeapi.dev`, `redd.it/r/dadjokes` RSS).
+3. In `bluesky_post_joke.py`, attempt providers in order, skipping any that raise an exception or return a status outside 2xx.
+4. Apply the existing `MAX_ATTEMPTS` / deduplication logic against `posted_jokes.txt` across all providers combined.
+5. Retain the static fallback only after all providers are exhausted.
+6. Add unit tests for the provider-rotation logic (no live HTTP calls; mock `fetch_joke()`).
+
+Constraints:
+- Base64 encoding of jokes in `posted_jokes.txt` must be preserved (see Section 12.0).
+- Provider selection order should be deterministic (not random) to simplify debugging.
+- Do not change the post content format or hashtags.
+
 ## 13. Change Log (Problem Statement)
 - v0.1: Initial project-specific draft created to establish governance baseline.
 - v0.2: Added deferred unfollow re-engagement guardrail and temporary live-unfollow hold.
 - v0.3: Added GitHub Actions runtime contract constraint to protect operational continuity.
+- v0.4: Added Section 12.0 explicit "will not do" decisions (including base64 rationale). Added Section 12.2 multi-provider joke source with retry handler.
