@@ -67,5 +67,27 @@ Create a disciplined, low-risk development workflow that preserves core bot beha
 - Dry-run and additional test coverage for bot workflows.
 - Structured logging and stronger pagination/network safeguards.
 
+### 12.1 Unfollow Re-Engagement Guardrail (Deferred)
+
+Requirement summary:
+- Do not repeatedly follow and unfollow the same accounts.
+- Keep a persistent record of accounts the bot has unfollowed.
+- An account should remain excluded from auto-follow flows unless it has followed `thejokebot` again since the unfollow event.
+
+Why this matters:
+- Repeated follow/unfollow cycles can look like nagging behaviour and may risk policy issues even when unintended.
+- The current logic does not retain unfollow history, so it cannot apply this guardrail yet.
+
+Implementation direction (future):
+1. Add durable unfollow history storage (for example a tracked state file or small local database).
+2. Record minimum fields: DID, unfollow timestamp, reason/source script.
+3. Update follow-back and follower-generation selection logic to exclude previously unfollowed DIDs by default.
+4. Remove exclusion only when there is evidence the DID followed `thejokebot` after the recorded unfollow timestamp.
+5. Add dry-run visibility and tests for this decision path.
+
+Operational rule (effective now):
+- Do not run live unfollow automation as part of normal operations until this guardrail is implemented and tested.
+
 ## 13. Change Log (Problem Statement)
 - v0.1: Initial project-specific draft created to establish governance baseline.
+- v0.2: Added deferred unfollow re-engagement guardrail and temporary live-unfollow hold.
