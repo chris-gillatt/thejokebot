@@ -13,12 +13,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
       - name: Install dependencies
         run: |
-          python3 -m pip install --upgrade pip
-          pip3 install atproto colorama python-dotenv
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
 
       - name: Run bluesky_follow_back
         env:
           BLUESKY_PASSWORD: ${{ secrets.BLUESKY_PASSWORD }}
-        run: python3 bluesky_follow_back.py
+        run: python bluesky_follow_back.py
