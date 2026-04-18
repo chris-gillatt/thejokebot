@@ -47,6 +47,33 @@ def follow(did: str):
     except Exception as e:
         print(f"Unexpected error trying to follow {did}: {e}")
 
+
+def select_users(tag_users, tag_order, per_tag_limit, overall_limit):
+    selected_users = []
+    seen = set()
+
+    for tag in tag_order:
+        count = 0
+        for user in tag_users[tag]:
+            if user not in seen:
+                seen.add(user)
+                selected_users.append((tag, user))
+                count += 1
+                if count >= per_tag_limit:
+                    break
+
+    if len(selected_users) < overall_limit:
+        additional_needed = overall_limit - len(selected_users)
+        overflow = []
+        for tag in tag_order:
+            for user in tag_users[tag]:
+                if user not in seen:
+                    seen.add(user)
+                    overflow.append((tag, user))
+        selected_users += overflow[:additional_needed]
+
+    return selected_users[:overall_limit]
+
 def main():
     print("Starting follower generation script...")
     login()
@@ -71,30 +98,12 @@ def main():
     for tag, users in tag_users.items():
         print(f"  #{tag}: {len(users)} users")
 
-    selected_users = []
-    seen = set()
-
-    for tag in hashtags:
-        count = 0
-        for user in tag_users[tag]:
-            if user not in seen:
-                seen.add(user)
-                selected_users.append((tag, user))
-                count += 1
-                if count >= soft_tag_limit:
-                    break
-
-    if len(selected_users) < global_follow_limit:
-        additional_needed = global_follow_limit - len(selected_users)
-        overflow = []
-        for tag in hashtags:
-            for user in tag_users[tag]:
-                if user not in seen:
-                    seen.add(user)
-                    overflow.append((tag, user))
-        selected_users += overflow[:additional_needed]
-
-    selected_users = selected_users[:global_follow_limit]
+    selected_users = select_users(
+        tag_users,
+        hashtags,
+        per_tag_limit=soft_tag_limit,
+        overall_limit=global_follow_limit,
+    )
 
     print("\nFinal tag breakdown:")
     tag_counts = {tag: 0 for tag in hashtags}

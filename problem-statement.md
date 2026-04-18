@@ -36,6 +36,8 @@ Create a disciplined, low-risk development workflow that preserves core bot beha
 - Core functionality (joke posting cadence and intent) must remain intact during modernisation.
 - The project is automation-first (GitHub Actions + script execution).
 - Secrets must never be committed.
+- Existing GitHub Actions runtime contracts must be preserved unless deliberately changed and documented.
+- In practice this means script entry points, workflow file expectations, and required environment variable names such as `BLUESKY_PASSWORD` and `BLUESKY_USERNAME` should not be changed casually, because continuity depends on them.
 
 ## 8. Known Risks
 1. Dependency drift due to unpinned package installation in workflows.
@@ -91,3 +93,4 @@ Operational rule (effective now):
 ## 13. Change Log (Problem Statement)
 - v0.1: Initial project-specific draft created to establish governance baseline.
 - v0.2: Added deferred unfollow re-engagement guardrail and temporary live-unfollow hold.
+- v0.3: Added GitHub Actions runtime contract constraint to protect operational continuity.
