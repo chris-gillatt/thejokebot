@@ -19,6 +19,11 @@
 - Run relevant checks before finishing a task (script run, lint, or targeted tests where available).
 - Report what was verified and what could not be verified.
 
+## Terminal Command Workflow
+- Avoid heredocs for shell commands and file generation to reduce interruption-related issues.
+- Prefer temporary files inside `.agent-tmp/` for intermediate command input.
+- Keep `.agent-tmp/` out of commits except for `.agent-tmp/.gitkeep`.
+
 ## Problem Statement Workflow
 - Keep `problem-statement.md` current as the source of truth for scope, decisions, risks, and deferred work.
 - Add TODOs and out-of-scope items there as they arise.

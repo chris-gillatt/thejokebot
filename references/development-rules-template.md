@@ -21,6 +21,11 @@ Use this file as a starting point for other repositories.
 - Run relevant checks before finishing a task.
 - Report what was verified and what could not be verified.
 
+## Terminal Command Workflow
+- Avoid heredocs for shell commands and file generation.
+- Prefer intermediate files under a dedicated ignored directory (for example, `.agent-tmp/`).
+- Keep that directory committed as empty via `.gitkeep` only.
+
 ## Problem Statement Workflow
 - Maintain a `problem-statement.md` as the active source of scope, decisions, risks, and deferred work.
 - Keep TODOs and deferred backlog entries current.

@@ -30,6 +30,7 @@ Create a disciplined, low-risk development workflow that preserves core bot beha
 - Use Conventional Commits for all commits.
 - Commit messages must include why the change was made.
 - Keep changes focused; defer non-critical ideas to Section 12.
+- Avoid heredocs in terminal workflows; prefer temporary files in `.agent-tmp/`.
 
 ## 7. Constraints and Assumptions
 - Core functionality (joke posting cadence and intent) must remain intact during modernisation.
