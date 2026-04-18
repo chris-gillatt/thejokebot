@@ -53,6 +53,7 @@ These controls apply to:
 - `bluesky_follow_back.py`: follow users who follow the bot.
 - `bluesky_unfollow.py`: unfollow accounts that do not follow back (except ignore list).
 - `bluesky_generate_followers.py`: find hashtag users and follow up to configured limits.
+- `bluesky_verify_latest_joke_post.py`: read-only check that a recent joke post exists on the account.
 
 ## GitHub workflows
 

@@ -1,7 +1,19 @@
 import os
+from pathlib import Path
+
 from atproto import Client
+from dotenv import load_dotenv
 
 DEFAULT_BLUESKY_USERNAME = "thejokebot.bsky.social"
+
+
+def _load_local_env_file():
+    env_path = Path(__file__).resolve().parent / ".env"
+    if env_path.exists():
+        load_dotenv(dotenv_path=env_path, override=False)
+
+
+_load_local_env_file()
 
 
 def get_bluesky_credentials():

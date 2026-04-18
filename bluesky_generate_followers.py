@@ -22,7 +22,9 @@ def login():
 def fetch_users_for_tag(tag: str):
     print(f"Searching posts with hashtag #{tag}...")
     try:
-        resp = client.app.bsky.feed.search_posts({"tag": [tag], "limit": 100, "sort": "latest"})
+        resp = client.app.bsky.feed.search_posts(
+            {"q": f"#{tag}", "tag": [tag], "limit": 100, "sort": "latest"}
+        )
         users = [post.author.did for post in resp.posts]
         print(f"Found {len(users)} users for #{tag}")
         return users
