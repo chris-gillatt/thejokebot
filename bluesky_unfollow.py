@@ -1,32 +1,24 @@
 ### File: bluesky_unfollow.py
-from atproto import Client
-import os
 from colorama import Fore, Style
 from bluesky_follower_utils import fetch_paginated_data
+from bluesky_common import login_client
 
 def unfollow_users():
-    username = "thejokebot.bsky.social"
-    password = os.getenv('BLUESKY_PASSWORD')
-
     # List of usernames to ignore
     ignorable_usernames = ["theonion"]
-
-    if not password:
-        print(f"{Fore.RED}Error: Missing BLUESKY_PASSWORD in the environment.{Style.RESET_ALL}")
-        return
-
-    client = Client()
+    client = None
+    username = None
 
     try:
         print(f"{Fore.YELLOW}Logging in to BlueSky...{Style.RESET_ALL}")
-        client.login(username, password)
+        client, username = login_client()
         print(f"{Fore.GREEN}Successfully logged in to BlueSky.{Style.RESET_ALL}")
     except Exception as e:
         print(f"{Fore.RED}Login failed: {e}{Style.RESET_ALL}")
         return
 
     try:
-        user_did = client.me['did']
+        user_did = client.me.did
         print(f"{Fore.YELLOW}Fetching followers and following for user: {username}{Style.RESET_ALL}")
 
         # Fetch followers and following
@@ -43,8 +35,15 @@ def unfollow_users():
         for ignorable_username in ignorable_usernames:
             try:
                 profile = client.get_profile(ignorable_username)
-                ignorable_dids.add(profile['did'])
-                print(f"{Fore.GREEN}Resolved username {ignorable_username} to DID {profile['did']}{Style.RESET_ALL}")
+                did = getattr(profile, "did", None)
+                if not did and isinstance(profile, dict):
+                    did = profile.get("did")
+
+                if did:
+                    ignorable_dids.add(did)
+                    print(f"{Fore.GREEN}Resolved username {ignorable_username} to DID {did}{Style.RESET_ALL}")
+                else:
+                    print(f"{Fore.RED}No DID found for username {ignorable_username}, skipping ignore rule.{Style.RESET_ALL}")
             except Exception as e:
                 print(f"{Fore.RED}Failed to resolve username {ignorable_username}: {e}{Style.RESET_ALL}")
 
@@ -59,7 +58,7 @@ def unfollow_users():
             uri = following_map.get(did)
             if uri:
                 print(f"{Fore.YELLOW}({i}/{len(to_unfollow)}) Unfollowing {did}...{Style.RESET_ALL}")
-                client.delete_follow(uri)
+                client.unfollow(uri)
                 print(f"{Fore.GREEN}Unfollowed {did}{Style.RESET_ALL}")
             else:
                 print(f"{Fore.RED}No URI found for {did}, skipping...{Style.RESET_ALL}")

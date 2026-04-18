@@ -1,29 +1,22 @@
 ### File: bluesky_follow_back.py
-from atproto import Client
-import os
 from colorama import Fore, Style
 from bluesky_follower_utils import fetch_paginated_data
+from bluesky_common import login_client
 
 def follow_back():
-    username = "thejokebot.bsky.social"
-    password = os.getenv('BLUESKY_PASSWORD')
-
-    if not password:
-        print(f"{Fore.RED}Error: Missing BLUESKY_PASSWORD in the environment.{Style.RESET_ALL}")
-        return
-
-    client = Client()
+    client = None
+    username = None
 
     try:
         print(f"{Fore.YELLOW}Logging in to BlueSky...{Style.RESET_ALL}")
-        client.login(username, password)
+        client, username = login_client()
         print(f"{Fore.GREEN}Successfully logged in to BlueSky.{Style.RESET_ALL}")
     except Exception as e:
         print(f"{Fore.RED}Login failed: {e}{Style.RESET_ALL}")
         return
 
     try:
-        user_did = client.me['did']
+        user_did = client.me.did
         print(f"{Fore.YELLOW}Fetching followers and following for user: {username}{Style.RESET_ALL}")
 
         # Fetch followers and following
