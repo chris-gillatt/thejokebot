@@ -34,7 +34,6 @@ jobs:
           BLUESKY_PASSWORD: ${{ secrets.BLUESKY_PASSWORD }}
         run: python bluesky_post_joke.py
 
-      - name: Update posted_jokes.txt
       - name: Update bot_state.json
         run: |
           # Use the GitHub Bot user for Git and GitHub IAM.
