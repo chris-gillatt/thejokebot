@@ -118,10 +118,13 @@ Implementation direction (future):
 6. Add unit tests for the provider-rotation logic (no live HTTP calls; mock `fetch_joke()`).
 
 Constraints:
-- Base64 encoding of jokes in `posted_jokes.txt` must be preserved (see Section 12.0).
+- Base64 encoding of jokes in `bot_state.json` must be preserved (see Section 12.0).
 - Provider selection order should be deterministic (not random) to simplify debugging.
 - Do not change the post content format or hashtags.
 - `api.api-ninjas.com/v1/dadjokes` should be treated as a backup-only provider in default operation because its joke pool is very small; it should only be used after the primary providers fail unless explicitly selected for testing.
+- `official_jokes` (bundled `resources/official_jokes.json`) must remain the final resort in the backup chain and must never be added to the primary rotation.
+
+**Status: complete.** Provider chain implemented: `icanhazdadjoke` → `jokeapi` → `api_ninjas` → `official_jokes` (offline, 446 jokes, always available).
 
 ### 12.3 Workflow and Automation Hardening from Live Run Review (Deferred)
 
@@ -147,3 +150,4 @@ Implementation direction (future):
 - v0.4: Added Section 12.0 explicit "will not do" decisions (including base64 rationale). Added Section 12.2 multi-provider joke source with retry handler.
 - v0.5: Added Section 12.3 workflow and automation hardening backlog items from successful live GitHub Actions review.
 - v0.6: Added an explicit pull/rebase-before-push working rule to reduce avoidable push rejections from concurrent workflow updates.
+- v0.7: Completed Section 12.2 provider chain. Added `official_jokes` offline provider (446 jokes, b64-encoded in `resources/official_jokes.json`) as the final resort after all live providers fail. Updated constraints and status.

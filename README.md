@@ -31,10 +31,10 @@ Set these in `.env` (keep values quoted):
 
 - `BLUESKY_USERNAME`: account handle (defaults to `thejokebot.bsky.social` if omitted).
 - `BLUESKY_PASSWORD`: app password for Bluesky.
-- `API_NINJAS_API_KEY`: API key for the API Ninjas dad jokes endpoint. Optional unless you want the last-resort backup provider enabled.
+- `API_NINJAS_API_KEY`: API key for the API Ninjas dad jokes endpoint. Optional unless you want the `api_ninjas` backup provider enabled.
 - `BLUESKY_DRY_RUN`: `true` or `false`.
 - `BLUESKY_ACTION_DELAY_SECONDS`: delay between follow/unfollow actions.
-- `BLUESKY_JOKE_PROVIDER`: leave unset to alternate between the primary providers (`icanhazdadjoke`, `jokeapi`). Set to `api_ninjas` only for explicit testing or emergency fallback use.
+- `BLUESKY_JOKE_PROVIDER`: leave unset to alternate between the primary providers (`icanhazdadjoke`, `jokeapi`). Set to a specific provider name only for explicit testing or emergency use.
 
 ## Runtime safety controls
 
@@ -52,10 +52,10 @@ These controls apply to:
 ## Joke providers
 
 - Primary providers: `icanhazdadjoke`, `jokeapi`
-- Backup-only live provider: `api_ninjas`
-- Static fallback jokes remain the final safety net if all live providers fail.
+- Backup live provider: `api_ninjas` (small joke pool — used after primaries fail)
+- Offline final resort: `official_jokes` — 446 jokes bundled in `resources/official_jokes.json`, b64-encoded. No network access or API key required; always available.
 
-The default behaviour alternates between the primary providers and only uses `api_ninjas` if the primaries fail. This is intentional because the API Ninjas dad jokes endpoint has a very small joke pool.
+The default behaviour alternates between the primary providers, tries `api_ninjas` if both fail, and falls back to `official_jokes` as a last resort. The offline provider means a joke post should always succeed even if every live API is unavailable.
 
 ## Scripts
 
