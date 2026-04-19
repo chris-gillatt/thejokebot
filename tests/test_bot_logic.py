@@ -465,5 +465,101 @@ class LikeRepliesTests(unittest.TestCase):
         self.assertGreater(recent_time, cutoff)
 
 
+class JokeRetryChainTests(unittest.TestCase):
+    def test_pick_joke_returns_new_joke(self):
+        """pick_joke fetches and returns a non-duplicate joke."""
+        recent = set()
+        with mock.patch.object(bluesky_joke_providers, "PROVIDERS", {
+            "test_provider": lambda: "Test joke"
+        }):
+            joke, encoded = bluesky_post_joke.pick_joke(recent, "test_provider")
+        self.assertEqual(joke, "Test joke")
+        self.assertNotIn(encoded, recent)
+
+    def test_pick_joke_skips_duplicates(self):
+        """pick_joke skips jokes already in recent_b64s."""
+        joke1 = "Old joke"
+        b64_old = base64.b64encode(joke1.encode()).decode()
+        recent = {b64_old}
+        
+        call_count = [0]
+        def mock_fetch():
+            call_count[0] += 1
+            if call_count[0] == 1:
+                return joke1  # Duplicate
+            return "New joke"  # Not a duplicate
+        
+        with mock.patch.object(bluesky_joke_providers, "PROVIDERS", {
+            "test_provider": mock_fetch
+        }):
+            joke, encoded = bluesky_post_joke.pick_joke(recent, "test_provider")
+        
+        self.assertEqual(joke, "New joke")
+        self.assertEqual(call_count[0], 2)
+
+    def test_pick_joke_raises_when_all_duplicates(self):
+        """pick_joke raises ValueError if MAX_ATTEMPTS are all duplicates."""
+        joke = "All the same"
+        b64 = base64.b64encode(joke.encode()).decode()
+        recent = {b64}
+        
+        with mock.patch.object(bluesky_joke_providers, "PROVIDERS", {
+            "test_provider": lambda: joke
+        }):
+            with self.assertRaises(ValueError) as ctx:
+                bluesky_post_joke.pick_joke(recent, "test_provider")
+        
+        self.assertIn("duplicates", str(ctx.exception))
+
+    def test_provider_fallback_chain_tries_primaries_first(self):
+        """Provider fallback tries primary providers before backups."""
+        state = bluesky_state._default_state()
+        
+        # icanhazdadjoke is PRIMARY_PROVIDERS[0], jokeapi is PRIMARY_PROVIDERS[1]
+        self.assertEqual(bluesky_joke_providers.PRIMARY_PROVIDERS[0], "icanhazdadjoke")
+        
+        # After setting last_used to icanhazdadjoke, next should be jokeapi (still primary)
+        state["provider"]["last_used"] = "icanhazdadjoke"
+        next_provider = bluesky_state.get_next_provider(state)
+        self.assertIn(next_provider, bluesky_joke_providers.PRIMARY_PROVIDERS)
+
+    def test_backup_providers_include_jokebook(self):
+        """Backup providers include jokebot_jokebook as fallback."""
+        self.assertIn("jokebot_jokebook", bluesky_joke_providers.BACKUP_PROVIDERS)
+        # jokebook must be last (final fallback)
+        self.assertEqual(bluesky_joke_providers.BACKUP_PROVIDERS[-1], "jokebot_jokebook")
+
+    def test_deduplication_includes_denylisted_jokes(self):
+        """Deduplication set includes both recent and denylisted jokes."""
+        state = bluesky_state._default_state()
+        recent_joke = "This joke was posted recently"
+        b64_recent = base64.b64encode(recent_joke.encode()).decode()
+        
+        state["posted_jokes"] = [
+            {"ts": bluesky_post_joke.get_current_epoch() - 100, "b64": b64_recent, "provider": "test"}
+        ]
+        
+        denylist = {
+            "jokes": [
+                {"b64": "denied_b64", "source_post_uri": "at://post/1"}
+            ]
+        }
+        
+        cutoff = bluesky_post_joke.get_current_epoch() - (90 * 86400)
+        recent_b64s = bluesky_state.get_recent_b64s(state, cutoff)
+        recent_b64s |= bluesky_denylist.get_denylisted_b64s(denylist)
+        
+        self.assertIn(b64_recent, recent_b64s)
+        self.assertIn("denied_b64", recent_b64s)
+
+    def test_fallback_joke_used_when_all_providers_fail(self):
+        """Fallback static joke is used when all providers raise."""
+        fallback = bluesky_post_joke.get_fallback_joke()
+        self.assertIsInstance(fallback, str)
+        self.assertGreater(len(fallback), 0)
+        # Fallback should be self-deprecating or reference script/debugging
+        self.assertTrue(any(keyword in fallback.lower() for keyword in ["script", "byte", "debug", "exception", "fail"]))
+
+
 if __name__ == "__main__":
     unittest.main()
