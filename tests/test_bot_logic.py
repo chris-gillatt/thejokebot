@@ -1,7 +1,6 @@
 import base64
 import datetime as dt
 import os
-import tempfile
 import unittest
 from types import SimpleNamespace
 from unittest import mock
@@ -9,7 +8,9 @@ from unittest import mock
 import bluesky_common
 import bluesky_follower_utils
 import bluesky_generate_followers
+import bluesky_joke_providers
 import bluesky_post_joke
+import bluesky_state
 import bluesky_verify_latest_joke_post
 
 
@@ -29,50 +30,104 @@ class RuntimeControlTests(unittest.TestCase):
         self.assertEqual(controls["action_delay_seconds"], 1.5)
 
 
-class JokeHistoryTests(unittest.TestCase):
-    def test_load_recent_jokes_filters_old_and_invalid_rows(self):
-        now = 1_000_000
-        recent_joke = "recent joke"
-        old_joke = "old joke"
-        recent_encoded = base64.b64encode(recent_joke.encode("utf-8")).decode()
-        old_encoded = base64.b64encode(old_joke.encode("utf-8")).decode()
+class StateProviderRotationTests(unittest.TestCase):
+    def test_get_next_provider_starts_with_first_in_rotation(self):
+        state = bluesky_state._default_state()
+        self.assertEqual(bluesky_state.get_next_provider(state), "icanhazdadjoke")
 
-        with tempfile.TemporaryDirectory() as temp_dir:
-            jokes_file = os.path.join(temp_dir, "posted_jokes.txt")
-            with open(jokes_file, "w", encoding="utf-8") as handle:
-                handle.write(f"{now - 10} {recent_encoded}\n")
-                handle.write(f"{now - (91 * 86400)} {old_encoded}\n")
-                handle.write("not-a-timestamp broken\n")
+    def test_get_next_provider_alternates_after_first(self):
+        state = bluesky_state._default_state()
+        state["provider"]["last_used"] = "icanhazdadjoke"
+        self.assertEqual(bluesky_state.get_next_provider(state), "jokeapi")
 
-            with mock.patch.object(bluesky_post_joke, "POSTED_JOKES_FILE", jokes_file), mock.patch.object(
-                bluesky_post_joke, "get_current_epoch", return_value=now
-            ):
-                recent = bluesky_post_joke.load_recent_jokes()
+    def test_get_next_provider_wraps_back_to_first(self):
+        state = bluesky_state._default_state()
+        state["provider"]["last_used"] = "jokeapi"
+        self.assertEqual(bluesky_state.get_next_provider(state), "icanhazdadjoke")
 
-        self.assertEqual(recent, {recent_encoded})
+    def test_get_next_provider_honours_valid_override(self):
+        state = bluesky_state._default_state()
+        state["provider"]["last_used"] = "icanhazdadjoke"
+        self.assertEqual(bluesky_state.get_next_provider(state, override="jokeapi"), "jokeapi")
 
-    def test_clear_old_jokes_keeps_recent_rows_only(self):
-        now = 1_000_000
-        recent_encoded = base64.b64encode(b"recent").decode()
-        old_encoded = base64.b64encode(b"old").decode()
+    def test_get_next_provider_ignores_unknown_override(self):
+        state = bluesky_state._default_state()
+        # Unknown override falls back to rotation from the start.
+        result = bluesky_state.get_next_provider(state, override="nonexistent")
+        self.assertEqual(result, "icanhazdadjoke")
 
-        with tempfile.TemporaryDirectory() as temp_dir:
-            jokes_file = os.path.join(temp_dir, "posted_jokes.txt")
-            with open(jokes_file, "w", encoding="utf-8") as handle:
-                handle.write(f"{now - 10} {recent_encoded}\n")
-                handle.write(f"{now - (91 * 86400)} {old_encoded}\n")
-                handle.write("bad-row\n")
 
-            with mock.patch.object(bluesky_post_joke, "POSTED_JOKES_FILE", jokes_file), mock.patch.object(
-                bluesky_post_joke, "get_current_epoch", return_value=now
-            ):
-                bluesky_post_joke.clear_old_jokes()
+class StateJokeHistoryTests(unittest.TestCase):
+    def test_get_recent_b64s_filters_by_cutoff(self):
+        state = bluesky_state._default_state()
+        state["posted_jokes"] = [
+            {"ts": 1000, "b64": "recent", "provider": "icanhazdadjoke"},
+            {"ts": 1,    "b64": "old",    "provider": "icanhazdadjoke"},
+        ]
+        result = bluesky_state.get_recent_b64s(state, cutoff_ts=500)
+        self.assertEqual(result, {"recent"})
 
-            with open(jokes_file, "r", encoding="utf-8") as handle:
-                remaining = handle.read().strip().splitlines()
+    def test_prune_old_jokes_removes_old_entries(self):
+        state = bluesky_state._default_state()
+        state["posted_jokes"] = [
+            {"ts": 1000, "b64": "recent", "provider": "icanhazdadjoke"},
+            {"ts": 1,    "b64": "old",    "provider": "icanhazdadjoke"},
+        ]
+        bluesky_state.prune_old_jokes(state, cutoff_ts=500)
+        self.assertEqual(len(state["posted_jokes"]), 1)
+        self.assertEqual(state["posted_jokes"][0]["b64"], "recent")
 
-        self.assertEqual(remaining, [f"{now - 10} {recent_encoded}"])
+    def test_record_failure_increments_count_and_records_error(self):
+        state = bluesky_state._default_state()
+        bluesky_state.record_failure(state, "jokeapi", "HTTP 429")
+        bluesky_state.record_failure(state, "jokeapi", "HTTP 429")
+        failures = state["provider"]["failures"]["jokeapi"]
+        self.assertEqual(failures["count"], 2)
+        self.assertEqual(failures["last_error"], "HTTP 429")
 
+
+class JokeProviderTests(unittest.TestCase):
+    def test_fetch_from_icanhazdadjoke_returns_text(self):
+        mock_response = mock.Mock()
+        mock_response.text = "Why did the chicken cross the road?"
+        mock_response.raise_for_status = mock.Mock()
+        with mock.patch("bluesky_joke_providers.requests.get", return_value=mock_response):
+            joke = bluesky_joke_providers.fetch_from_icanhazdadjoke()
+        self.assertEqual(joke, "Why did the chicken cross the road?")
+
+    def test_fetch_from_jokeapi_returns_single_joke(self):
+        mock_response = mock.Mock()
+        mock_response.raise_for_status = mock.Mock()
+        mock_response.json.return_value = {
+            "error": False, "type": "single", "joke": "I am a joke."
+        }
+        with mock.patch("bluesky_joke_providers.requests.get", return_value=mock_response):
+            joke = bluesky_joke_providers.fetch_from_jokeapi()
+        self.assertEqual(joke, "I am a joke.")
+
+    def test_fetch_from_jokeapi_assembles_twopart_joke(self):
+        mock_response = mock.Mock()
+        mock_response.raise_for_status = mock.Mock()
+        mock_response.json.return_value = {
+            "error": False, "type": "twopart",
+            "setup": "Why did the dev quit?",
+            "delivery": "Because he didn't get arrays.",
+        }
+        with mock.patch("bluesky_joke_providers.requests.get", return_value=mock_response):
+            joke = bluesky_joke_providers.fetch_from_jokeapi()
+        self.assertIn("Why did the dev quit?", joke)
+        self.assertIn("Because he didn't get arrays.", joke)
+
+    def test_fetch_from_jokeapi_raises_on_api_error_flag(self):
+        mock_response = mock.Mock()
+        mock_response.raise_for_status = mock.Mock()
+        mock_response.json.return_value = {"error": True, "message": "No jokes found"}
+        with mock.patch("bluesky_joke_providers.requests.get", return_value=mock_response):
+            with self.assertRaises(ValueError):
+                bluesky_joke_providers.fetch_from_jokeapi()
+
+
+class FacetTests(unittest.TestCase):
     def test_build_hashtag_facets_uses_correct_byte_offsets(self):
         joke = "Hello"
         hashtags = ["#jokes", "#funny"]
