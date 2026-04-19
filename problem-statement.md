@@ -111,7 +111,7 @@ Why this matters:
 
 Implementation direction (future):
 1. Define a small provider interface: `fetch_joke() -> str | None` per provider module.
-2. Implement at least two additional providers (candidates: `official-joke-api.appspot.com`, `v2.jokeapi.dev`, `api.api-ninjas.com/v1/dadjokes`, `redd.it/r/dadjokes` RSS).
+2. Implement at least two additional providers (candidates: `official-joke-api.appspot.com`, `v2.jokeapi.dev`, `api.api-ninjas.com/v1/dadjokes`, `redd.it/r/dadjokes` RSS, `groandeck.com/developers`, `rapidapi.com/KegenGuyll/api/dad-jokes`, `humorapi.com/docs/#Random-Joke`).
 3. In `bluesky_post_joke.py`, attempt providers in order, skipping any that raise an exception or return a status outside 2xx.
 4. Apply the existing `MAX_ATTEMPTS` / deduplication logic against `posted_jokes.txt` across all providers combined.
 5. Retain the static fallback only after all providers are exhausted.
