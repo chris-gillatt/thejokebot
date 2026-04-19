@@ -1,12 +1,16 @@
 ### File: bluesky_unfollow.py
+import os
 import time
 from colorama import Fore, Style
 from bluesky_follower_utils import fetch_paginated_data
 from bluesky_common import login_client, get_runtime_controls
 
 def unfollow_users():
-    # List of usernames to ignore
-    ignorable_usernames = ["theonion"]
+    # List of usernames to ignore (configurable via BLUESKY_UNFOLLOW_IGNORE env var)
+    default_ignorable = ["theonion"]
+    env_ignorable = os.getenv("BLUESKY_UNFOLLOW_IGNORE", "")
+    ignorable_usernames = default_ignorable + [u.strip() for u in env_ignorable.split(",") if u.strip()]
+    ignorable_usernames = list(set(ignorable_usernames))  # Deduplicate
     client = None
     username = None
     controls = get_runtime_controls()

@@ -233,8 +233,9 @@ class ReportParsingTests(unittest.TestCase):
             "root_uri": "at://root/1",
             "root_cid": "cid",
         }
-        result = bluesky_process_reports.acknowledge_report(client, proposal)
-        self.assertFalse(result)
+        success, should_retry = bluesky_process_reports.acknowledge_report(client, proposal)
+        self.assertFalse(success)
+        self.assertFalse(should_retry)
         client.send_post.assert_not_called()
 
     def test_acknowledge_report_calls_send_post_with_reply_ref(self):
