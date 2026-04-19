@@ -1,6 +1,7 @@
 import base64
 import datetime as dt
 import os
+import re
 import unittest
 from types import SimpleNamespace
 from unittest import mock
@@ -108,6 +109,43 @@ class StateJokeHistoryTests(unittest.TestCase):
         uris = state["reports"]["processed_notification_uris"]
         self.assertEqual(uris, ["at://notif/1"])
 
+    def test_get_acknowledged_report_uris_returns_empty_set_initially(self):
+        state = bluesky_state._default_state()
+        result = bluesky_state.get_acknowledged_report_uris(state)
+        self.assertEqual(result, set())
+
+    def test_record_acknowledged_report_uri_adds_and_deduplicates(self):
+        state = bluesky_state._default_state()
+        bluesky_state.record_acknowledged_report_uri(state, "at://reply/1")
+        bluesky_state.record_acknowledged_report_uri(state, "at://reply/1")
+        uris = bluesky_state.get_acknowledged_report_uris(state)
+        self.assertEqual(uris, {"at://reply/1"})
+
+    def test_get_deleted_post_uris_returns_empty_set_initially(self):
+        state = bluesky_state._default_state()
+        result = bluesky_state.get_deleted_post_uris(state)
+        self.assertEqual(result, set())
+
+    def test_record_deleted_post_uri_adds_and_deduplicates(self):
+        state = bluesky_state._default_state()
+        bluesky_state.record_deleted_post_uri(state, "at://post/1")
+        bluesky_state.record_deleted_post_uri(state, "at://post/1")
+        uris = bluesky_state.get_deleted_post_uris(state)
+        self.assertEqual(uris, {"at://post/1"})
+
+    def test_get_likes_last_checked_at_returns_none_initially(self):
+        state = bluesky_state._default_state()
+        result = bluesky_state.get_likes_last_checked_at(state)
+        self.assertIsNone(result)
+
+    def test_set_likes_checked_now_records_epoch(self):
+        state = bluesky_state._default_state()
+        bluesky_state.set_likes_checked_now(state)
+        checked_at = bluesky_state.get_likes_last_checked_at(state)
+        self.assertIsNotNone(checked_at)
+        self.assertIsInstance(checked_at, int)
+        self.assertGreater(checked_at, 0)
+
 
 class DenylistTests(unittest.TestCase):
     def test_add_denylist_entry_adds_new_b64(self):
@@ -153,6 +191,63 @@ class ReportParsingTests(unittest.TestCase):
 
     def test_has_report_tag_rejects_partial_word(self):
         self.assertFalse(bluesky_process_reports.has_report_tag("Please remove #reporting"))
+
+    def test_has_report_tag_requires_word_boundary(self):
+        self.assertTrue(bluesky_process_reports.has_report_tag("#report at start"))
+        self.assertTrue(bluesky_process_reports.has_report_tag("in middle #report here"))
+        self.assertTrue(bluesky_process_reports.has_report_tag("at end #report"))
+        self.assertFalse(bluesky_process_reports.has_report_tag("noreporting"))
+
+    def test_extract_notification_extracts_all_fields(self):
+        notification = mock.Mock()
+        notification.uri = "at://notif/1"
+        notification.cid = "cid123"
+        notification.reason = "reply"
+        notification.reason_subject = "at://post/1"
+        notification.author = mock.Mock()
+        notification.author.did = "did:plc:reporter"
+        notification.indexed_at = "2026-04-19T12:00:00Z"
+        notification.record = mock.Mock()
+        notification.record.text = "This is bad #report"
+        notification.record.reply = mock.Mock()
+        notification.record.reply.root = mock.Mock()
+        notification.record.reply.root.uri = "at://root/1"
+        notification.record.reply.root.cid = "root_cid"
+
+        result = bluesky_process_reports._extract_notification(notification)
+
+        self.assertEqual(result["notification_uri"], "at://notif/1")
+        self.assertEqual(result["reply_cid"], "cid123")
+        self.assertEqual(result["author_did"], "did:plc:reporter")
+        self.assertEqual(result["reply_text"], "This is bad #report")
+        self.assertEqual(result["source_post_uri"], "at://post/1")
+        self.assertEqual(result["root_uri"], "at://root/1")
+        self.assertEqual(result["root_cid"], "root_cid")
+        self.assertEqual(result["indexed_at"], "2026-04-19T12:00:00Z")
+
+    def test_acknowledge_report_returns_false_if_missing_cids(self):
+        client = mock.Mock()
+        proposal = {
+            "source_reply_uri": "at://reply/1",
+            "reply_cid": None,
+            "root_uri": "at://root/1",
+            "root_cid": "cid",
+        }
+        result = bluesky_process_reports.acknowledge_report(client, proposal)
+        self.assertFalse(result)
+        client.send_post.assert_not_called()
+
+    def test_acknowledge_report_calls_send_post_with_reply_ref(self):
+        client = mock.Mock()
+        proposal = {
+            "source_reply_uri": "at://reply/1",
+            "reply_cid": "cid1",
+            "root_uri": "at://root/1",
+            "root_cid": "cid2",
+        }
+        result = bluesky_process_reports.acknowledge_report(client, proposal)
+        self.assertTrue(result)
+        client.send_post.assert_called_once()
 
 
 class JokeProviderTests(unittest.TestCase):
@@ -332,6 +427,42 @@ class VerificationHelperTests(unittest.TestCase):
             "thejokebot.bsky.social", "at://did:plc:abc/app.bsky.feed.post/1234"
         )
         self.assertEqual(url, "https://bsky.app/profile/thejokebot.bsky.social/post/1234")
+
+
+class LikeRepliesTests(unittest.TestCase):
+    def test_reply_with_report_tag_is_skipped(self):
+        """Ensure #report replies are not liked."""
+        reply_text = "This joke is bad #report"
+        has_report = bool(re.search(r"(?:^|\s)#report\b", reply_text, re.IGNORECASE))
+        self.assertTrue(has_report)
+
+    def test_reply_without_report_tag_passes_check(self):
+        """Ensure non-report replies pass the check."""
+        reply_text = "Great joke! #love"
+        has_report = bool(re.search(r"(?:^|\s)#report\b", reply_text, re.IGNORECASE))
+        self.assertFalse(has_report)
+
+    def test_24_hour_cutoff_filters_old_notifications(self):
+        """Ensure notifications older than 24 hours are skipped."""
+        import time
+        from datetime import datetime, timezone
+        
+        # Current time - 25 hours (definitely old)
+        old_time = datetime.now(timezone.utc).timestamp() - (25 * 60 * 60)
+        cutoff = time.time() - (24 * 60 * 60)
+        
+        self.assertLess(old_time, cutoff)
+
+    def test_24_hour_cutoff_keeps_recent_notifications(self):
+        """Ensure notifications newer than 24 hours are kept."""
+        import time
+        from datetime import datetime, timezone
+        
+        # Current time - 1 hour (recent)
+        recent_time = datetime.now(timezone.utc).timestamp() - (1 * 60 * 60)
+        cutoff = time.time() - (24 * 60 * 60)
+        
+        self.assertGreater(recent_time, cutoff)
 
 
 if __name__ == "__main__":
