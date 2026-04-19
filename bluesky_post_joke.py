@@ -1,26 +1,21 @@
-import requests
-import random
-import os
-import time
 import base64
+import os
+import random
+import time
+
+import bluesky_joke_providers
+import bluesky_state
 from bluesky_common import login_client
 
-# Configuration
-JOKE_API_URL = "https://icanhazdadjoke.com"
-HEADERS = {
-    "Accept": "text/plain",
-    "User-Agent": "thejokebot (https://github.com/chris-gillatt/thejokebot)"
-}
-POSTED_JOKES_FILE = "posted_jokes.txt"
 DAYS_LIMIT = 90
 MAX_ATTEMPTS = 5
-JOKE_TIMEOUT_SECONDS = 15
 
 # Hashtags
 HASHTAGS = ["#jokes", "#dadjoke", "#funny"]
 
+
 def get_fallback_joke():
-    """Return a static self-deprecating joke when something goes wrong."""
+    """Return a static self-deprecating joke when all providers are exhausted."""
     fallback_jokes = [
         "Why did this script fail? Because it has too much byte and not enough bark.",
         "If this script were a programmer, it would still be debugging hello world.",
@@ -28,72 +23,26 @@ def get_fallback_joke():
     ]
     return random.choice(fallback_jokes)
 
+
 def get_current_epoch():
     return int(time.time())
 
-def load_recent_jokes():
-    recent = set()
-    cutoff = get_current_epoch() - (DAYS_LIMIT * 86400)
-    if not os.path.exists(POSTED_JOKES_FILE):
-        return recent
-    with open(POSTED_JOKES_FILE, "r", encoding="utf-8") as f:
-        for line in f:
-            if not line.strip():
-                continue
-            try:
-                ts_str, b64 = line.strip().split(" ", 1)
-                if float(ts_str) > cutoff:
-                    recent.add(b64)
-            except ValueError:
-                continue
-    return recent
 
-def save_joke(joke_text):
-    encoded = base64.b64encode(joke_text.strip().encode("utf-8")).decode()
-    with open(POSTED_JOKES_FILE, "a", encoding="utf-8") as f:
-        f.write(f"{get_current_epoch()} {encoded}\n")
-
-def clear_old_jokes():
-    cutoff = get_current_epoch() - (DAYS_LIMIT * 86400)
-    if not os.path.exists(POSTED_JOKES_FILE):
-        return
-    with open(POSTED_JOKES_FILE, "r", encoding="utf-8") as f:
-        lines = f.readlines()
-    filtered = []
-    for line in lines:
-        if not line.strip():
-            continue
-        parts = line.split()
-        if not parts:
-            continue
-        try:
-            timestamp = float(parts[0])
-        except ValueError:
-            continue
-        if timestamp > cutoff:
-            filtered.append(line)
-    with open(POSTED_JOKES_FILE, "w", encoding="utf-8") as f:
-        f.writelines(filtered)
-
-def pick_joke(recent_jokes):
-    joke = None
+def pick_joke(recent_b64s: set, provider_name: str) -> tuple:
+    """
+    Fetch up to MAX_ATTEMPTS jokes from provider_name, skipping recent duplicates.
+    Returns (joke_text, b64_encoded) on success, raises ValueError if all attempts
+    are duplicates or the provider raises.
+    """
+    fetch_fn = bluesky_joke_providers.PROVIDERS[provider_name]
     for _ in range(MAX_ATTEMPTS):
-        try:
-            response = requests.get(JOKE_API_URL, headers=HEADERS, timeout=JOKE_TIMEOUT_SECONDS)
-            response.raise_for_status()
-            candidate = response.content.decode("utf-8").strip()
-            encoded = base64.b64encode(candidate.encode("utf-8")).decode()
-            if encoded not in recent_jokes:
-                joke = candidate
-                save_joke(joke)
-                break
-        except requests.exceptions.RequestException as e:
-            print(f"Failed to fetch joke: {e}")
-            return get_fallback_joke()
-
-    if not joke:
-        return get_fallback_joke()
-    return joke
+        joke = fetch_fn()
+        encoded = base64.b64encode(joke.encode("utf-8")).decode()
+        if encoded not in recent_b64s:
+            return joke, encoded
+    raise ValueError(
+        f"All {MAX_ATTEMPTS} jokes from '{provider_name}' were recent duplicates"
+    )
 
 
 def build_hashtag_facets(joke_text, hashtags):
@@ -119,8 +68,37 @@ def build_hashtag_facets(joke_text, hashtags):
 
 
 def main():
-    recent_jokes = load_recent_jokes()
-    joke = pick_joke(recent_jokes)
+    state = bluesky_state.load_state()
+    cutoff = get_current_epoch() - (DAYS_LIMIT * 86400)
+    recent_b64s = bluesky_state.get_recent_b64s(state, cutoff)
+
+    # Determine provider: explicit override or next in alternating rotation.
+    provider_override = os.getenv("BLUESKY_JOKE_PROVIDER", "").strip().lower() or None
+    selected = bluesky_state.get_next_provider(state, override=provider_override)
+    all_providers = list(bluesky_joke_providers.PROVIDERS.keys())
+    providers_to_try = [selected] + [p for p in all_providers if p != selected]
+
+    joke = None
+    b64 = None
+    used_provider = None
+
+    for provider_name in providers_to_try:
+        try:
+            joke, b64 = pick_joke(recent_b64s, provider_name)
+            used_provider = provider_name
+            break
+        except Exception as e:
+            print(f"Provider '{provider_name}' failed: {e}")
+            bluesky_state.record_failure(state, provider_name, str(e))
+
+    if not joke:
+        joke = get_fallback_joke()
+        b64 = base64.b64encode(joke.encode("utf-8")).decode()
+        used_provider = "fallback"
+
+    # Advance rotation after a successful provider fetch (regardless of post outcome).
+    if used_provider != "fallback":
+        bluesky_state.record_provider_used(state, used_provider)
 
     hashtags_string = " ".join(HASHTAGS)
     joke_with_tags = f"{joke}\n\n{hashtags_string}"
@@ -128,13 +106,15 @@ def main():
 
     try:
         client, username = login_client()
-        print(f"Posting as {username}: {repr(joke_with_tags)}")
+        print(f"Posting as {username} via '{used_provider}': {repr(joke_with_tags)}")
         client.send_post(text=joke_with_tags, facets=facets)
         print("Joke successfully posted!")
+        bluesky_state.add_posted_joke(state, b64, used_provider)
     except Exception as e:
         print(f"Failed to post joke: {e}")
     finally:
-        clear_old_jokes()
+        bluesky_state.prune_old_jokes(state, cutoff)
+        bluesky_state.save_state(state)
 
 
 if __name__ == "__main__":
