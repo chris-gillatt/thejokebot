@@ -72,11 +72,18 @@ def main():
     cutoff = get_current_epoch() - (DAYS_LIMIT * 86400)
     recent_b64s = bluesky_state.get_recent_b64s(state, cutoff)
 
-    # Determine provider: explicit override or next in alternating rotation.
+    # Determine provider order: explicit override or next primary provider in
+    # alternating rotation, followed by remaining primaries and then backups.
     provider_override = os.getenv("BLUESKY_JOKE_PROVIDER", "").strip().lower() or None
-    selected = bluesky_state.get_next_provider(state, override=provider_override)
-    all_providers = list(bluesky_joke_providers.PROVIDERS.keys())
-    providers_to_try = [selected] + [p for p in all_providers if p != selected]
+    if provider_override in bluesky_joke_providers.PROVIDERS:
+        providers_to_try = [provider_override]
+    else:
+        selected = bluesky_state.get_next_provider(state)
+        primary_providers = list(bluesky_joke_providers.PRIMARY_PROVIDERS)
+        backup_providers = list(bluesky_joke_providers.BACKUP_PROVIDERS)
+        providers_to_try = [selected]
+        providers_to_try += [p for p in primary_providers if p != selected]
+        providers_to_try += backup_providers
 
     joke = None
     b64 = None

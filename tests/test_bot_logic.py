@@ -56,6 +56,10 @@ class StateProviderRotationTests(unittest.TestCase):
         result = bluesky_state.get_next_provider(state, override="nonexistent")
         self.assertEqual(result, "icanhazdadjoke")
 
+    def test_api_ninjas_is_not_in_primary_rotation(self):
+        state = bluesky_state._default_state()
+        self.assertEqual(state["provider"]["rotation_order"], ["icanhazdadjoke", "jokeapi"])
+
 
 class StateJokeHistoryTests(unittest.TestCase):
     def test_get_recent_b64s_filters_by_cutoff(self):
@@ -125,6 +129,21 @@ class JokeProviderTests(unittest.TestCase):
         with mock.patch("bluesky_joke_providers.requests.get", return_value=mock_response):
             with self.assertRaises(ValueError):
                 bluesky_joke_providers.fetch_from_jokeapi()
+
+    def test_fetch_from_api_ninjas_requires_api_key(self):
+        with mock.patch.dict(os.environ, {}, clear=False):
+            with mock.patch.dict(os.environ, {"API_NINJAS_API_KEY": ""}, clear=False):
+                with self.assertRaises(ValueError):
+                    bluesky_joke_providers.fetch_from_api_ninjas()
+
+    def test_fetch_from_api_ninjas_returns_joke(self):
+        mock_response = mock.Mock()
+        mock_response.raise_for_status = mock.Mock()
+        mock_response.json.return_value = [{"joke": "Backup joke."}]
+        with mock.patch.dict(os.environ, {"API_NINJAS_API_KEY": "secret"}, clear=False):
+            with mock.patch("bluesky_joke_providers.requests.get", return_value=mock_response):
+                joke = bluesky_joke_providers.fetch_from_api_ninjas()
+        self.assertEqual(joke, "Backup joke.")
 
 
 class FacetTests(unittest.TestCase):

@@ -6,16 +6,19 @@ Each provider is a callable with signature () -> str that returns a single
 joke string (plain text, may contain newlines for two-part jokes) or raises
 an exception if the joke cannot be fetched.
 
-PROVIDERS maps provider name -> fetch function. Add new providers here and
-they will be picked up by the rotation in bluesky_state.py automatically
-(you must also add the name to PROVIDER_ROTATION_ORDER in bluesky_state.py).
+Primary providers participate in normal alternating rotation. Backup providers
+are only tried after the primaries fail, unless explicitly selected via
+BLUESKY_JOKE_PROVIDER for local testing or emergency use.
 """
+import os
+
 import requests
 
 JOKE_TIMEOUT_SECONDS = 15
 
 _USER_AGENT = "thejokebot (https://github.com/chris-gillatt/thejokebot)"
 _ICANHAZDADJOKE_URL = "https://icanhazdadjoke.com"
+_API_NINJAS_DADJOKES_URL = "https://api.api-ninjas.com/v1/dadjokes"
 
 # Safe categories only — Dark is excluded intentionally.
 # safe-mode is embedded in the URL as a value-less parameter because requests
@@ -24,6 +27,10 @@ _JOKEAPI_URL = (
     "https://v2.jokeapi.dev/joke/Misc,Programming,Pun,Spooky,Christmas?safe-mode"
 )
 _JOKEAPI_BLACKLIST = "nsfw,explicit,racist,sexist"
+
+
+PRIMARY_PROVIDERS = ["icanhazdadjoke", "jokeapi"]
+BACKUP_PROVIDERS = ["api_ninjas"]
 
 
 def fetch_from_icanhazdadjoke(timeout: int = JOKE_TIMEOUT_SECONDS) -> str:
@@ -73,8 +80,37 @@ def fetch_from_jokeapi(timeout: int = JOKE_TIMEOUT_SECONDS) -> str:
     return joke
 
 
-# Registry — keys must match the names in bluesky_state.PROVIDER_ROTATION_ORDER.
+def fetch_from_api_ninjas(timeout: int = JOKE_TIMEOUT_SECONDS) -> str:
+    """
+    Fetch a dad joke from API Ninjas.
+
+    This provider requires API_NINJAS_API_KEY and is intended as a last-resort
+    live provider because the API has a very limited joke pool.
+    """
+    api_key = os.getenv("API_NINJAS_API_KEY", "").strip()
+    if not api_key:
+        raise ValueError("API_NINJAS_API_KEY is not set")
+
+    resp = requests.get(
+        _API_NINJAS_DADJOKES_URL,
+        headers={"User-Agent": _USER_AGENT, "X-Api-Key": api_key},
+        timeout=timeout,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+
+    if not isinstance(data, list) or not data:
+        raise ValueError("API Ninjas returned an unexpected response shape")
+
+    joke = data[0].get("joke", "").strip()
+    if not joke:
+        raise ValueError("API Ninjas returned an empty joke")
+    return joke
+
+
+# Registry for all available providers.
 PROVIDERS: dict[str, callable] = {
     "icanhazdadjoke": fetch_from_icanhazdadjoke,
     "jokeapi": fetch_from_jokeapi,
+    "api_ninjas": fetch_from_api_ninjas,
 }

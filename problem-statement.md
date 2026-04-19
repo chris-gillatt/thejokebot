@@ -111,7 +111,7 @@ Why this matters:
 
 Implementation direction (future):
 1. Define a small provider interface: `fetch_joke() -> str | None` per provider module.
-2. Implement at least two additional providers (candidates: `official-joke-api.appspot.com`, `v2.jokeapi.dev`, `redd.it/r/dadjokes` RSS).
+2. Implement at least two additional providers (candidates: `official-joke-api.appspot.com`, `v2.jokeapi.dev`, `api.api-ninjas.com/v1/dadjokes`, `redd.it/r/dadjokes` RSS).
 3. In `bluesky_post_joke.py`, attempt providers in order, skipping any that raise an exception or return a status outside 2xx.
 4. Apply the existing `MAX_ATTEMPTS` / deduplication logic against `posted_jokes.txt` across all providers combined.
 5. Retain the static fallback only after all providers are exhausted.
@@ -121,6 +121,7 @@ Constraints:
 - Base64 encoding of jokes in `posted_jokes.txt` must be preserved (see Section 12.0).
 - Provider selection order should be deterministic (not random) to simplify debugging.
 - Do not change the post content format or hashtags.
+- `api.api-ninjas.com/v1/dadjokes` should be treated as a backup-only provider in default operation because its joke pool is very small; it should only be used after the primary providers fail unless explicitly selected for testing.
 
 ### 12.3 Workflow and Automation Hardening from Live Run Review (Deferred)
 

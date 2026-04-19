@@ -32,6 +32,7 @@ jobs:
       - name: Run bluesky_post_joke
         env:
           BLUESKY_PASSWORD: ${{ secrets.BLUESKY_PASSWORD }}
+          API_NINJAS_API_KEY: ${{ secrets.API_NINJAS_API_KEY }}
         run: python bluesky_post_joke.py
 
       - name: Update bot_state.json

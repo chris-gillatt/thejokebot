@@ -31,8 +31,10 @@ Set these in `.env` (keep values quoted):
 
 - `BLUESKY_USERNAME`: account handle (defaults to `thejokebot.bsky.social` if omitted).
 - `BLUESKY_PASSWORD`: app password for Bluesky.
+- `API_NINJAS_API_KEY`: API key for the API Ninjas dad jokes endpoint. Optional unless you want the last-resort backup provider enabled.
 - `BLUESKY_DRY_RUN`: `true` or `false`.
 - `BLUESKY_ACTION_DELAY_SECONDS`: delay between follow/unfollow actions.
+- `BLUESKY_JOKE_PROVIDER`: leave unset to alternate between the primary providers (`icanhazdadjoke`, `jokeapi`). Set to `api_ninjas` only for explicit testing or emergency fallback use.
 
 ## Runtime safety controls
 
@@ -47,9 +49,17 @@ These controls apply to:
 - `bluesky_unfollow.py`
 - `bluesky_generate_followers.py`
 
+## Joke providers
+
+- Primary providers: `icanhazdadjoke`, `jokeapi`
+- Backup-only live provider: `api_ninjas`
+- Static fallback jokes remain the final safety net if all live providers fail.
+
+The default behaviour alternates between the primary providers and only uses `api_ninjas` if the primaries fail. This is intentional because the API Ninjas dad jokes endpoint has a very small joke pool.
+
 ## Scripts
 
-- `bluesky_post_joke.py`: fetch a joke, append hashtags, post to Bluesky, maintain `posted_jokes.txt`.
+- `bluesky_post_joke.py`: fetch a joke, append hashtags, post to Bluesky, maintain `bot_state.json`.
 - `bluesky_follow_back.py`: follow users who follow the bot.
 - `bluesky_unfollow.py`: unfollow accounts that do not follow back (except ignore list).
 - `bluesky_generate_followers.py`: find hashtag users and follow up to configured limits.
@@ -64,7 +74,7 @@ These controls apply to:
 
 ## State and references
 
-- `posted_jokes.txt`: local text state used for deduplication.
+- `bot_state.json`: local JSON state used for deduplication, provider rotation, and provider failure tracking.
 - `references/bsky-docs`: local shallow submodule of Bluesky docs.
 
 ## Project governance
