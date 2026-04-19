@@ -3,6 +3,7 @@ import os
 import random
 import time
 
+import bluesky_denylist
 import bluesky_joke_providers
 import bluesky_state
 from bluesky_common import login_client
@@ -71,6 +72,8 @@ def main():
     state = bluesky_state.load_state()
     cutoff = get_current_epoch() - (DAYS_LIMIT * 86400)
     recent_b64s = bluesky_state.get_recent_b64s(state, cutoff)
+    denylist_payload = bluesky_denylist.load_denylist()
+    recent_b64s |= bluesky_denylist.get_denylisted_b64s(denylist_payload)
 
     # Determine provider order: explicit override or next primary provider in
     # alternating rotation, followed by remaining primaries and then backups.
@@ -116,9 +119,22 @@ def main():
         handle = getattr(client.me, "handle", "")
         display_identity = f"@{handle}" if handle else "@unknown"
         print(f"Posting as {display_identity} via '{used_provider}': {repr(joke_with_tags)}")
-        client.send_post(text=joke_with_tags, facets=facets)
+        post = client.send_post(text=joke_with_tags, facets=facets)
         print("Joke successfully posted!")
-        bluesky_state.add_posted_joke(state, b64, used_provider)
+
+        post_uri = getattr(post, "uri", None)
+        post_cid = getattr(post, "cid", None)
+        if isinstance(post, dict):
+            post_uri = post.get("uri")
+            post_cid = post.get("cid")
+
+        bluesky_state.add_posted_joke(
+            state,
+            b64,
+            used_provider,
+            post_uri=post_uri,
+            post_cid=post_cid,
+        )
     except Exception as e:
         print(f"Failed to post joke: {e}")
     finally:

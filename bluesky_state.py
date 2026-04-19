@@ -9,6 +9,8 @@ rotation/failure state.
 Writes are performed atomically via a temp file + os.replace() to prevent
 corruption if a run is interrupted.
 """
+from __future__ import annotations
+
 import json
 import os
 import time
@@ -31,8 +33,45 @@ def _default_state() -> dict:
                 for p in PROVIDER_ROTATION_ORDER
             },
         },
+        "reports": {
+            "processed_notification_uris": [],
+            "last_checked_at": None,
+        },
         "posted_jokes": [],
     }
+
+
+def _normalise_state(state: dict) -> dict:
+    """Backfill missing keys for older state files."""
+    defaults = _default_state()
+
+    if not isinstance(state, dict):
+        return defaults
+
+    # Ensure required top-level sections exist.
+    for key, value in defaults.items():
+        if key not in state:
+            state[key] = value
+
+    provider = state.setdefault("provider", {})
+    default_provider = defaults["provider"]
+    for key, value in default_provider.items():
+        if key not in provider:
+            provider[key] = value
+
+    failures = provider.setdefault("failures", {})
+    for provider_name in provider.get("rotation_order") or PROVIDER_ROTATION_ORDER:
+        failures.setdefault(
+            provider_name,
+            {"count": 0, "last_failure_at": None, "last_error": None},
+        )
+
+    reports = state.setdefault("reports", {})
+    reports.setdefault("processed_notification_uris", [])
+    reports.setdefault("last_checked_at", None)
+
+    state.setdefault("posted_jokes", [])
+    return state
 
 
 def load_state() -> dict:
@@ -41,7 +80,7 @@ def load_state() -> dict:
         return _default_state()
     try:
         with open(STATE_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+            return _normalise_state(json.load(f))
     except (json.JSONDecodeError, IOError):
         print(f"Warning: could not read {STATE_FILE}; starting with empty state.")
         return _default_state()
@@ -94,11 +133,20 @@ def record_failure(state: dict, provider: str, error: str) -> None:
     entry["last_error"] = str(error)
 
 
-def add_posted_joke(state: dict, b64: str, provider: str) -> None:
+def add_posted_joke(
+    state: dict,
+    b64: str,
+    provider: str,
+    post_uri: str | None = None,
+    post_cid: str | None = None,
+) -> None:
     """Record a successfully posted joke in state."""
-    state["posted_jokes"].append(
-        {"ts": int(time.time()), "b64": b64, "provider": provider}
-    )
+    entry = {"ts": int(time.time()), "b64": b64, "provider": provider}
+    if post_uri:
+        entry["post_uri"] = post_uri
+    if post_cid:
+        entry["post_cid"] = post_cid
+    state["posted_jokes"].append(entry)
 
 
 def get_recent_b64s(state: dict, cutoff_ts: float) -> set:
@@ -111,3 +159,42 @@ def prune_old_jokes(state: dict, cutoff_ts: float) -> None:
     state["posted_jokes"] = [
         e for e in state["posted_jokes"] if e["ts"] > cutoff_ts
     ]
+
+
+def get_post_uri_index(state: dict) -> dict:
+    """Map post URI to posted_jokes entry for report lookup."""
+    index = {}
+    for entry in state.get("posted_jokes", []):
+        post_uri = entry.get("post_uri")
+        if post_uri:
+            index[post_uri] = entry
+    return index
+
+
+def get_processed_notification_uris(state: dict) -> set[str]:
+    """Return processed notification URIs for idempotent report ingestion."""
+    reports = state.setdefault("reports", {})
+    uris = reports.setdefault("processed_notification_uris", [])
+    return set(uris)
+
+
+def record_processed_notification(state: dict, notification_uri: str) -> None:
+    """Record a processed notification URI if it has not been seen before."""
+    reports = state.setdefault("reports", {})
+    uris = reports.setdefault("processed_notification_uris", [])
+    if notification_uri and notification_uri not in uris:
+        uris.append(notification_uri)
+
+
+def prune_processed_notifications(state: dict, max_entries: int = 5000) -> None:
+    """Keep only the most recent processed notification URIs."""
+    reports = state.setdefault("reports", {})
+    uris = reports.setdefault("processed_notification_uris", [])
+    if len(uris) > max_entries:
+        reports["processed_notification_uris"] = uris[-max_entries:]
+
+
+def set_reports_checked_now(state: dict) -> None:
+    """Set the report polling timestamp to current epoch."""
+    reports = state.setdefault("reports", {})
+    reports["last_checked_at"] = int(time.time())

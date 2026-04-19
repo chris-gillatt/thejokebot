@@ -6,10 +6,12 @@ from types import SimpleNamespace
 from unittest import mock
 
 import bluesky_common
+import bluesky_denylist
 import bluesky_follower_utils
 import bluesky_generate_followers
 import bluesky_joke_providers
 import bluesky_post_joke
+import bluesky_process_reports
 import bluesky_state
 import bluesky_verify_latest_joke_post
 
@@ -88,6 +90,69 @@ class StateJokeHistoryTests(unittest.TestCase):
         failures = state["provider"]["failures"]["jokeapi"]
         self.assertEqual(failures["count"], 2)
         self.assertEqual(failures["last_error"], "HTTP 429")
+
+    def test_get_post_uri_index_returns_uri_mapping(self):
+        state = bluesky_state._default_state()
+        state["posted_jokes"] = [
+            {"ts": 1, "b64": "one", "provider": "jokeapi", "post_uri": "at://post/1"},
+            {"ts": 2, "b64": "two", "provider": "jokeapi"},
+        ]
+        index = bluesky_state.get_post_uri_index(state)
+        self.assertEqual(index["at://post/1"]["b64"], "one")
+        self.assertNotIn("at://post/2", index)
+
+    def test_record_processed_notification_is_idempotent(self):
+        state = bluesky_state._default_state()
+        bluesky_state.record_processed_notification(state, "at://notif/1")
+        bluesky_state.record_processed_notification(state, "at://notif/1")
+        uris = state["reports"]["processed_notification_uris"]
+        self.assertEqual(uris, ["at://notif/1"])
+
+
+class DenylistTests(unittest.TestCase):
+    def test_add_denylist_entry_adds_new_b64(self):
+        payload = {"version": 1, "jokes": []}
+        added = bluesky_denylist.add_denylist_entry(
+            payload,
+            b64="dGVzdA==",
+            source_post_uri="at://post/1",
+            source_reply_uri="at://reply/1",
+            reporter_did="did:plc:test",
+        )
+        self.assertTrue(added)
+        self.assertEqual(len(payload["jokes"]), 1)
+
+    def test_add_denylist_entry_skips_duplicate_b64(self):
+        payload = {
+            "version": 1,
+            "jokes": [
+                {
+                    "b64": "dGVzdA==",
+                    "source_post_uri": "at://post/1",
+                    "source_reply_uri": "at://reply/1",
+                    "reporter_did": "did:plc:test",
+                    "reason": "user_reply_report",
+                    "first_reported_at": 1,
+                }
+            ],
+        }
+        added = bluesky_denylist.add_denylist_entry(
+            payload,
+            b64="dGVzdA==",
+            source_post_uri="at://post/2",
+            source_reply_uri="at://reply/2",
+            reporter_did="did:plc:test2",
+        )
+        self.assertFalse(added)
+        self.assertEqual(len(payload["jokes"]), 1)
+
+
+class ReportParsingTests(unittest.TestCase):
+    def test_has_report_tag_accepts_case_insensitive_hashtag(self):
+        self.assertTrue(bluesky_process_reports.has_report_tag("Please remove this #REPORT"))
+
+    def test_has_report_tag_rejects_partial_word(self):
+        self.assertFalse(bluesky_process_reports.has_report_tag("Please remove #reporting"))
 
 
 class JokeProviderTests(unittest.TestCase):

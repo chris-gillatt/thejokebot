@@ -35,6 +35,8 @@ Set these in `.env` (keep values quoted):
 - `BLUESKY_DRY_RUN`: `true` or `false`.
 - `BLUESKY_ACTION_DELAY_SECONDS`: delay between follow/unfollow actions.
 - `BLUESKY_JOKE_PROVIDER`: leave unset to alternate between the primary providers (`icanhazdadjoke`, `jokeapi`). Set to a specific provider name only for explicit testing or emergency use.
+- `BLUESKY_REPORT_MAX_PAGES`: optional cap for report notification paging (default `3`).
+- `BLUESKY_REPORT_PAGE_LIMIT`: optional page size for report notifications (default `100`).
 
 ## Runtime safety controls
 
@@ -64,6 +66,8 @@ The default behaviour alternates between the primary providers, tries `api_ninja
 - `bluesky_unfollow.py`: unfollow accounts that do not follow back (except ignore list).
 - `bluesky_generate_followers.py`: find hashtag users and follow up to configured limits.
 - `bluesky_verify_latest_joke_post.py`: read-only check that a recent joke post exists on the account.
+- `bluesky_process_reports.py`: poll Bluesky reply notifications for `#report`, map replies to posted jokes, and emit denylist proposals.
+- `bluesky_create_report_prs.py`: create one denylist PR per report proposal.
 
 ## GitHub workflows
 
@@ -71,11 +75,21 @@ The default behaviour alternates between the primary providers, tries `api_ninja
 - `bluesky_follow_back.yml`: scheduled every 2 hours and manual trigger.
 - `bluesky_generate_followers.yml`: scheduled weekly (Friday) and manual trigger.
 - `bluesky_unfollow.yml`: manual trigger.
+- `bluesky_process_reports.yml`: scheduled every 30 minutes and manual trigger. Ingests `#report` replies, updates report checkpoints in `bot_state.json`, and opens one denylist PR per newly reported joke.
 
 ## State and references
 
 - `bot_state.json`: local JSON state used for deduplication, provider rotation, and provider failure tracking.
+- `resources/joke_denylist.json`: repository-backed denylist. Jokes added here are excluded from future posting.
 - `references/bsky-docs`: local shallow submodule of Bluesky docs.
+
+## User reporting flow
+
+1. A user replies to a joke post with `#report`.
+2. The report workflow reads reply notifications and maps the reply parent URI back to the posted joke state.
+3. For each newly reported joke, the workflow opens one PR that adds the joke b64 to `resources/joke_denylist.json`.
+4. Maintainers review and merge approved PRs.
+5. Merged denylist entries are excluded from future posts automatically.
 
 ## Project governance
 
