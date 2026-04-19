@@ -121,8 +121,26 @@ Constraints:
 - Provider selection order should be deterministic (not random) to simplify debugging.
 - Do not change the post content format or hashtags.
 
+### 12.3 Workflow and Automation Hardening from Live Run Review (Deferred)
+
+Requirement summary:
+- Recent manual GitHub Actions runs for `bluesky_post_joke`, `bluesky_follow_back`, and `bluesky_generate_followers` all completed successfully.
+- No immediate production bug was exposed, but the runs identified a few worthwhile hardening improvements.
+
+Why this matters:
+- `bluesky_generate_followers.py` currently executes live follow actions without the same runtime safety controls already added to follow-back/unfollow flows.
+- `bluesky_post_joke.yml` writes and pushes runtime state, so overlapping manual and scheduled runs can create avoidable git push/rebase churn.
+- `bluesky_generate_followers.py` currently logs every followed DID individually, which is useful for audit but noisy in workflow logs.
+
+Implementation direction (future):
+1. Add `BLUESKY_DRY_RUN` and `BLUESKY_ACTION_DELAY_SECONDS` support to `bluesky_generate_followers.py` so follow-generation has the same safety controls as the other automation scripts.
+2. Add workflow `concurrency` control to `bluesky_post_joke.yml` so only one post/state-writing run can execute at a time.
+3. Reduce `bluesky_generate_followers.py` log noise by logging counts and a small sample of followed DIDs instead of printing every DID by default.
+4. Preserve enough auditability that follow decisions can still be reviewed when needed.
+
 ## 13. Change Log (Problem Statement)
 - v0.1: Initial project-specific draft created to establish governance baseline.
 - v0.2: Added deferred unfollow re-engagement guardrail and temporary live-unfollow hold.
 - v0.3: Added GitHub Actions runtime contract constraint to protect operational continuity.
 - v0.4: Added Section 12.0 explicit "will not do" decisions (including base64 rationale). Added Section 12.2 multi-provider joke source with retry handler.
+- v0.5: Added Section 12.3 workflow and automation hardening backlog items from successful live GitHub Actions review.
