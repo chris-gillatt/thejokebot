@@ -54,4 +54,14 @@ jobs:
           fi
 
           git commit -m "chore: update bot_state.json; GH run: ${GITHUB_RUN_NUMBER}"
-          git push
+          for attempt in 1 2 3; do
+            git pull --rebase origin main
+            if git push; then
+              break
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "Push failed after 3 attempts."
+              exit 1
+            fi
+            echo "Push rejected, retrying (${attempt}/3)..."
+          done
