@@ -5,6 +5,9 @@ on:
     - cron:  '0 0,8,16 * * *'
   workflow_dispatch:
 
+concurrency:
+  group: bluesky_post_joke
+  cancel-in-progress: false
 
 permissions:
   contents: write

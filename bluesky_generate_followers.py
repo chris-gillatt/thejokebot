@@ -43,7 +43,6 @@ def get_following():
 def follow(did: str):
     try:
         client.follow(did)
-        print(f"Following DID: {did}")
     except Exception as e:
         print(f"Unexpected error trying to follow {did}: {e}")
 
@@ -114,16 +113,34 @@ def main():
 
     print(f"Total users to follow: {len(selected_users)}\n")
 
-    for i, (_, did) in enumerate(selected_users, start=1):
+    # Build summary of DIDs by tag (first 3 per tag for audit)
+    sample_by_tag = {tag: [] for tag in hashtags}
+    for tag, did in selected_users:
+        if len(sample_by_tag[tag]) < 3:
+            sample_by_tag[tag].append(did)
+
+    for i, (tag, did) in enumerate(selected_users, start=1):
         if dry_run:
-            print(f"[DRY-RUN] Would follow DID: {did}")
+            print(f"[DRY-RUN] Would follow {did} (#{tag})")
         else:
             follow(did)
 
         if action_delay_seconds > 0 and i < len(selected_users):
             time.sleep(action_delay_seconds)
 
-    print("Follower generation script completed.")
+    # Log summary by tag with sample DIDs for audit
+    print("\nFollowed users by tag (sample):")
+    for tag in hashtags:
+        count = tag_counts[tag]
+        samples = sample_by_tag[tag]
+        if count == 0:
+            print(f"  #{tag}: 0 users")
+        elif count <= 3:
+            print(f"  #{tag}: {count} user(s) – {', '.join(samples)}")
+        else:
+            print(f"  #{tag}: {count} users – sample: {', '.join(samples[:3])} ...")
+
+    print("\nFollower generation script completed.")
 
 if __name__ == "__main__":
     main()
