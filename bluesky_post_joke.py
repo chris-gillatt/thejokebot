@@ -105,8 +105,10 @@ def main():
     facets = build_hashtag_facets(joke, HASHTAGS)
 
     try:
-        client, username = login_client()
-        print(f"Posting as {username} via '{used_provider}': {repr(joke_with_tags)}")
+        client, _ = login_client()
+        handle = getattr(client.me, "handle", "")
+        display_identity = f"@{handle}" if handle else "@unknown"
+        print(f"Posting as {display_identity} via '{used_provider}': {repr(joke_with_tags)}")
         client.send_post(text=joke_with_tags, facets=facets)
         print("Joke successfully posted!")
         bluesky_state.add_posted_joke(state, b64, used_provider)
