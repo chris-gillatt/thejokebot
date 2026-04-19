@@ -87,7 +87,7 @@ The report pipeline runs every 30 minutes via the `bluesky_process_reports` work
 |---|---|
 | `bot_state.json` | Runtime state: posted joke history (b64, deduplication), provider rotation, report notification checkpoints, deleted post URIs, liked reply URIs. |
 | `resources/joke_denylist.json` | Repository-backed denylist. Jokes added here are permanently excluded from posting. |
-| `resources/official_jokes.json` | Bundled offline joke pool (446 jokes). Used as final fallback when all live APIs are unavailable. |
+| `resources/jokebot_jokebook.json` | Bundled offline joke pool (446 jokes). Used as final fallback when all live APIs are unavailable. |
 
 ## Credits
 

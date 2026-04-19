@@ -210,14 +210,14 @@ class JokeProviderTests(unittest.TestCase):
                 joke = bluesky_joke_providers.fetch_from_api_ninjas()
         self.assertEqual(joke, "Backup joke.")
 
-    def test_official_jokes_is_in_backup_providers_not_primary(self):
-        self.assertIn("official_jokes", bluesky_joke_providers.BACKUP_PROVIDERS)
-        self.assertNotIn("official_jokes", bluesky_joke_providers.PRIMARY_PROVIDERS)
+    def test_jokebot_jokebook_is_in_backup_providers_not_primary(self):
+        self.assertIn("jokebot_jokebook", bluesky_joke_providers.BACKUP_PROVIDERS)
+        self.assertNotIn("jokebot_jokebook", bluesky_joke_providers.PRIMARY_PROVIDERS)
 
-    def test_official_jokes_is_last_resort_backup(self):
-        self.assertEqual(bluesky_joke_providers.BACKUP_PROVIDERS[-1], "official_jokes")
+    def test_jokebot_jokebook_is_last_resort_backup(self):
+        self.assertEqual(bluesky_joke_providers.BACKUP_PROVIDERS[-1], "jokebot_jokebook")
 
-    def test_fetch_from_official_jokes_returns_decoded_joke(self):
+    def test_fetch_from_jokebot_jokebook_returns_decoded_joke(self):
         import base64, json, unittest.mock as umock
         joke_text = "Why did the chicken cross the road?\n\nTo get to the other side."
         encoded = base64.b64encode(joke_text.encode()).decode()
@@ -225,28 +225,28 @@ class JokeProviderTests(unittest.TestCase):
         mock_path = umock.MagicMock()
         mock_path.exists.return_value = True
         mock_open = umock.mock_open(read_data=fake_data)
-        with umock.patch("bluesky_joke_providers._OFFICIAL_JOKES_PATH", mock_path):
+        with umock.patch("bluesky_joke_providers._JOKEBOOK_PATH", mock_path):
             with umock.patch("builtins.open", mock_open):
-                joke = bluesky_joke_providers.fetch_from_official_jokes()
+                joke = bluesky_joke_providers.fetch_from_jokebot_jokebook()
         self.assertEqual(joke, joke_text)
 
-    def test_fetch_from_official_jokes_raises_if_file_missing(self):
+    def test_fetch_from_jokebot_jokebook_raises_if_file_missing(self):
         mock_path = mock.MagicMock()
         mock_path.exists.return_value = False
-        with mock.patch("bluesky_joke_providers._OFFICIAL_JOKES_PATH", mock_path):
-            with self.assertRaises(FileNotFoundError):
-                bluesky_joke_providers.fetch_from_official_jokes()
+        with mock.patch("bluesky_joke_providers._JOKEBOOK_PATH", mock_path):
+            with self.assertRaises(RuntimeError):
+                bluesky_joke_providers.fetch_from_jokebot_jokebook()
 
-    def test_fetch_from_official_jokes_raises_on_empty_list(self):
+    def test_fetch_from_jokebot_jokebook_raises_on_empty_list(self):
         import json, unittest.mock as umock
         fake_data = json.dumps({"jokes": []})
         mock_path = umock.MagicMock()
         mock_path.exists.return_value = True
         mock_open = umock.mock_open(read_data=fake_data)
-        with umock.patch("bluesky_joke_providers._OFFICIAL_JOKES_PATH", mock_path):
+        with umock.patch("bluesky_joke_providers._JOKEBOOK_PATH", mock_path):
             with umock.patch("builtins.open", mock_open):
                 with self.assertRaises(ValueError):
-                    bluesky_joke_providers.fetch_from_official_jokes()
+                    bluesky_joke_providers.fetch_from_jokebot_jokebook()
 
 
 class FacetTests(unittest.TestCase):

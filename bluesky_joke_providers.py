@@ -34,9 +34,9 @@ _JOKEAPI_BLACKLIST = "nsfw,explicit,racist,sexist"
 
 
 PRIMARY_PROVIDERS = ["icanhazdadjoke", "jokeapi"]
-BACKUP_PROVIDERS = ["api_ninjas", "official_jokes"]
+BACKUP_PROVIDERS = ["api_ninjas", "jokebot_jokebook"]
 
-_OFFICIAL_JOKES_PATH = pathlib.Path(__file__).parent / "resources" / "official_jokes.json"
+_JOKEBOOK_PATH = pathlib.Path(__file__).parent / "resources" / "jokebot_jokebook.json"
 
 
 def fetch_from_icanhazdadjoke(timeout: int = JOKE_TIMEOUT_SECONDS) -> str:
@@ -114,24 +114,24 @@ def fetch_from_api_ninjas(timeout: int = JOKE_TIMEOUT_SECONDS) -> str:
     return joke
 
 
-def fetch_from_official_jokes() -> str:
+def fetch_from_jokebot_jokebook() -> str:
     """
     Pick a random joke from the bundled offline joke list.
 
-    Jokes are stored in resources/official_jokes.json as base64-encoded strings
+    Jokes are stored in resources/jokebot_jokebook.json as base64-encoded strings
     (same encoding as posted_jokes in the state file).  This provider requires
     no network access or API key and should always succeed, making it the last
     resort in the backup chain.
     """
-    if not _OFFICIAL_JOKES_PATH.exists():
-        raise FileNotFoundError(
-            f"Official jokes file not found at {_OFFICIAL_JOKES_PATH}"
+    if not _JOKEBOOK_PATH.exists():
+        raise RuntimeError(
+            f"Jokebook file not found at {_JOKEBOOK_PATH}"
         )
-    with open(_OFFICIAL_JOKES_PATH, encoding="utf-8") as f:
+    with open(_JOKEBOOK_PATH, encoding="utf-8") as f:
         data = json.load(f)
     jokes = data.get("jokes", [])
     if not jokes:
-        raise ValueError("Official jokes file is empty")
+        raise ValueError("Jokebook file is empty")
     encoded = random.choice(jokes)
     return base64.b64decode(encoded).decode()
 
@@ -141,5 +141,5 @@ PROVIDERS: dict[str, callable] = {
     "icanhazdadjoke": fetch_from_icanhazdadjoke,
     "jokeapi": fetch_from_jokeapi,
     "api_ninjas": fetch_from_api_ninjas,
-    "official_jokes": fetch_from_official_jokes,
+    "jokebot_jokebook": fetch_from_jokebot_jokebook,
 }
