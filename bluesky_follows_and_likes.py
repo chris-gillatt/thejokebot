@@ -1,0 +1,167 @@
+"""Follow back new followers and like replies to the bot's posts."""
+
+from __future__ import annotations
+
+import time
+
+from colorama import Fore, Style
+
+import bluesky_state
+from bluesky_common import get_runtime_controls, login_client
+from bluesky_follower_utils import fetch_paginated_data
+
+_DEFAULT_LIKE_MAX_PAGES = 5
+_DEFAULT_LIKE_PAGE_LIMIT = 100
+
+
+# ---------------------------------------------------------------------------
+# Follow-back
+# ---------------------------------------------------------------------------
+
+def follow_back(client, username: str, dry_run: bool, action_delay_seconds: float) -> None:
+    """Follow back any followers the bot is not yet following."""
+    user_did = client.me.did
+    print(f"{Fore.YELLOW}Fetching followers and following for user: {username}{Style.RESET_ALL}")
+
+    followers = fetch_paginated_data(client.get_followers, user_did)
+    following = fetch_paginated_data(client.get_follows, user_did)
+
+    follower_dids = {f.did for f in followers}
+    following_dids = {f.did for f in following}
+
+    to_follow_back = follower_dids - following_dids
+    print(f"{Fore.GREEN}Found {len(to_follow_back)} followers to follow back.{Style.RESET_ALL}")
+
+    for i, did in enumerate(to_follow_back, start=1):
+        print(f"{Fore.YELLOW}({i}/{len(to_follow_back)}) Following {did}...{Style.RESET_ALL}")
+        if dry_run:
+            print(f"{Fore.YELLOW}[DRY-RUN] Would follow {did}{Style.RESET_ALL}")
+        else:
+            client.follow(did)
+            print(f"{Fore.GREEN}Followed {did}{Style.RESET_ALL}")
+
+        if action_delay_seconds > 0 and i < len(to_follow_back):
+            time.sleep(action_delay_seconds)
+
+    print(f"{Fore.GREEN}Follow-back completed.{Style.RESET_ALL}")
+
+
+# ---------------------------------------------------------------------------
+# Reply likes
+# ---------------------------------------------------------------------------
+
+def _get_value(obj, *path):
+    cur = obj
+    for key in path:
+        if cur is None:
+            return None
+        if isinstance(cur, dict):
+            cur = cur.get(key)
+        else:
+            cur = getattr(cur, key, None)
+    return cur
+
+
+def like_replies(client, state: dict, dry_run: bool, action_delay_seconds: float) -> int:
+    """Like replies to the bot's posts that have not been liked yet.
+
+    Fetches reply notifications, skips any already recorded in state, and
+    likes the remaining ones. Returns the number of new likes performed.
+    """
+    already_liked = bluesky_state.get_liked_reply_uris(state)
+    liked_count = 0
+
+    max_pages = _DEFAULT_LIKE_MAX_PAGES
+    page_limit = _DEFAULT_LIKE_PAGE_LIMIT
+    cursor = None
+
+    for _ in range(max_pages):
+        response = client.app.bsky.notification.list_notifications(
+            params={
+                "cursor": cursor,
+                "limit": page_limit,
+                "reasons": ["reply"],
+            }
+        )
+
+        notifications = _get_value(response, "notifications") or []
+        for notification in notifications:
+            reason = _get_value(notification, "reason")
+            if reason != "reply":
+                continue
+
+            uri = _get_value(notification, "uri")
+            cid = _get_value(notification, "cid")
+            if not uri or not cid:
+                continue
+
+            if uri in already_liked:
+                continue
+
+            if dry_run:
+                print(f"{Fore.YELLOW}[DRY-RUN] Would like reply: {uri}{Style.RESET_ALL}")
+            else:
+                try:
+                    client.like(uri=uri, cid=cid)
+                    print(f"{Fore.GREEN}Liked reply: {uri}{Style.RESET_ALL}")
+                except Exception as exc:
+                    print(f"{Fore.RED}Failed to like {uri}: {exc}{Style.RESET_ALL}")
+                    continue
+
+            bluesky_state.record_liked_reply_uri(state, uri)
+            already_liked.add(uri)
+            liked_count += 1
+
+            if action_delay_seconds > 0:
+                time.sleep(action_delay_seconds)
+
+        cursor = _get_value(response, "cursor")
+        if not cursor:
+            break
+
+    return liked_count
+
+
+# ---------------------------------------------------------------------------
+# Entry point
+# ---------------------------------------------------------------------------
+
+def main() -> None:
+    controls = get_runtime_controls()
+    dry_run = controls["dry_run"]
+    action_delay_seconds = controls["action_delay_seconds"]
+
+    if dry_run:
+        print(f"{Fore.YELLOW}Dry-run mode enabled. Actions will not be executed.{Style.RESET_ALL}")
+    if action_delay_seconds > 0:
+        print(
+            f"{Fore.YELLOW}Action delay enabled: {action_delay_seconds:.2f}s between actions.{Style.RESET_ALL}"
+        )
+
+    try:
+        print(f"{Fore.YELLOW}Logging in to Bluesky...{Style.RESET_ALL}")
+        client, username = login_client()
+        print(f"{Fore.GREEN}Successfully logged in as {username}.{Style.RESET_ALL}")
+    except Exception as exc:
+        print(f"{Fore.RED}Login failed: {exc}{Style.RESET_ALL}")
+        return
+
+    try:
+        follow_back(client, username, dry_run, action_delay_seconds)
+    except Exception as exc:
+        print(f"{Fore.RED}Follow-back failed: {exc}{Style.RESET_ALL}")
+
+    state = bluesky_state.load_state()
+    try:
+        liked = like_replies(client, state, dry_run, action_delay_seconds)
+        bluesky_state.prune_liked_reply_uris(state)
+        print(f"{Fore.GREEN}Liked {liked} new repl{'y' if liked == 1 else 'ies'}.{Style.RESET_ALL}")
+    except Exception as exc:
+        print(f"{Fore.RED}Reply liking failed: {exc}{Style.RESET_ALL}")
+
+    bluesky_state.save_state(state)
+    print(f"{Fore.GREEN}Done.{Style.RESET_ALL}")
+
+
+if __name__ == "__main__":
+    main()

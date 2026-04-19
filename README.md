@@ -1,7 +1,7 @@
 # The Joke Bot
 
 [![post-joke](https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_post_joke.yml/badge.svg)](https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_post_joke.yml)
-[![bluesky_follow_back](https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_follow_back.yml/badge.svg)](https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_follow_back.yml)
+[![bluesky_follows_and_likes](https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_follows_and_likes.yml/badge.svg)](https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_follows_and_likes.yml)
 [![bluesky_unfollow](https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_unfollow.yml/badge.svg)](https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_unfollow.yml)
 [![bluesky_generate_followers](https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_generate_followers.yml/badge.svg)](https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_generate_followers.yml)
 
@@ -14,7 +14,7 @@ Posts dad jokes to the Bluesky account [thejokebot.bsky.social](https://bsky.app
 - Posts a joke three times per day on a schedule.
 - Avoids reposting the same joke within a rolling 90-day window.
 - Rotates across multiple live joke APIs with a bundled offline fallback.
-- Supports follow-back, unfollow, and follower-generation scripts.
+- Supports follow-back, reply liking, unfollow, and follower-generation scripts.
 - Lets followers report unsuitable jokes via a `#report` reply, which triggers an automated PR to add the joke to a permanent denylist.
 
 ## Quick start (local)
@@ -44,8 +44,8 @@ Set these in `.env` (keep values quoted):
 
 ## Runtime safety controls
 
-- **Dry run:** set `BLUESKY_DRY_RUN='true'` to log actions without applying them. Applies to `bluesky_follow_back.py`, `bluesky_unfollow.py`, and `bluesky_generate_followers.py`.
-- **Throttling:** set `BLUESKY_ACTION_DELAY_SECONDS='1.5'` (example) to slow follow/unfollow loops.
+- **Dry run:** set `BLUESKY_DRY_RUN='true'` to log actions without applying them. Applies to `bluesky_follows_and_likes.py`, `bluesky_unfollow.py`, and `bluesky_generate_followers.py`.
+- **Throttling:** set `BLUESKY_ACTION_DELAY_SECONDS='1.5'` (example) to slow follow/unfollow/like loops.
 
 ## Reporting a joke (#report)
 
@@ -61,7 +61,7 @@ The report triggers an automated PR adding the joke to the denylist. Once a main
 | Script | Purpose |
 |---|---|
 | `bluesky_post_joke.py` | Fetch a joke, append hashtags, post to Bluesky, maintain `bot_state.json`. |
-| `bluesky_follow_back.py` | Follow back users who follow the bot. |
+| `bluesky_follows_and_likes.py` | Follow back new followers and like replies to the bot's posts. |
 | `bluesky_unfollow.py` | Unfollow accounts that do not follow back (respects an ignore list). |
 | `bluesky_generate_followers.py` | Find hashtag users and follow up to configured limits. |
 | `bluesky_verify_latest_joke_post.py` | Read-only check that a recent joke post exists on the account. |
@@ -85,7 +85,7 @@ The report pipeline runs every 30 minutes via the `bluesky_process_reports` work
 
 | File | Purpose |
 |---|---|
-| `bot_state.json` | Runtime state: posted joke history (b64, deduplication), provider rotation, report notification checkpoints, deleted post URIs. |
+| `bot_state.json` | Runtime state: posted joke history (b64, deduplication), provider rotation, report notification checkpoints, deleted post URIs, liked reply URIs. |
 | `resources/joke_denylist.json` | Repository-backed denylist. Jokes added here are permanently excluded from posting. |
 | `resources/official_jokes.json` | Bundled offline joke pool (446 jokes). Used as final fallback when all live APIs are unavailable. |
 

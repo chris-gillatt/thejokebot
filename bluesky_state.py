@@ -38,6 +38,9 @@ def _default_state() -> dict:
             "last_checked_at": None,
             "deleted_post_uris": [],
         },
+        "liked_replies": {
+            "liked_uris": [],
+        },
         "posted_jokes": [],
     }
 
@@ -71,6 +74,9 @@ def _normalise_state(state: dict) -> dict:
     reports.setdefault("processed_notification_uris", [])
     reports.setdefault("last_checked_at", None)
     reports.setdefault("deleted_post_uris", [])
+
+    liked_replies = state.setdefault("liked_replies", {})
+    liked_replies.setdefault("liked_uris", [])
 
     state.setdefault("posted_jokes", [])
     return state
@@ -215,3 +221,26 @@ def record_deleted_post_uri(state: dict, post_uri: str) -> None:
     uris = reports.setdefault("deleted_post_uris", [])
     if post_uri and post_uri not in uris:
         uris.append(post_uri)
+
+
+def get_liked_reply_uris(state: dict) -> set[str]:
+    """Return the set of reply post URIs the bot has already liked."""
+    liked_replies = state.setdefault("liked_replies", {})
+    uris = liked_replies.setdefault("liked_uris", [])
+    return set(uris)
+
+
+def record_liked_reply_uri(state: dict, uri: str) -> None:
+    """Record a reply URI as liked so it is not liked again."""
+    liked_replies = state.setdefault("liked_replies", {})
+    uris = liked_replies.setdefault("liked_uris", [])
+    if uri and uri not in uris:
+        uris.append(uri)
+
+
+def prune_liked_reply_uris(state: dict, max_entries: int = 5000) -> None:
+    """Keep only the most recent liked reply URIs."""
+    liked_replies = state.setdefault("liked_replies", {})
+    uris = liked_replies.setdefault("liked_uris", [])
+    if len(uris) > max_entries:
+        liked_replies["liked_uris"] = uris[-max_entries:]
