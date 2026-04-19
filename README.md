@@ -51,13 +51,13 @@ These controls apply to:
 - `bluesky_unfollow.py`
 - `bluesky_generate_followers.py`
 
-## Joke providers
+## Credits
 
-- Primary providers: `icanhazdadjoke`, `jokeapi`
-- Backup live provider: `api_ninjas` (small joke pool — used after primaries fail)
-- Offline final resort: `official_jokes` — 446 jokes bundled in `resources/official_jokes.json`, b64-encoded. No network access or API key required; always available.
+Joke content is sourced from these third-party APIs:
 
-The default behaviour alternates between the primary providers, tries `api_ninjas` if both fail, and falls back to `official_jokes` as a last resort. The offline provider means a joke post should always succeed even if every live API is unavailable.
+- [icanhazdadjoke](https://icanhazdadjoke.com/api) – free dad jokes API
+- [JokeAPI](https://jokeapi.dev) – multi-category joke API
+- [API Ninjas Jokes](https://api-ninjas.com/api/jokes) – supplementary backup provider
 
 ## Scripts
 
@@ -68,14 +68,6 @@ The default behaviour alternates between the primary providers, tries `api_ninja
 - `bluesky_verify_latest_joke_post.py`: read-only check that a recent joke post exists on the account.
 - `bluesky_process_reports.py`: poll Bluesky reply notifications for `#report`, map replies to posted jokes, and emit denylist proposals.
 - `bluesky_create_report_prs.py`: create one denylist PR per report proposal.
-
-## GitHub workflows
-
-- `bluesky_post_joke.yml`: scheduled post run (`0 0,8,16 * * *`) and manual trigger.
-- `bluesky_follow_back.yml`: scheduled every 2 hours and manual trigger.
-- `bluesky_generate_followers.yml`: scheduled weekly (Friday) and manual trigger.
-- `bluesky_unfollow.yml`: manual trigger.
-- `bluesky_process_reports.yml`: scheduled every 30 minutes and manual trigger. Ingests `#report` replies, updates report checkpoints in `bot_state.json`, and opens one denylist PR per newly reported joke.
 
 ## State and references
 
@@ -90,9 +82,5 @@ The default behaviour alternates between the primary providers, tries `api_ninja
 3. For each newly reported joke, the workflow opens one PR that adds the joke b64 to `resources/joke_denylist.json`.
 4. Maintainers review and merge approved PRs.
 5. Merged denylist entries are excluded from future posts automatically.
+6. On the next scheduled report run, any original Bluesky posts whose jokes have been approved into the denylist are deleted from the account.
 
-## Project governance
-
-- Working scope and backlog: `problem-statement.md`.
-- Copilot/project rules: `.github/copilot-instructions.md`.
-- Temp command workspace: `.agent-tmp/` (kept empty in git except `.gitkeep`).

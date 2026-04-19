@@ -105,6 +105,43 @@ def _encode_text_b64(text: str | None) -> str | None:
     return base64.b64encode(text.encode("utf-8")).decode("utf-8")
 
 
+def _delete_post(client, post_uri: str) -> bool:
+    """Delete a single Bluesky post by AT URI. Returns True on success."""
+    try:
+        parts = post_uri.split("/")
+        repo = parts[2]
+        rkey = parts[-1]
+        client.app.bsky.feed.post.delete(repo=repo, rkey=rkey)
+        return True
+    except Exception as exc:
+        print(f"Warning: failed to delete post {post_uri}: {exc}")
+        return False
+
+
+def delete_approved_report_posts(client, denylist: dict, state: dict) -> int:
+    """Delete original joke posts whose denylist entries have been approved.
+
+    Iterates over denylist entries that carry a source_post_uri. Any URI not
+    yet recorded as deleted in state is attempted. Successfully deleted URIs
+    are recorded so the attempt is not retried.
+
+    Returns the number of posts deleted in this run.
+    """
+    already_deleted = bluesky_state.get_deleted_post_uris(state)
+    deleted_count = 0
+
+    for entry in denylist.get("jokes", []):
+        uri = entry.get("source_post_uri")
+        if not uri or uri in already_deleted:
+            continue
+        if _delete_post(client, uri):
+            bluesky_state.record_deleted_post_uri(state, uri)
+            deleted_count += 1
+            print(f"Deleted approved report post: {uri}")
+
+    return deleted_count
+
+
 def collect_report_proposals(client, state: dict, denylisted_b64s: set[str]) -> tuple[list[dict], set[str], int]:
     """Collect new denylist proposals from reply notifications."""
     processed_uris = bluesky_state.get_processed_notification_uris(state)
@@ -196,6 +233,9 @@ def main() -> None:
     denylisted_b64s = bluesky_denylist.get_denylisted_b64s(denylist)
 
     client, _ = login_client()
+
+    deleted_count = delete_approved_report_posts(client, denylist, state)
+
     proposals, processed_notifications, pages_fetched = collect_report_proposals(
         client,
         state,
@@ -218,6 +258,7 @@ def main() -> None:
 
     print(f"Processed notifications: {len(processed_notifications)}")
     print(f"New report proposals: {len(proposals)}")
+    print(f"Approved posts deleted: {deleted_count}")
     print(f"Output written to {output_path}")
 
 
