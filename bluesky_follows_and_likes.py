@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+from datetime import datetime, timezone
 
 from colorama import Fore, Style
 
@@ -12,6 +13,7 @@ from bluesky_follower_utils import fetch_paginated_data
 
 _DEFAULT_LIKE_MAX_PAGES = 5
 _DEFAULT_LIKE_PAGE_LIMIT = 100
+_LIKE_WINDOW_SECONDS = 24 * 60 * 60  # only like replies from the last 24 hours
 
 
 # ---------------------------------------------------------------------------
@@ -63,13 +65,17 @@ def _get_value(obj, *path):
 
 
 def like_replies(client, state: dict, dry_run: bool, action_delay_seconds: float) -> int:
-    """Like replies to the bot's posts that have not been liked yet.
+    """Like replies to the bot's posts from the last 24 hours.
 
-    Fetches reply notifications, skips any already recorded in state, and
-    likes the remaining ones. Returns the number of new likes performed.
+    Notifications older than _LIKE_WINDOW_SECONDS are skipped. Already-liked
+    URIs (tracked in state) are also skipped. State is saved after each page
+    so progress survives an interruption.
+
+    Returns the number of new likes performed.
     """
     already_liked = bluesky_state.get_liked_reply_uris(state)
     liked_count = 0
+    cutoff_epoch = time.time() - _LIKE_WINDOW_SECONDS
 
     max_pages = _DEFAULT_LIKE_MAX_PAGES
     page_limit = _DEFAULT_LIKE_PAGE_LIMIT
@@ -85,10 +91,30 @@ def like_replies(client, state: dict, dry_run: bool, action_delay_seconds: float
         )
 
         notifications = _get_value(response, "notifications") or []
+        page_new_likes = 0
+        stop_paging = False
+
         for notification in notifications:
             reason = _get_value(notification, "reason")
             if reason != "reply":
                 continue
+
+            # Parse indexed_at to epoch for age check.
+            indexed_at = _get_value(notification, "indexed_at") or _get_value(notification, "indexedAt")
+            if indexed_at:
+                try:
+                    ts = datetime.fromisoformat(indexed_at.replace("Z", "+00:00"))
+                    notification_epoch = ts.timestamp()
+                except (ValueError, AttributeError):
+                    notification_epoch = None
+            else:
+                notification_epoch = None
+
+            if notification_epoch is not None and notification_epoch < cutoff_epoch:
+                # Notifications are ordered newest-first; once we hit one
+                # older than the cutoff the rest will be too.
+                stop_paging = True
+                break
 
             uri = _get_value(notification, "uri")
             cid = _get_value(notification, "cid")
@@ -111,14 +137,24 @@ def like_replies(client, state: dict, dry_run: bool, action_delay_seconds: float
             bluesky_state.record_liked_reply_uri(state, uri)
             already_liked.add(uri)
             liked_count += 1
+            page_new_likes += 1
 
             if action_delay_seconds > 0:
                 time.sleep(action_delay_seconds)
+
+        # Persist after each page so progress survives an interruption.
+        if page_new_likes > 0:
+            bluesky_state.prune_liked_reply_uris(state)
+            bluesky_state.save_state(state)
+
+        if stop_paging:
+            break
 
         cursor = _get_value(response, "cursor")
         if not cursor:
             break
 
+    bluesky_state.set_likes_checked_now(state)
     return liked_count
 
 
@@ -154,7 +190,6 @@ def main() -> None:
     state = bluesky_state.load_state()
     try:
         liked = like_replies(client, state, dry_run, action_delay_seconds)
-        bluesky_state.prune_liked_reply_uris(state)
         print(f"{Fore.GREEN}Liked {liked} new repl{'y' if liked == 1 else 'ies'}.{Style.RESET_ALL}")
     except Exception as exc:
         print(f"{Fore.RED}Reply liking failed: {exc}{Style.RESET_ALL}")

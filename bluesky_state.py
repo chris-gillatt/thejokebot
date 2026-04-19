@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import os
 import time
+from typing import Optional
 
 STATE_FILE = "bot_state.json"
 
@@ -40,6 +41,7 @@ def _default_state() -> dict:
         },
         "liked_replies": {
             "liked_uris": [],
+            "last_checked_at": None,
         },
         "posted_jokes": [],
     }
@@ -77,6 +79,7 @@ def _normalise_state(state: dict) -> dict:
 
     liked_replies = state.setdefault("liked_replies", {})
     liked_replies.setdefault("liked_uris", [])
+    liked_replies.setdefault("last_checked_at", None)
 
     state.setdefault("posted_jokes", [])
     return state
@@ -244,3 +247,15 @@ def prune_liked_reply_uris(state: dict, max_entries: int = 5000) -> None:
     uris = liked_replies.setdefault("liked_uris", [])
     if len(uris) > max_entries:
         liked_replies["liked_uris"] = uris[-max_entries:]
+
+
+def get_likes_last_checked_at(state: dict) -> Optional[int]:
+    """Return the epoch timestamp of the last reply-like run, or None."""
+    liked_replies = state.setdefault("liked_replies", {})
+    return liked_replies.get("last_checked_at")
+
+
+def set_likes_checked_now(state: dict) -> None:
+    """Set the reply-like polling timestamp to current epoch."""
+    liked_replies = state.setdefault("liked_replies", {})
+    liked_replies["last_checked_at"] = int(time.time())
