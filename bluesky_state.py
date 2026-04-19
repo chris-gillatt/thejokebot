@@ -7,14 +7,22 @@ tracks both joke history (base64-encoded, for deduplication) and provider
 rotation/failure state.
 
 Writes are performed atomically via a temp file + os.replace() to prevent
-corruption if a run is interrupted.
+corruption if a run is interrupted. File-level locking prevents concurrent
+mutations when two processes run simultaneously.
 """
 from __future__ import annotations
 
 import json
 import os
+import sys
 import time
 from typing import Optional
+
+# File locking support (Unix-like systems)
+if sys.platform != "win32":
+    import fcntl
+else:
+    fcntl = None  # type: ignore
 
 STATE_FILE = "bot_state.json"
 
@@ -88,23 +96,73 @@ def _normalise_state(state: dict) -> dict:
 
 
 def load_state() -> dict:
-    """Load state from disk. Returns a fresh default state if the file is missing or corrupt."""
+    """
+    Load state from disk with shared lock to prevent reading mid-write.
+    
+    Returns a fresh default state if the file is missing or corrupt.
+    Uses fcntl.flock() on Unix-like systems to ensure read consistency.
+    """
     if not os.path.exists(STATE_FILE):
         return _default_state()
+    
+    # On Unix-like systems, acquire shared lock to prevent reading during writes.
+    lock_file = None
+    if fcntl is not None:
+        try:
+            lock_file = open(STATE_FILE + ".lock", "w", encoding="utf-8")
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_SH)
+        except (OSError, IOError) as e:
+            print(f"Warning: could not acquire read lock on {STATE_FILE}: {e}")
+            if lock_file:
+                lock_file.close()
+            lock_file = None
+    
     try:
         with open(STATE_FILE, "r", encoding="utf-8") as f:
             return _normalise_state(json.load(f))
     except (json.JSONDecodeError, IOError):
         print(f"Warning: could not read {STATE_FILE}; starting with empty state.")
         return _default_state()
+    finally:
+        if lock_file is not None:
+            try:
+                fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+                lock_file.close()
+            except (OSError, IOError) as e:
+                print(f"Warning: could not release read lock on {STATE_FILE}: {e}")
 
 
 def save_state(state: dict) -> None:
-    """Write state to disk atomically."""
-    tmp = STATE_FILE + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(state, f, indent=2)
-    os.replace(tmp, STATE_FILE)
+    """
+    Write state to disk atomically with file-level locking to prevent concurrent mutations.
+    
+    Uses fcntl.flock() on Unix-like systems (macOS, Linux) to ensure exclusive access
+    during read-modify-write operations. On Windows, relies on atomic os.replace().
+    """
+    # On Unix-like systems, acquire exclusive lock before writing.
+    lock_file = None
+    if fcntl is not None:
+        try:
+            lock_file = open(STATE_FILE + ".lock", "w", encoding="utf-8")
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        except (OSError, IOError) as e:
+            print(f"Warning: could not acquire lock on {STATE_FILE}: {e}")
+            if lock_file:
+                lock_file.close()
+            lock_file = None
+
+    try:
+        tmp = STATE_FILE + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(state, f, indent=2)
+        os.replace(tmp, STATE_FILE)
+    finally:
+        if lock_file is not None:
+            try:
+                fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+                lock_file.close()
+            except (OSError, IOError) as e:
+                print(f"Warning: could not release lock on {STATE_FILE}: {e}")
 
 
 def get_next_provider(state: dict, override: str | None = None) -> str:

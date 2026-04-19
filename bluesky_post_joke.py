@@ -3,6 +3,8 @@ import os
 import random
 import time
 
+import requests
+
 import bluesky_denylist
 import bluesky_joke_providers
 import bluesky_state
@@ -97,7 +99,7 @@ def main():
             joke, b64 = pick_joke(recent_b64s, provider_name)
             used_provider = provider_name
             break
-        except Exception as e:
+        except (ValueError, requests.RequestException, TimeoutError) as e:
             print(f"Provider '{provider_name}' failed: {e}")
             bluesky_state.record_failure(state, provider_name, str(e))
 
@@ -135,7 +137,7 @@ def main():
             post_uri=post_uri,
             post_cid=post_cid,
         )
-    except Exception as e:
+    except (ValueError, requests.RequestException, TimeoutError) as e:
         print(f"Failed to post joke: {e}")
     finally:
         bluesky_state.prune_old_jokes(state, cutoff)

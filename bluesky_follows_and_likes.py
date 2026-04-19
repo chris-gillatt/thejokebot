@@ -6,6 +6,7 @@ import re
 import time
 from datetime import datetime, timezone
 
+import requests
 from colorama import Fore, Style
 
 import bluesky_state
@@ -184,13 +185,13 @@ def main() -> None:
         print(f"{Fore.YELLOW}Logging in to Bluesky...{Style.RESET_ALL}")
         client, username = login_client()
         print(f"{Fore.GREEN}Successfully logged in as {username}.{Style.RESET_ALL}")
-    except Exception as exc:
+    except (ValueError, requests.RequestException, TimeoutError) as exc:
         print(f"{Fore.RED}Login failed: {exc}{Style.RESET_ALL}")
         return
 
     try:
         follow_back(client, username, dry_run, action_delay_seconds)
-    except Exception as exc:
+    except (ValueError, requests.RequestException, TimeoutError) as exc:
         print(f"{Fore.RED}Follow-back failed: {exc}{Style.RESET_ALL}")
 
     state = bluesky_state.load_state()

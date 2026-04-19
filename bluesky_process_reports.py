@@ -8,6 +8,8 @@ import os
 import re
 from pathlib import Path
 
+import requests
+
 import bluesky_denylist
 import bluesky_state
 from atproto import models
@@ -119,7 +121,7 @@ def _delete_post(client, post_uri: str) -> bool:
         rkey = parts[-1]
         client.app.bsky.feed.post.delete(repo=repo, rkey=rkey)
         return True
-    except Exception as exc:
+    except (ValueError, requests.RequestException, TimeoutError) as exc:
         print(f"Warning: failed to delete post {post_uri}: {exc}")
         return False
 
@@ -141,7 +143,7 @@ def acknowledge_report(client, proposal: dict) -> bool:
         )
         client.send_post(text=_ACK_TEXT, reply_to=reply_ref)
         return True
-    except Exception as exc:
+    except (ValueError, requests.RequestException, TimeoutError) as exc:
         print(f"Warning: failed to send report acknowledgement for {reply_uri}: {exc}")
         return False
 
