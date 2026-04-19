@@ -143,6 +143,8 @@ Implementation direction (future):
 3. Reduce `bluesky_generate_followers.py` log noise by logging counts and a small sample of followed DIDs instead of printing every DID by default.
 4. Preserve enough auditability that follow decisions can still be reviewed when needed.
 
+**Status: complete.** Concurrency guard added to `bluesky_post_joke.yml` (78025b2). Per-DID logs removed from `bluesky_generate_followers.py` and replaced with summary by tag + sample (78025b2).
+
 ## 13. Change Log (Problem Statement)
 - v0.1: Initial project-specific draft created to establish governance baseline.
 - v0.2: Added deferred unfollow re-engagement guardrail and temporary live-unfollow hold.
@@ -151,3 +153,4 @@ Implementation direction (future):
 - v0.5: Added Section 12.3 workflow and automation hardening backlog items from successful live GitHub Actions review.
 - v0.6: Added an explicit pull/rebase-before-push working rule to reduce avoidable push rejections from concurrent workflow updates.
 - v0.7: Completed Section 12.2 provider chain. Added `jokebot_jokebook` offline provider (446 jokes, b64-encoded in `resources/jokebot_jokebook.json`) as the final resort after all live providers fail. Updated constraints and status.
+- v0.8: Completed Section 12.3 workflow hardening. Added concurrency guard to `bluesky_post_joke.yml` to prevent scheduled/manual run races. Reduced log noise in `bluesky_generate_followers.py` by replacing per-DID logs with tag summary + sample. Renamed resource files for clarity: `official_jokes.json` → `jokebot_jokebook.json`, `joke_denylist.json` → `jokebot_denylist.json`. Implemented report acknowledgement feature: bot now replies to #report with acknowledgement message. Implemented reply liking with 24-hour cutoff and #report skip logic. Added 31 new unit tests covering new code (state helpers, report processing, like_replies, retry chain). All 55 tests pass.
