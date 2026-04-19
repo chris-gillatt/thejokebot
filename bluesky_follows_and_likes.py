@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import time
 from datetime import datetime, timezone
 
@@ -119,6 +120,11 @@ def like_replies(client, state: dict, dry_run: bool, action_delay_seconds: float
             uri = _get_value(notification, "uri")
             cid = _get_value(notification, "cid")
             if not uri or not cid:
+                continue
+
+            # Never like #report replies — those are handled by the reports workflow.
+            reply_text = _get_value(notification, "record", "text") or ""
+            if re.search(r"(?:^|\s)#report\b", reply_text, re.IGNORECASE):
                 continue
 
             if uri in already_liked:

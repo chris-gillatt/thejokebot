@@ -38,6 +38,7 @@ def _default_state() -> dict:
             "processed_notification_uris": [],
             "last_checked_at": None,
             "deleted_post_uris": [],
+            "acknowledged_report_uris": [],
         },
         "liked_replies": {
             "liked_uris": [],
@@ -76,6 +77,7 @@ def _normalise_state(state: dict) -> dict:
     reports.setdefault("processed_notification_uris", [])
     reports.setdefault("last_checked_at", None)
     reports.setdefault("deleted_post_uris", [])
+    reports.setdefault("acknowledged_report_uris", [])
 
     liked_replies = state.setdefault("liked_replies", {})
     liked_replies.setdefault("liked_uris", [])
@@ -224,6 +226,21 @@ def record_deleted_post_uri(state: dict, post_uri: str) -> None:
     uris = reports.setdefault("deleted_post_uris", [])
     if post_uri and post_uri not in uris:
         uris.append(post_uri)
+
+
+def get_acknowledged_report_uris(state: dict) -> set[str]:
+    """Return the set of #report reply URIs the bot has already acknowledged."""
+    reports = state.setdefault("reports", {})
+    uris = reports.setdefault("acknowledged_report_uris", [])
+    return set(uris)
+
+
+def record_acknowledged_report_uri(state: dict, reply_uri: str) -> None:
+    """Record a #report reply URI as acknowledged so it is not re-acknowledged."""
+    reports = state.setdefault("reports", {})
+    uris = reports.setdefault("acknowledged_report_uris", [])
+    if reply_uri and reply_uri not in uris:
+        uris.append(reply_uri)
 
 
 def get_liked_reply_uris(state: dict) -> set[str]:

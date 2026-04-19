@@ -10,6 +10,7 @@ from pathlib import Path
 
 import bluesky_denylist
 import bluesky_state
+from atproto import models
 from bluesky_common import login_client
 
 REPORT_TAG_PATTERN = re.compile(r"(?:^|\s)#report\b", re.IGNORECASE)
@@ -17,6 +18,8 @@ TRAILING_TAGS_PATTERN = re.compile(r"\n\n(?:#\w+\s*)+$", re.IGNORECASE)
 DEFAULT_OUTPUT_PATH = Path(".agent-tmp/report_proposals.json")
 DEFAULT_MAX_PAGES = 3
 DEFAULT_PAGE_LIMIT = 100
+
+_ACK_TEXT = "Eek! Thanks for flagging that \U0001f648 I'll get it sent for review!"
 
 
 def _get_value(data, *path):
@@ -63,8 +66,11 @@ def _extract_notification(notification) -> dict:
         "notification_uri": _get_value(notification, "uri"),
         "author_did": _get_value(notification, "author", "did") or "unknown",
         "reply_uri": _get_value(notification, "uri"),
+        "reply_cid": _get_value(notification, "cid"),
         "reply_text": _normalise_text(record),
         "source_post_uri": _extract_parent_uri(notification),
+        "root_uri": _get_value(notification, "record", "reply", "root", "uri"),
+        "root_cid": _get_value(notification, "record", "reply", "root", "cid"),
         "indexed_at": _get_value(notification, "indexed_at") or _get_value(notification, "indexedAt"),
     }
 
@@ -115,6 +121,28 @@ def _delete_post(client, post_uri: str) -> bool:
         return True
     except Exception as exc:
         print(f"Warning: failed to delete post {post_uri}: {exc}")
+        return False
+
+
+def acknowledge_report(client, proposal: dict) -> bool:
+    """Reply to a #report notification to acknowledge receipt to the reporter."""
+    reply_uri = proposal.get("source_reply_uri")
+    reply_cid = proposal.get("reply_cid")
+    root_uri = proposal.get("root_uri") or proposal.get("source_post_uri")
+    root_cid = proposal.get("root_cid")
+
+    if not reply_uri or not reply_cid or not root_uri or not root_cid:
+        return False
+
+    try:
+        reply_ref = models.AppBskyFeedPost.ReplyRef(
+            parent=models.ComAtprotoRepoStrongRef.Main(uri=reply_uri, cid=reply_cid),
+            root=models.ComAtprotoRepoStrongRef.Main(uri=root_uri, cid=root_cid),
+        )
+        client.send_post(text=_ACK_TEXT, reply_to=reply_ref)
+        return True
+    except Exception as exc:
+        print(f"Warning: failed to send report acknowledgement for {reply_uri}: {exc}")
         return False
 
 
@@ -201,6 +229,9 @@ def collect_report_proposals(client, state: dict, denylisted_b64s: set[str]) -> 
                 "b64": b64_value,
                 "source_post_uri": source_post_uri,
                 "source_reply_uri": parsed["reply_uri"],
+                "reply_cid": parsed["reply_cid"],
+                "root_uri": parsed["root_uri"] or source_post_uri,
+                "root_cid": parsed["root_cid"],
                 "reporter_did": parsed["author_did"],
                 "reply_text": parsed["reply_text"],
                 "reply_indexed_at": parsed["indexed_at"],
@@ -246,6 +277,17 @@ def main() -> None:
         bluesky_state.record_processed_notification(state, notification_uri)
     bluesky_state.prune_processed_notifications(state)
     bluesky_state.set_reports_checked_now(state)
+
+    acknowledged_uris = bluesky_state.get_acknowledged_report_uris(state)
+    ack_count = 0
+    for proposal in proposals:
+        reply_uri = proposal.get("source_reply_uri")
+        if reply_uri and reply_uri not in acknowledged_uris:
+            if acknowledge_report(client, proposal):
+                bluesky_state.record_acknowledged_report_uri(state, reply_uri)
+                ack_count += 1
+                print(f"Acknowledged report reply: {reply_uri}")
+
     bluesky_state.save_state(state)
 
     payload = {
@@ -258,6 +300,7 @@ def main() -> None:
 
     print(f"Processed notifications: {len(processed_notifications)}")
     print(f"New report proposals: {len(proposals)}")
+    print(f"Report replies acknowledged: {ack_count}")
     print(f"Approved posts deleted: {deleted_count}")
     print(f"Output written to {output_path}")
 
