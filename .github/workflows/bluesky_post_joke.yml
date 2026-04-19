@@ -35,19 +35,20 @@ jobs:
         run: python bluesky_post_joke.py
 
       - name: Update posted_jokes.txt
+      - name: Update bot_state.json
         run: |
           # Use the GitHub Bot user for Git and GitHub IAM.
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          # Update posted_jokes.txt to prevent frequent duplications
-          git add posted_jokes.txt
+          # Persist updated provider rotation and joke history.
+          git add bot_state.json
 
           # Commit and push only when the file changed.
           if git diff --cached --quiet; then
-            echo "No posted_jokes.txt changes to commit."
+            echo "No bot_state.json changes to commit."
             exit 0
           fi
 
-          git commit -m "Update posted_jokes.txt; GH run: ${GITHUB_RUN_NUMBER}"
+          git commit -m "chore: update bot_state.json; GH run: ${GITHUB_RUN_NUMBER}"
           git push
