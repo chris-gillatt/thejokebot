@@ -11,7 +11,7 @@ from pathlib import Path
 import bluesky_denylist
 
 DEFAULT_PROPOSALS_PATH = Path(".agent-tmp/report_proposals.json")
-DENYLIST_PATH = Path("resources/joke_denylist.json")
+DENYLIST_PATH = Path("resources/jokebot_denylist.json")
 
 
 def run_command(args: list[str], check: bool = True) -> subprocess.CompletedProcess:

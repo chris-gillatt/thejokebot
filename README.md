@@ -72,13 +72,13 @@ The report triggers an automated PR adding the joke to the denylist. Once a main
 
 The report pipeline runs every 30 minutes via the `bluesky_process_reports` workflow. Each run:
 
-1. **Deletes approved posts.** Reads `resources/joke_denylist.json` for entries with a `source_post_uri` and deletes those Bluesky posts if not already deleted. Deleted URIs are recorded in `bot_state.json` so the attempt is not retried.
+1. **Deletes approved posts.** Reads `resources/jokebot_denylist.json` for entries with a `source_post_uri` and deletes those Bluesky posts if not already deleted. Deleted URIs are recorded in `bot_state.json` so the attempt is not retried.
 2. **Scans reply notifications.** Fetches the most recent reply notifications (up to `BLUESKY_REPORT_MAX_PAGES` × `BLUESKY_REPORT_PAGE_LIMIT` entries). Already-processed notification URIs are stored in `bot_state.json` and skipped.
 3. **Identifies `#report` replies.** A notification qualifies if it is a reply and its text contains `#report` as a standalone hashtag.
 4. **Resolves the reported joke.** The reply's parent URI is looked up in the post URI index in `bot_state.json`. If not found there (e.g. state was reset), the post text is fetched live from the Bluesky API and encoded.
 5. **Skips duplicates.** Jokes already in the denylist, or reported more than once in the same run, produce only one proposal.
 6. **Emits proposals.** New proposals are written to `.agent-tmp/report_proposals.json`.
-7. **Opens PRs.** `bluesky_create_report_prs.py` reads the proposals file and opens one pull request per new report. Each PR adds the joke's base64 value and evidence (post URI, reply URI, reporter DID) to `resources/joke_denylist.json`. Branches are named `chore/report-denylist-<sha1-prefix>` and skip creation if a matching remote branch or open PR already exists.
+7. **Opens PRs.** `bluesky_create_report_prs.py` reads the proposals file and opens one pull request per new report. Each PR adds the joke's base64 value and evidence (post URI, reply URI, reporter DID) to `resources/jokebot_denylist.json`. Branches are named `chore/report-denylist-<sha1-prefix>` and skip creation if a matching remote branch or open PR already exists.
 8. **Updates checkpoint state.** Processed notification URIs and the deletion record are saved back to `bot_state.json` and committed to `main` by the workflow.
 
 ## State
@@ -86,7 +86,7 @@ The report pipeline runs every 30 minutes via the `bluesky_process_reports` work
 | File | Purpose |
 |---|---|
 | `bot_state.json` | Runtime state: posted joke history (b64, deduplication), provider rotation, report notification checkpoints, deleted post URIs, liked reply URIs. |
-| `resources/joke_denylist.json` | Repository-backed denylist. Jokes added here are permanently excluded from posting. |
+| `resources/jokebot_denylist.json` | Repository-backed denylist. Jokes added here are permanently excluded from posting. |
 | `resources/jokebot_jokebook.json` | Bundled offline joke pool (446 jokes). Used as final fallback when all live APIs are unavailable. |
 
 ## Credits
