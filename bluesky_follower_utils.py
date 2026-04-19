@@ -1,12 +1,28 @@
 ### File: bluesky_follower_utils.py
-def fetch_paginated_data(client_method, actor, limit=100, max_pages=100):
+import time
+
+
+def fetch_paginated_data(
+    client_method,
+    actor,
+    limit=100,
+    max_pages=100,
+    max_runtime_seconds=30,
+):
     """Fetch paginated data (followers or following) with guardrails."""
     data = []
     cursor = None
     pages = 0
     seen_cursors = set()
+    started_at = time.monotonic()
 
     while pages < max_pages:
+        if time.monotonic() - started_at >= max_runtime_seconds:
+            print(
+                f"Reached pagination runtime safety limit ({max_runtime_seconds}s); stopping early."
+            )
+            break
+
         if cursor is not None:
             if cursor in seen_cursors:
                 print("Repeated pagination cursor detected; stopping early.")

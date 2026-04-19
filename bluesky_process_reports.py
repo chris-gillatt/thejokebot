@@ -61,7 +61,13 @@ def _extract_parent_uri(notification) -> str | None:
 
 
 def _extract_notification(notification) -> dict:
-    """Extract report-relevant fields from a notification payload."""
+    """
+    Extract report-relevant fields from a notification payload.
+
+    Supports both dict-like and model-like responses from atproto objects and
+    normalises naming variants (snake_case vs camelCase) used by different
+    response wrappers.
+    """
     record = _get_value(notification, "record")
     return {
         "reason": _get_value(notification, "reason"),
@@ -202,7 +208,21 @@ def delete_approved_report_posts(client, denylist: dict, state: dict) -> int:
 
 
 def collect_report_proposals(client, state: dict, denylisted_b64s: set[str]) -> tuple[list[dict], set[str], int]:
-    """Collect new denylist proposals from reply notifications."""
+    """
+    Collect new denylist proposals from reply notifications.
+
+    Workflow:
+    1. Page through recent reply notifications with safety limits.
+    2. Skip already-processed notifications for idempotency.
+    3. Keep only replies containing #report.
+    4. Resolve the source joke via state index or thread fetch fallback.
+    5. Emit unique proposals not already denylisted.
+
+    Returns:
+    - proposals: new denylist proposal dicts
+    - processed_notifications: URIs to persist as processed this run
+    - pages_fetched: number of notification pages requested
+    """
     processed_uris = bluesky_state.get_processed_notification_uris(state)
     post_uri_index = bluesky_state.get_post_uri_index(state)
 

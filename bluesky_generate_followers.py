@@ -1,18 +1,14 @@
-import os
 import time
-from atproto import Client
 from bluesky_common import login_client, get_runtime_controls
 from bluesky_follower_utils import fetch_paginated_data
-
-# Load credentials from environment
-username = os.getenv("BLUESKY_USERNAME")
 
 # Limits
 soft_tag_limit = 15
 global_follow_limit = 60
 hashtags = ["followback", "dadjoke", "jokes", "funny"]
 
-client = Client()
+client = None
+username = None
 
 def login():
     global client, username
