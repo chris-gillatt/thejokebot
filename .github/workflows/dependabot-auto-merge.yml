@@ -13,7 +13,7 @@ permissions:
   pull-requests: write
 
 jobs:
-  enable_automerge_for_patch_updates:
+  enable_automerge_for_patch_and_minor_updates:
     if: github.actor == 'dependabot[bot]'
     runs-on: ubuntu-latest
 
@@ -24,8 +24,8 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Enable auto-merge for patch updates
-        if: steps.metadata.outputs.update-type == 'version-update:semver-patch'
+      - name: Enable auto-merge for patch and minor updates
+        if: steps.metadata.outputs.update-type == 'version-update:semver-patch' || steps.metadata.outputs.update-type == 'version-update:semver-minor'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_URL: ${{ github.event.pull_request.html_url }}
