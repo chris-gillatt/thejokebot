@@ -31,6 +31,7 @@ Create a disciplined, low-risk development workflow that preserves core bot beha
 - Commit messages must include why the change was made.
 - Keep changes focused; defer non-critical ideas to Section 12.
 - Avoid heredocs in terminal workflows; prefer temporary files in `.agent-tmp/`.
+- Before pushing local commits, sync with remote changes first (normally `git pull --rebase`) because scheduled and manual bot workflows can update `main` between local edits and push time.
 
 ## 7. Constraints and Assumptions
 - Core functionality (joke posting cadence and intent) must remain intact during modernisation.
@@ -144,3 +145,4 @@ Implementation direction (future):
 - v0.3: Added GitHub Actions runtime contract constraint to protect operational continuity.
 - v0.4: Added Section 12.0 explicit "will not do" decisions (including base64 rationale). Added Section 12.2 multi-provider joke source with retry handler.
 - v0.5: Added Section 12.3 workflow and automation hardening backlog items from successful live GitHub Actions review.
+- v0.6: Added an explicit pull/rebase-before-push working rule to reduce avoidable push rejections from concurrent workflow updates.

@@ -14,6 +14,7 @@
 - Subject format: `<type>(<optional-scope>): <imperative summary>`.
 - Every commit message must explain why the change is being made.
 - Keep unrelated changes in separate commits.
+- Before any `git push`, sync with the remote first (`git pull --rebase` unless there is a deliberate reason not to) because the bot's GitHub Actions workflows can update the branch between local changes and push time.
 
 ## Validation Expectations
 - Run relevant checks before finishing a task (script run, lint, or targeted tests where available).
@@ -23,6 +24,7 @@
 - Avoid heredocs for shell commands and file generation to reduce interruption-related issues.
 - Prefer temporary files inside `.agent-tmp/` for intermediate command input.
 - Keep `.agent-tmp/` out of commits except for `.agent-tmp/.gitkeep`.
+- Treat `git pull --rebase` before `git push` as the default terminal workflow for this repository unless the user explicitly asks for a different git strategy.
 
 ## Problem Statement Workflow
 - Keep `problem-statement.md` current as the source of truth for scope, decisions, risks, and deferred work.
