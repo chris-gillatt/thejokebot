@@ -1,4 +1,3 @@
-### File: bluesky_joke_providers.py
 """
 Joke provider functions for the joke bot.
 

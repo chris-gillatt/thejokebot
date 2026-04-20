@@ -1,4 +1,3 @@
-### File: bluesky_state.py
 """
 Unified runtime state for the joke bot.
 

@@ -40,48 +40,23 @@ See v1.7 changelog entry.
 
 ---
 
-### 5.4 BLUESKY_UNFOLLOW_IGNORE undocumented (Documentation)
-**Priority: Low**
-
-`bluesky_unfollow.py` supports a `BLUESKY_UNFOLLOW_IGNORE` env var (comma-separated
-full handles to protect from unfollowing) but it appears in neither `.env.example`
-nor the README env-vars table. Users running the script locally or customising the
-workflow have no way to discover this without reading the source.
-
-Fix: add the variable to both `.env.example` and the README table.
+### 5.4 BLUESKY_UNFOLLOW_IGNORE undocumented ✓ Complete
+See v1.8 changelog entry.
 
 ---
 
-### 5.5 Stale `### File:` header comments (Code quality)
-**Priority: Low**
-
-Three files — `bluesky_state.py`, `bluesky_follower_utils.py`, and
-`bluesky_joke_providers.py` — have a `### File: <filename>` comment as their very
-first line. These appear to be stale agent-era artefacts with no value; they are
-not a recognised Python convention and would confuse new contributors.
-
-Fix: remove these three lines.
+### 5.5 Stale `### File:` header comments ✓ Complete
+See v1.8 changelog entry.
 
 ---
 
-### 5.6 `posted_jokes.txt` legacy file in repo root (Housekeeping)
-**Priority: Low**
-
-`posted_jokes.txt` exists in the repo root but the state module explicitly states
-it has been superseded by `bot_state.json`. Its presence may confuse contributors
-into thinking it is still active. Verify it is genuinely unused, then remove it (or
-add a brief note in `.gitignore` if it needs to be retained as a local dev artefact).
+### 5.6 `posted_jokes.txt` legacy file in repo root ✓ Complete
+File was already absent from the repository — no action required.
 
 ---
 
-### 5.7 `bluesky_create_report_prs.py` missing from README scripts table (Documentation)
-**Priority: Low**
-
-The README `Scripts` table lists six scripts but omits `bluesky_create_report_prs.py`.
-It is documented further down under "Report workflow (technical detail)" but a
-contributor scanning the table would not know it exists.
-
-Fix: add a row for `bluesky_create_report_prs.py` to the table.
+### 5.7 `bluesky_create_report_prs.py` missing from README scripts table ✓ Complete
+Script was already present in the README table — no action required.
 
 ---
 
@@ -177,3 +152,4 @@ Do not revisit these without a concrete operational reason.
 - v1.5: Logging and network guardrails (5.2) complete. Narrowed remaining bare `except Exception` handlers in `bluesky_follower_utils.py`, `bluesky_follow_fellows.py`, and `bluesky_follows_and_likes.py` to `(requests.RequestException, TimeoutError)`. Non-network defensive catches (`extract_text`, base64 decode, SDK attribute access) left as-is — they wrap arbitrary data, not network calls. Suite remains at 68 passing.
 - v1.6: Unfollow schedule changed to daily at 12:00 UTC to clear ~4,400 non-follower backlog (200 per run). Also fixed `atproto_client.exceptions.NetworkError` not being caught by narrowed exception handlers, and corrected bare username `theonion` → `theonion.bsky.social` for AT identifier validity.
 - v1.7: Fixed `bluesky_unfollow.yml` missing `contents: write` permission and state-persist step. Unfollow history was silently lost at the end of every CI run, making the re-engagement guardrail ineffective. Added push-retry step matching the pattern in `bluesky_post_joke.yml`.
+- v1.8: Low-priority housekeeping batch. Documented `BLUESKY_UNFOLLOW_IGNORE` in `.env.example` and README (5.4). Removed stale `### File:` header lines from `bluesky_state.py`, `bluesky_follower_utils.py`, and `bluesky_joke_providers.py` (5.5). Confirmed `posted_jokes.txt` and `bluesky_create_report_prs.py` README row already resolved (5.6, 5.7).

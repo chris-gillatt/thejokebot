@@ -1,4 +1,3 @@
-### File: bluesky_follower_utils.py
 import time
 import requests
 import atproto_client.exceptions
