@@ -33,6 +33,127 @@ See v1.4 changelog entry.
 ### 5.2 Logging and Network Guardrails ✓ Complete
 See v1.5 changelog entry.
 
+---
+
+### 5.3 Unfollow history not persisted to repo (Bug)
+**Priority: High**
+
+`bluesky_unfollow.yml` has no `contents: write` permission and no git-push step.
+The `unfollow_history` entries written to `bot_state.json` during each CI run are
+lost when the runner exits. Every subsequent run starts with no memory of who was
+already unfollowed, so the re-engagement guardrail and deduplication logic never
+have real data to work with.
+
+Fix: add `permissions: contents: write` and a state-persist step (with push-retry
+loop) to `bluesky_unfollow.yml`, matching the pattern already used in
+`bluesky_post_joke.yml` and `bluesky_follows_and_likes.yml`.
+
+---
+
+### 5.4 BLUESKY_UNFOLLOW_IGNORE undocumented (Documentation)
+**Priority: Low**
+
+`bluesky_unfollow.py` supports a `BLUESKY_UNFOLLOW_IGNORE` env var (comma-separated
+full handles to protect from unfollowing) but it appears in neither `.env.example`
+nor the README env-vars table. Users running the script locally or customising the
+workflow have no way to discover this without reading the source.
+
+Fix: add the variable to both `.env.example` and the README table.
+
+---
+
+### 5.5 Stale `### File:` header comments (Code quality)
+**Priority: Low**
+
+Three files — `bluesky_state.py`, `bluesky_follower_utils.py`, and
+`bluesky_joke_providers.py` — have a `### File: <filename>` comment as their very
+first line. These appear to be stale agent-era artefacts with no value; they are
+not a recognised Python convention and would confuse new contributors.
+
+Fix: remove these three lines.
+
+---
+
+### 5.6 `posted_jokes.txt` legacy file in repo root (Housekeeping)
+**Priority: Low**
+
+`posted_jokes.txt` exists in the repo root but the state module explicitly states
+it has been superseded by `bot_state.json`. Its presence may confuse contributors
+into thinking it is still active. Verify it is genuinely unused, then remove it (or
+add a brief note in `.gitignore` if it needs to be retained as a local dev artefact).
+
+---
+
+### 5.7 `bluesky_create_report_prs.py` missing from README scripts table (Documentation)
+**Priority: Low**
+
+The README `Scripts` table lists six scripts but omits `bluesky_create_report_prs.py`.
+It is documented further down under "Report workflow (technical detail)" but a
+contributor scanning the table would not know it exists.
+
+Fix: add a row for `bluesky_create_report_prs.py` to the table.
+
+---
+
+### 5.8 Dual source of truth for provider rotation order (Code quality)
+**Priority: Low**
+
+`PROVIDER_ROTATION_ORDER` in `bluesky_state.py` and `PRIMARY_PROVIDERS` in
+`bluesky_joke_providers.py` both enumerate the primary providers. Adding a new
+primary provider requires updating both lists; missing one silently breaks either
+rotation state or the pick-joke logic. Consolidate to a single source of truth
+(the state module is the natural owner).
+
+---
+
+### 5.9 Python version: schedule bump from 3.11 to 3.12 (Maintenance)
+**Priority: Low**
+
+All workflows pin `python-version: "3.11"`. Python 3.11 reaches end-of-life in
+October 2026; 3.12 is the current stable release. The codebase uses no 3.11-only
+features. Schedule a bump to 3.12 across all workflows before EOL to stay on a
+supported runtime.
+
+---
+
+### 5.10 `bluesky_follow_fellows.yml` missing concurrency guard (Workflow safety)
+**Priority: Low**
+
+`bluesky_follow_fellows.yml` (runs every Friday) has no `concurrency:` block.
+`bluesky_process_reports.yml` (runs every 30 minutes) and
+`bluesky_follows_and_likes.yml` (runs every 2 hours) also lack concurrency guards.
+If a run takes longer than expected or a manual `workflow_dispatch` overlaps with a
+scheduled run, two jobs could attempt simultaneous writes to `bot_state.json`. The
+`bluesky_post_joke.yml` pattern (`cancel-in-progress: false`) is the model to
+follow.
+
+---
+
+### 5.11 Investigate GroanDeck as new primary joke provider
+**Priority: Medium**
+
+GroanDeck (`https://groandeck.com/api/v1/random`) is a free REST API with no
+sign-up or API key required (30 req/min on the free tier). Response shape is
+`{"setup": "...", "punchline": "..."}` — a clean two-part format that maps
+naturally to the existing two-part joke assembly already used for JokeAPI. The
+pool is substantial (~800+ jokes across categories). No content-safety parameter,
+so review the category list to confirm it matches the bot's family-friendly policy
+before adding. Candidate for the primary rotation alongside or in place of JokeAPI.
+
+---
+
+### 5.12 Investigate HumorAPI as new backup joke provider
+**Priority: Medium**
+
+HumorAPI (`https://api.humorapi.com/jokes/random`) has an `exclude-tags=nsfw,dark`
+parameter and a `max-length` cap (useful for staying within Bluesky's 300-character
+post limit). Requires an API key (`api-key` query param). The quota model is
+point-based (1 point per request); the free tier should be adequate for the bot's
+usage. Fits naturally as a backup provider alongside `api_ninjas`. Assess whether
+the joke pool is suitably family-friendly and add `HUMORAPI_API_KEY` env var, a
+`fetch_from_humorapi()` function, and README/`.env.example` documentation if it
+passes review.
+
 ## 6. Explicit "Will Not Do" Decisions
 Do not revisit these without a concrete operational reason.
 
