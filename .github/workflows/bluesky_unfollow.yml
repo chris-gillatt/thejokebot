@@ -1,10 +1,10 @@
 name: bluesky_unfollow
 
 on:
-  # Runs twice yearly to give accounts plenty of time to follow back.
-  # 1 January and 1 July at 12:00 UTC.
+  # Runs daily at 12:00 UTC to chew through the backlog of non-followers.
+  # Revert to "0 12 1 1,7 *" (twice-yearly) once the backlog is clear.
   schedule:
-    - cron: "0 12 1 1,7 *"  # 1 Jan and 1 Jul at 12:00 UTC
+    - cron: "0 12 * * *"  # daily at 12:00 UTC
   workflow_dispatch:
 
 jobs:
