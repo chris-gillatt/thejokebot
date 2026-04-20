@@ -83,7 +83,7 @@ def _is_rate_limited_error(exc):
 
 def unfollow_users():
     # List of usernames to ignore (configurable via BLUESKY_UNFOLLOW_IGNORE env var)
-    default_ignorable = ["theonion"]
+    default_ignorable = ["theonion.bsky.social"]
     env_ignorable = os.getenv("BLUESKY_UNFOLLOW_IGNORE", "")
     ignorable_usernames = default_ignorable + [u.strip() for u in env_ignorable.split(",") if u.strip()]
     ignorable_usernames = list(set(ignorable_usernames))  # Deduplicate
