@@ -30,14 +30,8 @@ changelog in this file is intentionally brief.
 ### 5.1 Unfollow Re-Engagement Guardrail ✓ Complete
 See v1.4 changelog entry.
 
-### 5.2 Logging and Network Guardrails (Open)
-Requirement summary:
-- Continue strengthening bounded retry/timeout behaviour and action-level observability.
-
-Focus areas:
-1. Keep retries bounded and explicit for networked operations.
-2. Ensure logs are useful for diagnosis without noisy per-entity spam.
-3. Prefer deterministic execution paths for easier incident debugging.
+### 5.2 Logging and Network Guardrails ✓ Complete
+See v1.5 changelog entry.
 
 ## 6. Explicit "Will Not Do" Decisions
 Do not revisit these without a concrete operational reason.
@@ -68,3 +62,4 @@ Do not revisit these without a concrete operational reason.
 - v1.2: Jokebook report handling fix complete.
 - v1.3: Unfollow batching safeguards added (rate-aware stop, per-run action cap, configurable batch pause) to support cautious large clean-ups.
 - v1.4: Re-engagement guardrail (5.1) implemented. `unfollow_history` section added to `bot_state.json`. Each live unfollow is recorded. `bluesky_follow_fellows.py` excludes all previously-unfollowed DIDs. `bluesky_follows_and_likes.py` logs re-engagements when a previously-unfollowed DID is detected in the current followers list. 5 new state-layer tests added; suite at 68 passing.
+- v1.5: Logging and network guardrails (5.2) complete. Narrowed remaining bare `except Exception` handlers in `bluesky_follower_utils.py`, `bluesky_follow_fellows.py`, and `bluesky_follows_and_likes.py` to `(requests.RequestException, TimeoutError)`. Non-network defensive catches (`extract_text`, base64 decode, SDK attribute access) left as-is — they wrap arbitrary data, not network calls. Suite remains at 68 passing.

@@ -143,7 +143,7 @@ def like_replies(client, state: dict, dry_run: bool, action_delay_seconds: float
                 try:
                     client.like(uri=uri, cid=cid)
                     print(f"{Fore.GREEN}Liked reply: {uri}{Style.RESET_ALL}")
-                except Exception as exc:
+                except (requests.RequestException, TimeoutError) as exc:
                     print(f"{Fore.RED}Failed to like {uri}: {exc}{Style.RESET_ALL}")
                     continue
 
@@ -206,7 +206,7 @@ def main() -> None:
     try:
         liked = like_replies(client, state, dry_run, action_delay_seconds)
         print(f"{Fore.GREEN}Liked {liked} new repl{'y' if liked == 1 else 'ies'}.{Style.RESET_ALL}")
-    except Exception as exc:
+    except (ValueError, requests.RequestException, TimeoutError) as exc:
         print(f"{Fore.RED}Reply liking failed: {exc}{Style.RESET_ALL}")
 
     bluesky_state.save_state(state)

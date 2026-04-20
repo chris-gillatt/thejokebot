@@ -1,5 +1,6 @@
 ### File: bluesky_follower_utils.py
 import time
+import requests
 
 
 def fetch_paginated_data(
@@ -32,7 +33,7 @@ def fetch_paginated_data(
         pages += 1
         try:
             response = client_method(actor=actor, cursor=cursor, limit=limit)
-        except Exception as exc:
+        except (requests.RequestException, TimeoutError) as exc:
             print(f"Failed to fetch paginated data on page {pages}: {exc}")
             break
 

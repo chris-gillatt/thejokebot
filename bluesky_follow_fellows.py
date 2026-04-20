@@ -1,4 +1,5 @@
 import time
+import requests
 import bluesky_state
 from bluesky_common import login_client, get_runtime_controls
 from bluesky_follower_utils import fetch_paginated_data
@@ -25,7 +26,7 @@ def fetch_users_for_tag(tag: str):
         users = [post.author.did for post in resp.posts]
         print(f"Found {len(users)} users for #{tag}")
         return users
-    except Exception as e:
+    except (requests.RequestException, TimeoutError) as e:
         print(f"Exception during search for #{tag}: {e}")
         return []
 
@@ -33,14 +34,14 @@ def get_following():
     try:
         following = fetch_paginated_data(client.get_follows, client.me.did)
         return {follow.did for follow in following}
-    except Exception as e:
+    except (requests.RequestException, TimeoutError) as e:
         print(f"Could not fetch following list, proceeding without deduplication: {e}")
         return set()
 
 def follow(did: str):
     try:
         client.follow(did)
-    except Exception as e:
+    except (requests.RequestException, TimeoutError) as e:
         print(f"Unexpected error trying to follow {did}: {e}")
 
 
