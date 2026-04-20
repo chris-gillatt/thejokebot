@@ -1,16 +1,16 @@
 {
   "provider": {
     "last_used": "jokeapi",
-    "last_used_at": 1776688759,
+    "last_used_at": 1776705046,
     "rotation_order": [
       "icanhazdadjoke",
       "jokeapi"
     ],
     "failures": {
       "icanhazdadjoke": {
-        "count": 0,
-        "last_failure_at": null,
-        "last_error": null
+        "count": 1,
+        "last_failure_at": 1776705046,
+        "last_error": "502 Server Error: Bad Gateway for url: https://icanhazdadjoke.com/"
       },
       "jokeapi": {
         "count": 0,
@@ -20,11 +20,6 @@
     }
   },
   "posted_jokes": [
-    {
-      "ts": 1768926299,
-      "b64": "TXkgd2lmZSB0b2xkIG1lIHRvIHJ1YiB0aGUgaGVyYnMgb24gdGhlIG1lYXQgZm9yIGJldHRlciBmbGF2b3IuIFRoYXQncyBzYWdlIGFkdmljZS4=",
-      "provider": "icanhazdadjoke"
-    },
     {
       "ts": 1768957716,
       "b64": "V2hlcmXigJlzIHRoZSBiaW4/IERhZDogSSBoYXZlbuKAmXQgYmVlbiBhbnl3aGVyZSE=",
@@ -1412,6 +1407,13 @@
       "provider": "jokeapi",
       "post_uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mjwifaaeaw26",
       "post_cid": "bafyreifyo4yb766kxw25jr4ndctdd4kniroyqxwx22w625kx5q6kkdaewy"
+    },
+    {
+      "ts": 1776705047,
+      "b64": "SGV5IGJhYnkgSSB3aXNoIHlvdXIgbmFtZSB3YXMgYXN5bmNocm9ub3VzLi4uCgouLi4gc28geW91J2QgZ2l2ZSBtZSBhIGNhbGxiYWNrLg==",
+      "provider": "jokeapi",
+      "post_uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mjwxknpkll26",
+      "post_cid": "bafyreietombki4mownruoxh3grb5f5vfzjr3tdnpfwihmy5hdhkoo4ptoe"
     }
   ],
   "reports": {
