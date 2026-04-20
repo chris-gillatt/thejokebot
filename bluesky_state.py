@@ -52,6 +52,9 @@ def _default_state() -> dict:
             "liked_uris": [],
             "last_checked_at": None,
         },
+        "unfollow_history": {
+            "entries": [],
+        },
         "posted_jokes": [],
     }
 
@@ -90,6 +93,9 @@ def _normalise_state(state: dict) -> dict:
     liked_replies = state.setdefault("liked_replies", {})
     liked_replies.setdefault("liked_uris", [])
     liked_replies.setdefault("last_checked_at", None)
+
+    unfollow_history = state.setdefault("unfollow_history", {})
+    unfollow_history.setdefault("entries", [])
 
     state.setdefault("posted_jokes", [])
     return state
@@ -334,3 +340,34 @@ def set_likes_checked_now(state: dict) -> None:
     """Set the reply-like polling timestamp to current epoch."""
     liked_replies = state.setdefault("liked_replies", {})
     liked_replies["last_checked_at"] = int(time.time())
+
+
+# ---------------------------------------------------------------------------
+# Unfollow history
+# ---------------------------------------------------------------------------
+
+def get_unfollowed_dids(state: dict) -> set[str]:
+    """Return the set of DIDs the bot has previously unfollowed."""
+    history = state.setdefault("unfollow_history", {"entries": []})
+    return {e["did"] for e in history.get("entries", [])}
+
+
+def record_unfollow(state: dict, did: str, reason: str = "not_following_back") -> None:
+    """Record that the bot unfollowed a DID, updating the entry if it already exists."""
+    history = state.setdefault("unfollow_history", {})
+    entries = history.setdefault("entries", [])
+    for entry in entries:
+        if entry["did"] == did:
+            entry["unfollowed_at"] = int(time.time())
+            entry["reason"] = reason
+            return
+    entries.append({"did": did, "unfollowed_at": int(time.time()), "reason": reason})
+
+
+def prune_unfollow_history(state: dict, max_entries: int = 10000) -> None:
+    """Keep only the most recent unfollow history entries to bound state file growth."""
+    history = state.setdefault("unfollow_history", {})
+    entries = history.setdefault("entries", [])
+    if len(entries) > max_entries:
+        entries.sort(key=lambda e: e.get("unfollowed_at", 0))
+        history["entries"] = entries[-max_entries:]

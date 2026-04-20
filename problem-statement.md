@@ -27,21 +27,8 @@ changelog in this file is intentionally brief.
 
 ## 5. Active Backlog
 
-### 5.1 Unfollow Re-Engagement Guardrail (Open)
-Requirement summary:
-- Prevent repeated follow/unfollow cycles against the same accounts.
-- Persist unfollow history and use it as an exclusion signal.
-- Allow re-eligibility only if the account follows `thejokebot` again after unfollow.
-
-Implementation direction:
-1. Add durable unfollow history storage (state file-backed).
-2. Record DID, unfollow timestamp, and source/reason.
-3. Exclude previously unfollowed DIDs from follow-back and follow-fellows flows.
-4. Remove exclusion only with evidence of post-unfollow re-follow.
-5. Add dry-run visibility and tests for this path.
-
-Operational rule (current):
-- Keep unfollow automation conservative while this guardrail is open (low-frequency schedule plus batching/throttle controls).
+### 5.1 Unfollow Re-Engagement Guardrail ✓ Complete
+See v1.4 changelog entry.
 
 ### 5.2 Logging and Network Guardrails (Open)
 Requirement summary:
@@ -69,6 +56,7 @@ Do not revisit these without a concrete operational reason.
 - Report pipeline improvements completed (`#report` acknowledgement, like/report rules, jokebook-aware report handling).
 - Follow script renamed to `bluesky_follow_fellows.py` to reflect conservative behaviour and reduce misleading framing.
 - Unfollow automation now applies safety-first batching controls (per-run cap, inter-batch pause, and throttle-aware early stop).
+- Re-engagement guardrail implemented: unfollow history recorded in `bot_state.json`; `follow_fellows` excludes previously-unfollowed DIDs; `follow_back` logs re-engagements.
 
 ## 8. Changelog (Milestones)
 - v0.1: Initial governance draft.
@@ -79,3 +67,4 @@ Do not revisit these without a concrete operational reason.
 - v1.1: Low-priority quality hardening complete.
 - v1.2: Jokebook report handling fix complete.
 - v1.3: Unfollow batching safeguards added (rate-aware stop, per-run action cap, configurable batch pause) to support cautious large clean-ups.
+- v1.4: Re-engagement guardrail (5.1) implemented. `unfollow_history` section added to `bot_state.json`. Each live unfollow is recorded. `bluesky_follow_fellows.py` excludes all previously-unfollowed DIDs. `bluesky_follows_and_likes.py` logs re-engagements when a previously-unfollowed DID is detected in the current followers list. 5 new state-layer tests added; suite at 68 passing.

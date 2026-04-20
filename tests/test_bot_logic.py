@@ -544,6 +544,39 @@ class LikeRepliesTests(unittest.TestCase):
         self.assertGreater(recent_time, cutoff)
 
 
+class UnfollowHistoryTests(unittest.TestCase):
+    def test_get_unfollowed_dids_returns_empty_set_initially(self):
+        state = bluesky_state._default_state()
+        self.assertEqual(bluesky_state.get_unfollowed_dids(state), set())
+
+    def test_record_unfollow_stores_did_and_reason(self):
+        state = bluesky_state._default_state()
+        bluesky_state.record_unfollow(state, "did:plc:abc", "not_following_back")
+        dids = bluesky_state.get_unfollowed_dids(state)
+        self.assertIn("did:plc:abc", dids)
+
+    def test_record_unfollow_updates_existing_entry_rather_than_duplicating(self):
+        state = bluesky_state._default_state()
+        bluesky_state.record_unfollow(state, "did:plc:abc", "not_following_back")
+        bluesky_state.record_unfollow(state, "did:plc:abc", "not_following_back")
+        entries = state["unfollow_history"]["entries"]
+        self.assertEqual(len(entries), 1)
+
+    def test_prune_unfollow_history_keeps_most_recent_entries(self):
+        state = bluesky_state._default_state()
+        for i in range(5):
+            bluesky_state.record_unfollow(state, f"did:plc:{i:03d}")
+        bluesky_state.prune_unfollow_history(state, max_entries=3)
+        self.assertEqual(len(state["unfollow_history"]["entries"]), 3)
+
+    def test_normalise_state_backfills_unfollow_history(self):
+        # Simulate an older state file without the unfollow_history key.
+        old_state = {"posted_jokes": [], "provider": {}, "reports": {}, "liked_replies": {}}
+        normalised = bluesky_state._normalise_state(old_state)
+        self.assertIn("unfollow_history", normalised)
+        self.assertIn("entries", normalised["unfollow_history"])
+
+
 class JokeRetryChainTests(unittest.TestCase):
     def test_pick_joke_returns_new_joke(self):
         """pick_joke fetches and returns a non-duplicate joke."""

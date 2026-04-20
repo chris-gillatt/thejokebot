@@ -4,6 +4,7 @@ import requests
 from colorama import Fore, Style
 from bluesky_follower_utils import fetch_paginated_data
 from bluesky_common import login_client, get_runtime_controls
+import bluesky_state as _state
 
 
 DEFAULT_UNFOLLOW_MAX_ACTIONS = 200
@@ -173,6 +174,8 @@ def unfollow_users():
         skipped_missing_uri = 0
         stop_early = False
 
+        state = _state.load_state()
+
         for i, did in enumerate(to_unfollow, start=1):
             uri = following_map.get(did)
             if uri:
@@ -185,6 +188,7 @@ def unfollow_users():
                         client.unfollow(uri)
                         print(f"{Fore.GREEN}Unfollowed {did}{Style.RESET_ALL}")
                         unfollowed_count += 1
+                        _state.record_unfollow(state, did)
                     except (ValueError, requests.RequestException, TimeoutError) as e:
                         failed_count += 1
                         print(f"{Fore.RED}Failed to unfollow {did}: {e}{Style.RESET_ALL}")
@@ -225,6 +229,8 @@ def unfollow_users():
             f"unfollowed={unfollowed_count}, failed={failed_count}, "
             f"missing_uri={skipped_missing_uri}.{Style.RESET_ALL}"
         )
+        _state.prune_unfollow_history(state)
+        _state.save_state(state)
         print(f"{Fore.GREEN}Unfollow actions completed! 🎉{Style.RESET_ALL}")
     except (ValueError, requests.RequestException, TimeoutError) as e:
         print(f"{Fore.RED}An unexpected error occurred: {e}{Style.RESET_ALL}")

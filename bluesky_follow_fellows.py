@@ -1,4 +1,5 @@
 import time
+import bluesky_state
 from bluesky_common import login_client, get_runtime_controls
 from bluesky_follower_utils import fetch_paginated_data
 
@@ -82,11 +83,15 @@ def main():
         print(f"Action delay enabled: {action_delay_seconds:.2f}s between actions.")
 
     already_following = get_following()
+    state = bluesky_state.load_state()
+    unfollowed_dids = bluesky_state.get_unfollowed_dids(state)
+    if unfollowed_dids:
+        print(f"{len(unfollowed_dids)} DID(s) in unfollow history — excluded from candidates.")
 
     tag_users = {}
     for tag in hashtags:
         users = fetch_users_for_tag(tag)
-        eligible_users = [u for u in users if u not in already_following]
+        eligible_users = [u for u in users if u not in already_following and u not in unfollowed_dids]
         tag_users[tag] = eligible_users
 
     print("\nEligible users before redistribution:")

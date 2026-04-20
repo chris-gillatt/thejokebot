@@ -22,8 +22,10 @@ _LIKE_WINDOW_SECONDS = 24 * 60 * 60  # only like replies from the last 24 hours
 # Follow-back
 # ---------------------------------------------------------------------------
 
-def follow_back(client, username: str, dry_run: bool, action_delay_seconds: float) -> None:
+def follow_back(client, username: str, dry_run: bool, action_delay_seconds: float, unfollowed_dids: set | None = None) -> None:
     """Follow back any followers the bot is not yet following."""
+    if unfollowed_dids is None:
+        unfollowed_dids = set()
     user_did = client.me.did
     print(f"{Fore.YELLOW}Fetching followers and following for user: {username}{Style.RESET_ALL}")
 
@@ -37,6 +39,10 @@ def follow_back(client, username: str, dry_run: bool, action_delay_seconds: floa
     print(f"{Fore.GREEN}Found {len(to_follow_back)} followers to follow back.{Style.RESET_ALL}")
 
     for i, did in enumerate(to_follow_back, start=1):
+        if did in unfollowed_dids:
+            print(
+                f"{Fore.GREEN}({i}/{len(to_follow_back)}) Re-engagement: {did} is following again after previous unfollow.{Style.RESET_ALL}"
+            )
         print(f"{Fore.YELLOW}({i}/{len(to_follow_back)}) Following {did}...{Style.RESET_ALL}")
         if dry_run:
             print(f"{Fore.YELLOW}[DRY-RUN] Would follow {did}{Style.RESET_ALL}")
@@ -189,12 +195,14 @@ def main() -> None:
         print(f"{Fore.RED}Login failed: {exc}{Style.RESET_ALL}")
         return
 
+    state = bluesky_state.load_state()
+    unfollowed_dids = bluesky_state.get_unfollowed_dids(state)
+
     try:
-        follow_back(client, username, dry_run, action_delay_seconds)
+        follow_back(client, username, dry_run, action_delay_seconds, unfollowed_dids)
     except (ValueError, requests.RequestException, TimeoutError) as exc:
         print(f"{Fore.RED}Follow-back failed: {exc}{Style.RESET_ALL}")
 
-    state = bluesky_state.load_state()
     try:
         liked = like_replies(client, state, dry_run, action_delay_seconds)
         print(f"{Fore.GREEN}Liked {liked} new repl{'y' if liked == 1 else 'ies'}.{Style.RESET_ALL}")
