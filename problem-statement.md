@@ -129,21 +129,21 @@ Constraints:
 ### 12.3 Workflow and Automation Hardening from Live Run Review (Deferred)
 
 Requirement summary:
-- Recent manual GitHub Actions runs for `bluesky_post_joke`, `bluesky_follow_back`, and `bluesky_generate_followers` all completed successfully.
+- Recent manual GitHub Actions runs for `bluesky_post_joke`, `bluesky_follow_back`, and `bluesky_follow_fellows` all completed successfully.
 - No immediate production bug was exposed, but the runs identified a few worthwhile hardening improvements.
 
 Why this matters:
-- `bluesky_generate_followers.py` currently executes live follow actions without the same runtime safety controls already added to follow-back/unfollow flows.
+- `bluesky_follow_fellows.py` currently executes live follow actions without the same runtime safety controls already added to follow-back/unfollow flows.
 - `bluesky_post_joke.yml` writes and pushes runtime state, so overlapping manual and scheduled runs can create avoidable git push/rebase churn.
-- `bluesky_generate_followers.py` currently logs every followed DID individually, which is useful for audit but noisy in workflow logs.
+- `bluesky_follow_fellows.py` currently logs every followed DID individually, which is useful for audit but noisy in workflow logs.
 
 Implementation direction (future):
-1. Add `BLUESKY_DRY_RUN` and `BLUESKY_ACTION_DELAY_SECONDS` support to `bluesky_generate_followers.py` so follow-generation has the same safety controls as the other automation scripts.
+1. Add `BLUESKY_DRY_RUN` and `BLUESKY_ACTION_DELAY_SECONDS` support to `bluesky_follow_fellows.py` so follow-generation has the same safety controls as the other automation scripts.
 2. Add workflow `concurrency` control to `bluesky_post_joke.yml` so only one post/state-writing run can execute at a time.
-3. Reduce `bluesky_generate_followers.py` log noise by logging counts and a small sample of followed DIDs instead of printing every DID by default.
+3. Reduce `bluesky_follow_fellows.py` log noise by logging counts and a small sample of followed DIDs instead of printing every DID by default.
 4. Preserve enough auditability that follow decisions can still be reviewed when needed.
 
-**Status: complete.** Concurrency guard added to `bluesky_post_joke.yml` (78025b2). Per-DID logs removed from `bluesky_generate_followers.py` and replaced with summary by tag + sample (78025b2).
+**Status: complete.** Concurrency guard added to `bluesky_post_joke.yml` (78025b2). Per-DID logs removed from `bluesky_follow_fellows.py` and replaced with summary by tag + sample (78025b2).
 
 ## 13. Change Log (Problem Statement)
 - v0.1: Initial project-specific draft created to establish governance baseline.
@@ -153,8 +153,8 @@ Implementation direction (future):
 - v0.5: Added Section 12.3 workflow and automation hardening backlog items from successful live GitHub Actions review.
 - v0.6: Added an explicit pull/rebase-before-push working rule to reduce avoidable push rejections from concurrent workflow updates.
 - v0.7: Completed Section 12.2 provider chain. Added `jokebot_jokebook` offline provider (446 jokes, b64-encoded in `resources/jokebot_jokebook.json`) as the final resort after all live providers fail. Updated constraints and status.
-- v0.8: Completed Section 12.3 workflow hardening. Added concurrency guard to `bluesky_post_joke.yml` to prevent scheduled/manual run races. Reduced log noise in `bluesky_generate_followers.py` by replacing per-DID logs with tag summary + sample. Renamed resource files for clarity: `official_jokes.json` → `jokebot_jokebook.json`, `joke_denylist.json` → `jokebot_denylist.json`. Implemented report acknowledgement feature: bot now replies to #report with acknowledgement message. Implemented reply liking with 24-hour cutoff and #report skip logic. Added 31 new unit tests covering new code (state helpers, report processing, like_replies, retry chain). All 55 tests pass.
+- v0.8: Completed Section 12.3 workflow hardening. Added concurrency guard to `bluesky_post_joke.yml` to prevent scheduled/manual run races. Reduced log noise in `bluesky_follow_fellows.py` by replacing per-DID logs with tag summary + sample. Renamed resource files for clarity: `official_jokes.json` → `jokebot_jokebook.json`, `joke_denylist.json` → `jokebot_denylist.json`. Implemented report acknowledgement feature: bot now replies to #report with acknowledgement message. Implemented reply liking with 24-hour cutoff and #report skip logic. Added 31 new unit tests covering new code (state helpers, report processing, like_replies, retry chain). All 55 tests pass.
 - v0.9: **Critical security and stability hardening**. Fixed bare exception handlers in `bluesky_post_joke.py`, `bluesky_follows_and_likes.py`, and `bluesky_process_reports.py` — now catch only `(ValueError, RequestException, TimeoutError)` instead of all exceptions, preventing unintended masking of `KeyboardInterrupt`, `MemoryError`, and fatal errors. Added file-level locking (`fcntl.flock()`) to `bluesky_state.py` load/save to prevent concurrent mutations when two automation scripts run simultaneously. All 55 tests pass.
 - v1.0: **Error handling and operational improvements**. Enhanced `bluesky_process_reports.py` to distinguish transient errors (network/timeout) from permanent errors (invalid URIs/format) in `_delete_post()` and `acknowledge_report()` — now returns `(success, should_retry)` tuples so only permanent failures are recorded to avoid retry spam. Made unfollow ignore list configurable via `BLUESKY_UNFOLLOW_IGNORE` environment variable while maintaining default list (theonion). Updated tests to verify new tuple returns. All 55 tests pass.
-- v1.1: **Low-priority quality hardening complete**. Removed unused global initialisation in `bluesky_generate_followers.py` (no eager `Client()` construction and no redundant env pre-read). Added a runtime safety guard to `bluesky_follower_utils.fetch_paginated_data()` via `max_runtime_seconds` to reduce long-running hangs. Expanded docstrings in `bluesky_process_reports.py` for notification extraction and proposal collection flow clarity. All 55 tests pass.
+- v1.1: **Low-priority quality hardening complete**. Removed unused global initialisation in `bluesky_follow_fellows.py` (no eager `Client()` construction and no redundant env pre-read). Added a runtime safety guard to `bluesky_follower_utils.fetch_paginated_data()` via `max_runtime_seconds` to reduce long-running hangs. Expanded docstrings in `bluesky_process_reports.py` for notification extraction and proposal collection flow clarity. All 55 tests pass.
 - v1.2: **Issue #5 fix (jokebook report handling)**. Report proposals now carry `source_provider` from state. In `bluesky_create_report_prs.py`, reports tied to `jokebot_jokebook` now create jokebook-removal PRs by deleting the reported base64 entry from `resources/jokebot_jokebook.json` instead of adding it to `resources/jokebot_denylist.json`. Added unit tests for proposal routing and jokebook removal helpers. All 59 tests pass.

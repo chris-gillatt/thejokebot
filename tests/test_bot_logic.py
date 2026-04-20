@@ -10,7 +10,7 @@ import bluesky_common
 import bluesky_create_report_prs
 import bluesky_denylist
 import bluesky_follower_utils
-import bluesky_generate_followers
+import bluesky_follow_fellows
 import bluesky_joke_providers
 import bluesky_post_joke
 import bluesky_process_reports
@@ -420,7 +420,7 @@ class FollowerSelectionTests(unittest.TestCase):
             "jokes": ["did:5"],
         }
 
-        selected = bluesky_generate_followers.select_users(
+        selected = bluesky_follow_fellows.select_users(
             tag_users,
             ["followback", "dadjoke", "jokes"],
             per_tag_limit=1,

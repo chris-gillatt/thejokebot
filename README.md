@@ -3,7 +3,7 @@
 [![post-joke](https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_post_joke.yml/badge.svg)](https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_post_joke.yml)
 [![bluesky_follows_and_likes](https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_follows_and_likes.yml/badge.svg)](https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_follows_and_likes.yml)
 [![bluesky_unfollow](https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_unfollow.yml/badge.svg)](https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_unfollow.yml)
-[![bluesky_generate_followers](https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_generate_followers.yml/badge.svg)](https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_generate_followers.yml)
+[![bluesky_follow_fellows](https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_follow_fellows.yml/badge.svg)](https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_follow_fellows.yml)
 
 Posts dad jokes to the Bluesky account [thejokebot.bsky.social](https://bsky.app/profile/thejokebot.bsky.social), and runs optional follower automation.
 
@@ -27,6 +27,16 @@ Posts dad jokes to the Bluesky account [thejokebot.bsky.social](https://bsky.app
 4. Run a script:
 	- `python bluesky_post_joke.py`
 
+## Local validation helper
+
+After merges (for example Dependabot updates), run the local test helper:
+
+- `./scripts/test-local.sh`
+
+If you prefer a direct one-liner without the helper script:
+
+- `.venv/bin/python -m pytest tests/ -v --tb=short`
+
 ## Environment variables
 
 Set these in `.env` (keep values quoted):
@@ -44,7 +54,7 @@ Set these in `.env` (keep values quoted):
 
 ## Runtime safety controls
 
-- **Dry run:** set `BLUESKY_DRY_RUN='true'` to log actions without applying them. Applies to `bluesky_follows_and_likes.py`, `bluesky_unfollow.py`, and `bluesky_generate_followers.py`.
+- **Dry run:** set `BLUESKY_DRY_RUN='true'` to log actions without applying them. Applies to `bluesky_follows_and_likes.py`, `bluesky_unfollow.py`, and `bluesky_follow_fellows.py`.
 - **Throttling:** set `BLUESKY_ACTION_DELAY_SECONDS='1.5'` (example) to slow follow/unfollow/like loops.
 
 ## Reporting a joke (#report)
@@ -63,7 +73,7 @@ The report triggers an automated PR adding the joke to the denylist. Once a main
 | `bluesky_post_joke.py` | Fetch a joke, append hashtags, post to Bluesky, maintain `bot_state.json`. |
 | `bluesky_follows_and_likes.py` | Follow back new followers and like replies to the bot's posts. |
 | `bluesky_unfollow.py` | Unfollow accounts that do not follow back (respects an ignore list). |
-| `bluesky_generate_followers.py` | Find hashtag users and follow up to configured limits. |
+| `bluesky_follow_fellows.py` | Find hashtag users and follow up to configured limits. |
 | `bluesky_verify_latest_joke_post.py` | Read-only check that a recent joke post exists on the account. |
 | `bluesky_process_reports.py` | Poll reply notifications for `#report`, map replies to posted jokes, delete approved denylist posts, and write PR proposals. |
 | `bluesky_create_report_prs.py` | Open one denylist PR per new report proposal. |

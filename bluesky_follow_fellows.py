@@ -70,7 +70,7 @@ def select_users(tag_users, tag_order, per_tag_limit, overall_limit):
     return selected_users[:overall_limit]
 
 def main():
-    print("Starting follower generation script...")
+    print("Starting fellow-follow discovery script...")
     login()
     controls = get_runtime_controls()
     dry_run = controls["dry_run"]
@@ -136,7 +136,7 @@ def main():
         else:
             print(f"  #{tag}: {count} users – sample: {', '.join(samples[:3])} ...")
 
-    print("\nFollower generation script completed.")
+    print("\nFollow fellows script completed.")
 
 if __name__ == "__main__":
     main()

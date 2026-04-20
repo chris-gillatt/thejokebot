@@ -1,4 +1,4 @@
-name: bluesky_generate_followers
+name: bluesky_follow_fellows
 
 on:
   schedule:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  bluesky_generate_followers:
+  bluesky_follow_fellows:
     runs-on: ubuntu-latest
 
     steps:
@@ -23,8 +23,8 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
 
-      - name: Run bluesky_generate_followers
+      - name: Run bluesky_follow_fellows
         env:
           BLUESKY_PASSWORD: ${{ secrets.BLUESKY_PASSWORD }}
           BLUESKY_USERNAME: ${{ vars.BLUESKY_USERNAME }}
-        run: python bluesky_generate_followers.py
+        run: python bluesky_follow_fellows.py
