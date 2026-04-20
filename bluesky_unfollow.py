@@ -1,6 +1,7 @@
 import os
 import time
 import requests
+import atproto_client.exceptions
 from colorama import Fore, Style
 from bluesky_follower_utils import fetch_paginated_data
 from bluesky_common import login_client, get_runtime_controls
@@ -112,7 +113,7 @@ def unfollow_users():
         print(f"{Fore.YELLOW}Logging in to BlueSky...{Style.RESET_ALL}")
         client, username = login_client()
         print(f"{Fore.GREEN}Successfully logged in to BlueSky.{Style.RESET_ALL}")
-    except (ValueError, requests.RequestException, TimeoutError) as e:
+    except (ValueError, requests.RequestException, TimeoutError, atproto_client.exceptions.NetworkError) as e:
         print(f"{Fore.RED}Login failed: {e}{Style.RESET_ALL}")
         return
 
@@ -143,7 +144,7 @@ def unfollow_users():
                     print(f"{Fore.GREEN}Resolved username {ignorable_username} to DID {did}{Style.RESET_ALL}")
                 else:
                     print(f"{Fore.RED}No DID found for username {ignorable_username}, skipping ignore rule.{Style.RESET_ALL}")
-            except (ValueError, requests.RequestException, TimeoutError) as e:
+            except (ValueError, requests.RequestException, TimeoutError, atproto_client.exceptions.NetworkError) as e:
                 print(f"{Fore.RED}Failed to resolve username {ignorable_username}: {e}{Style.RESET_ALL}")
 
         to_unfollow_all = select_unfollow_candidates(
@@ -189,7 +190,7 @@ def unfollow_users():
                         print(f"{Fore.GREEN}Unfollowed {did}{Style.RESET_ALL}")
                         unfollowed_count += 1
                         _state.record_unfollow(state, did)
-                    except (ValueError, requests.RequestException, TimeoutError) as e:
+                    except (ValueError, requests.RequestException, TimeoutError, atproto_client.exceptions.NetworkError) as e:
                         failed_count += 1
                         print(f"{Fore.RED}Failed to unfollow {did}: {e}{Style.RESET_ALL}")
                         if _is_rate_limited_error(e):
@@ -232,7 +233,7 @@ def unfollow_users():
         _state.prune_unfollow_history(state)
         _state.save_state(state)
         print(f"{Fore.GREEN}Unfollow actions completed! 🎉{Style.RESET_ALL}")
-    except (ValueError, requests.RequestException, TimeoutError) as e:
+    except (ValueError, requests.RequestException, TimeoutError, atproto_client.exceptions.NetworkError) as e:
         print(f"{Fore.RED}An unexpected error occurred: {e}{Style.RESET_ALL}")
 
 if __name__ == "__main__":

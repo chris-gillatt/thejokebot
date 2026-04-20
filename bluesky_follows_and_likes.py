@@ -7,6 +7,7 @@ import time
 from datetime import datetime, timezone
 
 import requests
+import atproto_client.exceptions
 from colorama import Fore, Style
 
 import bluesky_state
@@ -143,7 +144,7 @@ def like_replies(client, state: dict, dry_run: bool, action_delay_seconds: float
                 try:
                     client.like(uri=uri, cid=cid)
                     print(f"{Fore.GREEN}Liked reply: {uri}{Style.RESET_ALL}")
-                except (requests.RequestException, TimeoutError) as exc:
+                except (requests.RequestException, TimeoutError, atproto_client.exceptions.NetworkError) as exc:
                     print(f"{Fore.RED}Failed to like {uri}: {exc}{Style.RESET_ALL}")
                     continue
 
@@ -191,7 +192,7 @@ def main() -> None:
         print(f"{Fore.YELLOW}Logging in to Bluesky...{Style.RESET_ALL}")
         client, username = login_client()
         print(f"{Fore.GREEN}Successfully logged in as {username}.{Style.RESET_ALL}")
-    except (ValueError, requests.RequestException, TimeoutError) as exc:
+    except (ValueError, requests.RequestException, TimeoutError, atproto_client.exceptions.NetworkError) as exc:
         print(f"{Fore.RED}Login failed: {exc}{Style.RESET_ALL}")
         return
 
@@ -200,13 +201,13 @@ def main() -> None:
 
     try:
         follow_back(client, username, dry_run, action_delay_seconds, unfollowed_dids)
-    except (ValueError, requests.RequestException, TimeoutError) as exc:
+    except (ValueError, requests.RequestException, TimeoutError, atproto_client.exceptions.NetworkError) as exc:
         print(f"{Fore.RED}Follow-back failed: {exc}{Style.RESET_ALL}")
 
     try:
         liked = like_replies(client, state, dry_run, action_delay_seconds)
         print(f"{Fore.GREEN}Liked {liked} new repl{'y' if liked == 1 else 'ies'}.{Style.RESET_ALL}")
-    except (ValueError, requests.RequestException, TimeoutError) as exc:
+    except (ValueError, requests.RequestException, TimeoutError, atproto_client.exceptions.NetworkError) as exc:
         print(f"{Fore.RED}Reply liking failed: {exc}{Style.RESET_ALL}")
 
     bluesky_state.save_state(state)

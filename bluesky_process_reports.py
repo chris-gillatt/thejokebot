@@ -9,6 +9,7 @@ import re
 from pathlib import Path
 
 import requests
+import atproto_client.exceptions
 
 import bluesky_denylist
 import bluesky_state
@@ -137,7 +138,7 @@ def _delete_post(client, post_uri: str) -> tuple[bool, bool]:
         rkey = parts[-1]
         client.app.bsky.feed.post.delete(repo=repo, rkey=rkey)
         return True, False
-    except (requests.RequestException, TimeoutError) as exc:
+    except (requests.RequestException, TimeoutError, atproto_client.exceptions.NetworkError) as exc:
         print(f"Warning: transient error deleting post {post_uri}, will retry: {exc}")
         return False, True
     except (ValueError, AttributeError) as exc:
@@ -169,7 +170,7 @@ def acknowledge_report(client, proposal: dict) -> tuple[bool, bool]:
         )
         client.send_post(text=_ACK_TEXT, reply_to=reply_ref)
         return True, False
-    except (requests.RequestException, TimeoutError) as exc:
+    except (requests.RequestException, TimeoutError, atproto_client.exceptions.NetworkError) as exc:
         print(f"Warning: transient error acknowledging {reply_uri}, will retry: {exc}")
         return False, True
     except (ValueError, AttributeError) as exc:
