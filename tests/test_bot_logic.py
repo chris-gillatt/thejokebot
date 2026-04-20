@@ -6,6 +6,7 @@ import unittest
 from types import SimpleNamespace
 from unittest import mock
 
+import atproto_client.exceptions
 import bluesky_common
 import bluesky_create_report_prs
 import bluesky_denylist
@@ -33,6 +34,50 @@ class RuntimeControlTests(unittest.TestCase):
 
         self.assertTrue(controls["dry_run"])
         self.assertEqual(controls["action_delay_seconds"], 1.5)
+
+
+class LoginClientRetryTests(unittest.TestCase):
+    def test_login_client_retries_after_transient_network_error(self):
+        mock_client = mock.Mock()
+        mock_client.login.side_effect = [
+            atproto_client.exceptions.NetworkError(),
+            None,
+        ]
+        with mock.patch.dict(
+            os.environ,
+            {
+                "BLUESKY_USERNAME": "thejokebot.bsky.social",
+                "BLUESKY_PASSWORD": "test-password",
+                "BLUESKY_LOGIN_RETRY_ATTEMPTS": "3",
+                "BLUESKY_LOGIN_RETRY_DELAY_SECONDS": "0",
+            },
+            clear=True,
+        ):
+            with mock.patch("bluesky_common.Client", return_value=mock_client):
+                client, username = bluesky_common.login_client()
+
+        self.assertIs(client, mock_client)
+        self.assertEqual(username, "thejokebot.bsky.social")
+        self.assertEqual(mock_client.login.call_count, 2)
+
+    def test_login_client_raises_after_retry_exhausted(self):
+        mock_client = mock.Mock()
+        mock_client.login.side_effect = atproto_client.exceptions.NetworkError()
+        with mock.patch.dict(
+            os.environ,
+            {
+                "BLUESKY_USERNAME": "thejokebot.bsky.social",
+                "BLUESKY_PASSWORD": "test-password",
+                "BLUESKY_LOGIN_RETRY_ATTEMPTS": "2",
+                "BLUESKY_LOGIN_RETRY_DELAY_SECONDS": "0",
+            },
+            clear=True,
+        ):
+            with mock.patch("bluesky_common.Client", return_value=mock_client):
+                with self.assertRaises(atproto_client.exceptions.NetworkError):
+                    bluesky_common.login_client()
+
+        self.assertEqual(mock_client.login.call_count, 2)
 
 
 class UnfollowControlTests(unittest.TestCase):
