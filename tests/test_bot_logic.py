@@ -7,6 +7,7 @@ from types import SimpleNamespace
 from unittest import mock
 
 import bluesky_common
+import bluesky_create_report_prs
 import bluesky_denylist
 import bluesky_follower_utils
 import bluesky_generate_followers
@@ -183,6 +184,30 @@ class DenylistTests(unittest.TestCase):
         )
         self.assertFalse(added)
         self.assertEqual(len(payload["jokes"]), 1)
+
+
+class ReportPrRoutingTests(unittest.TestCase):
+    def test_proposal_target_uses_jokebook_for_jokebook_provider(self):
+        proposal = {"source_provider": "jokebot_jokebook"}
+        target = bluesky_create_report_prs.proposal_target(proposal)
+        self.assertEqual(target, "jokebook")
+
+    def test_proposal_target_defaults_to_denylist(self):
+        proposal = {"source_provider": "jokeapi"}
+        target = bluesky_create_report_prs.proposal_target(proposal)
+        self.assertEqual(target, "denylist")
+
+    def test_remove_jokebook_entry_removes_matching_b64(self):
+        payload = {"jokes": ["a", "b", "a"]}
+        removed = bluesky_create_report_prs.remove_jokebook_entry(payload, "a")
+        self.assertTrue(removed)
+        self.assertEqual(payload["jokes"], ["b"])
+
+    def test_remove_jokebook_entry_returns_false_when_missing(self):
+        payload = {"jokes": ["a", "b"]}
+        removed = bluesky_create_report_prs.remove_jokebook_entry(payload, "c")
+        self.assertFalse(removed)
+        self.assertEqual(payload["jokes"], ["a", "b"])
 
 
 class ReportParsingTests(unittest.TestCase):

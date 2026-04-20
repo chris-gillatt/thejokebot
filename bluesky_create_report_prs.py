@@ -12,6 +12,8 @@ import bluesky_denylist
 
 DEFAULT_PROPOSALS_PATH = Path(".agent-tmp/report_proposals.json")
 DENYLIST_PATH = Path("resources/jokebot_denylist.json")
+JOKEBOOK_PATH = Path("resources/jokebot_jokebook.json")
+JOKEBOOK_PROVIDER_NAME = "jokebot_jokebook"
 
 
 def run_command(args: list[str], check: bool = True) -> subprocess.CompletedProcess:
@@ -47,9 +49,51 @@ def has_open_pr_for_branch(branch_name: str) -> bool:
     return bool(rows)
 
 
-def branch_name_for_b64(b64_value: str) -> str:
+def proposal_target(proposal: dict) -> str:
+    """Return persistence target for a report proposal: denylist or jokebook."""
+    if proposal.get("source_provider") == JOKEBOOK_PROVIDER_NAME:
+        return "jokebook"
+    return "denylist"
+
+
+def branch_name_for_b64(b64_value: str, target: str) -> str:
     suffix = hashlib.sha1(b64_value.encode("utf-8")).hexdigest()[:12]
+    if target == "jokebook":
+        return f"chore/report-jokebook-{suffix}"
     return f"chore/report-denylist-{suffix}"
+
+
+def load_jokebook(file_path: Path | None = None) -> dict:
+    """Load jokebook payload from disk, defaulting to an empty list."""
+    path = file_path or JOKEBOOK_PATH
+    if not path.exists():
+        return {"jokes": []}
+    with open(path, "r", encoding="utf-8") as f:
+        payload = json.load(f)
+    if not isinstance(payload, dict):
+        return {"jokes": []}
+    payload.setdefault("jokes", [])
+    return payload
+
+
+def save_jokebook(payload: dict, file_path: Path | None = None) -> None:
+    """Write jokebook payload atomically."""
+    path = file_path or JOKEBOOK_PATH
+    tmp = f"{path}.tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(payload, f, indent=2)
+        f.write("\n")
+    os.replace(tmp, path)
+
+
+def remove_jokebook_entry(payload: dict, b64_value: str) -> bool:
+    """Remove reported b64 entry from jokebook. Returns True when removed."""
+    jokes = payload.get("jokes", [])
+    filtered = [j for j in jokes if j != b64_value]
+    if len(filtered) == len(jokes):
+        return False
+    payload["jokes"] = filtered
+    return True
 
 
 def build_pr_body(proposal: dict, joke_hash: str) -> str:
@@ -86,35 +130,49 @@ def create_pr_for_proposal(proposal: dict) -> bool:
     if not b64_value:
         return False
 
-    branch_name = branch_name_for_b64(b64_value)
+    target = proposal_target(proposal)
+    branch_name = branch_name_for_b64(b64_value, target)
     if has_remote_branch(branch_name) or has_open_pr_for_branch(branch_name):
         print(f"Skipping existing branch/PR for {branch_name}")
         return False
 
     joke_hash = hashlib.sha1(b64_value.encode("utf-8")).hexdigest()[:8]
-    pr_title = f"chore(denylist): add reported joke {joke_hash}"
+    if target == "jokebook":
+        pr_title = f"chore(jokebook): remove reported joke {joke_hash}"
+    else:
+        pr_title = f"chore(denylist): add reported joke {joke_hash}"
     pr_body = build_pr_body(proposal, joke_hash)
 
     run_command(["git", "checkout", "-b", branch_name])
 
-    denylist = bluesky_denylist.load_denylist(DENYLIST_PATH)
-    added = bluesky_denylist.add_denylist_entry(
-        denylist,
-        b64=b64_value,
-        source_post_uri=proposal.get("source_post_uri") or "",
-        source_reply_uri=proposal.get("source_reply_uri") or "",
-        reporter_did=proposal.get("reporter_did") or "unknown",
-        reason=proposal.get("reason") or "user_reply_report",
-    )
-    if not added:
-        run_command(["git", "checkout", "main"])
-        run_command(["git", "branch", "-D", branch_name], check=False)
-        print(f"Skipping already denylisted joke hash {joke_hash}")
-        return False
+    if target == "jokebook":
+        jokebook = load_jokebook(JOKEBOOK_PATH)
+        removed = remove_jokebook_entry(jokebook, b64_value)
+        if not removed:
+            run_command(["git", "checkout", "main"])
+            run_command(["git", "branch", "-D", branch_name], check=False)
+            print(f"Skipping joke hash {joke_hash}; not found in jokebook")
+            return False
+        save_jokebook(jokebook, JOKEBOOK_PATH)
+        run_command(["git", "add", str(JOKEBOOK_PATH)])
+    else:
+        denylist = bluesky_denylist.load_denylist(DENYLIST_PATH)
+        added = bluesky_denylist.add_denylist_entry(
+            denylist,
+            b64=b64_value,
+            source_post_uri=proposal.get("source_post_uri") or "",
+            source_reply_uri=proposal.get("source_reply_uri") or "",
+            reporter_did=proposal.get("reporter_did") or "unknown",
+            reason=proposal.get("reason") or "user_reply_report",
+        )
+        if not added:
+            run_command(["git", "checkout", "main"])
+            run_command(["git", "branch", "-D", branch_name], check=False)
+            print(f"Skipping already denylisted joke hash {joke_hash}")
+            return False
 
-    bluesky_denylist.save_denylist(denylist, DENYLIST_PATH)
-
-    run_command(["git", "add", str(DENYLIST_PATH)])
+        bluesky_denylist.save_denylist(denylist, DENYLIST_PATH)
+        run_command(["git", "add", str(DENYLIST_PATH)])
     run_command(["git", "commit", "-m", pr_title])
     run_command(["git", "push", "-u", "origin", branch_name])
     run_command(

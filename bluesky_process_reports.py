@@ -278,6 +278,7 @@ def collect_report_proposals(client, state: dict, denylisted_b64s: set[str]) -> 
 
             proposal = {
                 "b64": b64_value,
+                "source_provider": posted_entry.get("provider") if posted_entry else "unknown",
                 "source_post_uri": source_post_uri,
                 "source_reply_uri": parsed["reply_uri"],
                 "reply_cid": parsed["reply_cid"],
