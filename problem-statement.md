@@ -41,7 +41,7 @@ Implementation direction:
 5. Add dry-run visibility and tests for this path.
 
 Operational rule (current):
-- Keep live unfollow automation disabled until this guardrail is implemented and tested.
+- Keep unfollow automation conservative while this guardrail is open (low-frequency schedule plus batching/throttle controls).
 
 ### 5.2 Logging and Network Guardrails (Open)
 Requirement summary:
@@ -68,6 +68,7 @@ Do not revisit these without a concrete operational reason.
 - Security/stability hardening completed (exception narrowing, file locking, safer retries).
 - Report pipeline improvements completed (`#report` acknowledgement, like/report rules, jokebook-aware report handling).
 - Follow script renamed to `bluesky_follow_fellows.py` to reflect conservative behaviour and reduce misleading framing.
+- Unfollow automation now applies safety-first batching controls (per-run cap, inter-batch pause, and throttle-aware early stop).
 
 ## 8. Changelog (Milestones)
 - v0.1: Initial governance draft.
@@ -77,3 +78,4 @@ Do not revisit these without a concrete operational reason.
 - v1.0: Error-handling improvements complete.
 - v1.1: Low-priority quality hardening complete.
 - v1.2: Jokebook report handling fix complete.
+- v1.3: Unfollow batching safeguards added (rate-aware stop, per-run action cap, configurable batch pause) to support cautious large clean-ups.

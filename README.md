@@ -50,6 +50,9 @@ Set these in `.env` (keep values quoted):
 | `API_NINJAS_API_KEY` | No | API key for the API Ninjas jokes endpoint. Only needed if you want the `api_ninjas` backup provider. |
 | `BLUESKY_DRY_RUN` | No | Set to `true` to log actions without applying them. |
 | `BLUESKY_ACTION_DELAY_SECONDS` | No | Seconds to wait between follow/unfollow actions. |
+| `BLUESKY_UNFOLLOW_MAX_ACTIONS` | No | Safety cap per run for unfollow actions (default `200`; set `0` for no cap). |
+| `BLUESKY_UNFOLLOW_BATCH_SIZE` | No | Unfollow batch size before pause (default `50`). |
+| `BLUESKY_UNFOLLOW_BATCH_PAUSE_SECONDS` | No | Pause between unfollow batches in seconds (default `60`). |
 | `BLUESKY_JOKE_PROVIDER` | No | Force a specific provider by name. Leave unset for normal rotation. |
 | `BLUESKY_REPORT_MAX_PAGES` | No | Max notification pages to fetch per report run (default `3`). |
 | `BLUESKY_REPORT_PAGE_LIMIT` | No | Notifications per page when polling for reports (default `100`). |
@@ -58,6 +61,12 @@ Set these in `.env` (keep values quoted):
 
 - **Dry run:** set `BLUESKY_DRY_RUN='true'` to log actions without applying them. Applies to `bluesky_follows_and_likes.py`, `bluesky_unfollow.py`, and `bluesky_follow_fellows.py`.
 - **Throttling:** set `BLUESKY_ACTION_DELAY_SECONDS='1.5'` (example) to slow follow/unfollow/like loops.
+- **Unfollow batching:** `bluesky_unfollow.py` is capped and batched by default (`BLUESKY_UNFOLLOW_MAX_ACTIONS=200`, `BLUESKY_UNFOLLOW_BATCH_SIZE=50`, `BLUESKY_UNFOLLOW_BATCH_PAUSE_SECONDS=60`) to reduce throttle risk on large clean-ups.
+
+Bluesky rate-limit context (as documented):
+- Repository write budget is point-based per account: `5000` points/hour and `35000` points/day; delete operations cost `1` point each.
+- Hosted PDS API requests are also rate-limited by IP (`3000` requests per `5` minutes).
+- This repo defaults to conservative unfollow batches so multi-thousand clean-ups can be done over repeated runs instead of one aggressive burst.
 
 ## Reporting a joke (#report)
 

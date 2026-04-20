@@ -1,10 +1,10 @@
 name: bluesky_unfollow
 
 on:
-  # Schedule is intentionally disabled. When enabled, this runs on the
-  # second Monday of each month at 12:00 UTC.
-  # schedule:
-  #   - cron: "0 12 8-14 * 1"  # 2nd Monday each month at 12:00 UTC
+  # Runs twice yearly to give accounts plenty of time to follow back.
+  # 1 January and 1 July at 12:00 UTC.
+  schedule:
+    - cron: "0 12 1 1,7 *"  # 1 Jan and 1 Jul at 12:00 UTC
   workflow_dispatch:
 
 jobs:
@@ -28,4 +28,8 @@ jobs:
       - name: Run bluesky_unfollow
         env:
           BLUESKY_PASSWORD: ${{ secrets.BLUESKY_PASSWORD }}
+          BLUESKY_ACTION_DELAY_SECONDS: "1"
+          BLUESKY_UNFOLLOW_MAX_ACTIONS: "200"
+          BLUESKY_UNFOLLOW_BATCH_SIZE: "50"
+          BLUESKY_UNFOLLOW_BATCH_PAUSE_SECONDS: "60"
         run: python bluesky_unfollow.py

@@ -15,6 +15,7 @@ import bluesky_joke_providers
 import bluesky_post_joke
 import bluesky_process_reports
 import bluesky_state
+import bluesky_unfollow
 import bluesky_verify_latest_joke_post
 
 
@@ -32,6 +33,58 @@ class RuntimeControlTests(unittest.TestCase):
 
         self.assertTrue(controls["dry_run"])
         self.assertEqual(controls["action_delay_seconds"], 1.5)
+
+
+class UnfollowControlTests(unittest.TestCase):
+    def test_get_unfollow_controls_defaults(self):
+        with mock.patch.dict(os.environ, {}, clear=True):
+            controls = bluesky_unfollow.get_unfollow_controls()
+
+        self.assertEqual(controls["max_actions"], bluesky_unfollow.DEFAULT_UNFOLLOW_MAX_ACTIONS)
+        self.assertEqual(controls["batch_size"], bluesky_unfollow.DEFAULT_UNFOLLOW_BATCH_SIZE)
+        self.assertEqual(
+            controls["batch_pause_seconds"],
+            bluesky_unfollow.DEFAULT_UNFOLLOW_BATCH_PAUSE_SECONDS,
+        )
+
+    def test_get_unfollow_controls_parses_env_values(self):
+        with mock.patch.dict(
+            os.environ,
+            {
+                "BLUESKY_UNFOLLOW_MAX_ACTIONS": "120",
+                "BLUESKY_UNFOLLOW_BATCH_SIZE": "20",
+                "BLUESKY_UNFOLLOW_BATCH_PAUSE_SECONDS": "7.5",
+            },
+            clear=True,
+        ):
+            controls = bluesky_unfollow.get_unfollow_controls()
+
+        self.assertEqual(controls["max_actions"], 120)
+        self.assertEqual(controls["batch_size"], 20)
+        self.assertEqual(controls["batch_pause_seconds"], 7.5)
+
+    def test_select_unfollow_candidates_is_sorted_and_capped(self):
+        following_map = {
+            "did:3": "uri:3",
+            "did:1": "uri:1",
+            "did:2": "uri:2",
+            "did:4": "uri:4",
+        }
+        follower_dids = {"did:4"}
+        ignorable_dids = {"did:2"}
+
+        selected = bluesky_unfollow.select_unfollow_candidates(
+            following_map,
+            follower_dids,
+            ignorable_dids,
+            max_actions=1,
+        )
+
+        self.assertEqual(selected, ["did:1"])
+
+    def test_is_rate_limited_error_detects_429_text(self):
+        self.assertTrue(bluesky_unfollow._is_rate_limited_error(RuntimeError("HTTP 429 Too Many Requests")))
+        self.assertFalse(bluesky_unfollow._is_rate_limited_error(RuntimeError("Connection timeout")))
 
 
 class StateProviderRotationTests(unittest.TestCase):
