@@ -7,6 +7,9 @@ on:
     - cron: "0 12 * * *"  # daily at 12:00 UTC
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   bluesky_unfollow:
     runs-on: ubuntu-latest
@@ -14,6 +17,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -33,3 +38,28 @@ jobs:
           BLUESKY_UNFOLLOW_BATCH_SIZE: "50"
           BLUESKY_UNFOLLOW_BATCH_PAUSE_SECONDS: "60"
         run: python bluesky_unfollow.py
+
+      - name: Persist unfollow history state
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add bot_state.json
+
+          if git diff --cached --quiet; then
+            echo "No bot_state.json changes to commit."
+            exit 0
+          fi
+
+          git commit -m "chore(unfollow): persist unfollow history state; GH run: ${GITHUB_RUN_NUMBER}"
+          for attempt in 1 2 3; do
+            git pull --rebase origin main
+            if git push; then
+              break
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "Push failed after 3 attempts."
+              exit 1
+            fi
+            echo "Push rejected, retrying (${attempt}/3)..."
+          done

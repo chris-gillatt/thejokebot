@@ -35,18 +35,8 @@ See v1.5 changelog entry.
 
 ---
 
-### 5.3 Unfollow history not persisted to repo (Bug)
-**Priority: High**
-
-`bluesky_unfollow.yml` has no `contents: write` permission and no git-push step.
-The `unfollow_history` entries written to `bot_state.json` during each CI run are
-lost when the runner exits. Every subsequent run starts with no memory of who was
-already unfollowed, so the re-engagement guardrail and deduplication logic never
-have real data to work with.
-
-Fix: add `permissions: contents: write` and a state-persist step (with push-retry
-loop) to `bluesky_unfollow.yml`, matching the pattern already used in
-`bluesky_post_joke.yml` and `bluesky_follows_and_likes.yml`.
+### 5.3 Unfollow history not persisted to repo ✓ Complete
+See v1.7 changelog entry.
 
 ---
 
@@ -186,3 +176,4 @@ Do not revisit these without a concrete operational reason.
 - v1.4: Re-engagement guardrail (5.1) implemented. `unfollow_history` section added to `bot_state.json`. Each live unfollow is recorded. `bluesky_follow_fellows.py` excludes all previously-unfollowed DIDs. `bluesky_follows_and_likes.py` logs re-engagements when a previously-unfollowed DID is detected in the current followers list. 5 new state-layer tests added; suite at 68 passing.
 - v1.5: Logging and network guardrails (5.2) complete. Narrowed remaining bare `except Exception` handlers in `bluesky_follower_utils.py`, `bluesky_follow_fellows.py`, and `bluesky_follows_and_likes.py` to `(requests.RequestException, TimeoutError)`. Non-network defensive catches (`extract_text`, base64 decode, SDK attribute access) left as-is — they wrap arbitrary data, not network calls. Suite remains at 68 passing.
 - v1.6: Unfollow schedule changed to daily at 12:00 UTC to clear ~4,400 non-follower backlog (200 per run). Also fixed `atproto_client.exceptions.NetworkError` not being caught by narrowed exception handlers, and corrected bare username `theonion` → `theonion.bsky.social` for AT identifier validity.
+- v1.7: Fixed `bluesky_unfollow.yml` missing `contents: write` permission and state-persist step. Unfollow history was silently lost at the end of every CI run, making the re-engagement guardrail ineffective. Added push-retry step matching the pattern in `bluesky_post_joke.yml`.
