@@ -59,7 +59,7 @@ def login_client():
                 f"Warning: transient Bluesky login failure ({attempt}/{max_attempts}): {exc}. "
                 f"Retrying in {retry_delay_seconds:.1f}s."
             )
-            if retry_delay_seconds:
+            if retry_delay_seconds > 0:
                 time.sleep(retry_delay_seconds)
 
 
