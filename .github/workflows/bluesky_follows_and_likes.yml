@@ -2,7 +2,7 @@ name: bluesky_follows_and_likes
 
 on:
   schedule:
-    - cron: "0 */2 * * *"  # Runs every 2 hours
+    - cron: "0 */2 * * *"  # Runs every 2 hours (UTC)
   workflow_dispatch:
 
 permissions:

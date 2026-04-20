@@ -1,9 +1,11 @@
 name: bluesky_unfollow
 
 on:
-#  schedule:
-#    - cron: "0 12 8-14 * 1"  # Runs on the 2nd Monday of each month
-  workflow_dispatch:  
+  # Schedule is intentionally disabled. When enabled, this runs on the
+  # second Monday of each month at 12:00 UTC.
+  # schedule:
+  #   - cron: "0 12 8-14 * 1"  # 2nd Monday each month at 12:00 UTC
+  workflow_dispatch:
 
 jobs:
   bluesky_unfollow:
