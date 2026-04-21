@@ -5,6 +5,10 @@ on:
     - cron: "*/30 * * * *"  # Runs every 30 minutes (UTC)
   workflow_dispatch:
 
+concurrency:
+  group: bluesky_process_reports
+  cancel-in-progress: false
+
 permissions:
   contents: write
   pull-requests: write

@@ -70,16 +70,11 @@ Updated all Python-running workflows from `python-version: "3.11"` to `"3.12"`.
 
 ---
 
-### 5.10 `bluesky_follow_fellows.yml` missing concurrency guard (Workflow safety)
-**Priority: Low**
-
-`bluesky_follow_fellows.yml` (runs every Friday) has no `concurrency:` block.
-`bluesky_process_reports.yml` (runs every 30 minutes) and
-`bluesky_follows_and_likes.yml` (runs every 2 hours) also lack concurrency guards.
-If a run takes longer than expected or a manual `workflow_dispatch` overlaps with a
-scheduled run, two jobs could attempt simultaneous writes to `bot_state.json`. The
-`bluesky_post_joke.yml` pattern (`cancel-in-progress: false`) is the model to
-follow.
+### 5.10 Missing concurrency guards on follow/report workflows ✓ Complete
+Added `concurrency` blocks with `cancel-in-progress: false` to:
+- `bluesky_follow_fellows.yml`
+- `bluesky_process_reports.yml`
+- `bluesky_follows_and_likes.yml`
 
 ---
 
@@ -144,3 +139,4 @@ Do not revisit these without a concrete operational reason.
 - v1.8: Low-priority housekeeping batch. Documented `BLUESKY_UNFOLLOW_IGNORE` in `.env.example` and README (5.4). Removed stale `### File:` header lines from `bluesky_state.py`, `bluesky_follower_utils.py`, and `bluesky_joke_providers.py` (5.5). Confirmed `posted_jokes.txt` and `bluesky_create_report_prs.py` README row already resolved (5.6, 5.7).
 - v1.9: Resolved provider-rotation dual source of truth (5.8). `bluesky_joke_providers.PRIMARY_PROVIDERS` now derives from `bluesky_state.PROVIDER_ROTATION_ORDER`, with a test guard to keep them aligned.
 - v1.10: Completed Python runtime maintenance bump (5.9). All workflows running project scripts now use `python-version: "3.12"`.
+- v1.11: Added missing workflow concurrency guards (5.10) to follow-fellows, follows-and-likes, and process-reports using the same `cancel-in-progress: false` safety model as post-joke.

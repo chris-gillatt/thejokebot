@@ -5,6 +5,10 @@ on:
     - cron: "0 */2 * * *"  # Runs every 2 hours (UTC)
   workflow_dispatch:
 
+concurrency:
+  group: bluesky_follows_and_likes
+  cancel-in-progress: false
+
 permissions:
   contents: write
 
