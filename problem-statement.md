@@ -78,7 +78,7 @@ Added `concurrency` blocks with `cancel-in-progress: false` to:
 
 ---
 
-### 5.11 Investigate GroanDeck as new primary joke provider
+### 5.11 Investigate GroanDeck as new primary joke provider ✓ Complete
 **Priority: Medium**
 
 GroanDeck (`https://groandeck.com/api/v1/random`) is a free REST API with no
@@ -88,6 +88,14 @@ naturally to the existing two-part joke assembly already used for JokeAPI. The
 pool is substantial (~800+ jokes across categories). No content-safety parameter,
 so review the category list to confirm it matches the bot's family-friendly policy
 before adding. Candidate for the primary rotation alongside or in place of JokeAPI.
+
+**Resolution:** All 33 GroanDeck categories confirmed family-friendly (~2,200 total
+jokes: puns, animals, food, technology, etc.; no adult or dark-humour content).
+Added `fetch_from_groandeck()` in `bluesky_joke_providers.py`, appended `groandeck`
+to `bluesky_state.PROVIDER_ROTATION_ORDER` (primary rotation is now
+`[icanhazdadjoke, jokeapi, groandeck]`), registered in `PROVIDERS` dict. No API key
+required. README updated with provider names in `BLUESKY_JOKE_PROVIDER` doc. 4 new
+tests added.
 
 ---
 
@@ -140,3 +148,4 @@ Do not revisit these without a concrete operational reason.
 - v1.9: Resolved provider-rotation dual source of truth (5.8). `bluesky_joke_providers.PRIMARY_PROVIDERS` now derives from `bluesky_state.PROVIDER_ROTATION_ORDER`, with a test guard to keep them aligned.
 - v1.10: Completed Python runtime maintenance bump (5.9). All workflows running project scripts now use `python-version: "3.12"`.
 - v1.11: Added missing workflow concurrency guards (5.10) to follow-fellows, follows-and-likes, and process-reports using the same `cancel-in-progress: false` safety model as post-joke.
+- v1.12: Added GroanDeck as a third primary provider (5.11). `fetch_from_groandeck()` added, all 33 categories reviewed and confirmed family-friendly. Primary rotation extended to `[icanhazdadjoke, jokeapi, groandeck]`.

@@ -31,6 +31,7 @@ _JOKEAPI_URL = (
     "https://v2.jokeapi.dev/joke/Misc,Programming,Pun,Spooky,Christmas?safe-mode"
 )
 _JOKEAPI_BLACKLIST = "nsfw,explicit,racist,sexist"
+_GROANDECK_URL = "https://groandeck.com/api/v1/random"
 
 
 # Single source of truth for primary-provider rotation order lives in
@@ -88,6 +89,30 @@ def fetch_from_jokeapi(timeout: int = JOKE_TIMEOUT_SECONDS) -> str:
     return joke
 
 
+def fetch_from_groandeck(timeout: int = JOKE_TIMEOUT_SECONDS) -> str:
+    """
+    Fetch a random pun or wordplay joke from GroanDeck.
+
+    Free tier; no API key required. Response shape is
+    ``{"setup": "...", "punchline": "..."}`` — always two-part.
+    All GroanDeck categories are family-friendly (puns, animals, food, etc.);
+    no adult or dark-humour content is present in the pool.
+    """
+    resp = requests.get(
+        _GROANDECK_URL,
+        headers={"User-Agent": _USER_AGENT},
+        timeout=timeout,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+
+    setup = data.get("setup", "").strip()
+    punchline = data.get("punchline", "").strip()
+    if not setup or not punchline:
+        raise ValueError("GroanDeck returned an incomplete joke")
+    return f"{setup}\n\n{punchline}"
+
+
 def fetch_from_api_ninjas(timeout: int = JOKE_TIMEOUT_SECONDS) -> str:
     """
     Fetch a dad joke from API Ninjas.
@@ -142,6 +167,7 @@ def fetch_from_jokebot_jokebook() -> str:
 PROVIDERS: dict[str, callable] = {
     "icanhazdadjoke": fetch_from_icanhazdadjoke,
     "jokeapi": fetch_from_jokeapi,
+    "groandeck": fetch_from_groandeck,
     "api_ninjas": fetch_from_api_ninjas,
     "jokebot_jokebook": fetch_from_jokebot_jokebook,
 }

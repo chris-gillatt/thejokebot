@@ -27,7 +27,7 @@ STATE_FILE = "bot_state.json"
 
 # Canonical provider order — the rotation wraps around this list.
 # Add new providers here and they will be included in rotation automatically.
-PROVIDER_ROTATION_ORDER = ["icanhazdadjoke", "jokeapi"]
+PROVIDER_ROTATION_ORDER = ["icanhazdadjoke", "jokeapi", "groandeck"]
 
 
 def _default_state() -> dict:

@@ -190,9 +190,14 @@ class StateProviderRotationTests(unittest.TestCase):
         state["provider"]["last_used"] = "icanhazdadjoke"
         self.assertEqual(bluesky_state.get_next_provider(state), "jokeapi")
 
-    def test_get_next_provider_wraps_back_to_first(self):
+    def test_get_next_provider_advances_to_third(self):
         state = bluesky_state._default_state()
         state["provider"]["last_used"] = "jokeapi"
+        self.assertEqual(bluesky_state.get_next_provider(state), "groandeck")
+
+    def test_get_next_provider_wraps_back_to_first(self):
+        state = bluesky_state._default_state()
+        state["provider"]["last_used"] = "groandeck"
         self.assertEqual(bluesky_state.get_next_provider(state), "icanhazdadjoke")
 
     def test_get_next_provider_honours_valid_override(self):
@@ -208,7 +213,10 @@ class StateProviderRotationTests(unittest.TestCase):
 
     def test_api_ninjas_is_not_in_primary_rotation(self):
         state = bluesky_state._default_state()
-        self.assertEqual(state["provider"]["rotation_order"], ["icanhazdadjoke", "jokeapi"])
+        self.assertEqual(
+            state["provider"]["rotation_order"],
+            ["icanhazdadjoke", "jokeapi", "groandeck"],
+        )
 
 
 class StateJokeHistoryTests(unittest.TestCase):
@@ -461,6 +469,34 @@ class JokeProviderTests(unittest.TestCase):
         with mock.patch("bluesky_joke_providers.requests.get", return_value=mock_response):
             with self.assertRaises(ValueError):
                 bluesky_joke_providers.fetch_from_jokeapi()
+
+    def test_fetch_from_groandeck_assembles_twopart_joke(self):
+        mock_response = mock.Mock()
+        mock_response.raise_for_status = mock.Mock()
+        mock_response.json.return_value = {
+            "id": "abc123",
+            "setup": "Why did the maths book look sad?",
+            "punchline": "Because it had too many problems.",
+            "tags": ["math"],
+        }
+        with mock.patch("bluesky_joke_providers.requests.get", return_value=mock_response):
+            joke = bluesky_joke_providers.fetch_from_groandeck()
+        self.assertIn("Why did the maths book look sad?", joke)
+        self.assertIn("Because it had too many problems.", joke)
+
+    def test_fetch_from_groandeck_raises_on_missing_punchline(self):
+        mock_response = mock.Mock()
+        mock_response.raise_for_status = mock.Mock()
+        mock_response.json.return_value = {"setup": "Setup only", "punchline": ""}
+        with mock.patch("bluesky_joke_providers.requests.get", return_value=mock_response):
+            with self.assertRaises(ValueError):
+                bluesky_joke_providers.fetch_from_groandeck()
+
+    def test_groandeck_is_in_primary_providers(self):
+        self.assertIn("groandeck", bluesky_joke_providers.PRIMARY_PROVIDERS)
+
+    def test_groandeck_is_registered_in_providers(self):
+        self.assertIn("groandeck", bluesky_joke_providers.PROVIDERS)
 
     def test_fetch_from_api_ninjas_requires_api_key(self):
         with mock.patch.dict(os.environ, {}, clear=False):
