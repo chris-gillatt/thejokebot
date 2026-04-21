@@ -14,7 +14,7 @@ import atproto_client.exceptions
 import bluesky_denylist
 import bluesky_state
 from atproto import models
-from bluesky_common import login_client
+from bluesky_common import login_client, retry_network_call
 
 REPORT_TAG_PATTERN = re.compile(r"(?:^|\s)#report\b", re.IGNORECASE)
 TRAILING_TAGS_PATTERN = re.compile(r"\n\n(?:#\w+\s*)+$", re.IGNORECASE)
@@ -136,7 +136,10 @@ def _delete_post(client, post_uri: str) -> tuple[bool, bool]:
             return False, False
         repo = parts[2]
         rkey = parts[-1]
-        client.app.bsky.feed.post.delete(repo=repo, rkey=rkey)
+        retry_network_call(
+            lambda: client.app.bsky.feed.post.delete(repo=repo, rkey=rkey),
+            description=f"deleting post {post_uri}",
+        )
         return True, False
     except (requests.RequestException, TimeoutError, atproto_client.exceptions.NetworkError) as exc:
         print(f"Warning: transient error deleting post {post_uri}, will retry: {exc}")
@@ -168,7 +171,10 @@ def acknowledge_report(client, proposal: dict) -> tuple[bool, bool]:
             parent=models.ComAtprotoRepoStrongRef.Main(uri=reply_uri, cid=reply_cid),
             root=models.ComAtprotoRepoStrongRef.Main(uri=root_uri, cid=root_cid),
         )
-        client.send_post(text=_ACK_TEXT, reply_to=reply_ref)
+        retry_network_call(
+            lambda: client.send_post(text=_ACK_TEXT, reply_to=reply_ref),
+            description=f"acknowledging report {reply_uri}",
+        )
         return True, False
     except (requests.RequestException, TimeoutError, atproto_client.exceptions.NetworkError) as exc:
         print(f"Warning: transient error acknowledging {reply_uri}, will retry: {exc}")
@@ -237,13 +243,20 @@ def collect_report_proposals(client, state: dict, denylisted_b64s: set[str]) -> 
 
     pages_fetched = 0
     for _ in range(max_pages):
-        response = client.app.bsky.notification.list_notifications(
-            params={
-                "cursor": cursor,
-                "limit": page_limit,
-                "reasons": ["reply"],
-            }
-        )
+        try:
+            response = retry_network_call(
+                lambda: client.app.bsky.notification.list_notifications(
+                    params={
+                        "cursor": cursor,
+                        "limit": page_limit,
+                        "reasons": ["reply"],
+                    }
+                ),
+                description="listing report notifications",
+            )
+        except (requests.RequestException, TimeoutError, atproto_client.exceptions.NetworkError) as exc:
+            print(f"Warning: failed to list report notifications after retries: {exc}")
+            break
         pages_fetched += 1
 
         notifications = _get_value(response, "notifications") or []

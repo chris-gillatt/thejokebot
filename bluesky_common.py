@@ -3,12 +3,16 @@ import time
 from pathlib import Path
 
 import atproto_client.exceptions
+import requests
 from atproto import Client
 from dotenv import load_dotenv
 
 DEFAULT_BLUESKY_USERNAME = "thejokebot.bsky.social"
 DEFAULT_LOGIN_RETRY_ATTEMPTS = 3
 DEFAULT_LOGIN_RETRY_DELAY_SECONDS = 2.0
+DEFAULT_NETWORK_RETRY_ATTEMPTS = 3
+DEFAULT_NETWORK_RETRY_DELAY_SECONDS = 1.0
+DEFAULT_NETWORK_RETRY_BACKOFF_FACTOR = 2.0
 
 
 def _load_local_env_file():
@@ -63,6 +67,50 @@ def login_client():
                 time.sleep(retry_delay_seconds)
 
 
+def retry_network_call(
+    operation,
+    description,
+    max_attempts=None,
+    initial_delay_seconds=None,
+    backoff_factor=None,
+):
+    """Run a network operation with bounded retries for transient failures."""
+    if max_attempts is None:
+        max_attempts = _get_int_env(
+            "BLUESKY_NETWORK_RETRY_ATTEMPTS",
+            default=DEFAULT_NETWORK_RETRY_ATTEMPTS,
+            minimum=1,
+        )
+    if initial_delay_seconds is None:
+        initial_delay_seconds = get_float_env(
+            "BLUESKY_NETWORK_RETRY_DELAY_SECONDS",
+            default=DEFAULT_NETWORK_RETRY_DELAY_SECONDS,
+            minimum=0.0,
+        )
+    if backoff_factor is None:
+        backoff_factor = get_float_env(
+            "BLUESKY_NETWORK_RETRY_BACKOFF_FACTOR",
+            default=DEFAULT_NETWORK_RETRY_BACKOFF_FACTOR,
+            minimum=1.0,
+        )
+
+    delay_seconds = initial_delay_seconds
+
+    for attempt in range(1, max_attempts + 1):
+        try:
+            return operation()
+        except (requests.RequestException, TimeoutError, atproto_client.exceptions.NetworkError) as exc:
+            if attempt >= max_attempts:
+                raise
+            print(
+                f"Warning: transient failure while {description} ({attempt}/{max_attempts}): {exc}. "
+                f"Retrying in {delay_seconds:.1f}s."
+            )
+            if delay_seconds > 0:
+                time.sleep(delay_seconds)
+            delay_seconds *= backoff_factor
+
+
 def get_bool_env(name, default=False):
     raw = os.getenv(name)
     if raw is None:
@@ -74,6 +122,21 @@ def get_bool_env(name, default=False):
     if value in {"0", "false", "no", "off"}:
         return False
     return default
+
+
+def _get_int_env(name, default, minimum=1):
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+
+    try:
+        value = int(raw.strip())
+    except ValueError:
+        return default
+
+    if value < minimum:
+        return minimum
+    return value
 
 
 def get_float_env(name, default=0.0, minimum=0.0):

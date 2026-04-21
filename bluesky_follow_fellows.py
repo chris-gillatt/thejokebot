@@ -2,7 +2,7 @@ import time
 import requests
 import atproto_client.exceptions
 import bluesky_state
-from bluesky_common import login_client, get_runtime_controls
+from bluesky_common import login_client, get_runtime_controls, retry_network_call
 from bluesky_follower_utils import fetch_paginated_data
 
 # Limits
@@ -21,8 +21,11 @@ def login():
 def fetch_users_for_tag(tag: str):
     print(f"Searching posts with hashtag #{tag}...")
     try:
-        resp = client.app.bsky.feed.search_posts(
-            {"q": f"#{tag}", "tag": [tag], "limit": 100, "sort": "latest"}
+        resp = retry_network_call(
+            lambda: client.app.bsky.feed.search_posts(
+                {"q": f"#{tag}", "tag": [tag], "limit": 100, "sort": "latest"}
+            ),
+            description=f"searching posts for #{tag}",
         )
         users = [post.author.did for post in resp.posts]
         print(f"Found {len(users)} users for #{tag}")
@@ -41,7 +44,10 @@ def get_following():
 
 def follow(did: str):
     try:
-        client.follow(did)
+        retry_network_call(
+            lambda: client.follow(did),
+            description=f"following {did}",
+        )
     except (requests.RequestException, TimeoutError, atproto_client.exceptions.NetworkError) as e:
         print(f"Unexpected error trying to follow {did}: {e}")
 

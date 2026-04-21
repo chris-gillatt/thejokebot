@@ -80,6 +80,31 @@ class LoginClientRetryTests(unittest.TestCase):
         self.assertEqual(mock_client.login.call_count, 2)
 
 
+class NetworkRetryHelperTests(unittest.TestCase):
+    def test_retry_network_call_succeeds_after_transient_error(self):
+        calls = {"count": 0}
+
+        def flaky_call():
+            calls["count"] += 1
+            if calls["count"] == 1:
+                raise atproto_client.exceptions.NetworkError("timeout")
+            return "ok"
+
+        with mock.patch.dict(
+            os.environ,
+            {
+                "BLUESKY_NETWORK_RETRY_ATTEMPTS": "2",
+                "BLUESKY_NETWORK_RETRY_DELAY_SECONDS": "0",
+                "BLUESKY_NETWORK_RETRY_BACKOFF_FACTOR": "1",
+            },
+            clear=False,
+        ):
+            result = bluesky_common.retry_network_call(flaky_call, "unit-test call")
+
+        self.assertEqual(result, "ok")
+        self.assertEqual(calls["count"], 2)
+
+
 class UnfollowControlTests(unittest.TestCase):
     def test_get_unfollow_controls_defaults(self):
         with mock.patch.dict(os.environ, {}, clear=True):
@@ -508,6 +533,29 @@ class PaginationTests(unittest.TestCase):
         data = bluesky_follower_utils.fetch_paginated_data(client_method, actor="did:test")
 
         self.assertEqual([item.did for item in data], ["did:one"])
+
+    def test_fetch_paginated_data_retries_transient_page_error(self):
+        calls = {"count": 0}
+
+        def client_method(actor, cursor=None, limit=100):
+            calls["count"] += 1
+            if calls["count"] == 1:
+                raise atproto_client.exceptions.NetworkError("transient")
+            return SimpleNamespace(follows=[SimpleNamespace(did="did:one")], cursor=None)
+
+        with mock.patch.dict(
+            os.environ,
+            {
+                "BLUESKY_NETWORK_RETRY_ATTEMPTS": "2",
+                "BLUESKY_NETWORK_RETRY_DELAY_SECONDS": "0",
+                "BLUESKY_NETWORK_RETRY_BACKOFF_FACTOR": "1",
+            },
+            clear=False,
+        ):
+            data = bluesky_follower_utils.fetch_paginated_data(client_method, actor="did:test")
+
+        self.assertEqual([item.did for item in data], ["did:one"])
+        self.assertEqual(calls["count"], 2)
 
 
 class FollowerSelectionTests(unittest.TestCase):

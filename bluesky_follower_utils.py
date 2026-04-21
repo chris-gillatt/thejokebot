@@ -1,6 +1,7 @@
 import time
 import requests
 import atproto_client.exceptions
+from bluesky_common import retry_network_call
 
 
 def fetch_paginated_data(
@@ -32,7 +33,10 @@ def fetch_paginated_data(
 
         pages += 1
         try:
-            response = client_method(actor=actor, cursor=cursor, limit=limit)
+            response = retry_network_call(
+                lambda: client_method(actor=actor, cursor=cursor, limit=limit),
+                description=f"fetching paginated data page {pages}",
+            )
         except (requests.RequestException, TimeoutError, atproto_client.exceptions.NetworkError) as exc:
             print(f"Failed to fetch paginated data on page {pages}: {exc}")
             break

@@ -11,7 +11,7 @@ import atproto_client.exceptions
 from colorama import Fore, Style
 
 import bluesky_state
-from bluesky_common import get_runtime_controls, login_client
+from bluesky_common import get_runtime_controls, login_client, retry_network_call
 from bluesky_follower_utils import fetch_paginated_data
 
 _DEFAULT_LIKE_MAX_PAGES = 5
@@ -48,8 +48,15 @@ def follow_back(client, username: str, dry_run: bool, action_delay_seconds: floa
         if dry_run:
             print(f"{Fore.YELLOW}[DRY-RUN] Would follow {did}{Style.RESET_ALL}")
         else:
-            client.follow(did)
-            print(f"{Fore.GREEN}Followed {did}{Style.RESET_ALL}")
+            try:
+                retry_network_call(
+                    lambda: client.follow(did),
+                    description=f"following back {did}",
+                )
+                print(f"{Fore.GREEN}Followed {did}{Style.RESET_ALL}")
+            except (requests.RequestException, TimeoutError, atproto_client.exceptions.NetworkError) as exc:
+                print(f"{Fore.RED}Failed to follow {did}: {exc}{Style.RESET_ALL}")
+                continue
 
         if action_delay_seconds > 0 and i < len(to_follow_back):
             time.sleep(action_delay_seconds)
@@ -91,13 +98,20 @@ def like_replies(client, state: dict, dry_run: bool, action_delay_seconds: float
     cursor = None
 
     for _ in range(max_pages):
-        response = client.app.bsky.notification.list_notifications(
-            params={
-                "cursor": cursor,
-                "limit": page_limit,
-                "reasons": ["reply"],
-            }
-        )
+        try:
+            response = retry_network_call(
+                lambda: client.app.bsky.notification.list_notifications(
+                    params={
+                        "cursor": cursor,
+                        "limit": page_limit,
+                        "reasons": ["reply"],
+                    }
+                ),
+                description="listing reply notifications",
+            )
+        except (requests.RequestException, TimeoutError, atproto_client.exceptions.NetworkError) as exc:
+            print(f"{Fore.RED}Failed to fetch reply notifications: {exc}{Style.RESET_ALL}")
+            break
 
         notifications = _get_value(response, "notifications") or []
         page_new_likes = 0
@@ -142,7 +156,10 @@ def like_replies(client, state: dict, dry_run: bool, action_delay_seconds: float
                 print(f"{Fore.YELLOW}[DRY-RUN] Would like reply: {uri}{Style.RESET_ALL}")
             else:
                 try:
-                    client.like(uri=uri, cid=cid)
+                    retry_network_call(
+                        lambda: client.like(uri=uri, cid=cid),
+                        description=f"liking reply {uri}",
+                    )
                     print(f"{Fore.GREEN}Liked reply: {uri}{Style.RESET_ALL}")
                 except (requests.RequestException, TimeoutError, atproto_client.exceptions.NetworkError) as exc:
                     print(f"{Fore.RED}Failed to like {uri}: {exc}{Style.RESET_ALL}")

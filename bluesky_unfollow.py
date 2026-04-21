@@ -4,7 +4,7 @@ import requests
 import atproto_client.exceptions
 from colorama import Fore, Style
 from bluesky_follower_utils import fetch_paginated_data
-from bluesky_common import login_client, get_runtime_controls
+from bluesky_common import login_client, get_runtime_controls, retry_network_call
 import bluesky_state as _state
 
 
@@ -134,7 +134,10 @@ def unfollow_users():
         ignorable_dids = set()
         for ignorable_username in ignorable_usernames:
             try:
-                profile = client.get_profile(ignorable_username)
+                profile = retry_network_call(
+                    lambda: client.get_profile(ignorable_username),
+                    description=f"resolving profile {ignorable_username}",
+                )
                 did = getattr(profile, "did", None)
                 if not did and isinstance(profile, dict):
                     did = profile.get("did")
@@ -186,7 +189,10 @@ def unfollow_users():
                     unfollowed_count += 1
                 else:
                     try:
-                        client.unfollow(uri)
+                        retry_network_call(
+                            lambda: client.unfollow(uri),
+                            description=f"unfollowing {did}",
+                        )
                         print(f"{Fore.GREEN}Unfollowed {did}{Style.RESET_ALL}")
                         unfollowed_count += 1
                         _state.record_unfollow(state, did)
