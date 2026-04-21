@@ -156,6 +156,23 @@ class UnfollowControlTests(unittest.TestCase):
         self.assertTrue(bluesky_unfollow._is_rate_limited_error(RuntimeError("HTTP 429 Too Many Requests")))
         self.assertFalse(bluesky_unfollow._is_rate_limited_error(RuntimeError("Connection timeout")))
 
+    def test_unfollow_users_skips_bad_profile_lookup_error(self):
+        state = bluesky_state._default_state()
+        client = mock.Mock()
+        client.me.did = "did:plc:test"
+
+        with mock.patch("bluesky_unfollow.login_client", return_value=(client, "thejokebot.bsky.social")):
+            with mock.patch("bluesky_unfollow.fetch_paginated_data", return_value=[]):
+                with mock.patch("bluesky_unfollow.get_runtime_controls", return_value={"dry_run": True, "action_delay_seconds": 0.0}):
+                    with mock.patch("bluesky_unfollow.get_unfollow_controls", return_value={"max_actions": 0, "batch_size": 50, "batch_pause_seconds": 0.0}):
+                        with mock.patch("bluesky_unfollow.retry_network_call", side_effect=atproto_client.exceptions.BadRequestError(mock.Mock())):
+                            with mock.patch("bluesky_unfollow._state.load_state", return_value=state):
+                                with mock.patch("bluesky_unfollow._state.prune_unfollow_history"):
+                                    with mock.patch("bluesky_unfollow._state.save_state") as save_state:
+                                        bluesky_unfollow.unfollow_users()
+
+        save_state.assert_called_once_with(state)
+
 
 class StateProviderRotationTests(unittest.TestCase):
     def test_primary_providers_match_state_rotation_order(self):

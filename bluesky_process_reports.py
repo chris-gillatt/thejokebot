@@ -144,7 +144,7 @@ def _delete_post(client, post_uri: str) -> tuple[bool, bool]:
     except (requests.RequestException, TimeoutError, atproto_client.exceptions.NetworkError) as exc:
         print(f"Warning: transient error deleting post {post_uri}, will retry: {exc}")
         return False, True
-    except (ValueError, AttributeError) as exc:
+    except (ValueError, AttributeError, atproto_client.exceptions.BadRequestError) as exc:
         print(f"Warning: permanent error deleting post {post_uri}, skipping: {exc}")
         return False, False
 
@@ -179,7 +179,7 @@ def acknowledge_report(client, proposal: dict) -> tuple[bool, bool]:
     except (requests.RequestException, TimeoutError, atproto_client.exceptions.NetworkError) as exc:
         print(f"Warning: transient error acknowledging {reply_uri}, will retry: {exc}")
         return False, True
-    except (ValueError, AttributeError) as exc:
+    except (ValueError, AttributeError, atproto_client.exceptions.BadRequestError) as exc:
         print(f"Warning: permanent error acknowledging {reply_uri}, skipping: {exc}")
         return False, False
 
