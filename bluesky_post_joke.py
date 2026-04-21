@@ -13,9 +13,14 @@ from bluesky_common import login_client
 
 DAYS_LIMIT = 90
 MAX_ATTEMPTS = 5
+BLUESKY_MAX_POST_CHARS = 300
 
 # Hashtags
 HASHTAGS = ["#jokes", "#dadjoke", "#funny"]
+
+# Graphemes consumed by "\n\n" + space-joined hashtags appended to every post.
+_HASHTAG_SUFFIX_LEN = 2 + len(" ".join(HASHTAGS))  # 2 newlines + tag string
+_MAX_JOKE_CHARS = BLUESKY_MAX_POST_CHARS - _HASHTAG_SUFFIX_LEN
 
 
 def get_fallback_joke():
@@ -34,18 +39,26 @@ def get_current_epoch():
 
 def pick_joke(recent_b64s: set, provider_name: str) -> tuple:
     """
-    Fetch up to MAX_ATTEMPTS jokes from provider_name, skipping recent duplicates.
+    Fetch up to MAX_ATTEMPTS jokes from provider_name, skipping recent duplicates
+    and jokes that would exceed the Bluesky post character limit once hashtags
+    are appended.
     Returns (joke_text, b64_encoded) on success, raises ValueError if all attempts
-    are duplicates or the provider raises.
+    are duplicates, too long, or the provider raises.
     """
     fetch_fn = bluesky_joke_providers.PROVIDERS[provider_name]
     for _ in range(MAX_ATTEMPTS):
         joke = fetch_fn()
+        if len(joke) > _MAX_JOKE_CHARS:
+            print(
+                f"Skipping joke from '{provider_name}': "
+                f"{len(joke)} chars exceeds limit of {_MAX_JOKE_CHARS}"
+            )
+            continue
         encoded = base64.b64encode(joke.encode("utf-8")).decode()
         if encoded not in recent_b64s:
             return joke, encoded
     raise ValueError(
-        f"All {MAX_ATTEMPTS} jokes from '{provider_name}' were recent duplicates"
+        f"All {MAX_ATTEMPTS} jokes from '{provider_name}' were recent duplicates or too long"
     )
 
 

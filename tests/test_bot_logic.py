@@ -775,6 +775,34 @@ class JokeRetryChainTests(unittest.TestCase):
         
         self.assertIn("duplicates", str(ctx.exception))
 
+    def test_pick_joke_skips_joke_exceeding_char_limit(self):
+        """pick_joke skips jokes that are too long and retries for a short one."""
+        long_joke = "x" * (bluesky_post_joke._MAX_JOKE_CHARS + 1)
+        short_joke = "A short joke."
+        call_count = [0]
+
+        def mock_fetch():
+            call_count[0] += 1
+            return long_joke if call_count[0] == 1 else short_joke
+
+        with mock.patch.object(bluesky_joke_providers, "PROVIDERS", {
+            "test_provider": mock_fetch
+        }):
+            joke, _ = bluesky_post_joke.pick_joke(set(), "test_provider")
+
+        self.assertEqual(joke, short_joke)
+        self.assertEqual(call_count[0], 2)
+
+    def test_pick_joke_raises_when_all_jokes_too_long(self):
+        """pick_joke raises ValueError when every attempt exceeds the char limit."""
+        long_joke = "x" * (bluesky_post_joke._MAX_JOKE_CHARS + 1)
+
+        with mock.patch.object(bluesky_joke_providers, "PROVIDERS", {
+            "test_provider": lambda: long_joke
+        }):
+            with self.assertRaises(ValueError):
+                bluesky_post_joke.pick_joke(set(), "test_provider")
+
     def test_provider_fallback_chain_tries_primaries_first(self):
         """Provider fallback tries primary providers before backups."""
         state = bluesky_state._default_state()
