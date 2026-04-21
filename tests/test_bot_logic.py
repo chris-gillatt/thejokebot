@@ -158,6 +158,12 @@ class UnfollowControlTests(unittest.TestCase):
 
 
 class StateProviderRotationTests(unittest.TestCase):
+    def test_primary_providers_match_state_rotation_order(self):
+        self.assertEqual(
+            bluesky_joke_providers.PRIMARY_PROVIDERS,
+            bluesky_state.PROVIDER_ROTATION_ORDER,
+        )
+
     def test_get_next_provider_starts_with_first_in_rotation(self):
         state = bluesky_state._default_state()
         self.assertEqual(bluesky_state.get_next_provider(state), "icanhazdadjoke")

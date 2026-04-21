@@ -60,14 +60,8 @@ Script was already present in the README table — no action required.
 
 ---
 
-### 5.8 Dual source of truth for provider rotation order (Code quality)
-**Priority: Low**
-
-`PROVIDER_ROTATION_ORDER` in `bluesky_state.py` and `PRIMARY_PROVIDERS` in
-`bluesky_joke_providers.py` both enumerate the primary providers. Adding a new
-primary provider requires updating both lists; missing one silently breaks either
-rotation state or the pick-joke logic. Consolidate to a single source of truth
-(the state module is the natural owner).
+### 5.8 Dual source of truth for provider rotation order ✓ Complete
+Single source of truth now lives in `bluesky_state.PROVIDER_ROTATION_ORDER`; `bluesky_joke_providers.PRIMARY_PROVIDERS` is derived from it.
 
 ---
 
@@ -153,3 +147,4 @@ Do not revisit these without a concrete operational reason.
 - v1.6: Unfollow schedule changed to daily at 12:00 UTC to clear ~4,400 non-follower backlog (200 per run). Also fixed `atproto_client.exceptions.NetworkError` not being caught by narrowed exception handlers, and corrected bare username `theonion` → `theonion.bsky.social` for AT identifier validity.
 - v1.7: Fixed `bluesky_unfollow.yml` missing `contents: write` permission and state-persist step. Unfollow history was silently lost at the end of every CI run, making the re-engagement guardrail ineffective. Added push-retry step matching the pattern in `bluesky_post_joke.yml`.
 - v1.8: Low-priority housekeeping batch. Documented `BLUESKY_UNFOLLOW_IGNORE` in `.env.example` and README (5.4). Removed stale `### File:` header lines from `bluesky_state.py`, `bluesky_follower_utils.py`, and `bluesky_joke_providers.py` (5.5). Confirmed `posted_jokes.txt` and `bluesky_create_report_prs.py` README row already resolved (5.6, 5.7).
+- v1.9: Resolved provider-rotation dual source of truth (5.8). `bluesky_joke_providers.PRIMARY_PROVIDERS` now derives from `bluesky_state.PROVIDER_ROTATION_ORDER`, with a test guard to keep them aligned.

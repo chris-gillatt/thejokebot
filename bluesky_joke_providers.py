@@ -16,6 +16,7 @@ import pathlib
 import random
 
 import requests
+import bluesky_state
 
 JOKE_TIMEOUT_SECONDS = 15
 
@@ -32,7 +33,9 @@ _JOKEAPI_URL = (
 _JOKEAPI_BLACKLIST = "nsfw,explicit,racist,sexist"
 
 
-PRIMARY_PROVIDERS = ["icanhazdadjoke", "jokeapi"]
+# Single source of truth for primary-provider rotation order lives in
+# bluesky_state.PROVIDER_ROTATION_ORDER.
+PRIMARY_PROVIDERS = list(bluesky_state.PROVIDER_ROTATION_ORDER)
 BACKUP_PROVIDERS = ["api_ninjas", "jokebot_jokebook"]
 
 _JOKEBOOK_PATH = pathlib.Path(__file__).parent / "resources" / "jokebot_jokebook.json"
