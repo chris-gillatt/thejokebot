@@ -775,6 +775,18 @@ class JokeRetryChainTests(unittest.TestCase):
         
         self.assertIn("duplicates", str(ctx.exception))
 
+    def test_sanitise_joke_text_repairs_mojibake_apostrophe(self):
+        raw = "Why do pumpkins sit on peopleâs porches?"
+        fixed = bluesky_post_joke.sanitise_joke_text(raw)
+        self.assertEqual(fixed, "Why do pumpkins sit on people's porches?")
+
+    def test_pick_joke_normalises_curly_quotes_before_return(self):
+        with mock.patch.object(bluesky_joke_providers, "PROVIDERS", {
+            "test_provider": lambda: "It's called \u2018normalisation\u2019."
+        }):
+            joke, _ = bluesky_post_joke.pick_joke(set(), "test_provider")
+        self.assertEqual(joke, "It's called 'normalisation'.")
+
     def test_pick_joke_skips_joke_exceeding_char_limit(self):
         """pick_joke skips jokes that are too long and retries for a short one."""
         long_joke = "x" * (bluesky_post_joke._MAX_JOKE_CHARS + 1)

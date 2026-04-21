@@ -21,6 +21,7 @@ HASHTAGS = ["#jokes", "#dadjoke", "#funny"]
 # Graphemes consumed by "\n\n" + space-joined hashtags appended to every post.
 _HASHTAG_SUFFIX_LEN = 2 + len(" ".join(HASHTAGS))  # 2 newlines + tag string
 _MAX_JOKE_CHARS = BLUESKY_MAX_POST_CHARS - _HASHTAG_SUFFIX_LEN
+_MOJIBAKE_MARKERS = ("Ã", "Â", "â", "ð", "\x80", "\x99")
 
 
 def get_fallback_joke():
@@ -37,6 +38,32 @@ def get_current_epoch():
     return int(time.time())
 
 
+def sanitise_joke_text(joke: str) -> str:
+    """Repair common mojibake and normalise quote punctuation for posting."""
+    cleaned = joke.replace("\r\n", "\n").replace("\r", "\n").strip()
+
+    # Repair common UTF-8 text that was accidentally decoded as Latin-1.
+    if any(marker in cleaned for marker in _MOJIBAKE_MARKERS):
+        try:
+            repaired = cleaned.encode("latin-1").decode("utf-8")
+            if sum(cleaned.count(m) for m in _MOJIBAKE_MARKERS) > sum(
+                repaired.count(m) for m in _MOJIBAKE_MARKERS
+            ):
+                cleaned = repaired
+        except UnicodeError:
+            pass
+
+    # Prefer plain ASCII quotes to avoid display quirks across clients/providers.
+    cleaned = (
+        cleaned
+        .replace("\u2018", "'")
+        .replace("\u2019", "'")
+        .replace("\u201c", '"')
+        .replace("\u201d", '"')
+    )
+    return cleaned
+
+
 def pick_joke(recent_b64s: set, provider_name: str) -> tuple:
     """
     Fetch up to MAX_ATTEMPTS jokes from provider_name, skipping recent duplicates
@@ -47,7 +74,7 @@ def pick_joke(recent_b64s: set, provider_name: str) -> tuple:
     """
     fetch_fn = bluesky_joke_providers.PROVIDERS[provider_name]
     for _ in range(MAX_ATTEMPTS):
-        joke = fetch_fn()
+        joke = sanitise_joke_text(fetch_fn())
         if len(joke) > _MAX_JOKE_CHARS:
             print(
                 f"Skipping joke from '{provider_name}': "
