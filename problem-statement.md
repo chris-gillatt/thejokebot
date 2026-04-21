@@ -111,6 +111,62 @@ the joke pool is suitably family-friendly and add `HUMORAPI_API_KEY` env var, a
 `fetch_from_humorapi()` function, and README/`.env.example` documentation if it
 passes review.
 
+---
+
+### 5.13 Enforce post-length preflight before Bluesky send ✓ Complete
+**Priority: High**
+
+Posting previously relied on the API call to reject over-limit payloads. Add a
+pre-send guard so provider candidates are filtered and retried before posting,
+using the effective joke-length budget after hashtags are appended.
+
+**Resolution:** Implemented in `bluesky_post_joke.py` via
+`BLUESKY_MAX_POST_CHARS=300`, `_HASHTAG_SUFFIX_LEN`, and `_MAX_JOKE_CHARS`.
+`pick_joke()` now skips over-long jokes and retries like duplicate handling;
+if all attempts are duplicates/too long it falls through to next provider.
+Test coverage added for skip-and-retry and all-too-long failure paths.
+
+---
+
+### 5.14 Use grapheme-aware length checks for post safety
+**Priority: Medium**
+
+Current length preflight uses Python `len()` (code points), while Bluesky limits
+are based on visible character units. For composed emoji and combining marks,
+code-point counts may diverge from rendered length. Evaluate and, if needed,
+switch to grapheme-cluster counting in the preflight check to avoid false
+accept/reject edge cases.
+
+---
+
+### 5.15 Add operational hygiene for stale unfollow ignore handles
+**Priority: Low**
+
+`BLUESKY_UNFOLLOW_IGNORE` can accumulate handles that no longer resolve
+(`Profile not found`), which now degrades gracefully but still adds noisy logs.
+Add a lightweight maintenance task/runbook step to periodically validate ignore
+handles and prune stale entries in GitHub Actions secrets.
+
+---
+
+### 5.16 Add Ruff lint/format checks in CI
+**Priority: Medium**
+
+Add a lightweight code-quality workflow using Ruff for linting and format
+validation. Start in non-invasive mode (`ruff check` and `ruff format --check`)
+to surface issues in pull requests without broad refactors. Include a minimal
+`pyproject.toml` Ruff configuration only if needed for stable rule selection.
+
+---
+
+### 5.17 Add GitHub CodeQL analysis workflow
+**Priority: Medium**
+
+Add a standard GitHub CodeQL workflow for Python to provide free baseline
+security/static analysis and code scanning alerts on pull requests and main
+branch updates. Keep configuration minimal initially, then tune query packs and
+exclusions only if noise is observed.
+
 ## 6. Explicit "Will Not Do" Decisions
 Do not revisit these without a concrete operational reason.
 
@@ -149,3 +205,4 @@ Do not revisit these without a concrete operational reason.
 - v1.10: Completed Python runtime maintenance bump (5.9). All workflows running project scripts now use `python-version: "3.12"`.
 - v1.11: Added missing workflow concurrency guards (5.10) to follow-fellows, follows-and-likes, and process-reports using the same `cancel-in-progress: false` safety model as post-joke.
 - v1.12: Added GroanDeck as a third primary provider (5.11). `fetch_from_groandeck()` added, all 33 categories reviewed and confirmed family-friendly. Primary rotation extended to `[icanhazdadjoke, jokeapi, groandeck]`.
+- v1.13: Added pre-post length guard (5.13). `pick_joke()` now skips over-long jokes before API send, retries within provider attempts, and falls through provider chain when necessary.
