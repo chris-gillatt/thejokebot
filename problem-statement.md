@@ -65,13 +65,8 @@ Single source of truth now lives in `bluesky_state.PROVIDER_ROTATION_ORDER`; `bl
 
 ---
 
-### 5.9 Python version: schedule bump from 3.11 to 3.12 (Maintenance)
-**Priority: Low**
-
-All workflows pin `python-version: "3.11"`. Python 3.11 reaches end-of-life in
-October 2026; 3.12 is the current stable release. The codebase uses no 3.11-only
-features. Schedule a bump to 3.12 across all workflows before EOL to stay on a
-supported runtime.
+### 5.9 Python version: schedule bump from 3.11 to 3.12 ✓ Complete
+Updated all Python-running workflows from `python-version: "3.11"` to `"3.12"`.
 
 ---
 
@@ -148,3 +143,4 @@ Do not revisit these without a concrete operational reason.
 - v1.7: Fixed `bluesky_unfollow.yml` missing `contents: write` permission and state-persist step. Unfollow history was silently lost at the end of every CI run, making the re-engagement guardrail ineffective. Added push-retry step matching the pattern in `bluesky_post_joke.yml`.
 - v1.8: Low-priority housekeeping batch. Documented `BLUESKY_UNFOLLOW_IGNORE` in `.env.example` and README (5.4). Removed stale `### File:` header lines from `bluesky_state.py`, `bluesky_follower_utils.py`, and `bluesky_joke_providers.py` (5.5). Confirmed `posted_jokes.txt` and `bluesky_create_report_prs.py` README row already resolved (5.6, 5.7).
 - v1.9: Resolved provider-rotation dual source of truth (5.8). `bluesky_joke_providers.PRIMARY_PROVIDERS` now derives from `bluesky_state.PROVIDER_ROTATION_ORDER`, with a test guard to keep them aligned.
+- v1.10: Completed Python runtime maintenance bump (5.9). All workflows running project scripts now use `python-version: "3.12"`.
