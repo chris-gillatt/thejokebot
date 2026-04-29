@@ -57,7 +57,7 @@ Set these in `.env` (keep values quoted):
 | `BLUESKY_UNFOLLOW_BATCH_SIZE` | No | Unfollow batch size before pause (default `50`). |
 | `BLUESKY_UNFOLLOW_BATCH_PAUSE_SECONDS` | No | Pause between unfollow batches in seconds (default `60`). |
 | `BLUESKY_UNFOLLOW_IGNORE` | No | Comma-separated fully-qualified handles to protect from unfollowing (e.g. `theonion.bsky.social`). |
-| `BLUESKY_JOKE_PROVIDER` | No | Force a specific provider by name (`icanhazdadjoke`, `jokeapi`, `groandeck`, `api_ninjas`, `jokebot_jokebook`). Leave unset for normal rotation. |
+| `BLUESKY_JOKE_PROVIDER` | No | Force a specific provider by name (`icanhazdadjoke`, `jokeapi`, `groandeck`, `syrsly`, `api_ninjas`, `jokebot_jokebook`). Leave unset for normal rotation. |
 | `BLUESKY_REPORT_MAX_PAGES` | No | Max notification pages to fetch per report run (default `3`). |
 | `BLUESKY_REPORT_PAGE_LIMIT` | No | Notifications per page when polling for reports (default `100`). |
 
@@ -123,5 +123,6 @@ Joke content is sourced from these third-party APIs:
 - [icanhazdadjoke](https://icanhazdadjoke.com/api) — free dad jokes API
 - [JokeAPI](https://jokeapi.dev) — multi-category joke API
 - [GroanDeck](https://groandeck.com/api/v1/random) — free two-part groan-worthy jokes API
+- [Syrsly Jokes API](https://www.syrsly.com/joke) — text dad-joke endpoint used as a backup provider
 - [API Ninjas Jokes](https://api-ninjas.com/api/jokes) — supplementary backup provider
 

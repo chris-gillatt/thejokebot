@@ -23,6 +23,7 @@ JOKE_TIMEOUT_SECONDS = 15
 _USER_AGENT = "thejokebot (https://github.com/chris-gillatt/thejokebot)"
 _ICANHAZDADJOKE_URL = "https://icanhazdadjoke.com"
 _API_NINJAS_DADJOKES_URL = "https://api.api-ninjas.com/v1/dadjokes"
+_SYRSLY_DAD_URL = "https://www.syrsly.com/joke/dad"
 
 # Safe categories only — Dark is excluded intentionally.
 # safe-mode is embedded in the URL as a value-less parameter because requests
@@ -37,7 +38,7 @@ _GROANDECK_URL = "https://groandeck.com/api/v1/random"
 # Single source of truth for primary-provider rotation order lives in
 # bluesky_state.PROVIDER_ROTATION_ORDER.
 PRIMARY_PROVIDERS = list(bluesky_state.PROVIDER_ROTATION_ORDER)
-BACKUP_PROVIDERS = ["api_ninjas", "jokebot_jokebook"]
+BACKUP_PROVIDERS = ["syrsly", "api_ninjas", "jokebot_jokebook"]
 
 _JOKEBOOK_PATH = pathlib.Path(__file__).parent / "resources" / "jokebot_jokebook.json"
 
@@ -113,6 +114,26 @@ def fetch_from_groandeck(timeout: int = JOKE_TIMEOUT_SECONDS) -> str:
     return f"{setup}\n\n{punchline}"
 
 
+def fetch_from_syrsly(timeout: int = JOKE_TIMEOUT_SECONDS) -> str:
+    """
+    Fetch a random dad joke from Syrsly's jokes API.
+
+    Uses the Syrsly dad-joke endpoint to stay aligned with family-friendly
+    expectations. The API returns plain text and may include encoded entities;
+    final normalisation happens in bluesky_post_joke.sanitise_joke_text().
+    """
+    resp = requests.get(
+        _SYRSLY_DAD_URL,
+        headers={"User-Agent": _USER_AGENT},
+        timeout=timeout,
+    )
+    resp.raise_for_status()
+    joke = resp.text.strip()
+    if not joke:
+        raise ValueError("Syrsly returned an empty response")
+    return joke
+
+
 def fetch_from_api_ninjas(timeout: int = JOKE_TIMEOUT_SECONDS) -> str:
     """
     Fetch a dad joke from API Ninjas.
@@ -168,6 +189,7 @@ PROVIDERS: dict[str, callable] = {
     "icanhazdadjoke": fetch_from_icanhazdadjoke,
     "jokeapi": fetch_from_jokeapi,
     "groandeck": fetch_from_groandeck,
+    "syrsly": fetch_from_syrsly,
     "api_ninjas": fetch_from_api_ninjas,
     "jokebot_jokebook": fetch_from_jokebot_jokebook,
 }

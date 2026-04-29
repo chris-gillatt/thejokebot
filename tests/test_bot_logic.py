@@ -493,11 +493,33 @@ class JokeProviderTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 bluesky_joke_providers.fetch_from_groandeck()
 
+    def test_fetch_from_syrsly_returns_text(self):
+        mock_response = mock.Mock()
+        mock_response.raise_for_status = mock.Mock()
+        mock_response.text = "A dad joke from syrsly."
+        with mock.patch("bluesky_joke_providers.requests.get", return_value=mock_response):
+            joke = bluesky_joke_providers.fetch_from_syrsly()
+        self.assertEqual(joke, "A dad joke from syrsly.")
+
+    def test_fetch_from_syrsly_raises_on_empty_response(self):
+        mock_response = mock.Mock()
+        mock_response.raise_for_status = mock.Mock()
+        mock_response.text = "   "
+        with mock.patch("bluesky_joke_providers.requests.get", return_value=mock_response):
+            with self.assertRaises(ValueError):
+                bluesky_joke_providers.fetch_from_syrsly()
+
     def test_groandeck_is_in_primary_providers(self):
         self.assertIn("groandeck", bluesky_joke_providers.PRIMARY_PROVIDERS)
 
     def test_groandeck_is_registered_in_providers(self):
         self.assertIn("groandeck", bluesky_joke_providers.PROVIDERS)
+
+    def test_syrsly_is_in_backup_providers(self):
+        self.assertIn("syrsly", bluesky_joke_providers.BACKUP_PROVIDERS)
+
+    def test_syrsly_is_registered_in_providers(self):
+        self.assertIn("syrsly", bluesky_joke_providers.PROVIDERS)
 
     def test_fetch_from_api_ninjas_requires_api_key(self):
         with mock.patch.dict(os.environ, {}, clear=False):
@@ -908,12 +930,39 @@ class JokeRetryChainTests(unittest.TestCase):
         fixed = bluesky_post_joke.sanitise_joke_text(raw)
         self.assertEqual(fixed, "Why do pumpkins sit on people's porches?")
 
+    def test_sanitise_joke_text_removes_utf8_bom_prefix(self):
+        raw = "\ufeffA clean joke"
+        fixed = bluesky_post_joke.sanitise_joke_text(raw)
+        self.assertEqual(fixed, "A clean joke")
+
+    def test_sanitise_joke_text_decodes_numeric_html_entity(self):
+        raw = "Did you hear about the kidnapping at school? It&#039;s ok, he woke up."
+        fixed = bluesky_post_joke.sanitise_joke_text(raw)
+        self.assertEqual(fixed, "Did you hear about the kidnapping at school? It's ok, he woke up.")
+
+    def test_sanitise_joke_text_decodes_named_html_entity(self):
+        raw = "Dad&apos;s favourite joke"
+        fixed = bluesky_post_joke.sanitise_joke_text(raw)
+        self.assertEqual(fixed, "Dad's favourite joke")
+
+    def test_sanitise_joke_text_decodes_double_escaped_entity(self):
+        raw = "It&amp;#039;s still funny"
+        fixed = bluesky_post_joke.sanitise_joke_text(raw)
+        self.assertEqual(fixed, "It's still funny")
+
     def test_pick_joke_normalises_curly_quotes_before_return(self):
         with mock.patch.object(bluesky_joke_providers, "PROVIDERS", {
             "test_provider": lambda: "It's called \u2018normalisation\u2019."
         }):
             joke, _ = bluesky_post_joke.pick_joke(set(), "test_provider")
         self.assertEqual(joke, "It's called 'normalisation'.")
+
+    def test_pick_joke_decodes_html_entities_before_return(self):
+        with mock.patch.object(bluesky_joke_providers, "PROVIDERS", {
+            "test_provider": lambda: "It&amp;#039;s fixed"
+        }):
+            joke, _ = bluesky_post_joke.pick_joke(set(), "test_provider")
+        self.assertEqual(joke, "It's fixed")
 
     def test_pick_joke_skips_joke_exceeding_char_limit(self):
         """pick_joke skips jokes that are too long and retries for a short one."""

@@ -167,6 +167,20 @@ security/static analysis and code scanning alerts on pull requests and main
 branch updates. Keep configuration minimal initially, then tune query packs and
 exclusions only if noise is observed.
 
+---
+
+### 5.18 Add Syrsly as an additional backup provider ✓ Complete
+**Priority: Medium**
+
+Issue #8 requested adding Syrsly (`https://www.syrsly.com/joke`) as an
+additional provider. Implementation uses `https://www.syrsly.com/joke/dad`
+as a family-friendly backup source. Added `fetch_from_syrsly()` and registered
+`syrsly` in `PROVIDERS` and `BACKUP_PROVIDERS` (ahead of API Ninjas and the
+offline jokebook fallback). Added provider tests and env/README documentation.
+
+Because the endpoint can return BOM-prefixed and HTML-escaped text, posting
+sanitisation now strips leading UTF-8 BOM markers before final normalisation.
+
 ## 6. Explicit "Will Not Do" Decisions
 Do not revisit these without a concrete operational reason.
 
@@ -206,3 +220,4 @@ Do not revisit these without a concrete operational reason.
 - v1.11: Added missing workflow concurrency guards (5.10) to follow-fellows, follows-and-likes, and process-reports using the same `cancel-in-progress: false` safety model as post-joke.
 - v1.12: Added GroanDeck as a third primary provider (5.11). `fetch_from_groandeck()` added, all 33 categories reviewed and confirmed family-friendly. Primary rotation extended to `[icanhazdadjoke, jokeapi, groandeck]`.
 - v1.13: Added pre-post length guard (5.13). `pick_joke()` now skips over-long jokes before API send, retries within provider attempts, and falls through provider chain when necessary.
+- v1.14: Added Syrsly as a backup provider (5.18) using the dad-joke endpoint, plus BOM sanitisation hardening for provider text normalisation.

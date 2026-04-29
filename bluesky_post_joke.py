@@ -1,4 +1,5 @@
 import base64
+import html
 import os
 import random
 import time
@@ -22,6 +23,7 @@ HASHTAGS = ["#jokes", "#dadjoke", "#funny"]
 _HASHTAG_SUFFIX_LEN = 2 + len(" ".join(HASHTAGS))  # 2 newlines + tag string
 _MAX_JOKE_CHARS = BLUESKY_MAX_POST_CHARS - _HASHTAG_SUFFIX_LEN
 _MOJIBAKE_MARKERS = ("Ã", "Â", "â", "ð", "\x80", "\x99")
+_HTML_UNESCAPE_PASSES = 3
 
 
 def get_fallback_joke():
@@ -41,6 +43,15 @@ def get_current_epoch():
 def sanitise_joke_text(joke: str) -> str:
     """Repair common mojibake and normalise quote punctuation for posting."""
     cleaned = joke.replace("\r\n", "\n").replace("\r", "\n").strip()
+    cleaned = cleaned.lstrip("\ufeff")
+
+    # Decode HTML entities from provider payloads (for example, '&#039;').
+    # Use bounded passes so doubly escaped forms like '&amp;#039;' are fixed.
+    for _ in range(_HTML_UNESCAPE_PASSES):
+        unescaped = html.unescape(cleaned)
+        if unescaped == cleaned:
+            break
+        cleaned = unescaped
 
     # Repair common UTF-8 text that was accidentally decoded as Latin-1.
     if any(marker in cleaned for marker in _MOJIBAKE_MARKERS):
