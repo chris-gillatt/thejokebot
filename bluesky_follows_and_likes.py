@@ -1,4 +1,4 @@
-"""Follow back new followers and like replies to the bot's posts."""
+"""Follow back new followers and like reply/repost interactions."""
 
 from __future__ import annotations
 
@@ -17,6 +17,7 @@ from bluesky_follower_utils import fetch_paginated_data
 _DEFAULT_LIKE_MAX_PAGES = 5
 _DEFAULT_LIKE_PAGE_LIMIT = 100
 _LIKE_WINDOW_SECONDS = 24 * 60 * 60  # only like replies from the last 24 hours
+_LIKE_REASONS = ("reply", "repost")
 
 
 # ---------------------------------------------------------------------------
@@ -81,7 +82,7 @@ def _get_value(obj, *path):
 
 
 def like_replies(client, state: dict, dry_run: bool, action_delay_seconds: float) -> int:
-    """Like replies to the bot's posts from the last 24 hours.
+    """Like replies/reposts of the bot's posts from the last 24 hours.
 
     Notifications older than _LIKE_WINDOW_SECONDS are skipped. Already-liked
     URIs (tracked in state) are also skipped. State is saved after each page
@@ -104,13 +105,13 @@ def like_replies(client, state: dict, dry_run: bool, action_delay_seconds: float
                     params={
                         "cursor": cursor,
                         "limit": page_limit,
-                        "reasons": ["reply"],
+                        "reasons": list(_LIKE_REASONS),
                     }
                 ),
-                description="listing reply notifications",
+                description="listing interaction notifications",
             )
         except (requests.RequestException, TimeoutError, atproto_client.exceptions.NetworkError) as exc:
-            print(f"{Fore.RED}Failed to fetch reply notifications: {exc}{Style.RESET_ALL}")
+            print(f"{Fore.RED}Failed to fetch interaction notifications: {exc}{Style.RESET_ALL}")
             break
 
         notifications = _get_value(response, "notifications") or []
@@ -119,7 +120,7 @@ def like_replies(client, state: dict, dry_run: bool, action_delay_seconds: float
 
         for notification in notifications:
             reason = _get_value(notification, "reason")
-            if reason != "reply":
+            if reason not in _LIKE_REASONS:
                 continue
 
             # Parse indexed_at to epoch for age check.
@@ -153,14 +154,16 @@ def like_replies(client, state: dict, dry_run: bool, action_delay_seconds: float
                 continue
 
             if dry_run:
-                print(f"{Fore.YELLOW}[DRY-RUN] Would like reply: {uri}{Style.RESET_ALL}")
+                print(
+                    f"{Fore.YELLOW}[DRY-RUN] Would like {reason}: {uri}{Style.RESET_ALL}"
+                )
             else:
                 try:
                     retry_network_call(
                         lambda: client.like(uri=uri, cid=cid),
-                        description=f"liking reply {uri}",
+                        description=f"liking {reason} {uri}",
                     )
-                    print(f"{Fore.GREEN}Liked reply: {uri}{Style.RESET_ALL}")
+                    print(f"{Fore.GREEN}Liked {reason}: {uri}{Style.RESET_ALL}")
                 except (requests.RequestException, TimeoutError, atproto_client.exceptions.NetworkError) as exc:
                     print(f"{Fore.RED}Failed to like {uri}: {exc}{Style.RESET_ALL}")
                     continue
@@ -223,9 +226,12 @@ def main() -> None:
 
     try:
         liked = like_replies(client, state, dry_run, action_delay_seconds)
-        print(f"{Fore.GREEN}Liked {liked} new repl{'y' if liked == 1 else 'ies'}.{Style.RESET_ALL}")
+        print(
+            f"{Fore.GREEN}Liked {liked} new interaction"
+            f"{'s' if liked != 1 else ''}.{Style.RESET_ALL}"
+        )
     except (ValueError, requests.RequestException, TimeoutError, atproto_client.exceptions.NetworkError) as exc:
-        print(f"{Fore.RED}Reply liking failed: {exc}{Style.RESET_ALL}")
+        print(f"{Fore.RED}Interaction liking failed: {exc}{Style.RESET_ALL}")
 
     bluesky_state.save_state(state)
     print(f"{Fore.GREEN}Done.{Style.RESET_ALL}")

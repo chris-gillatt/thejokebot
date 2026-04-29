@@ -12,6 +12,7 @@ import bluesky_create_report_prs
 import bluesky_denylist
 import bluesky_follower_utils
 import bluesky_follow_fellows
+import bluesky_follows_and_likes
 import bluesky_joke_providers
 import bluesky_post_joke
 import bluesky_process_reports
@@ -661,6 +662,133 @@ class VerificationHelperTests(unittest.TestCase):
 
 
 class LikeRepliesTests(unittest.TestCase):
+    def test_like_replies_likes_fresh_repost(self):
+        now = dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00", "Z")
+        notification = SimpleNamespace(
+            reason="repost",
+            indexed_at=now,
+            uri="at://did:plc:abc/app.bsky.feed.repost/1",
+            cid="cid-repost-1",
+            record=SimpleNamespace(text="Reposting this one"),
+        )
+        response = SimpleNamespace(notifications=[notification], cursor=None)
+
+        state = bluesky_state._default_state()
+        client = mock.Mock()
+        client.app.bsky.notification.list_notifications.return_value = response
+
+        with mock.patch(
+            "bluesky_follows_and_likes.retry_network_call",
+            side_effect=lambda fn, description: fn(),
+        ):
+            with mock.patch("bluesky_state.save_state"):
+                liked_count = bluesky_follows_and_likes.like_replies(
+                    client,
+                    state,
+                    dry_run=True,
+                    action_delay_seconds=0,
+                )
+
+        self.assertEqual(liked_count, 1)
+        self.assertIn(
+            "at://did:plc:abc/app.bsky.feed.repost/1",
+            bluesky_state.get_liked_reply_uris(state),
+        )
+        call_params = client.app.bsky.notification.list_notifications.call_args.kwargs["params"]
+        self.assertIn("repost", call_params["reasons"])
+
+    def test_like_replies_skips_duplicate_repost(self):
+        now = dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00", "Z")
+        uri = "at://did:plc:abc/app.bsky.feed.repost/duplicate"
+        notification = SimpleNamespace(
+            reason="repost",
+            indexed_at=now,
+            uri=uri,
+            cid="cid-duplicate",
+            record=SimpleNamespace(text="Seen repost"),
+        )
+        response = SimpleNamespace(notifications=[notification], cursor=None)
+
+        state = bluesky_state._default_state()
+        bluesky_state.record_liked_reply_uri(state, uri)
+        client = mock.Mock()
+        client.app.bsky.notification.list_notifications.return_value = response
+
+        with mock.patch(
+            "bluesky_follows_and_likes.retry_network_call",
+            side_effect=lambda fn, description: fn(),
+        ):
+            with mock.patch("bluesky_state.save_state"):
+                liked_count = bluesky_follows_and_likes.like_replies(
+                    client,
+                    state,
+                    dry_run=True,
+                    action_delay_seconds=0,
+                )
+
+        self.assertEqual(liked_count, 0)
+        self.assertEqual(len(bluesky_state.get_liked_reply_uris(state)), 1)
+
+    def test_like_replies_skips_stale_repost(self):
+        old = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=25)).isoformat().replace("+00:00", "Z")
+        notification = SimpleNamespace(
+            reason="repost",
+            indexed_at=old,
+            uri="at://did:plc:abc/app.bsky.feed.repost/old",
+            cid="cid-old",
+            record=SimpleNamespace(text="Old repost"),
+        )
+        response = SimpleNamespace(notifications=[notification], cursor=None)
+
+        state = bluesky_state._default_state()
+        client = mock.Mock()
+        client.app.bsky.notification.list_notifications.return_value = response
+
+        with mock.patch(
+            "bluesky_follows_and_likes.retry_network_call",
+            side_effect=lambda fn, description: fn(),
+        ):
+            with mock.patch("bluesky_state.save_state"):
+                liked_count = bluesky_follows_and_likes.like_replies(
+                    client,
+                    state,
+                    dry_run=True,
+                    action_delay_seconds=0,
+                )
+
+        self.assertEqual(liked_count, 0)
+        self.assertEqual(len(bluesky_state.get_liked_reply_uris(state)), 0)
+
+    def test_like_replies_skips_repost_with_report_tag(self):
+        now = dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00", "Z")
+        notification = SimpleNamespace(
+            reason="repost",
+            indexed_at=now,
+            uri="at://did:plc:abc/app.bsky.feed.repost/report",
+            cid="cid-report",
+            record=SimpleNamespace(text="Please see #report"),
+        )
+        response = SimpleNamespace(notifications=[notification], cursor=None)
+
+        state = bluesky_state._default_state()
+        client = mock.Mock()
+        client.app.bsky.notification.list_notifications.return_value = response
+
+        with mock.patch(
+            "bluesky_follows_and_likes.retry_network_call",
+            side_effect=lambda fn, description: fn(),
+        ):
+            with mock.patch("bluesky_state.save_state"):
+                liked_count = bluesky_follows_and_likes.like_replies(
+                    client,
+                    state,
+                    dry_run=True,
+                    action_delay_seconds=0,
+                )
+
+        self.assertEqual(liked_count, 0)
+        self.assertEqual(len(bluesky_state.get_liked_reply_uris(state)), 0)
+
     def test_reply_with_report_tag_is_skipped(self):
         """Ensure #report replies are not liked."""
         reply_text = "This joke is bad #report"
