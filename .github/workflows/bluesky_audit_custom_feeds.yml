@@ -71,10 +71,10 @@ jobs:
                       f"- {feed.get('name', 'Unnamed')}: {feed.get('matches', 0)} match(es), "
                       f"{feed.get('coverage_pct', 0.0)}%, status={feed.get('status', 'unknown')}"
                   )
-            summary_path = os.environ.get('GITHUB_STEP_SUMMARY')
-            if not summary_path:
+          summary_path = os.environ.get('GITHUB_STEP_SUMMARY')
+          if not summary_path:
               raise SystemExit('GITHUB_STEP_SUMMARY is not set.')
-            Path(summary_path).write_text('\n'.join(lines) + '\n', encoding='utf-8')
+          Path(summary_path).write_text('\n'.join(lines) + '\n', encoding='utf-8')
           PY
 
       - name: Upload custom-feed audit artifact
