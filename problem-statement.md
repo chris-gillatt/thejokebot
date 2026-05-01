@@ -99,7 +99,7 @@ tests added.
 
 ---
 
-### 5.12 Investigate HumorAPI as new backup joke provider
+### 5.12 Investigate HumorAPI as new backup joke provider ✗ Will Not Do
 **Priority: Medium**
 
 HumorAPI (`https://api.humorapi.com/jokes/random`) has an `exclude-tags=nsfw,dark`
@@ -110,6 +110,9 @@ usage. Fits naturally as a backup provider alongside `api_ninjas`. Assess whethe
 the joke pool is suitably family-friendly and add `HUMORAPI_API_KEY` env var, a
 `fetch_from_humorapi()` function, and README/`.env.example` documentation if it
 passes review.
+
+**Decision:** Do not implement HumorAPI integration due to terms-and-conditions
+concerns around permitted use/storage of joke content for this endpoint.
 
 ---
 
@@ -228,6 +231,7 @@ Do not revisit these without a concrete operational reason.
 | Rewrite scripts as async | Will not do | No throughput requirement justifies complexity increase. |
 | Redesign workflow schedules by default | Will not do | Current cadence works; change only for observed operational need. |
 | Remove base64 encoding from state payloads | Will not do | Prevents fragile comparisons and avoids indexing raw joke text. |
+| Integrate HumorAPI provider | Will not do | Terms-and-conditions concerns around permitted use/storage of joke content for this endpoint. |
 
 ## 7. Completed Milestones (Condensed)
 - Multi-provider joke chain implemented with offline last resort (`jokebot_jokebook`).
@@ -264,6 +268,7 @@ Do not revisit these without a concrete operational reason.
 - v1.17: Completed repo-wide Ruff formatting pass and switched `ruff_quality` format validation to strict enforcement (removed advisory mode), so formatting drift now fails CI.
 - v1.18: Added baseline GitHub CodeQL scanning (5.17) via `.github/workflows/codeql.yml` for Python on pull requests, `main` updates, weekly schedule, and manual dispatch.
 - v1.19: Completed grapheme-aware post-length preflight (5.14) in `bluesky_post_joke.py` using `regex` grapheme-cluster counting so composed characters are measured by visible units instead of code points.
+- v1.20: Marked HumorAPI integration (5.12) as will-not-do due to terms-and-conditions concerns around content use/storage for that endpoint.
 
 ## 9. Whole-Project Code Review Findings
 
