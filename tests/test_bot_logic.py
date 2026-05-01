@@ -21,6 +21,7 @@ import bluesky_process_reports
 import bluesky_state
 import bluesky_unfollow
 import bluesky_verify_latest_joke_post
+from bluesky_follower_utils import extract_list_member_did
 
 
 class RuntimeControlTests(unittest.TestCase):
@@ -202,15 +203,131 @@ class StarterPackManagerTests(unittest.TestCase):
 
     def test_extract_list_member_did_from_subject_forms(self):
         self.assertEqual(
-            bluesky_manage_starter_pack.extract_list_member_did({"subject": "did:plc:x"}),
+            extract_list_member_did({"subject": "did:plc:x"}),
             "did:plc:x",
         )
         self.assertEqual(
-            bluesky_manage_starter_pack.extract_list_member_did(
-                {"subject": {"did": "did:plc:y"}}
-            ),
+            extract_list_member_did({"subject": {"did": "did:plc:y"}}),
             "did:plc:y",
         )
+
+    def test_upsert_raises_on_invalid_starter_pack_uri(self):
+        client = mock.Mock()
+        client.me.did = "did:plc:test"
+
+        with self.assertRaises(ValueError):
+            bluesky_manage_starter_pack.upsert_starter_pack_record(
+                client,
+                {
+                    "name": "Pack",
+                    "description": "Desc",
+                    "starter_pack_uri": "not-an-at-uri",
+                    "record_key": "",
+                },
+                source_list_uri="at://did:plc:test/app.bsky.graph.list/3abc",
+                dry_run=False,
+            )
+
+    def test_upsert_raises_on_did_mismatch(self):
+        client = mock.Mock()
+        client.me.did = "did:plc:actual"
+
+        with self.assertRaises(ValueError):
+            bluesky_manage_starter_pack.upsert_starter_pack_record(
+                client,
+                {
+                    "name": "Pack",
+                    "description": "Desc",
+                    "starter_pack_uri": (
+                        "at://did:plc:other/app.bsky.graph.starterpack/3mkrjdntf7x2l"
+                    ),
+                    "record_key": "",
+                },
+                source_list_uri="at://did:plc:actual/app.bsky.graph.list/3abc",
+                dry_run=False,
+            )
+
+    def test_upsert_uses_put_record_for_valid_starter_pack_uri(self):
+        client = mock.Mock()
+        client.me.did = "did:plc:test"
+
+        with mock.patch(
+            "bluesky_manage_starter_pack.retry_network_call",
+            side_effect=lambda call, description: call(),
+        ):
+            result = bluesky_manage_starter_pack.upsert_starter_pack_record(
+                client,
+                {
+                    "name": "Pack",
+                    "description": "Desc",
+                    "starter_pack_uri": (
+                        "at://did:plc:test/app.bsky.graph.starterpack/3mkrjdntf7x2l"
+                    ),
+                    "record_key": "",
+                },
+                source_list_uri="at://did:plc:test/app.bsky.graph.list/3abc",
+                dry_run=False,
+            )
+
+        self.assertEqual(
+            result,
+            "at://did:plc:test/app.bsky.graph.starterpack/3mkrjdntf7x2l",
+        )
+        client.com.atproto.repo.put_record.assert_called_once()
+        client.com.atproto.repo.create_record.assert_not_called()
+
+    def test_upsert_uses_create_record_when_no_target_configured(self):
+        client = mock.Mock()
+        client.me.did = "did:plc:test"
+        client.com.atproto.repo.create_record.return_value = SimpleNamespace(
+            uri="at://did:plc:test/app.bsky.graph.starterpack/3xyzxyzxyzxyz"
+        )
+
+        with mock.patch(
+            "bluesky_manage_starter_pack.retry_network_call",
+            side_effect=lambda call, description: call(),
+        ):
+            result = bluesky_manage_starter_pack.upsert_starter_pack_record(
+                client,
+                {
+                    "name": "Pack",
+                    "description": "Desc",
+                    "starter_pack_uri": "",
+                    "record_key": "",
+                },
+                source_list_uri="at://did:plc:test/app.bsky.graph.list/3abc",
+                dry_run=False,
+            )
+
+        self.assertEqual(
+            result,
+            "at://did:plc:test/app.bsky.graph.starterpack/3xyzxyzxyzxyz",
+        )
+        client.com.atproto.repo.create_record.assert_called_once()
+        client.com.atproto.repo.put_record.assert_not_called()
+
+    def test_upsert_dry_run_returns_target_uri_without_writing(self):
+        client = mock.Mock()
+        client.me.did = "did:plc:test"
+
+        result = bluesky_manage_starter_pack.upsert_starter_pack_record(
+            client,
+            {
+                "name": "Pack",
+                "description": "Desc",
+                "starter_pack_uri": "at://did:plc:test/app.bsky.graph.starterpack/3mkrjdntf7x2l",
+                "record_key": "",
+            },
+            source_list_uri="at://did:plc:test/app.bsky.graph.list/3abc",
+            dry_run=True,
+        )
+
+        self.assertEqual(
+            result,
+            "at://did:plc:test/app.bsky.graph.starterpack/3mkrjdntf7x2l",
+        )
+        client.com.atproto.repo.put_record.assert_not_called()
+        client.com.atproto.repo.create_record.assert_not_called()
 
 
 class StateProviderRotationTests(unittest.TestCase):

@@ -5,7 +5,11 @@ import pathlib
 import requests
 import atproto_client.exceptions
 from colorama import Fore, Style
-from bluesky_follower_utils import fetch_paginated_data
+from bluesky_follower_utils import (
+    extract_list_member_did,
+    fetch_list_member_dids,
+    fetch_paginated_data,
+)
 from bluesky_common import login_client, get_runtime_controls, retry_network_call
 import bluesky_state as _state
 
@@ -86,18 +90,7 @@ def _is_rate_limited_error(exc):
 
 
 def _extract_list_member_did(item):
-    subject = getattr(item, "subject", None)
-    if subject is None and isinstance(item, dict):
-        subject = item.get("subject")
-
-    if isinstance(subject, str) and subject.startswith("did:"):
-        return subject.strip()
-
-    did = getattr(subject, "did", None)
-    if did is None and isinstance(subject, dict):
-        did = subject.get("did")
-
-    return str(did or "").strip()
+    return extract_list_member_did(item)
 
 
 def _load_source_list_uri(config_path=_STARTER_PACK_CONFIG_PATH):
@@ -124,35 +117,11 @@ def _load_source_list_uri(config_path=_STARTER_PACK_CONFIG_PATH):
 
 
 def _fetch_list_member_dids(client, list_uri):
-    dids = set()
-    cursor = None
-
-    while True:
-        params = {"list": list_uri, "limit": 100}
-        if cursor:
-            params["cursor"] = cursor
-
-        response = retry_network_call(
-            lambda: client.app.bsky.graph.get_list(params),
-            description="fetching protected starter-pack list members",
-        )
-
-        items = getattr(response, "items", None)
-        if items is None and isinstance(response, dict):
-            items = response.get("items", [])
-
-        for item in items or []:
-            did = _extract_list_member_did(item)
-            if did:
-                dids.add(did)
-
-        cursor = getattr(response, "cursor", None)
-        if cursor is None and isinstance(response, dict):
-            cursor = response.get("cursor")
-        if not cursor:
-            break
-
-    return dids
+    return fetch_list_member_dids(
+        client,
+        list_uri,
+        description="fetching protected starter-pack list members",
+    )
 
 def unfollow_users():
     # List of usernames to ignore (configurable via BLUESKY_UNFOLLOW_IGNORE env var)

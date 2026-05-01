@@ -11,9 +11,11 @@ import atproto_client.exceptions
 import requests
 
 from bluesky_common import get_runtime_controls, login_client, retry_network_call
-from bluesky_follower_utils import fetch_paginated_data
+from bluesky_follower_utils import fetch_list_member_dids, fetch_paginated_data
 
 _CONFIG_PATH = pathlib.Path(__file__).parent / "resources" / "jokebot_starter_pack.json"
+_STARTERPACK_COLLECTION = "app.bsky.graph.starterpack"
+_AT_URI_PATTERN = re.compile(r"^at://([^/]+)/([^/]+)/([^/]+)$")
 
 
 def load_starter_pack_config() -> dict:
@@ -24,7 +26,7 @@ def load_starter_pack_config() -> dict:
             "name": "The Joke Bot Funnies",
             "description": "Starter pack built from The Joke Bot's Funnies list.",
             "source_list_uri": "",
-            "record_key": "the-joke-bot-funnies",
+            "record_key": "",
             "starter_pack_uri": "",
             "sync": {
                 "follow_list_members": True,
@@ -86,55 +88,6 @@ def load_starter_pack_config() -> dict:
     return default
 
 
-def extract_list_member_did(item) -> str:
-    """Extract a DID from a getList item payload."""
-    subject = getattr(item, "subject", None)
-    if subject is None and isinstance(item, dict):
-        subject = item.get("subject")
-
-    if isinstance(subject, str) and subject.startswith("did:"):
-        return subject.strip()
-
-    did = getattr(subject, "did", None)
-    if did is None and isinstance(subject, dict):
-        did = subject.get("did")
-
-    return str(did or "").strip()
-
-
-def fetch_list_member_dids(client, list_uri: str) -> set[str]:
-    """Return all DIDs from a Bluesky list URI."""
-    dids: set[str] = set()
-    cursor = None
-
-    while True:
-        params = {"list": list_uri, "limit": 100}
-        if cursor:
-            params["cursor"] = cursor
-
-        resp = retry_network_call(
-            lambda: client.app.bsky.graph.get_list(params),
-            description="fetching source list members",
-        )
-
-        items = getattr(resp, "items", None)
-        if items is None and isinstance(resp, dict):
-            items = resp.get("items", [])
-
-        for item in items or []:
-            did = extract_list_member_did(item)
-            if did:
-                dids.add(did)
-
-        cursor = getattr(resp, "cursor", None)
-        if cursor is None and isinstance(resp, dict):
-            cursor = resp.get("cursor")
-        if not cursor:
-            break
-
-    return dids
-
-
 def _build_starter_pack_record(starter_cfg: dict, source_list_uri: str) -> dict:
     return {
         "$type": "app.bsky.graph.starterpack",
@@ -151,9 +104,15 @@ def _looks_like_tid(value: str) -> bool:
     return bool(re.fullmatch(r"[234567abcdefghijklmnopqrstuvwxyz]{13}", value))
 
 
-def _extract_rkey_from_uri(uri: str) -> str:
-    parts = [p for p in uri.strip().split("/") if p]
-    return parts[-1] if parts else ""
+def _parse_at_uri(uri: str) -> dict | None:
+    match = _AT_URI_PATTERN.fullmatch(uri.strip())
+    if not match:
+        return None
+    return {
+        "did": match.group(1),
+        "collection": match.group(2),
+        "rkey": match.group(3),
+    }
 
 
 def upsert_starter_pack_record(client, starter_cfg: dict, source_list_uri: str, dry_run: bool):
@@ -167,13 +126,24 @@ def upsert_starter_pack_record(client, starter_cfg: dict, source_list_uri: str, 
     target_uri = ""
     use_put_record = False
 
-    if configured_uri.startswith("at://"):
-        target_rkey = _extract_rkey_from_uri(configured_uri)
+    if configured_uri:
+        parsed_uri = _parse_at_uri(configured_uri)
+        if not parsed_uri:
+            raise ValueError("starter_pack_uri must be a valid at:// URI.")
+        if parsed_uri["did"] != repo_did:
+            raise ValueError(
+                "starter_pack_uri DID must match the authenticated account DID."
+            )
+        if parsed_uri["collection"] != _STARTERPACK_COLLECTION:
+            raise ValueError(
+                "starter_pack_uri must target app.bsky.graph.starterpack."
+            )
+        target_rkey = parsed_uri["rkey"]
         target_uri = configured_uri
-        use_put_record = bool(target_rkey)
+        use_put_record = True
     elif _looks_like_tid(configured_rkey):
         target_rkey = configured_rkey
-        target_uri = f"at://{repo_did}/app.bsky.graph.starterpack/{target_rkey}"
+        target_uri = f"at://{repo_did}/{_STARTERPACK_COLLECTION}/{target_rkey}"
         use_put_record = True
 
     if dry_run:
@@ -188,7 +158,7 @@ def upsert_starter_pack_record(client, starter_cfg: dict, source_list_uri: str, 
             lambda: client.com.atproto.repo.put_record(
                 {
                     "repo": repo_did,
-                    "collection": "app.bsky.graph.starterpack",
+                    "collection": _STARTERPACK_COLLECTION,
                     "rkey": target_rkey,
                     "record": record,
                 }
@@ -200,7 +170,7 @@ def upsert_starter_pack_record(client, starter_cfg: dict, source_list_uri: str, 
             lambda: client.com.atproto.repo.create_record(
                 {
                     "repo": repo_did,
-                    "collection": "app.bsky.graph.starterpack",
+                    "collection": _STARTERPACK_COLLECTION,
                     "record": record,
                 }
             ),
@@ -210,6 +180,9 @@ def upsert_starter_pack_record(client, starter_cfg: dict, source_list_uri: str, 
     created_uri = getattr(resp, "uri", None)
     if created_uri is None and isinstance(resp, dict):
         created_uri = resp.get("uri")
+
+    if use_put_record:
+        return target_uri
 
     if created_uri and not use_put_record:
         print(
