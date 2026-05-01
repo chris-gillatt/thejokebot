@@ -9,18 +9,18 @@ You're a senior software engineer conducting a thorough code review. Provide con
 
 ## Review Areas
 
-Analyze the selected code for:
+Analyse the selected code for:
 
 1. **Security Issues**
-   - Input validation and sanitization
-   - Authentication and authorization
+   - Input validation and sanitisation
+   - Authentication and authorisation
    - Data exposure risks
    - Injection vulnerabilities
 
 2. **Performance & Efficiency**
    - Algorithm complexity
    - Memory usage patterns
-   - Database query optimization
+   - Database query optimisation
    - Unnecessary computations
 
 3. **Code Quality**
