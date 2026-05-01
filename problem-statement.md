@@ -164,13 +164,19 @@ Python 3.12 and runs non-invasive checks only: `ruff check .` and
 
 ---
 
-### 5.17 Add GitHub CodeQL analysis workflow
+### 5.17 Add GitHub CodeQL analysis workflow ✓ Complete
 **Priority: Medium**
 
 Add a standard GitHub CodeQL workflow for Python to provide free baseline
 security/static analysis and code scanning alerts on pull requests and main
 branch updates. Keep configuration minimal initially, then tune query packs and
 exclusions only if noise is observed.
+
+**Resolution:** Added `.github/workflows/codeql.yml` using GitHub's standard
+CodeQL actions for Python (`init`, `autobuild`, `analyze`) with
+`pull_request`, `push` (`main`), weekly schedule, and manual dispatch triggers.
+Permissions are scoped to `actions: read`, `contents: read`, and
+`security-events: write`. README workflow status table updated with CodeQL badge.
 
 ---
 
@@ -250,6 +256,7 @@ Do not revisit these without a concrete operational reason.
 - v1.15: Hardened starter-pack update path (5.19 follow-on): full AT URI validation with DID and collection enforcement; removed misleading slug default for `record_key`; shared list-member DID helpers moved to `bluesky_follower_utils`; 5 new regression tests. Prompt file added for reusable code review. Suite at 105 passing.
 - v1.16: Added Ruff code-quality CI checks (5.16) via `.github/workflows/ruff_quality.yml` with non-invasive lint/format validation (`ruff check .`, `ruff format --check .`) on pull requests and `main` updates. README local validation guidance updated to match.
 - v1.17: Completed repo-wide Ruff formatting pass and switched `ruff_quality` format validation to strict enforcement (removed advisory mode), so formatting drift now fails CI.
+- v1.18: Added baseline GitHub CodeQL scanning (5.17) via `.github/workflows/codeql.yml` for Python on pull requests, `main` updates, weekly schedule, and manual dispatch.
 
 ## 9. Whole-Project Code Review Findings
 
