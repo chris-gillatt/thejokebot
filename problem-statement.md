@@ -148,13 +148,20 @@ tests covering combining-mark edge cases and updated dependencies.
 
 ---
 
-### 5.15 Add operational hygiene for stale unfollow ignore handles
+### 5.15 Add operational hygiene for stale unfollow ignore handles ✓ Complete
 **Priority: Low**
 
 `BLUESKY_UNFOLLOW_IGNORE` can accumulate handles that no longer resolve
 (`Profile not found`), which now degrades gracefully but still adds noisy logs.
 Add a lightweight maintenance task/runbook step to periodically validate ignore
 handles and prune stale entries in GitHub Actions secrets.
+
+**Resolution:** Added `bluesky_validate_unfollow_ignore.py` to resolve
+`BLUESKY_UNFOLLOW_IGNORE` handles and report stale entries with deterministic
+output. Added workflow `.github/workflows/bluesky_validate_unfollow_ignore.yml`
+for monthly and manual validation runs using existing Bluesky credentials. Script
+defaults to failing when stale handles are detected so repository secrets/vars can
+be pruned promptly.
 
 ---
 
@@ -269,6 +276,7 @@ Do not revisit these without a concrete operational reason.
 - v1.18: Added baseline GitHub CodeQL scanning (5.17) via `.github/workflows/codeql.yml` for Python on pull requests, `main` updates, weekly schedule, and manual dispatch.
 - v1.19: Completed grapheme-aware post-length preflight (5.14) in `bluesky_post_joke.py` using `regex` grapheme-cluster counting so composed characters are measured by visible units instead of code points.
 - v1.20: Marked HumorAPI integration (5.12) as will-not-do due to terms-and-conditions concerns around content use/storage for that endpoint.
+- v1.21: Completed stale ignore-handle hygiene (5.15) by adding a dedicated validator script and monthly/manual workflow to surface and prune unresolved `BLUESKY_UNFOLLOW_IGNORE` entries.
 
 ## 9. Whole-Project Code Review Findings
 

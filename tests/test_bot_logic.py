@@ -20,6 +20,7 @@ import bluesky_post_joke
 import bluesky_process_reports
 import bluesky_state
 import bluesky_unfollow
+import bluesky_validate_unfollow_ignore
 import bluesky_verify_latest_joke_post
 from bluesky_follower_utils import extract_list_member_did
 
@@ -168,6 +169,38 @@ class UnfollowControlTests(unittest.TestCase):
         )
         self.assertFalse(
             bluesky_unfollow._is_rate_limited_error(RuntimeError("Connection timeout"))
+        )
+
+
+class UnfollowIgnoreValidationTests(unittest.TestCase):
+    def test_parse_ignore_handles_deduplicates_and_sorts(self):
+        handles = bluesky_validate_unfollow_ignore.parse_ignore_handles(
+            " Example.Bsky.Social ,foo.bsky.social,foo.bsky.social",
+            default_handles=(),
+        )
+        self.assertEqual(handles, ["example.bsky.social", "foo.bsky.social"])
+
+    def test_extract_profile_did_supports_object_and_dict(self):
+        object_profile = SimpleNamespace(did="did:plc:abc")
+        dict_profile = {"did": "did:plc:def"}
+
+        self.assertEqual(
+            bluesky_validate_unfollow_ignore.extract_profile_did(object_profile),
+            "did:plc:abc",
+        )
+        self.assertEqual(
+            bluesky_validate_unfollow_ignore.extract_profile_did(dict_profile),
+            "did:plc:def",
+        )
+
+    def test_is_stale_resolution_error_detects_not_found_text(self):
+        exc = RuntimeError("Profile not found")
+        self.assertTrue(bluesky_validate_unfollow_ignore.is_stale_resolution_error(exc))
+
+    def test_is_stale_resolution_error_ignores_unrelated_error(self):
+        exc = RuntimeError("temporary network timeout")
+        self.assertFalse(
+            bluesky_validate_unfollow_ignore.is_stale_resolution_error(exc)
         )
 
     def test_unfollow_users_skips_bad_profile_lookup_error(self):
