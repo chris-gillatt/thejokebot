@@ -43,6 +43,11 @@ If you prefer a direct one-liner without the helper script:
 
 - `.venv/bin/python -m pytest tests/ -v --tb=short`
 
+For local code-quality checks aligned with CI:
+
+- `.venv/bin/ruff check .`
+- `.venv/bin/ruff format --check .`
+
 ## Environment variables
 
 Set these in `.env` (keep values quoted):

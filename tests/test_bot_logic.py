@@ -699,7 +699,9 @@ class JokeProviderTests(unittest.TestCase):
         self.assertEqual(bluesky_joke_providers.BACKUP_PROVIDERS[-1], "jokebot_jokebook")
 
     def test_fetch_from_jokebot_jokebook_returns_decoded_joke(self):
-        import base64, json, unittest.mock as umock
+        import base64
+        import json
+        import unittest.mock as umock
         joke_text = "Why did the chicken cross the road?\n\nTo get to the other side."
         encoded = base64.b64encode(joke_text.encode()).decode()
         fake_data = json.dumps({"jokes": [encoded]})
@@ -719,7 +721,8 @@ class JokeProviderTests(unittest.TestCase):
                 bluesky_joke_providers.fetch_from_jokebot_jokebook()
 
     def test_fetch_from_jokebot_jokebook_raises_on_empty_list(self):
-        import json, unittest.mock as umock
+        import json
+        import unittest.mock as umock
         fake_data = json.dumps({"jokes": []})
         mock_path = umock.MagicMock()
         mock_path.exists.return_value = True

@@ -149,13 +149,21 @@ handles and prune stale entries in GitHub Actions secrets.
 
 ---
 
-### 5.16 Add Ruff lint/format checks in CI
+### 5.16 Add Ruff lint/format checks in CI ✓ Complete
 **Priority: Medium**
 
 Add a lightweight code-quality workflow using Ruff for linting and format
 validation. Start in non-invasive mode (`ruff check` and `ruff format --check`)
 to surface issues in pull requests without broad refactors. Include a minimal
 `pyproject.toml` Ruff configuration only if needed for stable rule selection.
+
+**Resolution:** Added `.github/workflows/ruff_quality.yml` with
+`pull_request`, `push` (`main`), and manual dispatch triggers. The workflow uses
+Python 3.12 and runs non-invasive checks only: `ruff check .` and
+`ruff format --check .`. The format-check step is initially advisory
+(`continue-on-error: true`) so existing formatting drift is surfaced without
+forcing a broad reformat in the same change set. Added matching local validation
+commands to `README.md`.
 
 ---
 
@@ -243,6 +251,7 @@ Do not revisit these without a concrete operational reason.
 - v1.13: Added pre-post length guard (5.13). `pick_joke()` now skips over-long jokes before API send, retries within provider attempts, and falls through provider chain when necessary.
 - v1.14: Added Syrsly as a backup provider (5.18) using the dad-joke endpoint, plus BOM sanitisation hardening for provider text normalisation.
 - v1.15: Hardened starter-pack update path (5.19 follow-on): full AT URI validation with DID and collection enforcement; removed misleading slug default for `record_key`; shared list-member DID helpers moved to `bluesky_follower_utils`; 5 new regression tests. Prompt file added for reusable code review. Suite at 105 passing.
+- v1.16: Added Ruff code-quality CI checks (5.16) via `.github/workflows/ruff_quality.yml` with non-invasive lint/format validation (`ruff check .`, `ruff format --check .`) on pull requests and `main` updates. Format check is currently advisory to surface legacy drift without broad reformat churn. README local validation guidance updated to match.
 
 ## 9. Whole-Project Code Review Findings
 
