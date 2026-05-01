@@ -42,7 +42,7 @@ def follow_back(
         unfollowed_dids = set()
     user_did = client.me.did
     print(
-        f"{Fore.YELLOW}Fetching followers and following for user: {mask_sensitive(username)}{Style.RESET_ALL}"
+        f"{Fore.YELLOW}Fetching followers and following for account.{Style.RESET_ALL}"
     )
 
     followers = fetch_paginated_data(client.get_followers, user_did)
@@ -257,9 +257,7 @@ def main() -> None:
     try:
         print(f"{Fore.YELLOW}Logging in to Bluesky...{Style.RESET_ALL}")
         client, username = login_client()
-        print(
-            f"{Fore.GREEN}Successfully logged in as {mask_sensitive(username)}.{Style.RESET_ALL}"
-        )
+        print(f"{Fore.GREEN}Successfully logged in.{Style.RESET_ALL}")
     except (
         ValueError,
         requests.RequestException,

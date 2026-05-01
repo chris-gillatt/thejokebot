@@ -308,9 +308,7 @@ def main() -> int:
 
     try:
         client, username = login_client()
-        print(
-            f"Authenticated as {mask_sensitive(username)} ({mask_sensitive(client.me.did)})"
-        )
+        print("Authenticated successfully.")
 
         list_member_dids = fetch_list_member_dids(client, source_list_uri)
         print(f"Fetched {len(list_member_dids)} unique member DID(s) from source list.")

@@ -86,7 +86,7 @@ def main() -> int:
     print(f"Validating {len(handles)} ignore handle(s)...")
 
     client, username = login_client()
-    print(f"Logged in as {mask_sensitive(username)}")
+    print("Logged in successfully.")
 
     valid, stale, transient = resolve_handles(client, handles)
 

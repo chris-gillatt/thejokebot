@@ -97,9 +97,7 @@ def select_users(tag_users, tag_order, per_tag_limit, overall_limit):
 def main():
     print("Starting fellow-follow discovery script...")
     client, username = login_client()
-    print(
-        f"Authenticated as {mask_sensitive(client.me.did)} ({mask_sensitive(username)})"
-    )
+    print("Authenticated successfully.")
     controls = get_runtime_controls()
     dry_run = controls["dry_run"]
     action_delay_seconds = controls["action_delay_seconds"]

@@ -3,7 +3,7 @@ import datetime as dt
 import sys
 from typing import Optional
 
-from bluesky_common import login_client, mask_sensitive
+from bluesky_common import login_client
 
 DEFAULT_HASHTAGS = ("#jokes", "#dadjoke", "#funny")
 
@@ -76,9 +76,7 @@ def main() -> int:
     client, username = login_client()
     did = client.me.did
 
-    print(
-        f"Checking recent posts for {mask_sensitive(username)} ({mask_sensitive(did)})..."
-    )
+    print("Checking recent posts for account...")
 
     feed = client.get_author_feed(actor=did, limit=args.limit)
     now = dt.datetime.now(dt.timezone.utc)
@@ -121,7 +119,7 @@ def main() -> int:
 
     post_url = to_post_url(username, uri)
     if post_url:
-        print(f"Post URL: {mask_sensitive(post_url)}")
+        print("Post URL: [redacted]")
 
     return 0
 

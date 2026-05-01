@@ -158,7 +158,7 @@ def unfollow_users():
     try:
         user_did = client.me.did
         print(
-            f"{Fore.YELLOW}Fetching followers and following for user: {mask_sensitive(username)}{Style.RESET_ALL}"
+            f"{Fore.YELLOW}Fetching followers and following for account.{Style.RESET_ALL}"
         )
 
         # Fetch followers and following
