@@ -4,6 +4,7 @@ import argparse
 import datetime as dt
 import json
 import pathlib
+import re
 import time
 
 import atproto_client.exceptions
@@ -24,6 +25,7 @@ def load_starter_pack_config() -> dict:
             "description": "Starter pack built from The Joke Bot's Funnies list.",
             "source_list_uri": "",
             "record_key": "the-joke-bot-funnies",
+            "starter_pack_uri": "",
             "sync": {
                 "follow_list_members": True,
                 "upsert_record": True,
@@ -61,6 +63,9 @@ def load_starter_pack_config() -> dict:
             ).strip(),
             "record_key": str(
                 starter.get("record_key", default["starter_pack"]["record_key"])
+            ).strip(),
+            "starter_pack_uri": str(
+                starter.get("starter_pack_uri", default["starter_pack"]["starter_pack_uri"])
             ).strip(),
         }
     )
@@ -140,32 +145,79 @@ def _build_starter_pack_record(starter_cfg: dict, source_list_uri: str) -> dict:
     }
 
 
+def _looks_like_tid(value: str) -> bool:
+    # Starter-pack record keys are TIDs. This conservative pattern is enough
+    # to distinguish from friendly slug-like keys.
+    return bool(re.fullmatch(r"[234567abcdefghijklmnopqrstuvwxyz]{13}", value))
+
+
+def _extract_rkey_from_uri(uri: str) -> str:
+    parts = [p for p in uri.strip().split("/") if p]
+    return parts[-1] if parts else ""
+
+
 def upsert_starter_pack_record(client, starter_cfg: dict, source_list_uri: str, dry_run: bool):
     """Create/update starter-pack record in the bot's repo."""
     record = _build_starter_pack_record(starter_cfg, source_list_uri)
     repo_did = client.me.did
-    rkey = starter_cfg["record_key"]
-    at_uri = f"at://{repo_did}/app.bsky.graph.starterpack/{rkey}"
+    configured_uri = str(starter_cfg.get("starter_pack_uri") or "").strip()
+    configured_rkey = str(starter_cfg.get("record_key") or "").strip()
+
+    target_rkey = ""
+    target_uri = ""
+    use_put_record = False
+
+    if configured_uri.startswith("at://"):
+        target_rkey = _extract_rkey_from_uri(configured_uri)
+        target_uri = configured_uri
+        use_put_record = bool(target_rkey)
+    elif _looks_like_tid(configured_rkey):
+        target_rkey = configured_rkey
+        target_uri = f"at://{repo_did}/app.bsky.graph.starterpack/{target_rkey}"
+        use_put_record = True
 
     if dry_run:
-        print(f"[DRY-RUN] Would upsert starter-pack record: {at_uri}")
-        return at_uri
+        if use_put_record:
+            print(f"[DRY-RUN] Would update starter-pack record: {target_uri}")
+            return target_uri
+        print("[DRY-RUN] Would create starter-pack record (server-generated TID rkey).")
+        return ""
 
-    resp = retry_network_call(
-        lambda: client.com.atproto.repo.put_record(
-            {
-                "repo": repo_did,
-                "collection": "app.bsky.graph.starterpack",
-                "rkey": rkey,
-                "record": record,
-            }
-        ),
-        description="upserting starter-pack record",
-    )
+    if use_put_record:
+        resp = retry_network_call(
+            lambda: client.com.atproto.repo.put_record(
+                {
+                    "repo": repo_did,
+                    "collection": "app.bsky.graph.starterpack",
+                    "rkey": target_rkey,
+                    "record": record,
+                }
+            ),
+            description="upserting starter-pack record",
+        )
+    else:
+        resp = retry_network_call(
+            lambda: client.com.atproto.repo.create_record(
+                {
+                    "repo": repo_did,
+                    "collection": "app.bsky.graph.starterpack",
+                    "record": record,
+                }
+            ),
+            description="creating starter-pack record",
+        )
+
     created_uri = getattr(resp, "uri", None)
     if created_uri is None and isinstance(resp, dict):
         created_uri = resp.get("uri")
-    return created_uri or at_uri
+
+    if created_uri and not use_put_record:
+        print(
+            "Created starter-pack record with generated URI. "
+            "Persist this as starter_pack_uri in resources/jokebot_starter_pack.json "
+            "for deterministic future updates."
+        )
+    return created_uri or target_uri
 
 
 def ensure_following_list_members(

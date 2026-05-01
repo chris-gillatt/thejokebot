@@ -112,7 +112,8 @@ Configuration lives in `resources/jokebot_starter_pack.json`:
 
 - `enabled`: master switch for all starter-pack/list behaviour.
 - `source_list_uri`: source list used for conversion and protection.
-- `record_key`: starter-pack record key in the bot repo.
+- `starter_pack_uri`: preferred update target URI (set after first live creation).
+- `record_key`: optional TID rkey for explicit updates; leave blank unless you know the TID.
 - `sync.follow_list_members`: when enabled, manager script follows list members not already followed.
 - `sync.upsert_record`: when enabled, manager script updates the starter-pack record.
 
