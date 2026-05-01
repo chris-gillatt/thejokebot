@@ -964,6 +964,48 @@ class JokeRetryChainTests(unittest.TestCase):
             joke, _ = bluesky_post_joke.pick_joke(set(), "test_provider")
         self.assertEqual(joke, "It's fixed")
 
+    def test_select_post_hashtags_returns_defaults_when_disabled(self):
+        config = {
+            "custom_feeds": {
+                "enabled": False,
+                "hashtags": {
+                    "enabled": True,
+                    "max_per_post": 2,
+                    "rotate": ["#pun"],
+                },
+            }
+        }
+        selected = bluesky_post_joke.select_post_hashtags(config)
+        self.assertEqual(selected, bluesky_post_joke.HASHTAGS)
+
+    def test_select_post_hashtags_adds_bounded_rotating_tags(self):
+        config = {
+            "custom_feeds": {
+                "enabled": True,
+                "hashtags": {
+                    "enabled": True,
+                    "max_per_post": 2,
+                    "rotate": ["#pun", "dadjoke", "#cleanhumour"],
+                },
+            }
+        }
+        with mock.patch("bluesky_post_joke.random.sample", side_effect=lambda seq, n: seq[:n]):
+            selected = bluesky_post_joke.select_post_hashtags(config)
+
+        self.assertIn("#pun", selected)
+        self.assertIn("#cleanhumour", selected)
+        self.assertEqual(len(selected), len(bluesky_post_joke.HASHTAGS) + 2)
+
+    def test_pick_joke_respects_dynamic_hashtag_budget(self):
+        hashtags = bluesky_post_joke.HASHTAGS + ["#extra"]
+        long_joke = "x" * (bluesky_post_joke.max_joke_chars_for_hashtags(hashtags) + 1)
+
+        with mock.patch.object(bluesky_joke_providers, "PROVIDERS", {
+            "test_provider": lambda: long_joke
+        }):
+            with self.assertRaises(ValueError):
+                bluesky_post_joke.pick_joke(set(), "test_provider", hashtags=hashtags)
+
     def test_pick_joke_skips_joke_exceeding_char_limit(self):
         """pick_joke skips jokes that are too long and retries for a short one."""
         long_joke = "x" * (bluesky_post_joke._MAX_JOKE_CHARS + 1)

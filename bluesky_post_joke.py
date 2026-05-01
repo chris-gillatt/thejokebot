@@ -1,6 +1,8 @@
 import base64
 import html
+import json
 import os
+import pathlib
 import random
 import time
 
@@ -18,6 +20,18 @@ BLUESKY_MAX_POST_CHARS = 300
 
 # Hashtags
 HASHTAGS = ["#jokes", "#dadjoke", "#funny"]
+_DEFAULT_ROTATING_HASHTAGS = [
+    "#joke",
+    "#dadjokes",
+    "#pun",
+    "#puns",
+    "#humor",
+    "#comedy",
+    "#laugh",
+    "#lols"
+]
+_CUSTOM_FEEDS_CONFIG_PATH = pathlib.Path(__file__).parent / "resources" / "jokebot_custom_feeds.json"
+_DEFAULT_ROTATING_HASHTAG_LIMIT = 2
 
 # Graphemes consumed by "\n\n" + space-joined hashtags appended to every post.
 _HASHTAG_SUFFIX_LEN = 2 + len(" ".join(HASHTAGS))  # 2 newlines + tag string
@@ -75,7 +89,108 @@ def sanitise_joke_text(joke: str) -> str:
     return cleaned
 
 
-def pick_joke(recent_b64s: set, provider_name: str) -> tuple:
+def load_custom_feed_config() -> dict:
+    """Load optional custom-feed configuration from resources/jokebot_custom_feeds.json."""
+    default = {
+        "custom_feeds": {
+            "enabled": False,
+            "mode": "existing",
+            "target_feeds": [],
+            "hashtags": {
+                "enabled": False,
+                "max_per_post": _DEFAULT_ROTATING_HASHTAG_LIMIT,
+                "rotate": list(_DEFAULT_ROTATING_HASHTAGS),
+            },
+        }
+    }
+
+    if not _CUSTOM_FEEDS_CONFIG_PATH.exists():
+        return default
+
+    try:
+        with open(_CUSTOM_FEEDS_CONFIG_PATH, encoding="utf-8") as f:
+            loaded = json.load(f)
+    except (OSError, ValueError) as exc:
+        print(f"Warning: failed to load custom feed config: {exc}")
+        return default
+
+    if not isinstance(loaded, dict):
+        return default
+
+    custom_feeds = loaded.get("custom_feeds")
+    if not isinstance(custom_feeds, dict):
+        return default
+
+    hashtags = custom_feeds.get("hashtags")
+    if not isinstance(hashtags, dict):
+        hashtags = {}
+
+    default["custom_feeds"].update({
+        "enabled": bool(custom_feeds.get("enabled", default["custom_feeds"]["enabled"])),
+        "mode": str(custom_feeds.get("mode", default["custom_feeds"]["mode"])),
+        "target_feeds": custom_feeds.get("target_feeds", default["custom_feeds"]["target_feeds"]),
+    })
+    default["custom_feeds"]["hashtags"].update({
+        "enabled": bool(hashtags.get("enabled", default["custom_feeds"]["hashtags"]["enabled"])),
+        "max_per_post": hashtags.get("max_per_post", default["custom_feeds"]["hashtags"]["max_per_post"]),
+        "rotate": hashtags.get("rotate", default["custom_feeds"]["hashtags"]["rotate"]),
+    })
+    return default
+
+
+def select_post_hashtags(config: dict) -> list[str]:
+    """Select hashtags for a post using optional bounded rotation config."""
+    selected = list(HASHTAGS)
+    custom_feeds = config.get("custom_feeds", {})
+    if not custom_feeds.get("enabled"):
+        return selected
+
+    hashtag_cfg = custom_feeds.get("hashtags", {})
+    if not hashtag_cfg.get("enabled"):
+        return selected
+
+    rotate = hashtag_cfg.get("rotate")
+    if not isinstance(rotate, list):
+        rotate = list(_DEFAULT_ROTATING_HASHTAGS)
+
+    candidates = []
+    seen = set(tag.lower() for tag in selected)
+    for raw_tag in rotate:
+        if not isinstance(raw_tag, str):
+            continue
+        tag = raw_tag.strip()
+        if not tag:
+            continue
+        if not tag.startswith("#"):
+            tag = f"#{tag}"
+        key = tag.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        candidates.append(tag)
+
+    if not candidates:
+        return selected
+
+    try:
+        max_per_post = int(hashtag_cfg.get("max_per_post", _DEFAULT_ROTATING_HASHTAG_LIMIT))
+    except (TypeError, ValueError):
+        max_per_post = _DEFAULT_ROTATING_HASHTAG_LIMIT
+
+    if max_per_post <= 0:
+        return selected
+
+    selected.extend(random.sample(candidates, min(max_per_post, len(candidates))))
+    return selected
+
+
+def max_joke_chars_for_hashtags(hashtags: list[str]) -> int:
+    """Return available joke-char budget after appending hashtag suffix."""
+    suffix_len = 2 + len(" ".join(hashtags))
+    return BLUESKY_MAX_POST_CHARS - suffix_len
+
+
+def pick_joke(recent_b64s: set, provider_name: str, hashtags: list[str] | None = None) -> tuple:
     """
     Fetch up to MAX_ATTEMPTS jokes from provider_name, skipping recent duplicates
     and jokes that would exceed the Bluesky post character limit once hashtags
@@ -83,13 +198,17 @@ def pick_joke(recent_b64s: set, provider_name: str) -> tuple:
     Returns (joke_text, b64_encoded) on success, raises ValueError if all attempts
     are duplicates, too long, or the provider raises.
     """
+    if hashtags is None:
+        hashtags = HASHTAGS
+    max_joke_chars = max_joke_chars_for_hashtags(hashtags)
+
     fetch_fn = bluesky_joke_providers.PROVIDERS[provider_name]
     for _ in range(MAX_ATTEMPTS):
         joke = sanitise_joke_text(fetch_fn())
-        if len(joke) > _MAX_JOKE_CHARS:
+        if len(joke) > max_joke_chars:
             print(
                 f"Skipping joke from '{provider_name}': "
-                f"{len(joke)} chars exceeds limit of {_MAX_JOKE_CHARS}"
+                f"{len(joke)} chars exceeds limit of {max_joke_chars}"
             )
             continue
         encoded = base64.b64encode(joke.encode("utf-8")).decode()
@@ -124,6 +243,10 @@ def build_hashtag_facets(joke_text, hashtags):
 
 def main():
     state = bluesky_state.load_state()
+    custom_feed_config = load_custom_feed_config()
+    post_hashtags = select_post_hashtags(custom_feed_config)
+    print(f"Selected hashtags: {' '.join(post_hashtags)}")
+
     cutoff = get_current_epoch() - (DAYS_LIMIT * 86400)
     recent_b64s = bluesky_state.get_recent_b64s(state, cutoff)
     denylist_payload = bluesky_denylist.load_denylist()
@@ -148,7 +271,7 @@ def main():
 
     for provider_name in providers_to_try:
         try:
-            joke, b64 = pick_joke(recent_b64s, provider_name)
+            joke, b64 = pick_joke(recent_b64s, provider_name, hashtags=post_hashtags)
             used_provider = provider_name
             break
         except (ValueError, requests.RequestException, TimeoutError, atproto_client.exceptions.NetworkError) as e:
@@ -164,9 +287,9 @@ def main():
     if used_provider != "fallback":
         bluesky_state.record_provider_used(state, used_provider)
 
-    hashtags_string = " ".join(HASHTAGS)
+    hashtags_string = " ".join(post_hashtags)
     joke_with_tags = f"{joke}\n\n{hashtags_string}"
-    facets = build_hashtag_facets(joke, HASHTAGS)
+    facets = build_hashtag_facets(joke, post_hashtags)
 
     try:
         client, _ = login_client()

@@ -74,6 +74,20 @@ Bluesky rate-limit context (as documented):
 - Hosted PDS API requests are also rate-limited by IP (`3000` requests per `5` minutes).
 - This repo defaults to conservative unfollow batches so multi-thousand clean-ups can be done over repeated runs instead of one aggressive burst.
 
+## Custom feed integration (safe mode)
+
+This repo includes a conservative custom-feed integration path focused on discovery,
+not engagement farming:
+
+- Optional bounded hashtag rotation at post time (disabled by default).
+- Read-only visibility checks against configured feed URIs.
+- No auto-like campaigns, auto-reply campaigns, DM automation, or growth-spam loops.
+
+Configuration is in `resources/jokebot_custom_feeds.json`. Keep `custom_feeds.enabled` and
+`custom_feeds.hashtags.enabled` as `false` unless intentionally running a test.
+
+Implementation detail and rollout guidance is documented in `docs/custom-feeds.md`.
+
 ## Reporting a joke (#report)
 
 If a posted joke is unsuitable, any Bluesky user can flag it:
@@ -92,6 +106,7 @@ The report triggers an automated PR adding the joke to the denylist. Once a main
 | `bluesky_unfollow.py` | Unfollow accounts that do not follow back (respects an ignore list). |
 | `bluesky_follow_fellows.py` | Find hashtag users and follow up to configured limits. |
 | `bluesky_verify_latest_joke_post.py` | Read-only check that a recent joke post exists on the account. |
+| `bluesky_check_custom_feeds.py` | Read-only helper to check whether recent bot posts are visible in configured custom feeds. |
 | `bluesky_process_reports.py` | Poll reply notifications for `#report`, map replies to posted jokes, delete approved denylist posts, and write PR proposals. |
 | `bluesky_create_report_prs.py` | Open one denylist PR per new report proposal. |
 
