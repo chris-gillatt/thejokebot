@@ -11,7 +11,12 @@ import atproto_client.exceptions
 from colorama import Fore, Style
 
 import bluesky_state
-from bluesky_common import get_runtime_controls, login_client, retry_network_call
+from bluesky_common import (
+    get_runtime_controls,
+    login_client,
+    mask_sensitive,
+    retry_network_call,
+)
 from bluesky_follower_utils import fetch_paginated_data
 
 _DEFAULT_LIKE_MAX_PAGES = 5
@@ -37,7 +42,7 @@ def follow_back(
         unfollowed_dids = set()
     user_did = client.me.did
     print(
-        f"{Fore.YELLOW}Fetching followers and following for user: {username}{Style.RESET_ALL}"
+        f"{Fore.YELLOW}Fetching followers and following for user: {mask_sensitive(username)}{Style.RESET_ALL}"
     )
 
     followers = fetch_paginated_data(client.get_followers, user_did)
@@ -52,28 +57,31 @@ def follow_back(
     )
 
     for i, did in enumerate(to_follow_back, start=1):
+        masked_did = mask_sensitive(did)
         if did in unfollowed_dids:
             print(
-                f"{Fore.GREEN}({i}/{len(to_follow_back)}) Re-engagement: {did} is following again after previous unfollow.{Style.RESET_ALL}"
+                f"{Fore.GREEN}({i}/{len(to_follow_back)}) Re-engagement detected for {masked_did}.{Style.RESET_ALL}"
             )
         print(
-            f"{Fore.YELLOW}({i}/{len(to_follow_back)}) Following {did}...{Style.RESET_ALL}"
+            f"{Fore.YELLOW}({i}/{len(to_follow_back)}) Following {masked_did}...{Style.RESET_ALL}"
         )
         if dry_run:
-            print(f"{Fore.YELLOW}[DRY-RUN] Would follow {did}{Style.RESET_ALL}")
+            print(f"{Fore.YELLOW}[DRY-RUN] Would follow {masked_did}{Style.RESET_ALL}")
         else:
             try:
                 retry_network_call(
                     lambda current_did=did: client.follow(current_did),
-                    description=f"following back {did}",
+                    description=f"following back {masked_did}",
                 )
-                print(f"{Fore.GREEN}Followed {did}{Style.RESET_ALL}")
+                print(f"{Fore.GREEN}Followed {masked_did}{Style.RESET_ALL}")
             except (
                 requests.RequestException,
                 TimeoutError,
                 atproto_client.exceptions.NetworkError,
             ) as exc:
-                print(f"{Fore.RED}Failed to follow {did}: {exc}{Style.RESET_ALL}")
+                print(
+                    f"{Fore.RED}Failed to follow {masked_did}: {exc}{Style.RESET_ALL}"
+                )
                 continue
 
         if action_delay_seconds > 0 and i < len(to_follow_back):
@@ -172,6 +180,7 @@ def like_replies(
             cid = _get_value(notification, "cid")
             if not uri or not cid:
                 continue
+            masked_uri = mask_sensitive(uri)
 
             # Never like #report replies — those are handled by the reports workflow.
             reply_text = _get_value(notification, "record", "text") or ""
@@ -183,21 +192,25 @@ def like_replies(
 
             if dry_run:
                 print(
-                    f"{Fore.YELLOW}[DRY-RUN] Would like {reason}: {uri}{Style.RESET_ALL}"
+                    f"{Fore.YELLOW}[DRY-RUN] Would like {reason}: {masked_uri}{Style.RESET_ALL}"
                 )
             else:
                 try:
                     retry_network_call(
                         lambda u=uri, c=cid: client.like(uri=u, cid=c),
-                        description=f"liking {reason} {uri}",
+                        description=f"liking {reason} {masked_uri}",
                     )
-                    print(f"{Fore.GREEN}Liked {reason}: {uri}{Style.RESET_ALL}")
+                    print(
+                        f"{Fore.GREEN}Liked {reason}: {masked_uri}{Style.RESET_ALL}"
+                    )
                 except (
                     requests.RequestException,
                     TimeoutError,
                     atproto_client.exceptions.NetworkError,
                 ) as exc:
-                    print(f"{Fore.RED}Failed to like {uri}: {exc}{Style.RESET_ALL}")
+                    print(
+                        f"{Fore.RED}Failed to like {masked_uri}: {exc}{Style.RESET_ALL}"
+                    )
                     continue
 
             bluesky_state.record_liked_reply_uri(state, uri)
@@ -246,7 +259,9 @@ def main() -> None:
     try:
         print(f"{Fore.YELLOW}Logging in to Bluesky...{Style.RESET_ALL}")
         client, username = login_client()
-        print(f"{Fore.GREEN}Successfully logged in as {username}.{Style.RESET_ALL}")
+        print(
+            f"{Fore.GREEN}Successfully logged in as {mask_sensitive(username)}.{Style.RESET_ALL}"
+        )
     except (
         ValueError,
         requests.RequestException,

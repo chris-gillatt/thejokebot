@@ -7,7 +7,7 @@ import os
 import atproto_client.exceptions
 import requests
 
-from bluesky_common import get_bool_env, login_client, retry_network_call
+from bluesky_common import get_bool_env, login_client, mask_sensitive, retry_network_call
 
 DEFAULT_IGNORABLE_HANDLES = ("theonion.bsky.social",)
 _STALE_ERROR_MARKERS = (
@@ -81,16 +81,16 @@ def main() -> int:
     print(f"Validating {len(handles)} ignore handle(s)...")
 
     client, username = login_client()
-    print(f"Logged in as {username}")
+    print(f"Logged in as {mask_sensitive(username)}")
 
     valid, stale, transient = resolve_handles(client, handles)
 
     for handle, did in valid.items():
-        print(f"OK: {handle} -> {did}")
+        print(f"OK: {mask_sensitive(handle)} -> {mask_sensitive(did)}")
     for handle, reason in stale.items():
-        print(f"STALE: {handle} ({reason})")
+        print(f"STALE: {mask_sensitive(handle)} ({reason})")
     for handle, reason in transient.items():
-        print(f"WARN (transient): {handle} ({reason})")
+        print(f"WARN (transient): {mask_sensitive(handle)} ({reason})")
 
     print(
         f"Summary: valid={len(valid)}, stale={len(stale)}, transient={len(transient)}"

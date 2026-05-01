@@ -1,8 +1,15 @@
 import time
+
 import requests
+
 import atproto_client.exceptions
 import bluesky_state
-from bluesky_common import login_client, get_runtime_controls, retry_network_call
+from bluesky_common import (
+    get_runtime_controls,
+    login_client,
+    mask_sensitive,
+    retry_network_call,
+)
 from bluesky_follower_utils import fetch_paginated_data
 
 # Limits
@@ -46,17 +53,18 @@ def get_following(client):
 
 
 def follow(client, did: str):
+    masked_did = mask_sensitive(did)
     try:
         retry_network_call(
             lambda: client.follow(did),
-            description=f"following {did}",
+            description=f"following {masked_did}",
         )
     except (
         requests.RequestException,
         TimeoutError,
         atproto_client.exceptions.NetworkError,
     ) as e:
-        print(f"Unexpected error trying to follow {did}: {e}")
+        print(f"Unexpected error trying to follow {masked_did}: {e}")
 
 
 def select_users(tag_users, tag_order, per_tag_limit, overall_limit):
@@ -89,7 +97,9 @@ def select_users(tag_users, tag_order, per_tag_limit, overall_limit):
 def main():
     print("Starting fellow-follow discovery script...")
     client, username = login_client()
-    print(f"Authenticated as {client.me.did} ({username})")
+    print(
+        f"Authenticated as {mask_sensitive(client.me.did)} ({mask_sensitive(username)})"
+    )
     controls = get_runtime_controls()
     dry_run = controls["dry_run"]
     action_delay_seconds = controls["action_delay_seconds"]
@@ -135,32 +145,23 @@ def main():
 
     print(f"Total users to follow: {len(selected_users)}\n")
 
-    # Build summary of DIDs by tag (first 3 per tag for audit)
-    sample_by_tag = {tag: [] for tag in hashtags}
-    for tag, did in selected_users:
-        if len(sample_by_tag[tag]) < 3:
-            sample_by_tag[tag].append(did)
-
     for i, (tag, did) in enumerate(selected_users, start=1):
+        masked_did = mask_sensitive(did)
         if dry_run:
-            print(f"[DRY-RUN] Would follow {did} (#{tag})")
+            print(f"[DRY-RUN] Would follow {masked_did} (#{tag})")
         else:
             follow(client, did)
 
         if action_delay_seconds > 0 and i < len(selected_users):
             time.sleep(action_delay_seconds)
 
-    # Log summary by tag with sample DIDs for audit
-    print("\nFollowed users by tag (sample):")
+    print("\nFollowed users by tag:")
     for tag in hashtags:
         count = tag_counts[tag]
-        samples = sample_by_tag[tag]
         if count == 0:
             print(f"  #{tag}: 0 users")
-        elif count <= 3:
-            print(f"  #{tag}: {count} user(s) – {', '.join(samples)}")
         else:
-            print(f"  #{tag}: {count} users – sample: {', '.join(samples[:3])} ...")
+            print(f"  #{tag}: {count} users")
 
     print("\nFollow fellows script completed.")
 

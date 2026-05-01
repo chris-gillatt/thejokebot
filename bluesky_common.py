@@ -167,3 +167,13 @@ def get_runtime_controls():
             "BLUESKY_ACTION_DELAY_SECONDS", default=0.0, minimum=0.0
         ),
     }
+
+
+def mask_sensitive(value, prefix=4, suffix=4):
+    """Return a stable masked representation for potentially sensitive values."""
+    text = str(value or "").strip()
+    if not text:
+        return "<redacted>"
+    if len(text) <= prefix + suffix:
+        return "<redacted>"
+    return f"{text[:prefix]}...{text[-suffix:]}"

@@ -10,7 +10,12 @@ import time
 import atproto_client.exceptions
 import requests
 
-from bluesky_common import get_runtime_controls, login_client, retry_network_call
+from bluesky_common import (
+    get_runtime_controls,
+    login_client,
+    mask_sensitive,
+    retry_network_call,
+)
 from bluesky_follower_utils import fetch_list_member_dids, fetch_paginated_data
 
 _CONFIG_PATH = pathlib.Path(__file__).parent / "resources" / "jokebot_starter_pack.json"
@@ -248,15 +253,18 @@ def ensure_following_list_members(
 
     followed_now = 0
     for index, did in enumerate(missing, start=1):
+        masked_did = mask_sensitive(did)
         if dry_run:
-            print(f"[DRY-RUN] Would follow list member {did}")
+            print(f"[DRY-RUN] Would follow list member {masked_did}")
             followed_now += 1
         else:
             retry_network_call(
                 lambda current_did=did: client.follow(current_did),
-                description=f"following list member {did}",
+                description=f"following list member {masked_did}",
             )
-            print(f"Followed list member {did} ({index}/{len(missing)})")
+            print(
+                f"Followed list member {masked_did} ({index}/{len(missing)})"
+            )
             followed_now += 1
 
         if action_delay_seconds > 0 and index < len(missing):
@@ -302,7 +310,9 @@ def main() -> int:
 
     try:
         client, username = login_client()
-        print(f"Authenticated as {username} ({client.me.did})")
+        print(
+            f"Authenticated as {mask_sensitive(username)} ({mask_sensitive(client.me.did)})"
+        )
 
         list_member_dids = fetch_list_member_dids(client, source_list_uri)
         print(f"Fetched {len(list_member_dids)} unique member DID(s) from source list.")
