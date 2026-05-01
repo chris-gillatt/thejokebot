@@ -9,6 +9,7 @@ Writes are performed atomically via a temp file + os.replace() to prevent
 corruption if a run is interrupted. File-level locking prevents concurrent
 mutations when two processes run simultaneously.
 """
+
 from __future__ import annotations
 
 import json
@@ -104,13 +105,13 @@ def _normalise_state(state: dict) -> dict:
 def load_state() -> dict:
     """
     Load state from disk with shared lock to prevent reading mid-write.
-    
+
     Returns a fresh default state if the file is missing or corrupt.
     Uses fcntl.flock() on Unix-like systems to ensure read consistency.
     """
     if not os.path.exists(STATE_FILE):
         return _default_state()
-    
+
     # On Unix-like systems, acquire shared lock to prevent reading during writes.
     lock_file = None
     if fcntl is not None:
@@ -122,7 +123,7 @@ def load_state() -> dict:
             if lock_file:
                 lock_file.close()
             lock_file = None
-    
+
     try:
         with open(STATE_FILE, "r", encoding="utf-8") as f:
             return _normalise_state(json.load(f))
@@ -141,7 +142,7 @@ def load_state() -> dict:
 def save_state(state: dict) -> None:
     """
     Write state to disk atomically with file-level locking to prevent concurrent mutations.
-    
+
     Uses fcntl.flock() on Unix-like systems (macOS, Linux) to ensure exclusive access
     during read-modify-write operations. On Windows, relies on atomic os.replace().
     """
@@ -233,9 +234,7 @@ def get_recent_b64s(state: dict, cutoff_ts: float) -> set:
 
 def prune_old_jokes(state: dict, cutoff_ts: float) -> None:
     """Remove joke history entries older than cutoff_ts."""
-    state["posted_jokes"] = [
-        e for e in state["posted_jokes"] if e["ts"] > cutoff_ts
-    ]
+    state["posted_jokes"] = [e for e in state["posted_jokes"] if e["ts"] > cutoff_ts]
 
 
 def get_post_uri_index(state: dict) -> dict:
@@ -345,6 +344,7 @@ def set_likes_checked_now(state: dict) -> None:
 # ---------------------------------------------------------------------------
 # Unfollow history
 # ---------------------------------------------------------------------------
+
 
 def get_unfollowed_dids(state: dict) -> set[str]:
     """Return the set of DIDs the bot has previously unfollowed."""

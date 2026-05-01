@@ -39,7 +39,9 @@ def get_bluesky_credentials():
 
 def login_client():
     username, password = get_bluesky_credentials()
-    raw_attempts = os.getenv("BLUESKY_LOGIN_RETRY_ATTEMPTS", str(DEFAULT_LOGIN_RETRY_ATTEMPTS))
+    raw_attempts = os.getenv(
+        "BLUESKY_LOGIN_RETRY_ATTEMPTS", str(DEFAULT_LOGIN_RETRY_ATTEMPTS)
+    )
     try:
         max_attempts = int(raw_attempts.strip())
     except ValueError:
@@ -99,7 +101,11 @@ def retry_network_call(
     for attempt in range(1, max_attempts + 1):
         try:
             return operation()
-        except (requests.RequestException, TimeoutError, atproto_client.exceptions.NetworkError) as exc:
+        except (
+            requests.RequestException,
+            TimeoutError,
+            atproto_client.exceptions.NetworkError,
+        ) as exc:
             if attempt >= max_attempts:
                 raise
             print(

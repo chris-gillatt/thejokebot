@@ -61,13 +61,17 @@ def load_starter_pack_config() -> dict:
                 starter.get("description", default["starter_pack"]["description"])
             ).strip(),
             "source_list_uri": str(
-                starter.get("source_list_uri", default["starter_pack"]["source_list_uri"])
+                starter.get(
+                    "source_list_uri", default["starter_pack"]["source_list_uri"]
+                )
             ).strip(),
             "record_key": str(
                 starter.get("record_key", default["starter_pack"]["record_key"])
             ).strip(),
             "starter_pack_uri": str(
-                starter.get("starter_pack_uri", default["starter_pack"]["starter_pack_uri"])
+                starter.get(
+                    "starter_pack_uri", default["starter_pack"]["starter_pack_uri"]
+                )
             ).strip(),
         }
     )
@@ -80,7 +84,9 @@ def load_starter_pack_config() -> dict:
                 )
             ),
             "upsert_record": bool(
-                sync.get("upsert_record", default["starter_pack"]["sync"]["upsert_record"])
+                sync.get(
+                    "upsert_record", default["starter_pack"]["sync"]["upsert_record"]
+                )
             ),
         }
     )
@@ -88,13 +94,16 @@ def load_starter_pack_config() -> dict:
     return default
 
 
-def _build_starter_pack_record(starter_cfg: dict, source_list_uri: str, created_at: str | None = None) -> dict:
+def _build_starter_pack_record(
+    starter_cfg: dict, source_list_uri: str, created_at: str | None = None
+) -> dict:
     return {
         "$type": "app.bsky.graph.starterpack",
         "name": starter_cfg["name"],
         "description": starter_cfg["description"],
         "list": source_list_uri,
-        "createdAt": created_at or dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00", "Z"),
+        "createdAt": created_at
+        or dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00", "Z"),
     }
 
 
@@ -115,7 +124,9 @@ def _parse_at_uri(uri: str) -> dict | None:
     }
 
 
-def upsert_starter_pack_record(client, starter_cfg: dict, source_list_uri: str, dry_run: bool):
+def upsert_starter_pack_record(
+    client, starter_cfg: dict, source_list_uri: str, dry_run: bool
+):
     """Create/update starter-pack record in the bot's repo."""
     repo_did = client.me.did
     configured_uri = str(starter_cfg.get("starter_pack_uri") or "").strip()
@@ -134,9 +145,7 @@ def upsert_starter_pack_record(client, starter_cfg: dict, source_list_uri: str, 
                 "starter_pack_uri DID must match the authenticated account DID."
             )
         if parsed_uri["collection"] != _STARTERPACK_COLLECTION:
-            raise ValueError(
-                "starter_pack_uri must target app.bsky.graph.starterpack."
-            )
+            raise ValueError("starter_pack_uri must target app.bsky.graph.starterpack.")
         target_rkey = parsed_uri["rkey"]
         target_uri = configured_uri
         use_put_record = True
@@ -174,7 +183,9 @@ def upsert_starter_pack_record(client, starter_cfg: dict, source_list_uri: str, 
         except Exception:  # noqa: BLE001 — transient or not-found; fall back to current time
             pass
 
-    record = _build_starter_pack_record(starter_cfg, source_list_uri, created_at=existing_created_at)
+    record = _build_starter_pack_record(
+        starter_cfg, source_list_uri, created_at=existing_created_at
+    )
 
     if use_put_record:
         resp = retry_network_call(
@@ -226,7 +237,11 @@ def ensure_following_list_members(
     following = fetch_paginated_data(client.get_follows, client.me.did)
     already_following = {follow.did for follow in following}
 
-    missing = sorted(did for did in list_member_dids if did not in already_following and did != client.me.did)
+    missing = sorted(
+        did
+        for did in list_member_dids
+        if did not in already_following and did != client.me.did
+    )
     if not missing:
         print("All source-list members are already followed.")
         return len(already_following.intersection(list_member_dids)), 0
@@ -271,7 +286,9 @@ def main() -> int:
 
     cfg = load_starter_pack_config().get("starter_pack", {})
     if not cfg.get("enabled"):
-        print("Starter-pack integration is disabled in resources/jokebot_starter_pack.json.")
+        print(
+            "Starter-pack integration is disabled in resources/jokebot_starter_pack.json."
+        )
         return 0
 
     source_list_uri = str(cfg.get("source_list_uri") or "").strip()
@@ -295,7 +312,9 @@ def main() -> int:
 
         starter_pack_uri = None
         if args.mode == "setup" or upsert_enabled:
-            starter_pack_uri = upsert_starter_pack_record(client, cfg, source_list_uri, dry_run)
+            starter_pack_uri = upsert_starter_pack_record(
+                client, cfg, source_list_uri, dry_run
+            )
             print(f"Starter-pack URI: {starter_pack_uri}")
 
         already = 0

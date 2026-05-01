@@ -9,6 +9,7 @@ Primary providers participate in normal alternating rotation. Backup providers
 are only tried after the primaries fail, unless explicitly selected via
 BLUESKY_JOKE_PROVIDER for local testing or emergency use.
 """
+
 import base64
 import json
 import os
@@ -172,9 +173,7 @@ def fetch_from_jokebot_jokebook() -> str:
     resort in the backup chain.
     """
     if not _JOKEBOOK_PATH.exists():
-        raise RuntimeError(
-            f"Jokebook file not found at {_JOKEBOOK_PATH}"
-        )
+        raise RuntimeError(f"Jokebook file not found at {_JOKEBOOK_PATH}")
     with open(_JOKEBOOK_PATH, encoding="utf-8") as f:
         data = json.load(f)
     jokes = data.get("jokes", [])

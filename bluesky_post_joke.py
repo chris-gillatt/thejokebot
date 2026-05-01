@@ -31,7 +31,7 @@ def get_fallback_joke():
     fallback_jokes = [
         "Why did this script fail? Because it has too much byte and not enough bark.",
         "If this script were a programmer, it would still be debugging hello world.",
-        "Looks like this script is throwing exceptions faster than I throw tantrums."
+        "Looks like this script is throwing exceptions faster than I throw tantrums.",
     ]
     return random.choice(fallback_jokes)
 
@@ -66,8 +66,7 @@ def sanitise_joke_text(joke: str) -> str:
 
     # Prefer plain ASCII quotes to avoid display quirks across clients/providers.
     cleaned = (
-        cleaned
-        .replace("\u2018", "'")
+        cleaned.replace("\u2018", "'")
         .replace("\u2019", "'")
         .replace("\u201c", '"')
         .replace("\u201d", '"')
@@ -108,15 +107,15 @@ def build_hashtag_facets(joke_text, hashtags):
         tag_bytes = tag.encode("UTF-8")
         tag_start = current_offset
         tag_end = tag_start + len(tag_bytes)
-        facets.append({
-            "index": {
-                "byteStart": tag_start,
-                "byteEnd": tag_end,
-            },
-            "features": [
-                {"$type": "app.bsky.richtext.facet#tag", "tag": tag[1:]}
-            ],
-        })
+        facets.append(
+            {
+                "index": {
+                    "byteStart": tag_start,
+                    "byteEnd": tag_end,
+                },
+                "features": [{"$type": "app.bsky.richtext.facet#tag", "tag": tag[1:]}],
+            }
+        )
         current_offset = tag_end + 1
 
     return facets
@@ -151,7 +150,12 @@ def main():
             joke, b64 = pick_joke(recent_b64s, provider_name)
             used_provider = provider_name
             break
-        except (ValueError, requests.RequestException, TimeoutError, atproto_client.exceptions.NetworkError) as e:
+        except (
+            ValueError,
+            requests.RequestException,
+            TimeoutError,
+            atproto_client.exceptions.NetworkError,
+        ) as e:
             print(f"Provider '{provider_name}' failed: {e}")
             bluesky_state.record_failure(state, provider_name, str(e))
 
@@ -172,7 +176,9 @@ def main():
         client, _ = login_client()
         handle = getattr(client.me, "handle", "")
         display_identity = f"@{handle}" if handle else "@unknown"
-        print(f"Posting as {display_identity} via '{used_provider}': {repr(joke_with_tags)}")
+        print(
+            f"Posting as {display_identity} via '{used_provider}': {repr(joke_with_tags)}"
+        )
         post = client.send_post(text=joke_with_tags, facets=facets)
         print("Joke successfully posted!")
 
@@ -189,7 +195,12 @@ def main():
             post_uri=post_uri,
             post_cid=post_cid,
         )
-    except (ValueError, requests.RequestException, TimeoutError, atproto_client.exceptions.NetworkError) as e:
+    except (
+        ValueError,
+        requests.RequestException,
+        TimeoutError,
+        atproto_client.exceptions.NetworkError,
+    ) as e:
         print(f"Failed to post joke: {e}")
     finally:
         bluesky_state.prune_old_jokes(state, cutoff)

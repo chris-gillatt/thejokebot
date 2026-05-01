@@ -27,7 +27,9 @@ def run_command(args: list[str], check: bool = True) -> subprocess.CompletedProc
 
 
 def has_remote_branch(branch_name: str) -> bool:
-    result = run_command(["git", "ls-remote", "--heads", "origin", branch_name], check=False)
+    result = run_command(
+        ["git", "ls-remote", "--heads", "origin", branch_name], check=False
+    )
     return bool(result.stdout.strip())
 
 
@@ -204,7 +206,9 @@ def create_pr_for_proposal(proposal: dict) -> bool:
 
 
 def main() -> None:
-    proposals_path = Path(os.getenv("BLUESKY_REPORT_OUTPUT", str(DEFAULT_PROPOSALS_PATH)))
+    proposals_path = Path(
+        os.getenv("BLUESKY_REPORT_OUTPUT", str(DEFAULT_PROPOSALS_PATH))
+    )
     if not proposals_path.exists():
         print(f"No proposals file found at {proposals_path}; skipping PR creation")
         return

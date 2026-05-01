@@ -114,8 +114,12 @@ class UnfollowControlTests(unittest.TestCase):
         with mock.patch.dict(os.environ, {}, clear=True):
             controls = bluesky_unfollow.get_unfollow_controls()
 
-        self.assertEqual(controls["max_actions"], bluesky_unfollow.DEFAULT_UNFOLLOW_MAX_ACTIONS)
-        self.assertEqual(controls["batch_size"], bluesky_unfollow.DEFAULT_UNFOLLOW_BATCH_SIZE)
+        self.assertEqual(
+            controls["max_actions"], bluesky_unfollow.DEFAULT_UNFOLLOW_MAX_ACTIONS
+        )
+        self.assertEqual(
+            controls["batch_size"], bluesky_unfollow.DEFAULT_UNFOLLOW_BATCH_SIZE
+        )
         self.assertEqual(
             controls["batch_pause_seconds"],
             bluesky_unfollow.DEFAULT_UNFOLLOW_BATCH_PAUSE_SECONDS,
@@ -157,29 +161,61 @@ class UnfollowControlTests(unittest.TestCase):
         self.assertEqual(selected, ["did:1"])
 
     def test_is_rate_limited_error_detects_429_text(self):
-        self.assertTrue(bluesky_unfollow._is_rate_limited_error(RuntimeError("HTTP 429 Too Many Requests")))
-        self.assertFalse(bluesky_unfollow._is_rate_limited_error(RuntimeError("Connection timeout")))
+        self.assertTrue(
+            bluesky_unfollow._is_rate_limited_error(
+                RuntimeError("HTTP 429 Too Many Requests")
+            )
+        )
+        self.assertFalse(
+            bluesky_unfollow._is_rate_limited_error(RuntimeError("Connection timeout"))
+        )
 
     def test_unfollow_users_skips_bad_profile_lookup_error(self):
         state = bluesky_state._default_state()
         client = mock.Mock()
         client.me.did = "did:plc:test"
 
-        with mock.patch("bluesky_unfollow.login_client", return_value=(client, "thejokebot.bsky.social")):
+        with mock.patch(
+            "bluesky_unfollow.login_client",
+            return_value=(client, "thejokebot.bsky.social"),
+        ):
             with mock.patch("bluesky_unfollow.fetch_paginated_data", return_value=[]):
-                with mock.patch("bluesky_unfollow.get_runtime_controls", return_value={"dry_run": True, "action_delay_seconds": 0.0}):
-                    with mock.patch("bluesky_unfollow.get_unfollow_controls", return_value={"max_actions": 0, "batch_size": 50, "batch_pause_seconds": 0.0}):
-                        with mock.patch("bluesky_unfollow.retry_network_call", side_effect=atproto_client.exceptions.BadRequestError(mock.Mock())):
-                            with mock.patch("bluesky_unfollow._state.load_state", return_value=state):
-                                with mock.patch("bluesky_unfollow._state.prune_unfollow_history"):
-                                    with mock.patch("bluesky_unfollow._state.save_state") as save_state:
+                with mock.patch(
+                    "bluesky_unfollow.get_runtime_controls",
+                    return_value={"dry_run": True, "action_delay_seconds": 0.0},
+                ):
+                    with mock.patch(
+                        "bluesky_unfollow.get_unfollow_controls",
+                        return_value={
+                            "max_actions": 0,
+                            "batch_size": 50,
+                            "batch_pause_seconds": 0.0,
+                        },
+                    ):
+                        with mock.patch(
+                            "bluesky_unfollow.retry_network_call",
+                            side_effect=atproto_client.exceptions.BadRequestError(
+                                mock.Mock()
+                            ),
+                        ):
+                            with mock.patch(
+                                "bluesky_unfollow._state.load_state", return_value=state
+                            ):
+                                with mock.patch(
+                                    "bluesky_unfollow._state.prune_unfollow_history"
+                                ):
+                                    with mock.patch(
+                                        "bluesky_unfollow._state.save_state"
+                                    ) as save_state:
                                         bluesky_unfollow.unfollow_users()
 
         save_state.assert_called_once_with(state)
 
     def test_load_source_list_uri_returns_empty_when_file_missing(self):
         missing_path = pathlib.Path("/tmp/does-not-exist-jokebot-starter-pack.json")
-        self.assertEqual(bluesky_unfollow._load_source_list_uri(config_path=missing_path), "")
+        self.assertEqual(
+            bluesky_unfollow._load_source_list_uri(config_path=missing_path), ""
+        )
 
     def test_extract_list_member_did_supports_string_and_object_subject(self):
         did_str = bluesky_unfollow._extract_list_member_did({"subject": "did:plc:abc"})
@@ -359,7 +395,9 @@ class StateProviderRotationTests(unittest.TestCase):
     def test_get_next_provider_honours_valid_override(self):
         state = bluesky_state._default_state()
         state["provider"]["last_used"] = "icanhazdadjoke"
-        self.assertEqual(bluesky_state.get_next_provider(state, override="jokeapi"), "jokeapi")
+        self.assertEqual(
+            bluesky_state.get_next_provider(state, override="jokeapi"), "jokeapi"
+        )
 
     def test_get_next_provider_ignores_unknown_override(self):
         state = bluesky_state._default_state()
@@ -380,7 +418,7 @@ class StateJokeHistoryTests(unittest.TestCase):
         state = bluesky_state._default_state()
         state["posted_jokes"] = [
             {"ts": 1000, "b64": "recent", "provider": "icanhazdadjoke"},
-            {"ts": 1,    "b64": "old",    "provider": "icanhazdadjoke"},
+            {"ts": 1, "b64": "old", "provider": "icanhazdadjoke"},
         ]
         result = bluesky_state.get_recent_b64s(state, cutoff_ts=500)
         self.assertEqual(result, {"recent"})
@@ -389,7 +427,7 @@ class StateJokeHistoryTests(unittest.TestCase):
         state = bluesky_state._default_state()
         state["posted_jokes"] = [
             {"ts": 1000, "b64": "recent", "provider": "icanhazdadjoke"},
-            {"ts": 1,    "b64": "old",    "provider": "icanhazdadjoke"},
+            {"ts": 1, "b64": "old", "provider": "icanhazdadjoke"},
         ]
         bluesky_state.prune_old_jokes(state, cutoff_ts=500)
         self.assertEqual(len(state["posted_jokes"]), 1)
@@ -522,14 +560,20 @@ class ReportPrRoutingTests(unittest.TestCase):
 
 class ReportParsingTests(unittest.TestCase):
     def test_has_report_tag_accepts_case_insensitive_hashtag(self):
-        self.assertTrue(bluesky_process_reports.has_report_tag("Please remove this #REPORT"))
+        self.assertTrue(
+            bluesky_process_reports.has_report_tag("Please remove this #REPORT")
+        )
 
     def test_has_report_tag_rejects_partial_word(self):
-        self.assertFalse(bluesky_process_reports.has_report_tag("Please remove #reporting"))
+        self.assertFalse(
+            bluesky_process_reports.has_report_tag("Please remove #reporting")
+        )
 
     def test_has_report_tag_requires_word_boundary(self):
         self.assertTrue(bluesky_process_reports.has_report_tag("#report at start"))
-        self.assertTrue(bluesky_process_reports.has_report_tag("in middle #report here"))
+        self.assertTrue(
+            bluesky_process_reports.has_report_tag("in middle #report here")
+        )
         self.assertTrue(bluesky_process_reports.has_report_tag("at end #report"))
         self.assertFalse(bluesky_process_reports.has_report_tag("noreporting"))
 
@@ -568,7 +612,9 @@ class ReportParsingTests(unittest.TestCase):
             "root_uri": "at://root/1",
             "root_cid": "cid",
         }
-        success, should_retry = bluesky_process_reports.acknowledge_report(client, proposal)
+        success, should_retry = bluesky_process_reports.acknowledge_report(
+            client, proposal
+        )
         self.assertFalse(success)
         self.assertFalse(should_retry)
         client.send_post.assert_not_called()
@@ -591,7 +637,9 @@ class JokeProviderTests(unittest.TestCase):
         mock_response = mock.Mock()
         mock_response.text = "Why did the chicken cross the road?"
         mock_response.raise_for_status = mock.Mock()
-        with mock.patch("bluesky_joke_providers.requests.get", return_value=mock_response):
+        with mock.patch(
+            "bluesky_joke_providers.requests.get", return_value=mock_response
+        ):
             joke = bluesky_joke_providers.fetch_from_icanhazdadjoke()
         self.assertEqual(joke, "Why did the chicken cross the road?")
 
@@ -599,9 +647,13 @@ class JokeProviderTests(unittest.TestCase):
         mock_response = mock.Mock()
         mock_response.raise_for_status = mock.Mock()
         mock_response.json.return_value = {
-            "error": False, "type": "single", "joke": "I am a joke."
+            "error": False,
+            "type": "single",
+            "joke": "I am a joke.",
         }
-        with mock.patch("bluesky_joke_providers.requests.get", return_value=mock_response):
+        with mock.patch(
+            "bluesky_joke_providers.requests.get", return_value=mock_response
+        ):
             joke = bluesky_joke_providers.fetch_from_jokeapi()
         self.assertEqual(joke, "I am a joke.")
 
@@ -609,11 +661,14 @@ class JokeProviderTests(unittest.TestCase):
         mock_response = mock.Mock()
         mock_response.raise_for_status = mock.Mock()
         mock_response.json.return_value = {
-            "error": False, "type": "twopart",
+            "error": False,
+            "type": "twopart",
             "setup": "Why did the dev quit?",
             "delivery": "Because he didn't get arrays.",
         }
-        with mock.patch("bluesky_joke_providers.requests.get", return_value=mock_response):
+        with mock.patch(
+            "bluesky_joke_providers.requests.get", return_value=mock_response
+        ):
             joke = bluesky_joke_providers.fetch_from_jokeapi()
         self.assertIn("Why did the dev quit?", joke)
         self.assertIn("Because he didn't get arrays.", joke)
@@ -622,7 +677,9 @@ class JokeProviderTests(unittest.TestCase):
         mock_response = mock.Mock()
         mock_response.raise_for_status = mock.Mock()
         mock_response.json.return_value = {"error": True, "message": "No jokes found"}
-        with mock.patch("bluesky_joke_providers.requests.get", return_value=mock_response):
+        with mock.patch(
+            "bluesky_joke_providers.requests.get", return_value=mock_response
+        ):
             with self.assertRaises(ValueError):
                 bluesky_joke_providers.fetch_from_jokeapi()
 
@@ -635,7 +692,9 @@ class JokeProviderTests(unittest.TestCase):
             "punchline": "Because it had too many problems.",
             "tags": ["math"],
         }
-        with mock.patch("bluesky_joke_providers.requests.get", return_value=mock_response):
+        with mock.patch(
+            "bluesky_joke_providers.requests.get", return_value=mock_response
+        ):
             joke = bluesky_joke_providers.fetch_from_groandeck()
         self.assertIn("Why did the maths book look sad?", joke)
         self.assertIn("Because it had too many problems.", joke)
@@ -644,7 +703,9 @@ class JokeProviderTests(unittest.TestCase):
         mock_response = mock.Mock()
         mock_response.raise_for_status = mock.Mock()
         mock_response.json.return_value = {"setup": "Setup only", "punchline": ""}
-        with mock.patch("bluesky_joke_providers.requests.get", return_value=mock_response):
+        with mock.patch(
+            "bluesky_joke_providers.requests.get", return_value=mock_response
+        ):
             with self.assertRaises(ValueError):
                 bluesky_joke_providers.fetch_from_groandeck()
 
@@ -652,7 +713,9 @@ class JokeProviderTests(unittest.TestCase):
         mock_response = mock.Mock()
         mock_response.raise_for_status = mock.Mock()
         mock_response.text = "A dad joke from syrsly."
-        with mock.patch("bluesky_joke_providers.requests.get", return_value=mock_response):
+        with mock.patch(
+            "bluesky_joke_providers.requests.get", return_value=mock_response
+        ):
             joke = bluesky_joke_providers.fetch_from_syrsly()
         self.assertEqual(joke, "A dad joke from syrsly.")
 
@@ -660,7 +723,9 @@ class JokeProviderTests(unittest.TestCase):
         mock_response = mock.Mock()
         mock_response.raise_for_status = mock.Mock()
         mock_response.text = "   "
-        with mock.patch("bluesky_joke_providers.requests.get", return_value=mock_response):
+        with mock.patch(
+            "bluesky_joke_providers.requests.get", return_value=mock_response
+        ):
             with self.assertRaises(ValueError):
                 bluesky_joke_providers.fetch_from_syrsly()
 
@@ -687,7 +752,9 @@ class JokeProviderTests(unittest.TestCase):
         mock_response.raise_for_status = mock.Mock()
         mock_response.json.return_value = [{"joke": "Backup joke."}]
         with mock.patch.dict(os.environ, {"API_NINJAS_API_KEY": "secret"}, clear=False):
-            with mock.patch("bluesky_joke_providers.requests.get", return_value=mock_response):
+            with mock.patch(
+                "bluesky_joke_providers.requests.get", return_value=mock_response
+            ):
                 joke = bluesky_joke_providers.fetch_from_api_ninjas()
         self.assertEqual(joke, "Backup joke.")
 
@@ -696,12 +763,15 @@ class JokeProviderTests(unittest.TestCase):
         self.assertNotIn("jokebot_jokebook", bluesky_joke_providers.PRIMARY_PROVIDERS)
 
     def test_jokebot_jokebook_is_last_resort_backup(self):
-        self.assertEqual(bluesky_joke_providers.BACKUP_PROVIDERS[-1], "jokebot_jokebook")
+        self.assertEqual(
+            bluesky_joke_providers.BACKUP_PROVIDERS[-1], "jokebot_jokebook"
+        )
 
     def test_fetch_from_jokebot_jokebook_returns_decoded_joke(self):
         import base64
         import json
         import unittest.mock as umock
+
         joke_text = "Why did the chicken cross the road?\n\nTo get to the other side."
         encoded = base64.b64encode(joke_text.encode()).decode()
         fake_data = json.dumps({"jokes": [encoded]})
@@ -723,6 +793,7 @@ class JokeProviderTests(unittest.TestCase):
     def test_fetch_from_jokebot_jokebook_raises_on_empty_list(self):
         import json
         import unittest.mock as umock
+
         fake_data = json.dumps({"jokes": []})
         mock_path = umock.MagicMock()
         mock_path.exists.return_value = True
@@ -760,17 +831,23 @@ class PaginationTests(unittest.TestCase):
                 return responses[0]
             return responses[1]
 
-        data = bluesky_follower_utils.fetch_paginated_data(client_method, actor="did:test")
+        data = bluesky_follower_utils.fetch_paginated_data(
+            client_method, actor="did:test"
+        )
 
         self.assertEqual([item.did for item in data], ["did:one", "did:two"])
 
     def test_fetch_paginated_data_stops_on_repeated_cursor(self):
-        response = SimpleNamespace(followers=[SimpleNamespace(did="did:one")], cursor="same")
+        response = SimpleNamespace(
+            followers=[SimpleNamespace(did="did:one")], cursor="same"
+        )
 
         def client_method(actor, cursor=None, limit=100):
             return response
 
-        data = bluesky_follower_utils.fetch_paginated_data(client_method, actor="did:test")
+        data = bluesky_follower_utils.fetch_paginated_data(
+            client_method, actor="did:test"
+        )
 
         self.assertEqual([item.did for item in data], ["did:one"])
 
@@ -781,7 +858,9 @@ class PaginationTests(unittest.TestCase):
             calls["count"] += 1
             if calls["count"] == 1:
                 raise atproto_client.exceptions.NetworkError("transient")
-            return SimpleNamespace(follows=[SimpleNamespace(did="did:one")], cursor=None)
+            return SimpleNamespace(
+                follows=[SimpleNamespace(did="did:one")], cursor=None
+            )
 
         with mock.patch.dict(
             os.environ,
@@ -792,7 +871,9 @@ class PaginationTests(unittest.TestCase):
             },
             clear=False,
         ):
-            data = bluesky_follower_utils.fetch_paginated_data(client_method, actor="did:test")
+            data = bluesky_follower_utils.fetch_paginated_data(
+                client_method, actor="did:test"
+            )
 
         self.assertEqual([item.did for item in data], ["did:one"])
         self.assertEqual(calls["count"], 2)
@@ -826,7 +907,9 @@ class FollowerSelectionTests(unittest.TestCase):
 
 class VerificationHelperTests(unittest.TestCase):
     def test_parse_created_at_handles_z_suffix(self):
-        parsed = bluesky_verify_latest_joke_post.parse_created_at("2026-04-18T01:29:19.486797Z")
+        parsed = bluesky_verify_latest_joke_post.parse_created_at(
+            "2026-04-18T01:29:19.486797Z"
+        )
         self.assertEqual(parsed.tzinfo, dt.timezone.utc)
         self.assertEqual(parsed.year, 2026)
 
@@ -838,7 +921,9 @@ class VerificationHelperTests(unittest.TestCase):
         url = bluesky_verify_latest_joke_post.to_post_url(
             "thejokebot.bsky.social", "at://did:plc:abc/app.bsky.feed.post/1234"
         )
-        self.assertEqual(url, "https://bsky.app/profile/thejokebot.bsky.social/post/1234")
+        self.assertEqual(
+            url, "https://bsky.app/profile/thejokebot.bsky.social/post/1234"
+        )
 
 
 class LikeRepliesTests(unittest.TestCase):
@@ -874,7 +959,9 @@ class LikeRepliesTests(unittest.TestCase):
             "at://did:plc:abc/app.bsky.feed.repost/1",
             bluesky_state.get_liked_reply_uris(state),
         )
-        call_params = client.app.bsky.notification.list_notifications.call_args.kwargs["params"]
+        call_params = client.app.bsky.notification.list_notifications.call_args.kwargs[
+            "params"
+        ]
         self.assertIn("repost", call_params["reasons"])
 
     def test_like_replies_skips_duplicate_repost(self):
@@ -910,7 +997,11 @@ class LikeRepliesTests(unittest.TestCase):
         self.assertEqual(len(bluesky_state.get_liked_reply_uris(state)), 1)
 
     def test_like_replies_skips_stale_repost(self):
-        old = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=25)).isoformat().replace("+00:00", "Z")
+        old = (
+            (dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=25))
+            .isoformat()
+            .replace("+00:00", "Z")
+        )
         notification = SimpleNamespace(
             reason="repost",
             indexed_at=old,
@@ -985,22 +1076,22 @@ class LikeRepliesTests(unittest.TestCase):
         """Ensure notifications older than 24 hours are skipped."""
         import time
         from datetime import datetime, timezone
-        
+
         # Current time - 25 hours (definitely old)
         old_time = datetime.now(timezone.utc).timestamp() - (25 * 60 * 60)
         cutoff = time.time() - (24 * 60 * 60)
-        
+
         self.assertLess(old_time, cutoff)
 
     def test_24_hour_cutoff_keeps_recent_notifications(self):
         """Ensure notifications newer than 24 hours are kept."""
         import time
         from datetime import datetime, timezone
-        
+
         # Current time - 1 hour (recent)
         recent_time = datetime.now(timezone.utc).timestamp() - (1 * 60 * 60)
         cutoff = time.time() - (24 * 60 * 60)
-        
+
         self.assertGreater(recent_time, cutoff)
 
 
@@ -1031,7 +1122,12 @@ class UnfollowHistoryTests(unittest.TestCase):
 
     def test_normalise_state_backfills_unfollow_history(self):
         # Simulate an older state file without the unfollow_history key.
-        old_state = {"posted_jokes": [], "provider": {}, "reports": {}, "liked_replies": {}}
+        old_state = {
+            "posted_jokes": [],
+            "provider": {},
+            "reports": {},
+            "liked_replies": {},
+        }
         normalised = bluesky_state._normalise_state(old_state)
         self.assertIn("unfollow_history", normalised)
         self.assertIn("entries", normalised["unfollow_history"])
@@ -1041,9 +1137,9 @@ class JokeRetryChainTests(unittest.TestCase):
     def test_pick_joke_returns_new_joke(self):
         """pick_joke fetches and returns a non-duplicate joke."""
         recent = set()
-        with mock.patch.object(bluesky_joke_providers, "PROVIDERS", {
-            "test_provider": lambda: "Test joke"
-        }):
+        with mock.patch.object(
+            bluesky_joke_providers, "PROVIDERS", {"test_provider": lambda: "Test joke"}
+        ):
             joke, encoded = bluesky_post_joke.pick_joke(recent, "test_provider")
         self.assertEqual(joke, "Test joke")
         self.assertNotIn(encoded, recent)
@@ -1053,19 +1149,20 @@ class JokeRetryChainTests(unittest.TestCase):
         joke1 = "Old joke"
         b64_old = base64.b64encode(joke1.encode()).decode()
         recent = {b64_old}
-        
+
         call_count = [0]
+
         def mock_fetch():
             call_count[0] += 1
             if call_count[0] == 1:
                 return joke1  # Duplicate
             return "New joke"  # Not a duplicate
-        
-        with mock.patch.object(bluesky_joke_providers, "PROVIDERS", {
-            "test_provider": mock_fetch
-        }):
+
+        with mock.patch.object(
+            bluesky_joke_providers, "PROVIDERS", {"test_provider": mock_fetch}
+        ):
             joke, encoded = bluesky_post_joke.pick_joke(recent, "test_provider")
-        
+
         self.assertEqual(joke, "New joke")
         self.assertEqual(call_count[0], 2)
 
@@ -1074,13 +1171,13 @@ class JokeRetryChainTests(unittest.TestCase):
         joke = "All the same"
         b64 = base64.b64encode(joke.encode()).decode()
         recent = {b64}
-        
-        with mock.patch.object(bluesky_joke_providers, "PROVIDERS", {
-            "test_provider": lambda: joke
-        }):
+
+        with mock.patch.object(
+            bluesky_joke_providers, "PROVIDERS", {"test_provider": lambda: joke}
+        ):
             with self.assertRaises(ValueError) as ctx:
                 bluesky_post_joke.pick_joke(recent, "test_provider")
-        
+
         self.assertIn("duplicates", str(ctx.exception))
 
     def test_sanitise_joke_text_repairs_mojibake_apostrophe(self):
@@ -1096,7 +1193,9 @@ class JokeRetryChainTests(unittest.TestCase):
     def test_sanitise_joke_text_decodes_numeric_html_entity(self):
         raw = "Did you hear about the kidnapping at school? It&#039;s ok, he woke up."
         fixed = bluesky_post_joke.sanitise_joke_text(raw)
-        self.assertEqual(fixed, "Did you hear about the kidnapping at school? It's ok, he woke up.")
+        self.assertEqual(
+            fixed, "Did you hear about the kidnapping at school? It's ok, he woke up."
+        )
 
     def test_sanitise_joke_text_decodes_named_html_entity(self):
         raw = "Dad&apos;s favourite joke"
@@ -1109,16 +1208,20 @@ class JokeRetryChainTests(unittest.TestCase):
         self.assertEqual(fixed, "It's still funny")
 
     def test_pick_joke_normalises_curly_quotes_before_return(self):
-        with mock.patch.object(bluesky_joke_providers, "PROVIDERS", {
-            "test_provider": lambda: "It's called \u2018normalisation\u2019."
-        }):
+        with mock.patch.object(
+            bluesky_joke_providers,
+            "PROVIDERS",
+            {"test_provider": lambda: "It's called \u2018normalisation\u2019."},
+        ):
             joke, _ = bluesky_post_joke.pick_joke(set(), "test_provider")
         self.assertEqual(joke, "It's called 'normalisation'.")
 
     def test_pick_joke_decodes_html_entities_before_return(self):
-        with mock.patch.object(bluesky_joke_providers, "PROVIDERS", {
-            "test_provider": lambda: "It&amp;#039;s fixed"
-        }):
+        with mock.patch.object(
+            bluesky_joke_providers,
+            "PROVIDERS",
+            {"test_provider": lambda: "It&amp;#039;s fixed"},
+        ):
             joke, _ = bluesky_post_joke.pick_joke(set(), "test_provider")
         self.assertEqual(joke, "It's fixed")
 
@@ -1132,9 +1235,9 @@ class JokeRetryChainTests(unittest.TestCase):
             call_count[0] += 1
             return long_joke if call_count[0] == 1 else short_joke
 
-        with mock.patch.object(bluesky_joke_providers, "PROVIDERS", {
-            "test_provider": mock_fetch
-        }):
+        with mock.patch.object(
+            bluesky_joke_providers, "PROVIDERS", {"test_provider": mock_fetch}
+        ):
             joke, _ = bluesky_post_joke.pick_joke(set(), "test_provider")
 
         self.assertEqual(joke, short_joke)
@@ -1144,19 +1247,19 @@ class JokeRetryChainTests(unittest.TestCase):
         """pick_joke raises ValueError when every attempt exceeds the char limit."""
         long_joke = "x" * (bluesky_post_joke._MAX_JOKE_CHARS + 1)
 
-        with mock.patch.object(bluesky_joke_providers, "PROVIDERS", {
-            "test_provider": lambda: long_joke
-        }):
+        with mock.patch.object(
+            bluesky_joke_providers, "PROVIDERS", {"test_provider": lambda: long_joke}
+        ):
             with self.assertRaises(ValueError):
                 bluesky_post_joke.pick_joke(set(), "test_provider")
 
     def test_provider_fallback_chain_tries_primaries_first(self):
         """Provider fallback tries primary providers before backups."""
         state = bluesky_state._default_state()
-        
+
         # icanhazdadjoke is PRIMARY_PROVIDERS[0], jokeapi is PRIMARY_PROVIDERS[1]
         self.assertEqual(bluesky_joke_providers.PRIMARY_PROVIDERS[0], "icanhazdadjoke")
-        
+
         # After setting last_used to icanhazdadjoke, next should be jokeapi (still primary)
         state["provider"]["last_used"] = "icanhazdadjoke"
         next_provider = bluesky_state.get_next_provider(state)
@@ -1166,28 +1269,30 @@ class JokeRetryChainTests(unittest.TestCase):
         """Backup providers include jokebot_jokebook as fallback."""
         self.assertIn("jokebot_jokebook", bluesky_joke_providers.BACKUP_PROVIDERS)
         # jokebook must be last (final fallback)
-        self.assertEqual(bluesky_joke_providers.BACKUP_PROVIDERS[-1], "jokebot_jokebook")
+        self.assertEqual(
+            bluesky_joke_providers.BACKUP_PROVIDERS[-1], "jokebot_jokebook"
+        )
 
     def test_deduplication_includes_denylisted_jokes(self):
         """Deduplication set includes both recent and denylisted jokes."""
         state = bluesky_state._default_state()
         recent_joke = "This joke was posted recently"
         b64_recent = base64.b64encode(recent_joke.encode()).decode()
-        
+
         state["posted_jokes"] = [
-            {"ts": bluesky_post_joke.get_current_epoch() - 100, "b64": b64_recent, "provider": "test"}
+            {
+                "ts": bluesky_post_joke.get_current_epoch() - 100,
+                "b64": b64_recent,
+                "provider": "test",
+            }
         ]
-        
-        denylist = {
-            "jokes": [
-                {"b64": "denied_b64", "source_post_uri": "at://post/1"}
-            ]
-        }
-        
+
+        denylist = {"jokes": [{"b64": "denied_b64", "source_post_uri": "at://post/1"}]}
+
         cutoff = bluesky_post_joke.get_current_epoch() - (90 * 86400)
         recent_b64s = bluesky_state.get_recent_b64s(state, cutoff)
         recent_b64s |= bluesky_denylist.get_denylisted_b64s(denylist)
-        
+
         self.assertIn(b64_recent, recent_b64s)
         self.assertIn("denied_b64", recent_b64s)
 
@@ -1197,7 +1302,12 @@ class JokeRetryChainTests(unittest.TestCase):
         self.assertIsInstance(fallback, str)
         self.assertGreater(len(fallback), 0)
         # Fallback should be self-deprecating or reference script/debugging
-        self.assertTrue(any(keyword in fallback.lower() for keyword in ["script", "byte", "debug", "exception", "fail"]))
+        self.assertTrue(
+            any(
+                keyword in fallback.lower()
+                for keyword in ["script", "byte", "debug", "exception", "fail"]
+            )
+        )
 
 
 class StarterPackFollowSyncTests(unittest.TestCase):
@@ -1215,11 +1325,13 @@ class StarterPackFollowSyncTests(unittest.TestCase):
                 "bluesky_manage_starter_pack.retry_network_call",
                 side_effect=lambda fn, description: fn(),
             ):
-                already, followed = bluesky_manage_starter_pack.ensure_following_list_members(
-                    client,
-                    {"did:plc:a", "did:plc:b"},
-                    dry_run=False,
-                    action_delay_seconds=0,
+                already, followed = (
+                    bluesky_manage_starter_pack.ensure_following_list_members(
+                        client,
+                        {"did:plc:a", "did:plc:b"},
+                        dry_run=False,
+                        action_delay_seconds=0,
+                    )
                 )
 
         self.assertEqual(followed, 1)
@@ -1271,13 +1383,18 @@ class StarterPackFollowSyncTests(unittest.TestCase):
 
         with mock.patch(
             "bluesky_manage_starter_pack.fetch_paginated_data",
-            return_value=[SimpleNamespace(did="did:plc:a"), SimpleNamespace(did="did:plc:b")],
+            return_value=[
+                SimpleNamespace(did="did:plc:a"),
+                SimpleNamespace(did="did:plc:b"),
+            ],
         ):
-            already, followed = bluesky_manage_starter_pack.ensure_following_list_members(
-                client,
-                {"did:plc:a", "did:plc:b"},
-                dry_run=False,
-                action_delay_seconds=0,
+            already, followed = (
+                bluesky_manage_starter_pack.ensure_following_list_members(
+                    client,
+                    {"did:plc:a", "did:plc:b"},
+                    dry_run=False,
+                    action_delay_seconds=0,
+                )
             )
 
         self.assertEqual(followed, 0)
@@ -1298,7 +1415,9 @@ class StarterPackFollowSyncTests(unittest.TestCase):
 
         def capture_put(payload):
             captured_record.update(payload.get("record", {}))
-            return SimpleNamespace(uri="at://did:plc:test/app.bsky.graph.starterpack/3mkrjdntf7x2l")
+            return SimpleNamespace(
+                uri="at://did:plc:test/app.bsky.graph.starterpack/3mkrjdntf7x2l"
+            )
 
         client.com.atproto.repo.get_record.return_value = existing_record
         client.com.atproto.repo.put_record.side_effect = capture_put
@@ -1330,7 +1449,10 @@ class ApprovedReportDeletionTests(unittest.TestCase):
         state = bluesky_state._default_state()
         denylist = {
             "jokes": [
-                {"b64": "abc=", "source_post_uri": "at://did:plc:test/app.bsky.feed.post/rkey1"}
+                {
+                    "b64": "abc=",
+                    "source_post_uri": "at://did:plc:test/app.bsky.feed.post/rkey1",
+                }
             ]
         }
 
@@ -1338,7 +1460,9 @@ class ApprovedReportDeletionTests(unittest.TestCase):
             "bluesky_process_reports.retry_network_call",
             side_effect=lambda fn, description: fn(),
         ):
-            count = bluesky_process_reports.delete_approved_report_posts(client, denylist, state)
+            count = bluesky_process_reports.delete_approved_report_posts(
+                client, denylist, state
+            )
 
         self.assertEqual(count, 1)
         self.assertIn(
@@ -1354,7 +1478,9 @@ class ApprovedReportDeletionTests(unittest.TestCase):
         bluesky_state.record_deleted_post_uri(state, uri)
         denylist = {"jokes": [{"b64": "abc=", "source_post_uri": uri}]}
 
-        count = bluesky_process_reports.delete_approved_report_posts(client, denylist, state)
+        count = bluesky_process_reports.delete_approved_report_posts(
+            client, denylist, state
+        )
 
         self.assertEqual(count, 0)
         client.app.bsky.feed.post.delete.assert_not_called()
@@ -1364,7 +1490,9 @@ class ApprovedReportDeletionTests(unittest.TestCase):
         state = bluesky_state._default_state()
         denylist = {"jokes": [{"b64": "abc="}]}
 
-        count = bluesky_process_reports.delete_approved_report_posts(client, denylist, state)
+        count = bluesky_process_reports.delete_approved_report_posts(
+            client, denylist, state
+        )
 
         self.assertEqual(count, 0)
         client.app.bsky.feed.post.delete.assert_not_called()
@@ -1375,7 +1503,9 @@ class ApprovedReportDeletionTests(unittest.TestCase):
         bad_uri = "not-a-valid-uri"
         denylist = {"jokes": [{"b64": "abc=", "source_post_uri": bad_uri}]}
 
-        count = bluesky_process_reports.delete_approved_report_posts(client, denylist, state)
+        count = bluesky_process_reports.delete_approved_report_posts(
+            client, denylist, state
+        )
 
         self.assertEqual(count, 0)
         self.assertIn(bad_uri, bluesky_state.get_deleted_post_uris(state))
@@ -1387,6 +1517,7 @@ class StateRoundTripTests(unittest.TestCase):
 
     def test_save_and_load_round_trips_posted_jokes(self):
         import tempfile
+
         state = bluesky_state._default_state()
         state["posted_jokes"] = [{"ts": 9999, "b64": "dGVzdA==", "provider": "jokeapi"}]
 
@@ -1400,7 +1531,9 @@ class StateRoundTripTests(unittest.TestCase):
         self.assertEqual(loaded["posted_jokes"][0]["b64"], "dGVzdA==")
 
     def test_load_state_returns_default_when_file_missing(self):
-        with mock.patch("bluesky_state.STATE_FILE", "/tmp/does-not-exist-jokebot-state.json"):
+        with mock.patch(
+            "bluesky_state.STATE_FILE", "/tmp/does-not-exist-jokebot-state.json"
+        ):
             loaded = bluesky_state.load_state()
 
         self.assertIn("posted_jokes", loaded)
@@ -1409,6 +1542,7 @@ class StateRoundTripTests(unittest.TestCase):
     def test_save_state_is_atomic_via_temp_file(self):
         """save_state writes to a .tmp file then replaces atomically."""
         import tempfile
+
         state = bluesky_state._default_state()
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1426,7 +1560,12 @@ class StateRoundTripTests(unittest.TestCase):
         """Older state files without liked_replies are backfilled on load."""
         import json
         import tempfile
-        old = {"posted_jokes": [], "provider": bluesky_state._default_state()["provider"], "reports": {}}
+
+        old = {
+            "posted_jokes": [],
+            "provider": bluesky_state._default_state()["provider"],
+            "reports": {},
+        }
 
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp_path = str(pathlib.Path(tmpdir) / "bot_state.json")
@@ -1448,10 +1587,21 @@ class FollowFellowsMainTests(unittest.TestCase):
         client.app.bsky.feed.search_posts.return_value = SimpleNamespace(posts=[])
         state = bluesky_state._default_state()
 
-        with mock.patch("bluesky_follow_fellows.login_client", return_value=(client, "thejokebot.bsky.social")):
-            with mock.patch("bluesky_follow_fellows.get_runtime_controls", return_value={"dry_run": True, "action_delay_seconds": 0.0}):
-                with mock.patch("bluesky_follow_fellows.fetch_paginated_data", return_value=[]):
-                    with mock.patch("bluesky_follow_fellows.bluesky_state.load_state", return_value=state):
+        with mock.patch(
+            "bluesky_follow_fellows.login_client",
+            return_value=(client, "thejokebot.bsky.social"),
+        ):
+            with mock.patch(
+                "bluesky_follow_fellows.get_runtime_controls",
+                return_value={"dry_run": True, "action_delay_seconds": 0.0},
+            ):
+                with mock.patch(
+                    "bluesky_follow_fellows.fetch_paginated_data", return_value=[]
+                ):
+                    with mock.patch(
+                        "bluesky_follow_fellows.bluesky_state.load_state",
+                        return_value=state,
+                    ):
                         with mock.patch(
                             "bluesky_follow_fellows.retry_network_call",
                             side_effect=lambda fn, description: fn(),
@@ -1470,13 +1620,22 @@ class FollowFellowsMainTests(unittest.TestCase):
         client.app.bsky.feed.search_posts.return_value = SimpleNamespace(posts=[post])
         state = bluesky_state._default_state()
 
-        with mock.patch("bluesky_follow_fellows.login_client", return_value=(client, "thejokebot.bsky.social")):
-            with mock.patch("bluesky_follow_fellows.get_runtime_controls", return_value={"dry_run": True, "action_delay_seconds": 0.0}):
+        with mock.patch(
+            "bluesky_follow_fellows.login_client",
+            return_value=(client, "thejokebot.bsky.social"),
+        ):
+            with mock.patch(
+                "bluesky_follow_fellows.get_runtime_controls",
+                return_value={"dry_run": True, "action_delay_seconds": 0.0},
+            ):
                 with mock.patch(
                     "bluesky_follow_fellows.fetch_paginated_data",
                     return_value=[SimpleNamespace(did=already_did)],
                 ):
-                    with mock.patch("bluesky_follow_fellows.bluesky_state.load_state", return_value=state):
+                    with mock.patch(
+                        "bluesky_follow_fellows.bluesky_state.load_state",
+                        return_value=state,
+                    ):
                         with mock.patch(
                             "bluesky_follow_fellows.retry_network_call",
                             side_effect=lambda fn, description: fn(),
@@ -1495,10 +1654,21 @@ class FollowFellowsMainTests(unittest.TestCase):
         state = bluesky_state._default_state()
         bluesky_state.record_unfollow(state, prev_unfollowed)
 
-        with mock.patch("bluesky_follow_fellows.login_client", return_value=(client, "thejokebot.bsky.social")):
-            with mock.patch("bluesky_follow_fellows.get_runtime_controls", return_value={"dry_run": True, "action_delay_seconds": 0.0}):
-                with mock.patch("bluesky_follow_fellows.fetch_paginated_data", return_value=[]):
-                    with mock.patch("bluesky_follow_fellows.bluesky_state.load_state", return_value=state):
+        with mock.patch(
+            "bluesky_follow_fellows.login_client",
+            return_value=(client, "thejokebot.bsky.social"),
+        ):
+            with mock.patch(
+                "bluesky_follow_fellows.get_runtime_controls",
+                return_value={"dry_run": True, "action_delay_seconds": 0.0},
+            ):
+                with mock.patch(
+                    "bluesky_follow_fellows.fetch_paginated_data", return_value=[]
+                ):
+                    with mock.patch(
+                        "bluesky_follow_fellows.bluesky_state.load_state",
+                        return_value=state,
+                    ):
                         with mock.patch(
                             "bluesky_follow_fellows.retry_network_call",
                             side_effect=lambda fn, description: fn(),

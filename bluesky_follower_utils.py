@@ -37,7 +37,11 @@ def fetch_paginated_data(
                 lambda: client_method(actor=actor, cursor=cursor, limit=limit),
                 description=f"fetching paginated data page {pages}",
             )
-        except (requests.RequestException, TimeoutError, atproto_client.exceptions.NetworkError) as exc:
+        except (
+            requests.RequestException,
+            TimeoutError,
+            atproto_client.exceptions.NetworkError,
+        ) as exc:
             print(f"Failed to fetch paginated data on page {pages}: {exc}")
             break
 

@@ -10,24 +10,36 @@ from bluesky_follower_utils import (
     fetch_list_member_dids,
     fetch_paginated_data,
 )
-from bluesky_common import login_client, get_runtime_controls, retry_network_call, get_int_env, get_float_env
+from bluesky_common import (
+    login_client,
+    get_runtime_controls,
+    retry_network_call,
+    get_int_env,
+    get_float_env,
+)
 import bluesky_state as _state
 
 
 DEFAULT_UNFOLLOW_MAX_ACTIONS = 200
 DEFAULT_UNFOLLOW_BATCH_SIZE = 50
 DEFAULT_UNFOLLOW_BATCH_PAUSE_SECONDS = 60.0
-_STARTER_PACK_CONFIG_PATH = pathlib.Path(__file__).parent / "resources" / "jokebot_starter_pack.json"
+_STARTER_PACK_CONFIG_PATH = (
+    pathlib.Path(__file__).parent / "resources" / "jokebot_starter_pack.json"
+)
 
 
 def get_unfollow_controls():
     """Read unfollow safety controls from environment variables."""
     return {
         "max_actions": get_int_env(
-            "BLUESKY_UNFOLLOW_MAX_ACTIONS", default=DEFAULT_UNFOLLOW_MAX_ACTIONS, minimum=0
+            "BLUESKY_UNFOLLOW_MAX_ACTIONS",
+            default=DEFAULT_UNFOLLOW_MAX_ACTIONS,
+            minimum=0,
         ),
         "batch_size": get_int_env(
-            "BLUESKY_UNFOLLOW_BATCH_SIZE", default=DEFAULT_UNFOLLOW_BATCH_SIZE, minimum=1
+            "BLUESKY_UNFOLLOW_BATCH_SIZE",
+            default=DEFAULT_UNFOLLOW_BATCH_SIZE,
+            minimum=1,
         ),
         "batch_pause_seconds": get_float_env(
             "BLUESKY_UNFOLLOW_BATCH_PAUSE_SECONDS",
@@ -37,7 +49,9 @@ def get_unfollow_controls():
     }
 
 
-def select_unfollow_candidates(following_map, follower_dids, ignorable_dids, max_actions):
+def select_unfollow_candidates(
+    following_map, follower_dids, ignorable_dids, max_actions
+):
     """Return deterministic DID candidates to unfollow with an optional safety cap."""
     candidates = sorted(
         did
@@ -93,11 +107,14 @@ def _fetch_list_member_dids(client, list_uri):
         description="fetching protected starter-pack list members",
     )
 
+
 def unfollow_users():
     # List of usernames to ignore (configurable via BLUESKY_UNFOLLOW_IGNORE env var)
     default_ignorable = ["theonion.bsky.social"]
     env_ignorable = os.getenv("BLUESKY_UNFOLLOW_IGNORE", "")
-    ignorable_usernames = default_ignorable + [u.strip() for u in env_ignorable.split(",") if u.strip()]
+    ignorable_usernames = default_ignorable + [
+        u.strip() for u in env_ignorable.split(",") if u.strip()
+    ]
     ignorable_usernames = list(set(ignorable_usernames))  # Deduplicate
     client = None
     username = None
@@ -110,7 +127,9 @@ def unfollow_users():
     batch_pause_seconds = unfollow_controls["batch_pause_seconds"]
 
     if dry_run:
-        print(f"{Fore.YELLOW}Dry-run mode enabled. Unfollow actions will not be executed.{Style.RESET_ALL}")
+        print(
+            f"{Fore.YELLOW}Dry-run mode enabled. Unfollow actions will not be executed.{Style.RESET_ALL}"
+        )
     if action_delay_seconds > 0:
         print(
             f"{Fore.YELLOW}Action delay enabled: {action_delay_seconds:.2f}s between actions.{Style.RESET_ALL}"
@@ -137,7 +156,9 @@ def unfollow_users():
 
     try:
         user_did = client.me.did
-        print(f"{Fore.YELLOW}Fetching followers and following for user: {username}{Style.RESET_ALL}")
+        print(
+            f"{Fore.YELLOW}Fetching followers and following for user: {username}{Style.RESET_ALL}"
+        )
 
         # Fetch followers and following
         followers = fetch_paginated_data(client.get_followers, user_did)
@@ -162,9 +183,13 @@ def unfollow_users():
 
                 if did:
                     ignorable_dids.add(did)
-                    print(f"{Fore.GREEN}Resolved username {ignorable_username} to DID {did}{Style.RESET_ALL}")
+                    print(
+                        f"{Fore.GREEN}Resolved username {ignorable_username} to DID {did}{Style.RESET_ALL}"
+                    )
                 else:
-                    print(f"{Fore.RED}No DID found for username {ignorable_username}, skipping ignore rule.{Style.RESET_ALL}")
+                    print(
+                        f"{Fore.RED}No DID found for username {ignorable_username}, skipping ignore rule.{Style.RESET_ALL}"
+                    )
             except (
                 ValueError,
                 requests.RequestException,
@@ -172,7 +197,9 @@ def unfollow_users():
                 atproto_client.exceptions.NetworkError,
                 atproto_client.exceptions.BadRequestError,
             ) as e:
-                print(f"{Fore.RED}Failed to resolve username {ignorable_username}: {e}{Style.RESET_ALL}")
+                print(
+                    f"{Fore.RED}Failed to resolve username {ignorable_username}: {e}{Style.RESET_ALL}"
+                )
 
         source_list_uri = _load_source_list_uri()
         if source_list_uri:
@@ -228,9 +255,13 @@ def unfollow_users():
         for i, did in enumerate(to_unfollow, start=1):
             uri = following_map.get(did)
             if uri:
-                print(f"{Fore.YELLOW}({i}/{len(to_unfollow)}) Unfollowing {did}...{Style.RESET_ALL}")
+                print(
+                    f"{Fore.YELLOW}({i}/{len(to_unfollow)}) Unfollowing {did}...{Style.RESET_ALL}"
+                )
                 if dry_run:
-                    print(f"{Fore.YELLOW}[DRY-RUN] Would unfollow {did}{Style.RESET_ALL}")
+                    print(
+                        f"{Fore.YELLOW}[DRY-RUN] Would unfollow {did}{Style.RESET_ALL}"
+                    )
                     unfollowed_count += 1
                 else:
                     try:
@@ -249,7 +280,9 @@ def unfollow_users():
                         atproto_client.exceptions.BadRequestError,
                     ) as e:
                         failed_count += 1
-                        print(f"{Fore.RED}Failed to unfollow {did}: {e}{Style.RESET_ALL}")
+                        print(
+                            f"{Fore.RED}Failed to unfollow {did}: {e}{Style.RESET_ALL}"
+                        )
                         if _is_rate_limited_error(e):
                             print(
                                 f"{Fore.RED}Rate limit/throttle detected. "
@@ -298,6 +331,7 @@ def unfollow_users():
         atproto_client.exceptions.BadRequestError,
     ) as e:
         print(f"{Fore.RED}An unexpected error occurred: {e}{Style.RESET_ALL}")
+
 
 if __name__ == "__main__":
     unfollow_users()

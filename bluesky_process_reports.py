@@ -80,7 +80,8 @@ def _extract_notification(notification) -> dict:
         "source_post_uri": _extract_parent_uri(notification),
         "root_uri": _get_value(notification, "record", "reply", "root", "uri"),
         "root_cid": _get_value(notification, "record", "reply", "root", "cid"),
-        "indexed_at": _get_value(notification, "indexed_at") or _get_value(notification, "indexedAt"),
+        "indexed_at": _get_value(notification, "indexed_at")
+        or _get_value(notification, "indexedAt"),
     }
 
 
@@ -123,7 +124,7 @@ def _encode_text_b64(text: str | None) -> str | None:
 def _delete_post(client, post_uri: str) -> tuple[bool, bool]:
     """
     Delete a single Bluesky post by AT URI.
-    
+
     Returns (success, should_retry):
     - (True, False): Post deleted successfully
     - (False, True): Transient error (network/timeout); will retry on next run
@@ -141,10 +142,18 @@ def _delete_post(client, post_uri: str) -> tuple[bool, bool]:
             description=f"deleting post {post_uri}",
         )
         return True, False
-    except (requests.RequestException, TimeoutError, atproto_client.exceptions.NetworkError) as exc:
+    except (
+        requests.RequestException,
+        TimeoutError,
+        atproto_client.exceptions.NetworkError,
+    ) as exc:
         print(f"Warning: transient error deleting post {post_uri}, will retry: {exc}")
         return False, True
-    except (ValueError, AttributeError, atproto_client.exceptions.BadRequestError) as exc:
+    except (
+        ValueError,
+        AttributeError,
+        atproto_client.exceptions.BadRequestError,
+    ) as exc:
         print(f"Warning: permanent error deleting post {post_uri}, skipping: {exc}")
         return False, False
 
@@ -152,7 +161,7 @@ def _delete_post(client, post_uri: str) -> tuple[bool, bool]:
 def acknowledge_report(client, proposal: dict) -> tuple[bool, bool]:
     """
     Reply to a #report notification to acknowledge receipt to the reporter.
-    
+
     Returns (success, should_retry):
     - (True, False): Acknowledgement sent successfully
     - (False, True): Transient error (network/timeout); will retry on next run
@@ -176,10 +185,18 @@ def acknowledge_report(client, proposal: dict) -> tuple[bool, bool]:
             description=f"acknowledging report {reply_uri}",
         )
         return True, False
-    except (requests.RequestException, TimeoutError, atproto_client.exceptions.NetworkError) as exc:
+    except (
+        requests.RequestException,
+        TimeoutError,
+        atproto_client.exceptions.NetworkError,
+    ) as exc:
         print(f"Warning: transient error acknowledging {reply_uri}, will retry: {exc}")
         return False, True
-    except (ValueError, AttributeError, atproto_client.exceptions.BadRequestError) as exc:
+    except (
+        ValueError,
+        AttributeError,
+        atproto_client.exceptions.BadRequestError,
+    ) as exc:
         print(f"Warning: permanent error acknowledging {reply_uri}, skipping: {exc}")
         return False, False
 
@@ -214,7 +231,9 @@ def delete_approved_report_posts(client, denylist: dict, state: dict) -> int:
     return deleted_count
 
 
-def collect_report_proposals(client, state: dict, denylisted_b64s: set[str]) -> tuple[list[dict], set[str], int]:
+def collect_report_proposals(
+    client, state: dict, denylisted_b64s: set[str]
+) -> tuple[list[dict], set[str], int]:
     """
     Collect new denylist proposals from reply notifications.
 
@@ -254,7 +273,11 @@ def collect_report_proposals(client, state: dict, denylisted_b64s: set[str]) -> 
                 ),
                 description="listing report notifications",
             )
-        except (requests.RequestException, TimeoutError, atproto_client.exceptions.NetworkError) as exc:
+        except (
+            requests.RequestException,
+            TimeoutError,
+            atproto_client.exceptions.NetworkError,
+        ) as exc:
             print(f"Warning: failed to list report notifications after retries: {exc}")
             break
         pages_fetched += 1
@@ -292,7 +315,9 @@ def collect_report_proposals(client, state: dict, denylisted_b64s: set[str]) -> 
 
             proposal = {
                 "b64": b64_value,
-                "source_provider": posted_entry.get("provider") if posted_entry else "unknown",
+                "source_provider": posted_entry.get("provider")
+                if posted_entry
+                else "unknown",
                 "source_post_uri": source_post_uri,
                 "source_reply_uri": parsed["reply_uri"],
                 "reply_cid": parsed["reply_cid"],

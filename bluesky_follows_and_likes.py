@@ -24,12 +24,21 @@ _LIKE_REASONS = ("reply", "repost")
 # Follow-back
 # ---------------------------------------------------------------------------
 
-def follow_back(client, username: str, dry_run: bool, action_delay_seconds: float, unfollowed_dids: set | None = None) -> None:
+
+def follow_back(
+    client,
+    username: str,
+    dry_run: bool,
+    action_delay_seconds: float,
+    unfollowed_dids: set | None = None,
+) -> None:
     """Follow back any followers the bot is not yet following."""
     if unfollowed_dids is None:
         unfollowed_dids = set()
     user_did = client.me.did
-    print(f"{Fore.YELLOW}Fetching followers and following for user: {username}{Style.RESET_ALL}")
+    print(
+        f"{Fore.YELLOW}Fetching followers and following for user: {username}{Style.RESET_ALL}"
+    )
 
     followers = fetch_paginated_data(client.get_followers, user_did)
     following = fetch_paginated_data(client.get_follows, user_did)
@@ -38,14 +47,18 @@ def follow_back(client, username: str, dry_run: bool, action_delay_seconds: floa
     following_dids = {f.did for f in following}
 
     to_follow_back = follower_dids - following_dids
-    print(f"{Fore.GREEN}Found {len(to_follow_back)} followers to follow back.{Style.RESET_ALL}")
+    print(
+        f"{Fore.GREEN}Found {len(to_follow_back)} followers to follow back.{Style.RESET_ALL}"
+    )
 
     for i, did in enumerate(to_follow_back, start=1):
         if did in unfollowed_dids:
             print(
                 f"{Fore.GREEN}({i}/{len(to_follow_back)}) Re-engagement: {did} is following again after previous unfollow.{Style.RESET_ALL}"
             )
-        print(f"{Fore.YELLOW}({i}/{len(to_follow_back)}) Following {did}...{Style.RESET_ALL}")
+        print(
+            f"{Fore.YELLOW}({i}/{len(to_follow_back)}) Following {did}...{Style.RESET_ALL}"
+        )
         if dry_run:
             print(f"{Fore.YELLOW}[DRY-RUN] Would follow {did}{Style.RESET_ALL}")
         else:
@@ -55,7 +68,11 @@ def follow_back(client, username: str, dry_run: bool, action_delay_seconds: floa
                     description=f"following back {did}",
                 )
                 print(f"{Fore.GREEN}Followed {did}{Style.RESET_ALL}")
-            except (requests.RequestException, TimeoutError, atproto_client.exceptions.NetworkError) as exc:
+            except (
+                requests.RequestException,
+                TimeoutError,
+                atproto_client.exceptions.NetworkError,
+            ) as exc:
                 print(f"{Fore.RED}Failed to follow {did}: {exc}{Style.RESET_ALL}")
                 continue
 
@@ -69,6 +86,7 @@ def follow_back(client, username: str, dry_run: bool, action_delay_seconds: floa
 # Reply likes
 # ---------------------------------------------------------------------------
 
+
 def _get_value(obj, *path):
     cur = obj
     for key in path:
@@ -81,7 +99,9 @@ def _get_value(obj, *path):
     return cur
 
 
-def like_replies(client, state: dict, dry_run: bool, action_delay_seconds: float) -> int:
+def like_replies(
+    client, state: dict, dry_run: bool, action_delay_seconds: float
+) -> int:
     """Like replies/reposts of the bot's posts from the last 24 hours.
 
     Notifications older than _LIKE_WINDOW_SECONDS are skipped. Already-liked
@@ -110,8 +130,14 @@ def like_replies(client, state: dict, dry_run: bool, action_delay_seconds: float
                 ),
                 description="listing interaction notifications",
             )
-        except (requests.RequestException, TimeoutError, atproto_client.exceptions.NetworkError) as exc:
-            print(f"{Fore.RED}Failed to fetch interaction notifications: {exc}{Style.RESET_ALL}")
+        except (
+            requests.RequestException,
+            TimeoutError,
+            atproto_client.exceptions.NetworkError,
+        ) as exc:
+            print(
+                f"{Fore.RED}Failed to fetch interaction notifications: {exc}{Style.RESET_ALL}"
+            )
             break
 
         notifications = _get_value(response, "notifications") or []
@@ -124,7 +150,9 @@ def like_replies(client, state: dict, dry_run: bool, action_delay_seconds: float
                 continue
 
             # Parse indexed_at to epoch for age check.
-            indexed_at = _get_value(notification, "indexed_at") or _get_value(notification, "indexedAt")
+            indexed_at = _get_value(notification, "indexed_at") or _get_value(
+                notification, "indexedAt"
+            )
             if indexed_at:
                 try:
                     ts = datetime.fromisoformat(indexed_at.replace("Z", "+00:00"))
@@ -164,7 +192,11 @@ def like_replies(client, state: dict, dry_run: bool, action_delay_seconds: float
                         description=f"liking {reason} {uri}",
                     )
                     print(f"{Fore.GREEN}Liked {reason}: {uri}{Style.RESET_ALL}")
-                except (requests.RequestException, TimeoutError, atproto_client.exceptions.NetworkError) as exc:
+                except (
+                    requests.RequestException,
+                    TimeoutError,
+                    atproto_client.exceptions.NetworkError,
+                ) as exc:
                     print(f"{Fore.RED}Failed to like {uri}: {exc}{Style.RESET_ALL}")
                     continue
 
@@ -196,13 +228,16 @@ def like_replies(client, state: dict, dry_run: bool, action_delay_seconds: float
 # Entry point
 # ---------------------------------------------------------------------------
 
+
 def main() -> None:
     controls = get_runtime_controls()
     dry_run = controls["dry_run"]
     action_delay_seconds = controls["action_delay_seconds"]
 
     if dry_run:
-        print(f"{Fore.YELLOW}Dry-run mode enabled. Actions will not be executed.{Style.RESET_ALL}")
+        print(
+            f"{Fore.YELLOW}Dry-run mode enabled. Actions will not be executed.{Style.RESET_ALL}"
+        )
     if action_delay_seconds > 0:
         print(
             f"{Fore.YELLOW}Action delay enabled: {action_delay_seconds:.2f}s between actions.{Style.RESET_ALL}"
@@ -212,7 +247,12 @@ def main() -> None:
         print(f"{Fore.YELLOW}Logging in to Bluesky...{Style.RESET_ALL}")
         client, username = login_client()
         print(f"{Fore.GREEN}Successfully logged in as {username}.{Style.RESET_ALL}")
-    except (ValueError, requests.RequestException, TimeoutError, atproto_client.exceptions.NetworkError) as exc:
+    except (
+        ValueError,
+        requests.RequestException,
+        TimeoutError,
+        atproto_client.exceptions.NetworkError,
+    ) as exc:
         print(f"{Fore.RED}Login failed: {exc}{Style.RESET_ALL}")
         return
 
@@ -221,7 +261,12 @@ def main() -> None:
 
     try:
         follow_back(client, username, dry_run, action_delay_seconds, unfollowed_dids)
-    except (ValueError, requests.RequestException, TimeoutError, atproto_client.exceptions.NetworkError) as exc:
+    except (
+        ValueError,
+        requests.RequestException,
+        TimeoutError,
+        atproto_client.exceptions.NetworkError,
+    ) as exc:
         print(f"{Fore.RED}Follow-back failed: {exc}{Style.RESET_ALL}")
 
     try:
@@ -230,7 +275,12 @@ def main() -> None:
             f"{Fore.GREEN}Liked {liked} new interaction"
             f"{'s' if liked != 1 else ''}.{Style.RESET_ALL}"
         )
-    except (ValueError, requests.RequestException, TimeoutError, atproto_client.exceptions.NetworkError) as exc:
+    except (
+        ValueError,
+        requests.RequestException,
+        TimeoutError,
+        atproto_client.exceptions.NetworkError,
+    ) as exc:
         print(f"{Fore.RED}Interaction liking failed: {exc}{Style.RESET_ALL}")
 
     bluesky_state.save_state(state)

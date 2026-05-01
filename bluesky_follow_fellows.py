@@ -23,17 +23,27 @@ def fetch_users_for_tag(client, tag: str):
         users = [post.author.did for post in resp.posts]
         print(f"Found {len(users)} users for #{tag}")
         return users
-    except (requests.RequestException, TimeoutError, atproto_client.exceptions.NetworkError) as e:
+    except (
+        requests.RequestException,
+        TimeoutError,
+        atproto_client.exceptions.NetworkError,
+    ) as e:
         print(f"Exception during search for #{tag}: {e}")
         return []
+
 
 def get_following(client):
     try:
         following = fetch_paginated_data(client.get_follows, client.me.did)
         return {follow.did for follow in following}
-    except (requests.RequestException, TimeoutError, atproto_client.exceptions.NetworkError) as e:
+    except (
+        requests.RequestException,
+        TimeoutError,
+        atproto_client.exceptions.NetworkError,
+    ) as e:
         print(f"Could not fetch following list, proceeding without deduplication: {e}")
         return set()
+
 
 def follow(client, did: str):
     try:
@@ -41,7 +51,11 @@ def follow(client, did: str):
             lambda: client.follow(did),
             description=f"following {did}",
         )
-    except (requests.RequestException, TimeoutError, atproto_client.exceptions.NetworkError) as e:
+    except (
+        requests.RequestException,
+        TimeoutError,
+        atproto_client.exceptions.NetworkError,
+    ) as e:
         print(f"Unexpected error trying to follow {did}: {e}")
 
 
@@ -71,6 +85,7 @@ def select_users(tag_users, tag_order, per_tag_limit, overall_limit):
 
     return selected_users[:overall_limit]
 
+
 def main():
     print("Starting fellow-follow discovery script...")
     client, username = login_client()
@@ -88,12 +103,16 @@ def main():
     state = bluesky_state.load_state()
     unfollowed_dids = bluesky_state.get_unfollowed_dids(state)
     if unfollowed_dids:
-        print(f"{len(unfollowed_dids)} DID(s) in unfollow history — excluded from candidates.")
+        print(
+            f"{len(unfollowed_dids)} DID(s) in unfollow history — excluded from candidates."
+        )
 
     tag_users = {}
     for tag in hashtags:
         users = fetch_users_for_tag(client, tag)
-        eligible_users = [u for u in users if u not in already_following and u not in unfollowed_dids]
+        eligible_users = [
+            u for u in users if u not in already_following and u not in unfollowed_dids
+        ]
         tag_users[tag] = eligible_users
 
     print("\nEligible users before redistribution:")
@@ -144,6 +163,7 @@ def main():
             print(f"  #{tag}: {count} users – sample: {', '.join(samples[:3])} ...")
 
     print("\nFollow fellows script completed.")
+
 
 if __name__ == "__main__":
     main()
