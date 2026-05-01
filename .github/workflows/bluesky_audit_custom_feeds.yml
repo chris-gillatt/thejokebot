@@ -1,0 +1,86 @@
+name: bluesky_audit_custom_feeds
+
+on:
+  schedule:
+    - cron: "30 18 * * *"  # Runs daily at 18:30 UTC after the final joke post window
+  workflow_dispatch:
+
+concurrency:
+  group: bluesky_audit_custom_feeds
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  bluesky_audit_custom_feeds:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Run custom-feed audit
+        env:
+          BLUESKY_PASSWORD: ${{ secrets.BLUESKY_PASSWORD }}
+        run: |
+          mkdir -p .agent-tmp
+          python bluesky_check_custom_feeds.py \
+            --days 14 \
+            --out-json .agent-tmp/custom_feed_audit_latest.json
+
+      - name: Write workflow summary
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          path = Path('.agent-tmp/custom_feed_audit_latest.json')
+          if not path.exists():
+              raise SystemExit('Audit JSON not found.')
+
+          data = json.loads(path.read_text(encoding='utf-8'))
+          lines = []
+          lines.append('# Custom Feed Audit')
+          lines.append('')
+          lines.append(f"Status: {data.get('status', 'unknown')}")
+          lines.append(f"Message: {data.get('message', '')}")
+          lines.append(f"Window days: {data.get('window_days')}")
+          lines.append(f"Recent posts: {data.get('recent_post_count', 0)}")
+          lines.append(f"Unique posts in any feed: {data.get('unique_posts_in_any_feed', 0)}")
+          lines.append(f"Unique posts in any feed %: {data.get('unique_posts_in_any_feed_pct', 0.0)}")
+          lines.append(f"Total matches: {data.get('total_matches', 0)}")
+          lines.append('')
+          feeds = data.get('feeds', [])
+          if feeds:
+              lines.append('## Feeds')
+              lines.append('')
+              for feed in feeds:
+                  lines.append(
+                      f"- {feed.get('name', 'Unnamed')}: {feed.get('matches', 0)} match(es), "
+                      f"{feed.get('coverage_pct', 0.0)}%, status={feed.get('status', 'unknown')}"
+                  )
+            summary_path = os.environ.get('GITHUB_STEP_SUMMARY')
+            if not summary_path:
+              raise SystemExit('GITHUB_STEP_SUMMARY is not set.')
+            Path(summary_path).write_text('\n'.join(lines) + '\n', encoding='utf-8')
+          PY
+
+      - name: Upload custom-feed audit artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: custom-feed-audit-${{ github.run_number }}
+          path: .agent-tmp/custom_feed_audit_latest.json
+          if-no-files-found: error
+          retention-days: 30

@@ -17,6 +17,16 @@ _DEFAULT_FEED_PAGE_LIMIT = 3
 _PAGE_SIZE = 100
 
 
+def _write_json_summary(out_path: str, payload: dict[str, Any]) -> None:
+    if not out_path:
+        return
+    path = pathlib.Path(out_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(payload, f, indent=2)
+        f.write("\n")
+
+
 def load_config() -> dict[str, Any]:
     if not _CONFIG_PATH.exists():
         return {"custom_feeds": {"enabled": False, "target_feeds": []}}
@@ -216,16 +226,42 @@ def main() -> int:
         })
 
     if not selected_feeds:
-        print(
+        message = (
             "No valid custom feeds configured in resources/jokebot_custom_feeds.json. "
             "Add at least one real feed URI to custom_feeds.target_feeds."
         )
+        print(message)
+        _write_json_summary(args.out_json, {
+            "window_days": args.days,
+            "window_start_utc": since_dt.isoformat(),
+            "feed_source": "configured",
+            "status": "no_configured_feeds",
+            "message": message,
+            "recent_post_count": 0,
+            "total_matches": 0,
+            "unique_posts_in_any_feed": 0,
+            "unique_posts_in_any_feed_pct": 0.0,
+            "feeds": [],
+        })
         return 0
 
     recent_uris = get_recent_author_post_uris(client, actor, author_did, since_dt)
 
     if not recent_uris:
-        print(f"No authored post URIs found in the last {args.days} day(s).")
+        message = f"No authored post URIs found in the last {args.days} day(s)."
+        print(message)
+        _write_json_summary(args.out_json, {
+            "window_days": args.days,
+            "window_start_utc": since_dt.isoformat(),
+            "feed_source": "configured",
+            "status": "no_recent_posts",
+            "message": message,
+            "recent_post_count": 0,
+            "total_matches": 0,
+            "unique_posts_in_any_feed": 0,
+            "unique_posts_in_any_feed_pct": 0.0,
+            "feeds": [],
+        })
         return 0
 
     print(
@@ -296,18 +332,16 @@ def main() -> int:
             "window_days": args.days,
             "window_start_utc": since_dt.isoformat(),
             "feed_source": "configured",
+            "status": "ok",
+            "message": "Audit completed successfully.",
             "recent_post_count": len(recent_uris),
             "total_matches": total_matches,
             "unique_posts_in_any_feed": len(unique_matched_uris),
             "unique_posts_in_any_feed_pct": unique_match_pct,
             "feeds": per_feed_results,
         }
-        out_path = pathlib.Path(args.out_json)
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(out_path, "w", encoding="utf-8") as f:
-            json.dump(payload, f, indent=2)
-            f.write("\n")
-        print(f"Wrote JSON summary to {out_path}")
+        _write_json_summary(args.out_json, payload)
+        print(f"Wrote JSON summary to {args.out_json}")
 
     return 0
 

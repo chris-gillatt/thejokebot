@@ -197,19 +197,24 @@ spam-like automation, implementation is split into conservative phases.
 - Added optional bounded hashtag rotation in `bluesky_post_joke.py`.
 - Added `bluesky_check_custom_feeds.py` as a read-only visibility checker
 	for configured feed generator URIs.
+- Added `.github/workflows/bluesky_audit_custom_feeds.yml` so the discovery audit runs automatically in GitHub Actions and uploads JSON evidence artifacts.
 - Added implementation/runbook documentation in `docs/custom-feeds.md`.
 
 **Still deferred:**
 - Any dedicated feed-generator service build-out.
 - Any growth-spam patterns (auto-like/reply/DM/follow campaigns).
 
+**Temporary scope rule:**
+- The discovery checker, discovery workflow, config file, and any supporting hashtag experiment in this area are temporary evaluation tooling, not permanent platform infrastructure.
+- Remove them during housekeeping if the review concludes they are no longer needed once the owned feed-generator path is decided.
+
 **Review checkpoint (time-bound):**
 - Review date: **2026-05-15** (UTC)
 - Owner action at review:
-	- Run `python bluesky_check_custom_feeds.py --days 14 --out-json .agent-tmp/custom_feed_review_2026-05-15.json`
-	- Compare `unique_posts_in_any_feed_pct` against the previous baseline.
+	- Review the latest `bluesky_audit_custom_feeds` workflow runs in GitHub Actions.
+	- Download the uploaded JSON artifact and compare `unique_posts_in_any_feed_pct` against the previous baseline.
 	- Decide one of: keep incremental integration, roll back optional hashtag rotation, or scope next-phase implementation.
-	- Housekeeping: prune invalid/stale feed URIs from `resources/jokebot_custom_feeds.json` and archive the review JSON in `.agent-tmp/`.
+	- Housekeeping: prune invalid/stale feed URIs from `resources/jokebot_custom_feeds.json` and remove the temporary discovery workflow/tooling if this track has run its course.
 
 ## 6. Explicit "Will Not Do" Decisions
 Do not revisit these without a concrete operational reason.
