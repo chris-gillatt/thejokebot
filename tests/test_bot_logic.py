@@ -1253,6 +1253,33 @@ class JokeRetryChainTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 bluesky_post_joke.pick_joke(set(), "test_provider")
 
+    def test_grapheme_len_treats_combining_mark_sequence_as_one(self):
+        self.assertEqual(bluesky_post_joke._grapheme_len("e\u0301"), 1)
+
+    def test_pick_joke_accepts_combining_sequence_at_grapheme_limit(self):
+        # Each "e\u0301" is one grapheme, despite being two code points.
+        grapheme_limited_joke = "e\u0301" * bluesky_post_joke._MAX_JOKE_CHARS
+
+        with mock.patch.object(
+            bluesky_joke_providers,
+            "PROVIDERS",
+            {"test_provider": lambda: grapheme_limited_joke},
+        ):
+            joke, _ = bluesky_post_joke.pick_joke(set(), "test_provider")
+
+        self.assertEqual(joke, grapheme_limited_joke)
+
+    def test_pick_joke_rejects_grapheme_over_limit(self):
+        over_limit_joke = "x" * (bluesky_post_joke._MAX_JOKE_CHARS + 1)
+
+        with mock.patch.object(
+            bluesky_joke_providers,
+            "PROVIDERS",
+            {"test_provider": lambda: over_limit_joke},
+        ):
+            with self.assertRaises(ValueError):
+                bluesky_post_joke.pick_joke(set(), "test_provider")
+
     def test_provider_fallback_chain_tries_primaries_first(self):
         """Provider fallback tries primary providers before backups."""
         state = bluesky_state._default_state()

@@ -128,7 +128,7 @@ Test coverage added for skip-and-retry and all-too-long failure paths.
 
 ---
 
-### 5.14 Use grapheme-aware length checks for post safety
+### 5.14 Use grapheme-aware length checks for post safety ✓ Complete
 **Priority: Medium**
 
 Current length preflight uses Python `len()` (code points), while Bluesky limits
@@ -136,6 +136,12 @@ are based on visible character units. For composed emoji and combining marks,
 code-point counts may diverge from rendered length. Evaluate and, if needed,
 switch to grapheme-cluster counting in the preflight check to avoid false
 accept/reject edge cases.
+
+**Resolution:** `bluesky_post_joke.py` now uses grapheme-cluster counting via
+the `regex` package (`\X`) for preflight length checks. `_MAX_JOKE_CHARS` is
+now derived from grapheme-aware hashtag suffix length, and `pick_joke()`
+compares joke length in graphemes rather than code points. Added regression
+tests covering combining-mark edge cases and updated dependencies.
 
 ---
 
@@ -257,6 +263,7 @@ Do not revisit these without a concrete operational reason.
 - v1.16: Added Ruff code-quality CI checks (5.16) via `.github/workflows/ruff_quality.yml` with non-invasive lint/format validation (`ruff check .`, `ruff format --check .`) on pull requests and `main` updates. README local validation guidance updated to match.
 - v1.17: Completed repo-wide Ruff formatting pass and switched `ruff_quality` format validation to strict enforcement (removed advisory mode), so formatting drift now fails CI.
 - v1.18: Added baseline GitHub CodeQL scanning (5.17) via `.github/workflows/codeql.yml` for Python on pull requests, `main` updates, weekly schedule, and manual dispatch.
+- v1.19: Completed grapheme-aware post-length preflight (5.14) in `bluesky_post_joke.py` using `regex` grapheme-cluster counting so composed characters are measured by visible units instead of code points.
 
 ## 9. Whole-Project Code Review Findings
 

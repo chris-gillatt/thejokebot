@@ -6,6 +6,7 @@ import time
 
 import requests
 import atproto_client.exceptions
+import regex
 
 import bluesky_denylist
 import bluesky_joke_providers
@@ -19,8 +20,17 @@ BLUESKY_MAX_POST_CHARS = 300
 # Hashtags
 HASHTAGS = ["#jokes", "#dadjoke", "#funny"]
 
+# Bluesky character limits are based on user-visible characters, not code points.
+_GRAPHEME_PATTERN = regex.compile(r"\X")
+
+
+def _grapheme_len(text: str) -> int:
+    """Return grapheme-cluster count for user-visible character length checks."""
+    return len(_GRAPHEME_PATTERN.findall(text))
+
+
 # Graphemes consumed by "\n\n" + space-joined hashtags appended to every post.
-_HASHTAG_SUFFIX_LEN = 2 + len(" ".join(HASHTAGS))  # 2 newlines + tag string
+_HASHTAG_SUFFIX_LEN = 2 + _grapheme_len(" ".join(HASHTAGS))  # 2 newlines + tag string
 _MAX_JOKE_CHARS = BLUESKY_MAX_POST_CHARS - _HASHTAG_SUFFIX_LEN
 _MOJIBAKE_MARKERS = ("Ã", "Â", "â", "ð", "\x80", "\x99")
 _HTML_UNESCAPE_PASSES = 3
@@ -85,10 +95,11 @@ def pick_joke(recent_b64s: set, provider_name: str) -> tuple:
     fetch_fn = bluesky_joke_providers.PROVIDERS[provider_name]
     for _ in range(MAX_ATTEMPTS):
         joke = sanitise_joke_text(fetch_fn())
-        if len(joke) > _MAX_JOKE_CHARS:
+        grapheme_count = _grapheme_len(joke)
+        if grapheme_count > _MAX_JOKE_CHARS:
             print(
                 f"Skipping joke from '{provider_name}': "
-                f"{len(joke)} chars exceeds limit of {_MAX_JOKE_CHARS}"
+                f"{grapheme_count} graphemes exceeds limit of {_MAX_JOKE_CHARS}"
             )
             continue
         encoded = base64.b64encode(joke.encode("utf-8")).decode()
