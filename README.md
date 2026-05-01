@@ -17,10 +17,10 @@ Posts dad jokes to the Bluesky account [thejokebot.bsky.social](https://bsky.app
 
 ![joke bot](./images/jokebot-logo.png)
 
-## What this repo does
+## Functionality
 
-- Posts a joke three times per day on a schedule.
-- Avoids reposting the same joke within a rolling 90-day window.
+- Posts regular jokes by a schedule.
+- Avoids duplicating jokes within a rolling 90-day window.
 - Rotates across multiple live joke APIs with a bundled offline fallback.
 - Supports follow-back, reply liking, unfollow, and fellow-follow discovery scripts.
 - Lets followers report unsuitable jokes via a `#report` reply, which triggers an automated PR to add the joke to a permanent denylist.
@@ -110,37 +110,29 @@ The report triggers an automated PR adding the joke to the denylist. Once a main
 
 ## Starter pack workflow
 
-Issue #14 uses a hybrid model:
-
-- One-time setup to convert an existing Bluesky list into a starter-pack record.
-- Manual sync runs afterwards to keep follows and record metadata aligned.
+Starter-pack operations are manual and safe by default.
 
 Configuration lives in `resources/jokebot_starter_pack.json`:
 
 - `enabled`: master switch for all starter-pack/list behaviour.
-- `source_list_uri`: source list used for conversion and protection.
+- `source_list_uri`: source list used for protection and starter-pack sync.
 - `starter_pack_uri`: preferred update target URI (set after first live creation).
-- `record_key`: optional TID rkey for explicit updates; leave blank unless you know the TID.
+- `record_key`: optional TID rkey for explicit updates.
 - `sync.follow_list_members`: when enabled, manager script follows list members not already followed.
 - `sync.upsert_record`: when enabled, manager script updates the starter-pack record.
 
-Manual operation is via workflow dispatch: `bluesky_manage_starter_pack`.
+Run it via workflow dispatch: `bluesky_manage_starter_pack`.
 
 - Leave `apply_changes=false` for dry-run preview.
 - Set `apply_changes=true` to perform live follow/record mutations.
 
 ## Report workflow (technical detail)
 
-The report pipeline runs every 30 minutes via the `bluesky_process_reports` workflow. Each run:
+The report pipeline runs every 30 minutes via `bluesky_process_reports`.
 
-1. **Deletes approved posts.** Reads `resources/jokebot_denylist.json` for entries with a `source_post_uri` and deletes those Bluesky posts if not already deleted. Deleted URIs are recorded in `bot_state.json` so the attempt is not retried.
-2. **Scans reply notifications.** Fetches the most recent reply notifications (up to `BLUESKY_REPORT_MAX_PAGES` × `BLUESKY_REPORT_PAGE_LIMIT` entries). Already-processed notification URIs are stored in `bot_state.json` and skipped.
-3. **Identifies `#report` replies.** A notification qualifies if it is a reply and its text contains `#report` as a standalone hashtag.
-4. **Resolves the reported joke.** The reply's parent URI is looked up in the post URI index in `bot_state.json`. If not found there (e.g. state was reset), the post text is fetched live from the Bluesky API and encoded.
-5. **Skips duplicates.** Jokes already in the denylist, or reported more than once in the same run, produce only one proposal.
-6. **Emits proposals.** New proposals are written to `.agent-tmp/report_proposals.json`.
-7. **Opens PRs.** `bluesky_create_report_prs.py` reads the proposals file and opens one pull request per new report. Each PR adds the joke's base64 value and evidence (post URI, reply URI, reporter DID) to `resources/jokebot_denylist.json`. Branches are named `chore/report-denylist-<sha1-prefix>` and skip creation if a matching remote branch or open PR already exists.
-8. **Updates checkpoint state.** Processed notification URIs and the deletion record are saved back to `bot_state.json` and committed to `main` by the workflow.
+1. It scans replies for `#report`, maps each report to a posted joke, and ignores duplicates.
+2. It writes proposals to `.agent-tmp/report_proposals.json` and opens denylist PRs via `bluesky_create_report_prs.py`.
+3. It updates state in `bot_state.json` so notifications and deletions are not reprocessed.
 
 ## State
 
