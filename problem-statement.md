@@ -242,3 +242,162 @@ Do not revisit these without a concrete operational reason.
 - v1.12: Added GroanDeck as a third primary provider (5.11). `fetch_from_groandeck()` added, all 33 categories reviewed and confirmed family-friendly. Primary rotation extended to `[icanhazdadjoke, jokeapi, groandeck]`.
 - v1.13: Added pre-post length guard (5.13). `pick_joke()` now skips over-long jokes before API send, retries within provider attempts, and falls through provider chain when necessary.
 - v1.14: Added Syrsly as a backup provider (5.18) using the dad-joke endpoint, plus BOM sanitisation hardening for provider text normalisation.
+- v1.15: Hardened starter-pack update path (5.19 follow-on): full AT URI validation with DID and collection enforcement; removed misleading slug default for `record_key`; shared list-member DID helpers moved to `bluesky_follower_utils`; 5 new regression tests. Prompt file added for reusable code review. Suite at 105 passing.
+
+## 9. Whole-Project Code Review Findings
+
+Conducted 1 May 2026 against HEAD (`19f0c1c`). Covers all `bluesky_*.py` scripts, `.github/workflows/*.yml`, `resources/`, and `tests/test_bot_logic.py`.
+
+---
+
+### 🔴 Critical Issues
+
+#### CR-1 — `bluesky_process_reports.py`: bare `int()` coercions of env vars crash the report pipeline
+**File:** `bluesky_process_reports.py`, inside `collect_report_proposals()` (lines near the `page_limit`/`max_pages` assignments).
+
+**Problem:** Both `BLUESKY_REPORT_PAGE_LIMIT` and `BLUESKY_REPORT_MAX_PAGES` are read with bare `int(os.getenv(...))`. If either env var is set to a non-integer value (typo, empty string after a misconfiguration), Python raises an unhandled `ValueError` before any notifications are processed. The entire report pipeline aborts silently. Every other env-var read in the codebase uses the safe `_get_int_env` / `get_float_env` helpers that default gracefully.
+
+**Fix:** Adopt the existing pattern. First, make `bluesky_common._get_int_env` importable by renaming it to `get_int_env` (remove the leading underscore), then replace the bare coercions:
+
+```python
+# bluesky_process_reports.py
+from bluesky_common import get_int_env
+
+page_limit = get_int_env("BLUESKY_REPORT_PAGE_LIMIT", DEFAULT_PAGE_LIMIT, minimum=1)
+max_pages  = get_int_env("BLUESKY_REPORT_MAX_PAGES",  DEFAULT_MAX_PAGES,  minimum=1)
+```
+
+---
+
+### 🟡 Suggestions
+
+#### CS-1 — `bluesky_follow_fellows.py`: module-level `client`/`username` globals
+**File:** `bluesky_follow_fellows.py`, top of file and `login()` function.
+
+**Problem:** `client = None` and `username = None` are declared at module level; `login()` writes them via `global`. This is the only script in the project that uses this pattern — all others (`bluesky_unfollow.py`, `bluesky_follows_and_likes.py`, etc.) receive `client` as a function argument. The global state makes unit testing harder (tests must reset or mock module globals), and importing the module has side-effect potential.
+
+**Fix:** Inline the login call into `main()` and pass `client`/`username` as parameters to `follow()` and `fetch_users_for_tag()`:
+
+```python
+def fetch_users_for_tag(client, tag: str): ...
+def follow(client, did: str): ...
+def main():
+    client, username = login_client()
+    ...
+    follow(client, did)
+```
+
+#### CS-2 — `bluesky_follow_fellows.yml`: no `permissions` block
+**File:** `.github/workflows/bluesky_follow_fellows.yml`.
+
+**Problem:** Every other workflow in the project either declares `permissions: contents: read` or `permissions: contents: write`. `bluesky_follow_fellows.yml` has no `permissions:` key, so it silently inherits the repository's default token permissions (typically `contents: write`). The follow-fellows script only reads state; it never commits. Declare least-privilege permissions explicitly.
+
+**Fix:** Add to the workflow:
+```yaml
+permissions:
+  contents: read
+```
+
+#### CS-3 — `bluesky_unfollow.py`: duplicates `_get_int_env`/`_get_float_env` from `bluesky_common`
+**File:** `bluesky_unfollow.py` lines ~18–52.
+
+**Problem:** The private helpers `_get_int_env` and `_get_float_env` in `bluesky_unfollow.py` are near-identical to `bluesky_common._get_int_env` and `bluesky_common.get_float_env`. The only difference is the default `minimum` value. If the safe-parse logic needs a bug fix, both copies must be updated. This is the same class of duplication that was already addressed for list-member DID helpers in v1.15.
+
+**Fix:** Make `bluesky_common._get_int_env` public (rename to `get_int_env`), then import and reuse it in `bluesky_unfollow.py` with an explicit `minimum=0` argument.
+
+#### CS-4 — `bluesky_follows_and_likes.yml`: missing `BLUESKY_USERNAME` env var
+**File:** `.github/workflows/bluesky_follows_and_likes.yml`, `Run bluesky_follows_and_likes` step.
+
+**Problem:** `bluesky_follow_fellows.yml` explicitly passes `BLUESKY_USERNAME: ${{ vars.BLUESKY_USERNAME }}` to its script, but `bluesky_follows_and_likes.yml` does not. Both call `login_client()`, which falls back to the hardcoded constant `DEFAULT_BLUESKY_USERNAME = "thejokebot.bsky.social"`. The inconsistency means a handle change requires updating the source code rather than just a repository variable.
+
+**Fix:** Add the env var to the `Run bluesky_follows_and_likes` step:
+```yaml
+env:
+  BLUESKY_PASSWORD: ${{ secrets.BLUESKY_PASSWORD }}
+  BLUESKY_USERNAME: ${{ vars.BLUESKY_USERNAME }}
+```
+
+#### CS-5 — `bluesky_manage_starter_pack.py`: `_build_starter_pack_record` overwrites `createdAt` on updates
+**File:** `bluesky_manage_starter_pack.py`, `_build_starter_pack_record()`.
+
+**Problem:** Every call to `upsert_starter_pack_record` (including `put_record` update paths) sets `"createdAt"` to the current time. For AT Protocol records, `createdAt` conventionally represents the original creation time, not the last-modified time. Overwriting it on every sync makes it impossible to determine when the starter pack was first created from the record itself.
+
+**Fix:** Accept an optional `created_at` argument, defaulting to now (for the create path). On the update path, fetch the existing record first (`get_record`) and preserve its `createdAt` value:
+```python
+def _build_starter_pack_record(starter_cfg, source_list_uri, created_at=None):
+    return {
+        ...
+        "createdAt": created_at or dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00", "Z"),
+    }
+```
+
+#### CS-6 — `bluesky_create_report_prs.py`: stderr suppressed on git/gh command failures
+**File:** `bluesky_create_report_prs.py`, `run_command()`.
+
+**Problem:** `subprocess.run(..., capture_output=True)` captures both stdout and stderr but neither is printed on failure. When `git checkout -b`, `git push`, or `gh pr create` fails, the raised `CalledProcessError` carries no human-readable diagnostic. Debugging CI failures requires digging into raw exception tracebacks.
+
+**Fix:**
+```python
+def run_command(args: list[str], check: bool = True) -> subprocess.CompletedProcess:
+    result = subprocess.run(args, check=False, text=True, capture_output=True)
+    if check and result.returncode != 0:
+        if result.stderr:
+            print(result.stderr, file=sys.stderr)
+        result.check_returncode()
+    return result
+```
+
+#### CS-7 — `bluesky_state.py`: `STATE_FILE` is CWD-relative
+**File:** `bluesky_state.py`, line `STATE_FILE = "bot_state.json"`.
+
+**Problem:** The path resolves relative to the process working directory. In CI this works because `actions/checkout` sets CWD to the repo root. However, running any script from a subdirectory locally (e.g., `cd tests && python -m pytest`) will silently create or read a different `bot_state.json` in the wrong location. All other resource files in the project use `Path(__file__).parent / ...` for deterministic resolution.
+
+**Fix:**
+```python
+STATE_FILE = str(Path(__file__).resolve().parent / "bot_state.json")
+```
+
+#### CS-8 — Loop lambda closures: inconsistent late-binding pattern
+**File:** `bluesky_follows_and_likes.py` (`follow_back`), `bluesky_follow_fellows.py` (`follow`).
+
+**Problem:** Several loop lambdas capture the loop variable by reference rather than by value, e.g.:
+```python
+lambda: client.follow(did)
+```
+Because `retry_network_call` is synchronous this is safe today, but it is inconsistent with `bluesky_manage_starter_pack.py` which correctly uses:
+```python
+lambda current_did=did: client.follow(current_did)
+```
+The default-argument pattern is the idiomatic Python fix and removes the implicit dependency on synchronous execution order.
+
+**Fix:** Standardise all loop lambdas that capture a loop variable to use the default-argument pattern.
+
+#### CS-9 — Test coverage gaps
+The following significant paths have no unit tests:
+
+| Area | Gap |
+|---|---|
+| `bluesky_manage_starter_pack.ensure_following_list_members()` | Only upsert paths are covered; the follow-sync path is untested. |
+| `bluesky_process_reports.collect_report_proposals()` | No test for the main notification collection and deduplication loop. |
+| `bluesky_process_reports.delete_approved_report_posts()` | No test for the denylist-driven delete loop. |
+| `bluesky_state.load_state()` / `save_state()` with locking | File-locking code paths (fcntl, atomic replace) are not covered. |
+| `bluesky_follow_fellows.main()` | No smoke test; hindered by the global state issue (CS-1). |
+
+Fixing CS-1 (globals in `follow_fellows`) would immediately make `main()` testable, unlocking that gap.
+
+---
+
+### ✅ Good Practices
+
+- **Atomic state writes** via `os.replace()` from a temp file prevent partial-write corruption on interruption — consistent across `bluesky_state.py`, `bluesky_denylist.py`, and `bluesky_create_report_prs.py`.
+- **File-level locking** (`fcntl.flock`) on Unix guards against concurrent read/write races in `bluesky_state.py`.
+- **Defensive pagination**: cursor deduplication, page-count cap, and wall-clock runtime guard in `bluesky_follower_utils.fetch_paginated_data`.
+- **Dry-run default** on all mutating operations. Workflows default `apply_changes=false`; state-mutating scripts check `BLUESKY_DRY_RUN`.
+- **Retry wrappers** with configurable exponential backoff (`retry_network_call`) applied consistently across all network calls.
+- **Exception narrowing**: no bare `except Exception` in network paths; exceptions are narrowed to `(requests.RequestException, TimeoutError, atproto_client.exceptions.NetworkError)`.
+- **Shared helpers** in `bluesky_follower_utils` (pagination, list-member DID extraction) eliminate duplication across scripts.
+- **AT URI validation** with DID match and collection enforcement in `bluesky_manage_starter_pack` guards against inadvertent writes to wrong records.
+- **Concurrency guards** (`cancel-in-progress: false`) on all workflow files prevent overlapping runs.
+- **Dependabot auto-merge** gated behind a full test run and restricted to patch/minor semver updates only.
+- **Single source of truth** for provider rotation in `bluesky_state.PROVIDER_ROTATION_ORDER`; `bluesky_joke_providers.PRIMARY_PROVIDERS` is derived from it, backed by a test guard.
+- **Report pipeline idempotency**: processed/acknowledged/deleted URIs are tracked in state to prevent duplicate actions across runs.
