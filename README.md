@@ -142,6 +142,10 @@ The report pipeline runs every 30 minutes via `bluesky_process_reports`.
 | `resources/jokebot_denylist.json` | Repository-backed denylist. Jokes added here are permanently excluded from posting. |
 | `resources/jokebot_jokebook.json` | Bundled offline joke pool (446 jokes). Used as final fallback when all live APIs are unavailable. |
 
+## Security
+
+For vulnerability reporting and security handling expectations, see [SECURITY.md](SECURITY.md).
+
 ## Credits
 
 Joke content is sourced from these third-party APIs:
