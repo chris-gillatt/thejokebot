@@ -15,6 +15,7 @@ import json
 import os
 import sys
 import time
+from pathlib import Path
 from typing import Optional
 
 # File locking support (Unix-like systems)
@@ -23,7 +24,7 @@ if sys.platform != "win32":
 else:
     fcntl = None  # type: ignore
 
-STATE_FILE = "bot_state.json"
+STATE_FILE = str(Path(__file__).resolve().parent / "bot_state.json")
 
 # Canonical provider order — the rotation wraps around this list.
 # Add new providers here and they will be included in rotation automatically.

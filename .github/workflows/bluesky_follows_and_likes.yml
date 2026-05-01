@@ -35,6 +35,7 @@ jobs:
       - name: Run bluesky_follows_and_likes
         env:
           BLUESKY_PASSWORD: ${{ secrets.BLUESKY_PASSWORD }}
+          BLUESKY_USERNAME: ${{ vars.BLUESKY_USERNAME }}
         run: python bluesky_follows_and_likes.py
 
       - name: Persist liked-reply state

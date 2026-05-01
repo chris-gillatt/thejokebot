@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import subprocess
+import sys
 from pathlib import Path
 
 import bluesky_denylist
@@ -17,7 +18,12 @@ JOKEBOOK_PROVIDER_NAME = "jokebot_jokebook"
 
 
 def run_command(args: list[str], check: bool = True) -> subprocess.CompletedProcess:
-    return subprocess.run(args, check=check, text=True, capture_output=True)
+    result = subprocess.run(args, check=False, text=True, capture_output=True)
+    if check and result.returncode != 0:
+        if result.stderr:
+            print(result.stderr, file=sys.stderr)
+        result.check_returncode()
+    return result
 
 
 def has_remote_branch(branch_name: str) -> bool:

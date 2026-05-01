@@ -10,15 +10,8 @@ soft_tag_limit = 15
 global_follow_limit = 60
 hashtags = ["followback", "dadjoke", "jokes", "funny"]
 
-client = None
-username = None
 
-def login():
-    global client, username
-    client, username = login_client()
-    print(f"Authenticated as {client.me.did} ({username})")
-
-def fetch_users_for_tag(tag: str):
+def fetch_users_for_tag(client, tag: str):
     print(f"Searching posts with hashtag #{tag}...")
     try:
         resp = retry_network_call(
@@ -34,7 +27,7 @@ def fetch_users_for_tag(tag: str):
         print(f"Exception during search for #{tag}: {e}")
         return []
 
-def get_following():
+def get_following(client):
     try:
         following = fetch_paginated_data(client.get_follows, client.me.did)
         return {follow.did for follow in following}
@@ -42,7 +35,7 @@ def get_following():
         print(f"Could not fetch following list, proceeding without deduplication: {e}")
         return set()
 
-def follow(did: str):
+def follow(client, did: str):
     try:
         retry_network_call(
             lambda: client.follow(did),
@@ -80,7 +73,8 @@ def select_users(tag_users, tag_order, per_tag_limit, overall_limit):
 
 def main():
     print("Starting fellow-follow discovery script...")
-    login()
+    client, username = login_client()
+    print(f"Authenticated as {client.me.did} ({username})")
     controls = get_runtime_controls()
     dry_run = controls["dry_run"]
     action_delay_seconds = controls["action_delay_seconds"]
@@ -90,7 +84,7 @@ def main():
     if action_delay_seconds > 0:
         print(f"Action delay enabled: {action_delay_seconds:.2f}s between actions.")
 
-    already_following = get_following()
+    already_following = get_following(client)
     state = bluesky_state.load_state()
     unfollowed_dids = bluesky_state.get_unfollowed_dids(state)
     if unfollowed_dids:
@@ -98,7 +92,7 @@ def main():
 
     tag_users = {}
     for tag in hashtags:
-        users = fetch_users_for_tag(tag)
+        users = fetch_users_for_tag(client, tag)
         eligible_users = [u for u in users if u not in already_following and u not in unfollowed_dids]
         tag_users[tag] = eligible_users
 
@@ -132,7 +126,7 @@ def main():
         if dry_run:
             print(f"[DRY-RUN] Would follow {did} (#{tag})")
         else:
-            follow(did)
+            follow(client, did)
 
         if action_delay_seconds > 0 and i < len(selected_users):
             time.sleep(action_delay_seconds)

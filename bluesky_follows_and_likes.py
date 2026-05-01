@@ -51,7 +51,7 @@ def follow_back(client, username: str, dry_run: bool, action_delay_seconds: floa
         else:
             try:
                 retry_network_call(
-                    lambda: client.follow(did),
+                    lambda current_did=did: client.follow(current_did),
                     description=f"following back {did}",
                 )
                 print(f"{Fore.GREEN}Followed {did}{Style.RESET_ALL}")
@@ -160,7 +160,7 @@ def like_replies(client, state: dict, dry_run: bool, action_delay_seconds: float
             else:
                 try:
                     retry_network_call(
-                        lambda: client.like(uri=uri, cid=cid),
+                        lambda u=uri, c=cid: client.like(uri=u, cid=c),
                         description=f"liking {reason} {uri}",
                     )
                     print(f"{Fore.GREEN}Liked {reason}: {uri}{Style.RESET_ALL}")

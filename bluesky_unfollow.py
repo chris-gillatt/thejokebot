@@ -10,7 +10,7 @@ from bluesky_follower_utils import (
     fetch_list_member_dids,
     fetch_paginated_data,
 )
-from bluesky_common import login_client, get_runtime_controls, retry_network_call
+from bluesky_common import login_client, get_runtime_controls, retry_network_call, get_int_env, get_float_env
 import bluesky_state as _state
 
 
@@ -20,46 +20,16 @@ DEFAULT_UNFOLLOW_BATCH_PAUSE_SECONDS = 60.0
 _STARTER_PACK_CONFIG_PATH = pathlib.Path(__file__).parent / "resources" / "jokebot_starter_pack.json"
 
 
-def _get_int_env(name, default, minimum=0):
-    raw = os.getenv(name)
-    if raw is None:
-        return default
-
-    try:
-        value = int(raw.strip())
-    except ValueError:
-        return default
-
-    if value < minimum:
-        return minimum
-    return value
-
-
-def _get_float_env(name, default, minimum=0.0):
-    raw = os.getenv(name)
-    if raw is None:
-        return default
-
-    try:
-        value = float(raw.strip())
-    except ValueError:
-        return default
-
-    if value < minimum:
-        return minimum
-    return value
-
-
 def get_unfollow_controls():
     """Read unfollow safety controls from environment variables."""
     return {
-        "max_actions": _get_int_env(
+        "max_actions": get_int_env(
             "BLUESKY_UNFOLLOW_MAX_ACTIONS", default=DEFAULT_UNFOLLOW_MAX_ACTIONS, minimum=0
         ),
-        "batch_size": _get_int_env(
+        "batch_size": get_int_env(
             "BLUESKY_UNFOLLOW_BATCH_SIZE", default=DEFAULT_UNFOLLOW_BATCH_SIZE, minimum=1
         ),
-        "batch_pause_seconds": _get_float_env(
+        "batch_pause_seconds": get_float_env(
             "BLUESKY_UNFOLLOW_BATCH_PAUSE_SECONDS",
             default=DEFAULT_UNFOLLOW_BATCH_PAUSE_SECONDS,
             minimum=0.0,
@@ -265,7 +235,7 @@ def unfollow_users():
                 else:
                     try:
                         retry_network_call(
-                            lambda: client.unfollow(uri),
+                            lambda u=uri: client.unfollow(u),
                             description=f"unfollowing {did}",
                         )
                         print(f"{Fore.GREEN}Unfollowed {did}{Style.RESET_ALL}")

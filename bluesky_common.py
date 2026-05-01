@@ -76,7 +76,7 @@ def retry_network_call(
 ):
     """Run a network operation with bounded retries for transient failures."""
     if max_attempts is None:
-        max_attempts = _get_int_env(
+        max_attempts = get_int_env(
             "BLUESKY_NETWORK_RETRY_ATTEMPTS",
             default=DEFAULT_NETWORK_RETRY_ATTEMPTS,
             minimum=1,
@@ -124,7 +124,7 @@ def get_bool_env(name, default=False):
     return default
 
 
-def _get_int_env(name, default, minimum=1):
+def get_int_env(name, default, minimum=1):
     raw = os.getenv(name)
     if raw is None:
         return default

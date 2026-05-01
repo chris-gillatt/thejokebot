@@ -88,13 +88,13 @@ def load_starter_pack_config() -> dict:
     return default
 
 
-def _build_starter_pack_record(starter_cfg: dict, source_list_uri: str) -> dict:
+def _build_starter_pack_record(starter_cfg: dict, source_list_uri: str, created_at: str | None = None) -> dict:
     return {
         "$type": "app.bsky.graph.starterpack",
         "name": starter_cfg["name"],
         "description": starter_cfg["description"],
         "list": source_list_uri,
-        "createdAt": dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00", "Z"),
+        "createdAt": created_at or dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00", "Z"),
     }
 
 
@@ -117,7 +117,6 @@ def _parse_at_uri(uri: str) -> dict | None:
 
 def upsert_starter_pack_record(client, starter_cfg: dict, source_list_uri: str, dry_run: bool):
     """Create/update starter-pack record in the bot's repo."""
-    record = _build_starter_pack_record(starter_cfg, source_list_uri)
     repo_did = client.me.did
     configured_uri = str(starter_cfg.get("starter_pack_uri") or "").strip()
     configured_rkey = str(starter_cfg.get("record_key") or "").strip()
@@ -152,6 +151,30 @@ def upsert_starter_pack_record(client, starter_cfg: dict, source_list_uri: str, 
             return target_uri
         print("[DRY-RUN] Would create starter-pack record (server-generated TID rkey).")
         return ""
+
+    # Preserve the original createdAt timestamp when updating an existing record.
+    existing_created_at = None
+    if use_put_record:
+        try:
+            existing = retry_network_call(
+                lambda: client.com.atproto.repo.get_record(
+                    {
+                        "repo": repo_did,
+                        "collection": _STARTERPACK_COLLECTION,
+                        "rkey": target_rkey,
+                    }
+                ),
+                description="fetching existing starter-pack record",
+            )
+            ex_value = getattr(existing, "value", None)
+            if ex_value is None and isinstance(existing, dict):
+                ex_value = existing.get("value")
+            if isinstance(ex_value, dict):
+                existing_created_at = ex_value.get("createdAt")
+        except Exception:  # noqa: BLE001 — transient or not-found; fall back to current time
+            pass
+
+    record = _build_starter_pack_record(starter_cfg, source_list_uri, created_at=existing_created_at)
 
     if use_put_record:
         resp = retry_network_call(

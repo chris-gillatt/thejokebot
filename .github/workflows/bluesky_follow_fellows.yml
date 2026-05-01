@@ -9,6 +9,9 @@ concurrency:
   group: bluesky_follow_fellows
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
   bluesky_follow_fellows:
     runs-on: ubuntu-latest

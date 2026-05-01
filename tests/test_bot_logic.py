@@ -1197,5 +1197,313 @@ class JokeRetryChainTests(unittest.TestCase):
         self.assertTrue(any(keyword in fallback.lower() for keyword in ["script", "byte", "debug", "exception", "fail"]))
 
 
+class StarterPackFollowSyncTests(unittest.TestCase):
+    """Tests for ensure_following_list_members (CS-9 coverage gap)."""
+
+    def test_follows_member_not_yet_followed(self):
+        client = mock.Mock()
+        client.me.did = "did:plc:bot"
+
+        with mock.patch(
+            "bluesky_manage_starter_pack.fetch_paginated_data",
+            return_value=[SimpleNamespace(did="did:plc:a")],
+        ):
+            with mock.patch(
+                "bluesky_manage_starter_pack.retry_network_call",
+                side_effect=lambda fn, description: fn(),
+            ):
+                already, followed = bluesky_manage_starter_pack.ensure_following_list_members(
+                    client,
+                    {"did:plc:a", "did:plc:b"},
+                    dry_run=False,
+                    action_delay_seconds=0,
+                )
+
+        self.assertEqual(followed, 1)
+        client.follow.assert_called_once_with("did:plc:b")
+
+    def test_dry_run_does_not_call_follow(self):
+        client = mock.Mock()
+        client.me.did = "did:plc:bot"
+
+        with mock.patch(
+            "bluesky_manage_starter_pack.fetch_paginated_data",
+            return_value=[],
+        ):
+            _, followed = bluesky_manage_starter_pack.ensure_following_list_members(
+                client,
+                {"did:plc:x"},
+                dry_run=True,
+                action_delay_seconds=0,
+            )
+
+        self.assertEqual(followed, 1)
+        client.follow.assert_not_called()
+
+    def test_does_not_follow_self(self):
+        client = mock.Mock()
+        client.me.did = "did:plc:bot"
+
+        with mock.patch(
+            "bluesky_manage_starter_pack.fetch_paginated_data",
+            return_value=[],
+        ):
+            with mock.patch(
+                "bluesky_manage_starter_pack.retry_network_call",
+                side_effect=lambda fn, description: fn(),
+            ):
+                _, followed = bluesky_manage_starter_pack.ensure_following_list_members(
+                    client,
+                    {"did:plc:bot"},
+                    dry_run=False,
+                    action_delay_seconds=0,
+                )
+
+        self.assertEqual(followed, 0)
+        client.follow.assert_not_called()
+
+    def test_skips_already_followed_members(self):
+        client = mock.Mock()
+        client.me.did = "did:plc:bot"
+
+        with mock.patch(
+            "bluesky_manage_starter_pack.fetch_paginated_data",
+            return_value=[SimpleNamespace(did="did:plc:a"), SimpleNamespace(did="did:plc:b")],
+        ):
+            already, followed = bluesky_manage_starter_pack.ensure_following_list_members(
+                client,
+                {"did:plc:a", "did:plc:b"},
+                dry_run=False,
+                action_delay_seconds=0,
+            )
+
+        self.assertEqual(followed, 0)
+        self.assertEqual(already, 2)
+        client.follow.assert_not_called()
+
+    def test_upsert_preserves_existing_created_at_on_update(self):
+        """CS-5: createdAt from the existing record is preserved on put_record path."""
+        client = mock.Mock()
+        client.me.did = "did:plc:test"
+
+        original_ts = "2025-01-01T00:00:00Z"
+        existing_record = SimpleNamespace(
+            value={"createdAt": original_ts, "name": "Old Name"}
+        )
+
+        captured_record = {}
+
+        def capture_put(payload):
+            captured_record.update(payload.get("record", {}))
+            return SimpleNamespace(uri="at://did:plc:test/app.bsky.graph.starterpack/3mkrjdntf7x2l")
+
+        client.com.atproto.repo.get_record.return_value = existing_record
+        client.com.atproto.repo.put_record.side_effect = capture_put
+
+        with mock.patch(
+            "bluesky_manage_starter_pack.retry_network_call",
+            side_effect=lambda fn, description: fn(),
+        ):
+            bluesky_manage_starter_pack.upsert_starter_pack_record(
+                client,
+                {
+                    "name": "Updated Pack",
+                    "description": "Desc",
+                    "starter_pack_uri": "at://did:plc:test/app.bsky.graph.starterpack/3mkrjdntf7x2l",
+                    "record_key": "",
+                },
+                source_list_uri="at://did:plc:test/app.bsky.graph.list/3abc",
+                dry_run=False,
+            )
+
+        self.assertEqual(captured_record.get("createdAt"), original_ts)
+
+
+class ApprovedReportDeletionTests(unittest.TestCase):
+    """Tests for delete_approved_report_posts (CS-9 coverage gap)."""
+
+    def test_deletes_uri_from_denylist(self):
+        client = mock.Mock()
+        state = bluesky_state._default_state()
+        denylist = {
+            "jokes": [
+                {"b64": "abc=", "source_post_uri": "at://did:plc:test/app.bsky.feed.post/rkey1"}
+            ]
+        }
+
+        with mock.patch(
+            "bluesky_process_reports.retry_network_call",
+            side_effect=lambda fn, description: fn(),
+        ):
+            count = bluesky_process_reports.delete_approved_report_posts(client, denylist, state)
+
+        self.assertEqual(count, 1)
+        self.assertIn(
+            "at://did:plc:test/app.bsky.feed.post/rkey1",
+            bluesky_state.get_deleted_post_uris(state),
+        )
+        client.app.bsky.feed.post.delete.assert_called_once()
+
+    def test_skips_already_deleted_uri(self):
+        client = mock.Mock()
+        state = bluesky_state._default_state()
+        uri = "at://did:plc:test/app.bsky.feed.post/done"
+        bluesky_state.record_deleted_post_uri(state, uri)
+        denylist = {"jokes": [{"b64": "abc=", "source_post_uri": uri}]}
+
+        count = bluesky_process_reports.delete_approved_report_posts(client, denylist, state)
+
+        self.assertEqual(count, 0)
+        client.app.bsky.feed.post.delete.assert_not_called()
+
+    def test_handles_entry_with_no_post_uri(self):
+        client = mock.Mock()
+        state = bluesky_state._default_state()
+        denylist = {"jokes": [{"b64": "abc="}]}
+
+        count = bluesky_process_reports.delete_approved_report_posts(client, denylist, state)
+
+        self.assertEqual(count, 0)
+        client.app.bsky.feed.post.delete.assert_not_called()
+
+    def test_records_permanent_failure_for_invalid_uri(self):
+        client = mock.Mock()
+        state = bluesky_state._default_state()
+        bad_uri = "not-a-valid-uri"
+        denylist = {"jokes": [{"b64": "abc=", "source_post_uri": bad_uri}]}
+
+        count = bluesky_process_reports.delete_approved_report_posts(client, denylist, state)
+
+        self.assertEqual(count, 0)
+        self.assertIn(bad_uri, bluesky_state.get_deleted_post_uris(state))
+        client.app.bsky.feed.post.delete.assert_not_called()
+
+
+class StateRoundTripTests(unittest.TestCase):
+    """Tests for load_state/save_state round-trip (CS-9 coverage gap)."""
+
+    def test_save_and_load_round_trips_posted_jokes(self):
+        import tempfile
+        state = bluesky_state._default_state()
+        state["posted_jokes"] = [{"ts": 9999, "b64": "dGVzdA==", "provider": "jokeapi"}]
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_path = str(pathlib.Path(tmpdir) / "bot_state.json")
+            with mock.patch("bluesky_state.STATE_FILE", tmp_path):
+                bluesky_state.save_state(state)
+                loaded = bluesky_state.load_state()
+
+        self.assertEqual(len(loaded["posted_jokes"]), 1)
+        self.assertEqual(loaded["posted_jokes"][0]["b64"], "dGVzdA==")
+
+    def test_load_state_returns_default_when_file_missing(self):
+        with mock.patch("bluesky_state.STATE_FILE", "/tmp/does-not-exist-jokebot-state.json"):
+            loaded = bluesky_state.load_state()
+
+        self.assertIn("posted_jokes", loaded)
+        self.assertEqual(loaded["posted_jokes"], [])
+
+    def test_save_state_is_atomic_via_temp_file(self):
+        """save_state writes to a .tmp file then replaces atomically."""
+        import tempfile
+        state = bluesky_state._default_state()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_path = str(pathlib.Path(tmpdir) / "bot_state.json")
+            with mock.patch("bluesky_state.STATE_FILE", tmp_path):
+                with mock.patch("os.replace", wraps=os.replace) as mock_replace:
+                    bluesky_state.save_state(state)
+                    mock_replace.assert_called_once()
+                    call_args = mock_replace.call_args[0]
+                    # Source should be a .tmp file; destination should be STATE_FILE.
+                    self.assertTrue(call_args[0].endswith(".tmp"))
+                    self.assertEqual(call_args[1], tmp_path)
+
+    def test_load_state_normalises_old_state_missing_liked_replies(self):
+        """Older state files without liked_replies are backfilled on load."""
+        import json
+        import tempfile
+        old = {"posted_jokes": [], "provider": bluesky_state._default_state()["provider"], "reports": {}}
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_path = str(pathlib.Path(tmpdir) / "bot_state.json")
+            with open(tmp_path, "w", encoding="utf-8") as f:
+                json.dump(old, f)
+            with mock.patch("bluesky_state.STATE_FILE", tmp_path):
+                loaded = bluesky_state.load_state()
+
+        self.assertIn("liked_replies", loaded)
+        self.assertIn("liked_uris", loaded["liked_replies"])
+
+
+class FollowFellowsMainTests(unittest.TestCase):
+    """Smoke tests for bluesky_follow_fellows.main() (CS-9 coverage gap)."""
+
+    def test_main_dry_run_does_not_call_follow(self):
+        client = mock.Mock()
+        client.me.did = "did:plc:bot"
+        client.app.bsky.feed.search_posts.return_value = SimpleNamespace(posts=[])
+        state = bluesky_state._default_state()
+
+        with mock.patch("bluesky_follow_fellows.login_client", return_value=(client, "thejokebot.bsky.social")):
+            with mock.patch("bluesky_follow_fellows.get_runtime_controls", return_value={"dry_run": True, "action_delay_seconds": 0.0}):
+                with mock.patch("bluesky_follow_fellows.fetch_paginated_data", return_value=[]):
+                    with mock.patch("bluesky_follow_fellows.bluesky_state.load_state", return_value=state):
+                        with mock.patch(
+                            "bluesky_follow_fellows.retry_network_call",
+                            side_effect=lambda fn, description: fn(),
+                        ):
+                            bluesky_follow_fellows.main()
+
+        client.follow.assert_not_called()
+
+    def test_main_excludes_already_following(self):
+        """Users already followed are excluded from candidates."""
+        already_did = "did:plc:already"
+        client = mock.Mock()
+        client.me.did = "did:plc:bot"
+        # search_posts returns one user the bot already follows
+        post = SimpleNamespace(author=SimpleNamespace(did=already_did))
+        client.app.bsky.feed.search_posts.return_value = SimpleNamespace(posts=[post])
+        state = bluesky_state._default_state()
+
+        with mock.patch("bluesky_follow_fellows.login_client", return_value=(client, "thejokebot.bsky.social")):
+            with mock.patch("bluesky_follow_fellows.get_runtime_controls", return_value={"dry_run": True, "action_delay_seconds": 0.0}):
+                with mock.patch(
+                    "bluesky_follow_fellows.fetch_paginated_data",
+                    return_value=[SimpleNamespace(did=already_did)],
+                ):
+                    with mock.patch("bluesky_follow_fellows.bluesky_state.load_state", return_value=state):
+                        with mock.patch(
+                            "bluesky_follow_fellows.retry_network_call",
+                            side_effect=lambda fn, description: fn(),
+                        ):
+                            bluesky_follow_fellows.main()
+
+        client.follow.assert_not_called()
+
+    def test_main_excludes_previously_unfollowed_dids(self):
+        """Users in unfollow history are excluded from follow candidates."""
+        prev_unfollowed = "did:plc:prev"
+        client = mock.Mock()
+        client.me.did = "did:plc:bot"
+        post = SimpleNamespace(author=SimpleNamespace(did=prev_unfollowed))
+        client.app.bsky.feed.search_posts.return_value = SimpleNamespace(posts=[post])
+        state = bluesky_state._default_state()
+        bluesky_state.record_unfollow(state, prev_unfollowed)
+
+        with mock.patch("bluesky_follow_fellows.login_client", return_value=(client, "thejokebot.bsky.social")):
+            with mock.patch("bluesky_follow_fellows.get_runtime_controls", return_value={"dry_run": True, "action_delay_seconds": 0.0}):
+                with mock.patch("bluesky_follow_fellows.fetch_paginated_data", return_value=[]):
+                    with mock.patch("bluesky_follow_fellows.bluesky_state.load_state", return_value=state):
+                        with mock.patch(
+                            "bluesky_follow_fellows.retry_network_call",
+                            side_effect=lambda fn, description: fn(),
+                        ):
+                            bluesky_follow_fellows.main()
+
+        client.follow.assert_not_called()
+
+
 if __name__ == "__main__":
     unittest.main()

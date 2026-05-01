@@ -14,7 +14,7 @@ import atproto_client.exceptions
 import bluesky_denylist
 import bluesky_state
 from atproto import models
-from bluesky_common import login_client, retry_network_call
+from bluesky_common import login_client, retry_network_call, get_int_env
 
 REPORT_TAG_PATTERN = re.compile(r"(?:^|\s)#report\b", re.IGNORECASE)
 TRAILING_TAGS_PATTERN = re.compile(r"\n\n(?:#\w+\s*)+$", re.IGNORECASE)
@@ -233,8 +233,8 @@ def collect_report_proposals(client, state: dict, denylisted_b64s: set[str]) -> 
     processed_uris = bluesky_state.get_processed_notification_uris(state)
     post_uri_index = bluesky_state.get_post_uri_index(state)
 
-    page_limit = int(os.getenv("BLUESKY_REPORT_PAGE_LIMIT", str(DEFAULT_PAGE_LIMIT)))
-    max_pages = int(os.getenv("BLUESKY_REPORT_MAX_PAGES", str(DEFAULT_MAX_PAGES)))
+    page_limit = get_int_env("BLUESKY_REPORT_PAGE_LIMIT", DEFAULT_PAGE_LIMIT, minimum=1)
+    max_pages = get_int_env("BLUESKY_REPORT_MAX_PAGES", DEFAULT_MAX_PAGES, minimum=1)
 
     cursor = None
     proposals: list[dict] = []
