@@ -181,6 +181,27 @@ offline jokebook fallback). Added provider tests and env/README documentation.
 Because the endpoint can return BOM-prefixed and HTML-escaped text, posting
 sanitisation now strips leading UTF-8 BOM markers before final normalisation.
 
+---
+
+### 5.19 Create a starter pack from the Funnies list ✓ Complete
+**Priority: Medium**
+
+Issue #14 requested converting The Joke Bot's existing Bluesky list ("Funnies")
+into a starter pack, plus operational guardrails so list accounts are followed and
+not accidentally removed by unfollow automation.
+
+**Resolution:** Added `resources/jokebot_starter_pack.json` and a new script
+`bluesky_manage_starter_pack.py` with hybrid operation (one-time setup and manual
+sync). Script can upsert the `app.bsky.graph.starterpack` record from the source
+list and optionally follow missing list members.
+
+Added workflow `.github/workflows/bluesky_manage_starter_pack.yml` with manual
+dispatch and dry-run default (`apply_changes=false`) for safe roll-out.
+
+`bluesky_unfollow.py` now loads source list members from
+`resources/jokebot_starter_pack.json` when enabled and unions those DIDs with
+`BLUESKY_UNFOLLOW_IGNORE` protection, preventing accidental removals.
+
 ## 6. Explicit "Will Not Do" Decisions
 Do not revisit these without a concrete operational reason.
 

@@ -1,6 +1,7 @@
 import base64
 import datetime as dt
 import os
+import pathlib
 import re
 import unittest
 from types import SimpleNamespace
@@ -14,6 +15,7 @@ import bluesky_follower_utils
 import bluesky_follow_fellows
 import bluesky_follows_and_likes
 import bluesky_joke_providers
+import bluesky_manage_starter_pack
 import bluesky_post_joke
 import bluesky_process_reports
 import bluesky_state
@@ -173,6 +175,42 @@ class UnfollowControlTests(unittest.TestCase):
                                         bluesky_unfollow.unfollow_users()
 
         save_state.assert_called_once_with(state)
+
+    def test_load_source_list_uri_returns_empty_when_file_missing(self):
+        missing_path = pathlib.Path("/tmp/does-not-exist-jokebot-starter-pack.json")
+        self.assertEqual(bluesky_unfollow._load_source_list_uri(config_path=missing_path), "")
+
+    def test_extract_list_member_did_supports_string_and_object_subject(self):
+        did_str = bluesky_unfollow._extract_list_member_did({"subject": "did:plc:abc"})
+        did_obj = bluesky_unfollow._extract_list_member_did(
+            {"subject": {"did": "did:plc:def"}}
+        )
+        self.assertEqual(did_str, "did:plc:abc")
+        self.assertEqual(did_obj, "did:plc:def")
+
+
+class StarterPackManagerTests(unittest.TestCase):
+    def test_load_starter_pack_config_defaults_when_missing(self):
+        with mock.patch(
+            "bluesky_manage_starter_pack._CONFIG_PATH",
+            pathlib.Path("/tmp/does-not-exist-jokebot-starter-pack-config.json"),
+        ):
+            cfg = bluesky_manage_starter_pack.load_starter_pack_config()
+
+        self.assertIn("starter_pack", cfg)
+        self.assertFalse(cfg["starter_pack"]["enabled"])
+
+    def test_extract_list_member_did_from_subject_forms(self):
+        self.assertEqual(
+            bluesky_manage_starter_pack.extract_list_member_did({"subject": "did:plc:x"}),
+            "did:plc:x",
+        )
+        self.assertEqual(
+            bluesky_manage_starter_pack.extract_list_member_did(
+                {"subject": {"did": "did:plc:y"}}
+            ),
+            "did:plc:y",
+        )
 
 
 class StateProviderRotationTests(unittest.TestCase):

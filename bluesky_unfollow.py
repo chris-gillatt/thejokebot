@@ -1,5 +1,7 @@
 import os
 import time
+import json
+import pathlib
 import requests
 import atproto_client.exceptions
 from colorama import Fore, Style
@@ -11,6 +13,7 @@ import bluesky_state as _state
 DEFAULT_UNFOLLOW_MAX_ACTIONS = 200
 DEFAULT_UNFOLLOW_BATCH_SIZE = 50
 DEFAULT_UNFOLLOW_BATCH_PAUSE_SECONDS = 60.0
+_STARTER_PACK_CONFIG_PATH = pathlib.Path(__file__).parent / "resources" / "jokebot_starter_pack.json"
 
 
 def _get_int_env(name, default, minimum=0):
@@ -80,6 +83,76 @@ def _is_rate_limited_error(exc):
         or "rate limit" in text
         or "throttle" in text
     )
+
+
+def _extract_list_member_did(item):
+    subject = getattr(item, "subject", None)
+    if subject is None and isinstance(item, dict):
+        subject = item.get("subject")
+
+    if isinstance(subject, str) and subject.startswith("did:"):
+        return subject.strip()
+
+    did = getattr(subject, "did", None)
+    if did is None and isinstance(subject, dict):
+        did = subject.get("did")
+
+    return str(did or "").strip()
+
+
+def _load_source_list_uri(config_path=_STARTER_PACK_CONFIG_PATH):
+    if not config_path.exists():
+        return ""
+
+    try:
+        payload = json.loads(config_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return ""
+
+    if not isinstance(payload, dict):
+        return ""
+
+    starter_pack = payload.get("starter_pack")
+    if not isinstance(starter_pack, dict):
+        return ""
+
+    if not starter_pack.get("enabled"):
+        return ""
+
+    uri = str(starter_pack.get("source_list_uri") or "").strip()
+    return uri if uri.startswith("at://") else ""
+
+
+def _fetch_list_member_dids(client, list_uri):
+    dids = set()
+    cursor = None
+
+    while True:
+        params = {"list": list_uri, "limit": 100}
+        if cursor:
+            params["cursor"] = cursor
+
+        response = retry_network_call(
+            lambda: client.app.bsky.graph.get_list(params),
+            description="fetching protected starter-pack list members",
+        )
+
+        items = getattr(response, "items", None)
+        if items is None and isinstance(response, dict):
+            items = response.get("items", [])
+
+        for item in items or []:
+            did = _extract_list_member_did(item)
+            if did:
+                dids.add(did)
+
+        cursor = getattr(response, "cursor", None)
+        if cursor is None and isinstance(response, dict):
+            cursor = response.get("cursor")
+        if not cursor:
+            break
+
+    return dids
 
 def unfollow_users():
     # List of usernames to ignore (configurable via BLUESKY_UNFOLLOW_IGNORE env var)
@@ -161,6 +234,27 @@ def unfollow_users():
                 atproto_client.exceptions.BadRequestError,
             ) as e:
                 print(f"{Fore.RED}Failed to resolve username {ignorable_username}: {e}{Style.RESET_ALL}")
+
+        source_list_uri = _load_source_list_uri()
+        if source_list_uri:
+            try:
+                protected_list_dids = _fetch_list_member_dids(client, source_list_uri)
+                ignorable_dids |= protected_list_dids
+                print(
+                    f"{Fore.GREEN}Loaded {len(protected_list_dids)} protected DID(s) "
+                    f"from source list {source_list_uri}.{Style.RESET_ALL}"
+                )
+            except (
+                ValueError,
+                requests.RequestException,
+                TimeoutError,
+                atproto_client.exceptions.NetworkError,
+                atproto_client.exceptions.BadRequestError,
+            ) as e:
+                print(
+                    f"{Fore.RED}Failed to load protected list members from starter-pack config: {e}. "
+                    f"Continuing with env-based ignores only.{Style.RESET_ALL}"
+                )
 
         to_unfollow_all = select_unfollow_candidates(
             following_map,

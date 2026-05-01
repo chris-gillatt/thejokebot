@@ -52,7 +52,7 @@ Set these in `.env` (keep values quoted):
 | `BLUESKY_USERNAME` | No | Account handle. Defaults to `thejokebot.bsky.social`. |
 | `BLUESKY_PASSWORD` | Yes | App password for the Bluesky account. |
 | `API_NINJAS_API_KEY` | No | API key for the API Ninjas jokes endpoint. Only needed if you want the `api_ninjas` backup provider. |
-| `BLUESKY_DRY_RUN` | No | Set to `true` to log actions without applying them. |
+| `BLUESKY_DRY_RUN` | No | Set to `true` to log actions without applying them (also used by `bluesky_manage_starter_pack.py` for preview mode). |
 | `BLUESKY_ACTION_DELAY_SECONDS` | No | Seconds to wait between follow/unfollow actions. |
 | `BLUESKY_NETWORK_RETRY_ATTEMPTS` | No | Max attempts for transient network retries across API fetch/follow/like/unfollow/report calls (default `3`). |
 | `BLUESKY_NETWORK_RETRY_DELAY_SECONDS` | No | Initial retry delay in seconds for transient network failures (default `1`). |
@@ -71,6 +71,7 @@ Set these in `.env` (keep values quoted):
 - **Throttling:** set `BLUESKY_ACTION_DELAY_SECONDS='1.5'` (example) to slow follow/unfollow/like loops.
 - **Network retries:** set `BLUESKY_NETWORK_RETRY_ATTEMPTS`, `BLUESKY_NETWORK_RETRY_DELAY_SECONDS`, and `BLUESKY_NETWORK_RETRY_BACKOFF_FACTOR` to tune bounded retries for transient network/API failures.
 - **Unfollow batching:** `bluesky_unfollow.py` is capped and batched by default (`BLUESKY_UNFOLLOW_MAX_ACTIONS=200`, `BLUESKY_UNFOLLOW_BATCH_SIZE=50`, `BLUESKY_UNFOLLOW_BATCH_PAUSE_SECONDS=60`) to reduce throttle risk on large clean-ups.
+- **Starter-pack/list protection:** if `resources/jokebot_starter_pack.json` is enabled and points to a valid source list URI, all members of that list are automatically protected from unfollowing (unioned with `BLUESKY_UNFOLLOW_IGNORE`).
 - **Post length preflight:** `bluesky_post_joke.py` skips over-long jokes and retries provider fetches before posting, so posts stay within Bluesky's 300-character limit after hashtags are appended.
 
 Bluesky rate-limit context (as documented):
@@ -96,8 +97,29 @@ The report triggers an automated PR adding the joke to the denylist. Once a main
 | `bluesky_unfollow.py` | Unfollow accounts that do not follow back (respects an ignore list). |
 | `bluesky_follow_fellows.py` | Find hashtag users and follow up to configured limits. |
 | `bluesky_verify_latest_joke_post.py` | Read-only check that a recent joke post exists on the account. |
+| `bluesky_manage_starter_pack.py` | Convert/synchronise a starter pack from a configured Bluesky list and optionally follow missing list members. |
 | `bluesky_process_reports.py` | Poll reply notifications for `#report`, map replies to posted jokes, delete approved denylist posts, and write PR proposals. |
 | `bluesky_create_report_prs.py` | Open one denylist PR per new report proposal. |
+
+## Starter pack workflow
+
+Issue #14 uses a hybrid model:
+
+- One-time setup to convert an existing Bluesky list into a starter-pack record.
+- Manual sync runs afterwards to keep follows and record metadata aligned.
+
+Configuration lives in `resources/jokebot_starter_pack.json`:
+
+- `enabled`: master switch for all starter-pack/list behaviour.
+- `source_list_uri`: source list used for conversion and protection.
+- `record_key`: starter-pack record key in the bot repo.
+- `sync.follow_list_members`: when enabled, manager script follows list members not already followed.
+- `sync.upsert_record`: when enabled, manager script updates the starter-pack record.
+
+Manual operation is via workflow dispatch: `bluesky_manage_starter_pack`.
+
+- Leave `apply_changes=false` for dry-run preview.
+- Set `apply_changes=true` to perform live follow/record mutations.
 
 ## Report workflow (technical detail)
 
