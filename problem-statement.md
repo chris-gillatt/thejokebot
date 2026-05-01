@@ -99,7 +99,7 @@ tests added.
 
 ---
 
-### 5.12 Investigate HumorAPI as new backup joke provider ✗ Will Not Do
+### 5.12 Investigate HumorAPI as new backup joke provider
 **Priority: Medium**
 
 HumorAPI (`https://api.humorapi.com/jokes/random`) has an `exclude-tags=nsfw,dark`
@@ -110,9 +110,6 @@ usage. Fits naturally as a backup provider alongside `api_ninjas`. Assess whethe
 the joke pool is suitably family-friendly and add `HUMORAPI_API_KEY` env var, a
 `fetch_from_humorapi()` function, and README/`.env.example` documentation if it
 passes review.
-
-**Decision:** Do not implement HumorAPI integration due to terms-and-conditions
-concerns around permitted use/storage of joke content for this endpoint.
 
 ---
 
@@ -184,38 +181,6 @@ offline jokebook fallback). Added provider tests and env/README documentation.
 Because the endpoint can return BOM-prefixed and HTML-escaped text, posting
 sanitisation now strips leading UTF-8 BOM markers before final normalisation.
 
----
-
-### 5.19 Investigate safe Bluesky custom-feed integration ◐ In Progress
-**Priority: High**
-
-Issue #13 requests improved discoverability through custom feeds. To avoid
-spam-like automation, implementation is split into conservative phases.
-
-**Phase 1/2 completed in-repo:**
-- Added `resources/jokebot_custom_feeds.json` as a disabled-by-default config source.
-- Added optional bounded hashtag rotation in `bluesky_post_joke.py`.
-- Added `bluesky_check_custom_feeds.py` as a read-only visibility checker
-	for configured feed generator URIs.
-- Added `.github/workflows/bluesky_audit_custom_feeds.yml` so the discovery audit runs automatically in GitHub Actions and uploads JSON evidence artifacts.
-- Added implementation/runbook documentation in `docs/custom-feeds.md`.
-
-**Still deferred:**
-- Any dedicated feed-generator service build-out.
-- Any growth-spam patterns (auto-like/reply/DM/follow campaigns).
-
-**Temporary scope rule:**
-- The discovery checker, discovery workflow, config file, and any supporting hashtag experiment in this area are temporary evaluation tooling, not permanent platform infrastructure.
-- Remove them during housekeeping if the review concludes they are no longer needed once the owned feed-generator path is decided.
-
-**Review checkpoint (time-bound):**
-- Review date: **2026-05-15** (UTC)
-- Owner action at review:
-	- Review the latest `bluesky_audit_custom_feeds` workflow runs in GitHub Actions.
-	- Download the uploaded JSON artifact and compare `unique_posts_in_any_feed_pct` against the previous baseline.
-	- Decide one of: keep incremental integration, roll back optional hashtag rotation, or scope next-phase implementation.
-	- Housekeeping: prune invalid/stale feed URIs from `resources/jokebot_custom_feeds.json` and remove the temporary discovery workflow/tooling if this track has run its course.
-
 ## 6. Explicit "Will Not Do" Decisions
 Do not revisit these without a concrete operational reason.
 
@@ -225,7 +190,6 @@ Do not revisit these without a concrete operational reason.
 | Rewrite scripts as async | Will not do | No throughput requirement justifies complexity increase. |
 | Redesign workflow schedules by default | Will not do | Current cadence works; change only for observed operational need. |
 | Remove base64 encoding from state payloads | Will not do | Prevents fragile comparisons and avoids indexing raw joke text. |
-| Integrate HumorAPI provider | Will not do | Terms-and-conditions concerns around permitted use/storage of joke content for this endpoint. |
 
 ## 7. Completed Milestones (Condensed)
 - Multi-provider joke chain implemented with offline last resort (`jokebot_jokebook`).
@@ -257,5 +221,3 @@ Do not revisit these without a concrete operational reason.
 - v1.12: Added GroanDeck as a third primary provider (5.11). `fetch_from_groandeck()` added, all 33 categories reviewed and confirmed family-friendly. Primary rotation extended to `[icanhazdadjoke, jokeapi, groandeck]`.
 - v1.13: Added pre-post length guard (5.13). `pick_joke()` now skips over-long jokes before API send, retries within provider attempts, and falls through provider chain when necessary.
 - v1.14: Added Syrsly as a backup provider (5.18) using the dad-joke endpoint, plus BOM sanitisation hardening for provider text normalisation.
-- v1.15: Marked HumorAPI integration (5.12) as will-not-do due to terms-and-conditions concerns around content use/storage for that endpoint.
-- v1.16: Began custom-feed integration work (5.19) with a disabled-by-default config, bounded hashtag rotation, read-only feed visibility checks, and a dedicated rollout document.
