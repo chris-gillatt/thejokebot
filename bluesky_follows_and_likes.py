@@ -200,9 +200,7 @@ def like_replies(
                         lambda u=uri, c=cid: client.like(uri=u, cid=c),
                         description=f"liking {reason} {masked_uri}",
                     )
-                    print(
-                        f"{Fore.GREEN}Liked {reason}: {masked_uri}{Style.RESET_ALL}"
-                    )
+                    print(f"{Fore.GREEN}Liked {reason}: {masked_uri}{Style.RESET_ALL}")
                 except (
                     requests.RequestException,
                     TimeoutError,

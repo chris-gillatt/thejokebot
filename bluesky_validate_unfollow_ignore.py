@@ -7,7 +7,12 @@ import os
 import atproto_client.exceptions
 import requests
 
-from bluesky_common import get_bool_env, login_client, mask_sensitive, retry_network_call
+from bluesky_common import (
+    get_bool_env,
+    login_client,
+    mask_sensitive,
+    retry_network_call,
+)
 
 DEFAULT_IGNORABLE_HANDLES = ("theonion.bsky.social",)
 _STALE_ERROR_MARKERS = (

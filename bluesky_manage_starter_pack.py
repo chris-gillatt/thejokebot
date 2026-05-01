@@ -262,9 +262,7 @@ def ensure_following_list_members(
                 lambda current_did=did: client.follow(current_did),
                 description=f"following list member {masked_did}",
             )
-            print(
-                f"Followed list member {masked_did} ({index}/{len(missing)})"
-            )
+            print(f"Followed list member {masked_did} ({index}/{len(missing)})")
             followed_now += 1
 
         if action_delay_seconds > 0 and index < len(missing):
