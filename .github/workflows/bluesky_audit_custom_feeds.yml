@@ -78,9 +78,9 @@ jobs:
           PY
 
       - name: Upload custom-feed audit artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: custom-feed-audit-${{ github.run_number }}
           path: .agent-tmp/custom_feed_audit_latest.json
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 14
