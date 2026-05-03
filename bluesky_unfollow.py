@@ -253,6 +253,14 @@ def unfollow_users():
         stop_early = False
 
         state = _state.load_state()
+        _state.prune_follow_grace(state)
+        follow_grace_dids = _state.get_follow_grace_dids(state)
+        if follow_grace_dids:
+            ignorable_dids |= follow_grace_dids
+            print(
+                f"{Fore.GREEN}Loaded {len(follow_grace_dids)} follow-grace DID(s) "
+                f"within the {_state.FOLLOW_RESPONSE_GRACE_PERIOD_DAYS}-day response window.{Style.RESET_ALL}"
+            )
 
         for i, did in enumerate(to_unfollow, start=1):
             masked_did = mask_sensitive(did)

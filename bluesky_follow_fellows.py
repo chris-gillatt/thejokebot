@@ -59,12 +59,14 @@ def follow(client, did: str):
             lambda current_did=did: client.follow(current_did),
             description=f"following {masked_did}",
         )
+        return True
     except (
         requests.RequestException,
         TimeoutError,
         atproto_client.exceptions.NetworkError,
     ) as e:
         print(f"Unexpected error trying to follow {masked_did}: {e}")
+        return False
 
 
 def select_users(tag_users, tag_order, per_tag_limit, overall_limit):
@@ -110,6 +112,7 @@ def main():
     already_following = get_following(client)
     state = bluesky_state.load_state()
     unfollowed_dids = bluesky_state.get_unfollowed_dids(state)
+    state_changed = False
     if unfollowed_dids:
         print(
             f"{len(unfollowed_dids)} DID(s) in unfollow history — excluded from candidates."
@@ -148,10 +151,16 @@ def main():
         if dry_run:
             print(f"[DRY-RUN] Would follow {masked_did} (#{tag})")
         else:
-            follow(client, did)
+            if follow(client, did):
+                bluesky_state.record_follow_grace(state, did)
+                state_changed = True
 
         if action_delay_seconds > 0 and i < len(selected_users):
             time.sleep(action_delay_seconds)
+
+    if state_changed:
+        bluesky_state.prune_follow_grace(state)
+        bluesky_state.save_state(state)
 
     print("\nFollowed users by tag:")
     for tag in hashtags:

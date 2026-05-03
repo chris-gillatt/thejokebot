@@ -1330,6 +1330,14 @@ class UnfollowHistoryTests(unittest.TestCase):
         entries = state["unfollow_history"]["entries"]
         self.assertEqual(len(entries), 1)
 
+    def test_record_unfollow_removes_follow_grace_entry(self):
+        state = bluesky_state._default_state()
+        bluesky_state.record_follow_grace(state, "did:plc:abc")
+
+        bluesky_state.record_unfollow(state, "did:plc:abc", "not_following_back")
+
+        self.assertEqual(bluesky_state.get_follow_grace_dids(state, cutoff_ts=0), set())
+
     def test_prune_unfollow_history_keeps_most_recent_entries(self):
         state = bluesky_state._default_state()
         for i in range(5):
@@ -1348,6 +1356,68 @@ class UnfollowHistoryTests(unittest.TestCase):
         normalised = bluesky_state._normalise_state(old_state)
         self.assertIn("unfollow_history", normalised)
         self.assertIn("entries", normalised["unfollow_history"])
+
+
+class FollowGraceTests(unittest.TestCase):
+    def test_get_follow_grace_dids_returns_empty_set_initially(self):
+        state = bluesky_state._default_state()
+        self.assertEqual(bluesky_state.get_follow_grace_dids(state, cutoff_ts=0), set())
+
+    def test_record_follow_grace_stores_did_and_source(self):
+        state = bluesky_state._default_state()
+
+        bluesky_state.record_follow_grace(state, "did:plc:abc")
+
+        self.assertEqual(
+            bluesky_state.get_follow_grace_dids(state, cutoff_ts=0), {"did:plc:abc"}
+        )
+        self.assertEqual(
+            state["follow_grace"]["entries"][0]["source"], "follow_fellows"
+        )
+
+    def test_record_follow_grace_updates_existing_entry_rather_than_duplicating(self):
+        state = bluesky_state._default_state()
+
+        bluesky_state.record_follow_grace(state, "did:plc:abc")
+        bluesky_state.record_follow_grace(state, "did:plc:abc")
+
+        self.assertEqual(len(state["follow_grace"]["entries"]), 1)
+
+    def test_prune_follow_grace_removes_expired_entries(self):
+        state = bluesky_state._default_state()
+        state["follow_grace"]["entries"] = [
+            {
+                "did": "did:plc:expired",
+                "followed_at": 100,
+                "source": "follow_fellows",
+            },
+            {
+                "did": "did:plc:active",
+                "followed_at": 200,
+                "source": "follow_fellows",
+            },
+        ]
+
+        bluesky_state.prune_follow_grace(state, cutoff_ts=150)
+
+        self.assertEqual(
+            bluesky_state.get_follow_grace_dids(state, cutoff_ts=150),
+            {"did:plc:active"},
+        )
+
+    def test_normalise_state_backfills_follow_grace(self):
+        old_state = {
+            "posted_jokes": [],
+            "provider": {},
+            "reports": {},
+            "liked_replies": {},
+            "unfollow_history": {"entries": []},
+        }
+
+        normalised = bluesky_state._normalise_state(old_state)
+
+        self.assertIn("follow_grace", normalised)
+        self.assertIn("entries", normalised["follow_grace"])
 
 
 class JokeRetryChainTests(unittest.TestCase):
@@ -2041,6 +2111,47 @@ class FollowFellowsMainTests(unittest.TestCase):
                             bluesky_follow_fellows.main()
 
         client.follow.assert_not_called()
+
+    def test_main_records_follow_grace_for_successful_follow(self):
+        followed_did = "did:plc:newfollow"
+        client = mock.Mock()
+        client.me.did = "did:plc:bot"
+        post = SimpleNamespace(author=SimpleNamespace(did=followed_did))
+        client.app.bsky.feed.search_posts.return_value = SimpleNamespace(posts=[post])
+        state = bluesky_state._default_state()
+
+        with mock.patch(
+            "bluesky_follow_fellows.login_client",
+            return_value=(client, "thejokebot.bsky.social"),
+        ):
+            with mock.patch(
+                "bluesky_follow_fellows.get_runtime_controls",
+                return_value={"dry_run": False, "action_delay_seconds": 0.0},
+            ):
+                with mock.patch(
+                    "bluesky_follow_fellows.fetch_paginated_data", return_value=[]
+                ):
+                    with mock.patch(
+                        "bluesky_follow_fellows.bluesky_state.load_state",
+                        return_value=state,
+                    ):
+                        with mock.patch(
+                            "bluesky_follow_fellows.retry_network_call",
+                            side_effect=lambda fn, description: fn(),
+                        ):
+                            with mock.patch(
+                                "bluesky_follow_fellows.bluesky_state.save_state"
+                            ) as save_state:
+                                bluesky_follow_fellows.main()
+
+        self.assertEqual(
+            bluesky_state.get_follow_grace_dids(state, cutoff_ts=0), {followed_did}
+        )
+        self.assertEqual(
+            state["follow_grace"]["entries"][0]["source"], "follow_fellows"
+        )
+        save_state.assert_called_once_with(state)
+        client.follow.assert_called_once_with(followed_did)
 
 
 if __name__ == "__main__":

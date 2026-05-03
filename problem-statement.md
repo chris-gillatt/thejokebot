@@ -20,6 +20,7 @@ changelog in this file is intentionally brief.
 - The project is automation-first (GitHub Actions + script execution).
 - Existing runtime contracts (script entry points, workflow triggers, key env vars) should be treated as stable interfaces.
 - Required environment variable names such as `BLUESKY_PASSWORD` and `BLUESKY_USERNAME` should not change casually.
+- Bluesky profile counters and raw follow records can exceed hydrated `get_followers`/`get_follows` results; suspended, deactivated, taken-down, or otherwise hidden accounts may still count in totals without materialising in actionable graph queries.
 
 ## 4. Current Active Risks
 1. Dependency drift and workflow/runtime skew.

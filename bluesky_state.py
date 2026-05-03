@@ -26,6 +26,8 @@ else:
     fcntl = None  # type: ignore
 
 STATE_FILE = str(Path(__file__).resolve().parent / "bot_state.json")
+FOLLOW_RESPONSE_GRACE_PERIOD_DAYS = 90
+FOLLOW_RESPONSE_GRACE_PERIOD_SECONDS = FOLLOW_RESPONSE_GRACE_PERIOD_DAYS * 24 * 60 * 60
 
 # Canonical provider order — the rotation wraps around this list.
 # Add new providers here and they will be included in rotation automatically.
@@ -54,6 +56,9 @@ def _default_state() -> dict:
             "last_checked_at": None,
         },
         "unfollow_history": {
+            "entries": [],
+        },
+        "follow_grace": {
             "entries": [],
         },
         "posted_jokes": [],
@@ -102,6 +107,9 @@ def _normalise_state(state: dict) -> dict:
 
     unfollow_history = state.setdefault("unfollow_history", {})
     unfollow_history.setdefault("entries", [])
+
+    follow_grace = state.setdefault("follow_grace", {})
+    follow_grace.setdefault("entries", [])
 
     state.setdefault("posted_jokes", [])
     return state
@@ -361,6 +369,9 @@ def record_unfollow(state: dict, did: str, reason: str = "not_following_back") -
     """Record that the bot unfollowed a DID, updating the entry if it already exists."""
     history = state.setdefault("unfollow_history", {})
     entries = history.setdefault("entries", [])
+    follow_grace = state.setdefault("follow_grace", {})
+    grace_entries = follow_grace.setdefault("entries", [])
+    follow_grace["entries"] = [e for e in grace_entries if e.get("did") != did]
     for entry in entries:
         if entry["did"] == did:
             entry["unfollowed_at"] = int(time.time())
@@ -376,3 +387,53 @@ def prune_unfollow_history(state: dict, max_entries: int = 10000) -> None:
     if len(entries) > max_entries:
         entries.sort(key=lambda e: e.get("unfollowed_at", 0))
         history["entries"] = entries[-max_entries:]
+
+
+def get_follow_grace_dids(
+    state: dict,
+    cutoff_ts: float | None = None,
+) -> set[str]:
+    """Return the set of DIDs still within the follow-response grace window."""
+    if cutoff_ts is None:
+        cutoff_ts = time.time() - FOLLOW_RESPONSE_GRACE_PERIOD_SECONDS
+
+    follow_grace = state.setdefault("follow_grace", {"entries": []})
+    return {
+        entry["did"]
+        for entry in follow_grace.get("entries", [])
+        if entry.get("followed_at", 0) > cutoff_ts
+    }
+
+
+def record_follow_grace(
+    state: dict,
+    did: str,
+    source: str = "follow_fellows",
+) -> None:
+    """Record a followed DID so unfollow honours the response grace window."""
+    follow_grace = state.setdefault("follow_grace", {})
+    entries = follow_grace.setdefault("entries", [])
+    for entry in entries:
+        if entry["did"] == did:
+            entry["followed_at"] = int(time.time())
+            entry["source"] = source
+            return
+    entries.append({"did": did, "followed_at": int(time.time()), "source": source})
+
+
+def prune_follow_grace(
+    state: dict,
+    cutoff_ts: float | None = None,
+    max_entries: int = 10000,
+) -> None:
+    """Drop expired follow-grace entries and bound state-file growth."""
+    if cutoff_ts is None:
+        cutoff_ts = time.time() - FOLLOW_RESPONSE_GRACE_PERIOD_SECONDS
+
+    follow_grace = state.setdefault("follow_grace", {})
+    entries = follow_grace.setdefault("entries", [])
+    entries = [entry for entry in entries if entry.get("followed_at", 0) > cutoff_ts]
+    if len(entries) > max_entries:
+        entries.sort(key=lambda entry: entry.get("followed_at", 0))
+        entries = entries[-max_entries:]
+    follow_grace["entries"] = entries
