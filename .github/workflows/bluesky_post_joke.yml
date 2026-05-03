@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: bluesky_post_joke
+  group: bot_state_writer
   cancel-in-progress: false
 
 permissions:
