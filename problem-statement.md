@@ -229,7 +229,31 @@ dispatch and dry-run default (`apply_changes=false`) for safe roll-out.
 `resources/jokebot_starter_pack.json` when enabled and unions those DIDs with
 `BLUESKY_UNFOLLOW_IGNORE` protection, preventing accidental removals.
 
-## 6. Explicit "Will Not Do" Decisions
+---
+
+### 5.20 Pull starter pack updates from Bluesky ✓ Complete
+**Priority: Medium**
+
+Issue #16 noted that the starter pack on Bluesky had been manually updated
+(description changed, users added to the source list) and that any future
+workflow run would silently overwrite those changes with stale local config
+values. Bluesky should be the source of truth.
+
+**Resolution:** Added `pull_starter_pack_record()` and
+`write_starter_pack_config_updates()` to `bluesky_manage_starter_pack.py`.
+A new `--mode pull` option fetches the live `name` and `description` from the
+Bluesky record and updates `resources/jokebot_starter_pack.json` in place,
+only touching fields that have actually changed. The `pull` mode is
+intentionally non-destructive: it never pushes anything to Bluesky.
+
+Updated `bluesky_manage_starter_pack.yml` to expose `pull` as a workflow
+choice and added a commit step so that pulled config changes land back on the
+branch automatically (only fires when `mode=pull` and `apply_changes=true`).
+Elevated workflow permissions from `contents: read` to `contents: write` for
+the commit step. Added 9 new unit tests covering error paths, dry-run, no-op,
+and actual field-update scenarios. Suite at 136 passing.
+
+
 Do not revisit these without a concrete operational reason.
 
 | Item | Decision | Reason |
@@ -277,6 +301,7 @@ Do not revisit these without a concrete operational reason.
 - v1.19: Completed grapheme-aware post-length preflight (5.14) in `bluesky_post_joke.py` using `regex` grapheme-cluster counting so composed characters are measured by visible units instead of code points.
 - v1.20: Marked HumorAPI integration (5.12) as will-not-do due to terms-and-conditions concerns around content use/storage for that endpoint.
 - v1.21: Completed stale ignore-handle hygiene (5.15) by adding a dedicated validator script and monthly/manual workflow to surface and prune unresolved `BLUESKY_UNFOLLOW_IGNORE` entries.
+- v1.22: Added starter-pack pull mode (5.20). `bluesky_manage_starter_pack.py` now supports `--mode pull` to fetch the live name/description from Bluesky and write them back to `resources/jokebot_starter_pack.json`. Workflow updated with `pull` choice, commit-back step, and `contents: write` permission. Suite at 136 passing.
 
 ## 9. Whole-Project Code Review Findings
 

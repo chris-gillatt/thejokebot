@@ -232,6 +232,85 @@ def upsert_starter_pack_record(
     return created_uri or target_uri
 
 
+def pull_starter_pack_record(client, starter_cfg: dict, dry_run: bool) -> dict:
+    """Fetch the live starter-pack record from Bluesky and return the fields that
+    differ from the local config.  The caller is responsible for persisting the
+    result.
+
+    Returns a dict with the keys that should be updated in the local config
+    (currently ``name`` and ``description``).  An empty dict means nothing
+    needs updating.
+    """
+    configured_uri = str(starter_cfg.get("starter_pack_uri") or "").strip()
+    if not configured_uri:
+        raise ValueError(
+            "starter_pack_uri must be set in resources/jokebot_starter_pack.json"
+            " to pull from Bluesky."
+        )
+
+    parsed_uri = _parse_at_uri(configured_uri)
+    if not parsed_uri:
+        raise ValueError("starter_pack_uri must be a valid at:// URI.")
+
+    repo_did = client.me.did
+    if parsed_uri["did"] != repo_did:
+        raise ValueError(
+            "starter_pack_uri DID must match the authenticated account DID."
+        )
+    if parsed_uri["collection"] != _STARTERPACK_COLLECTION:
+        raise ValueError("starter_pack_uri must target app.bsky.graph.starterpack.")
+
+    if dry_run:
+        print(f"[DRY-RUN] Would fetch starter-pack record: {configured_uri}")
+        return {}
+
+    existing = retry_network_call(
+        lambda: client.com.atproto.repo.get_record(
+            {
+                "repo": parsed_uri["did"],
+                "collection": parsed_uri["collection"],
+                "rkey": parsed_uri["rkey"],
+            }
+        ),
+        description="fetching live starter-pack record",
+    )
+
+    ex_value = getattr(existing, "value", None)
+    if ex_value is None and isinstance(existing, dict):
+        ex_value = existing.get("value")
+    if not isinstance(ex_value, dict):
+        raise ValueError("Unexpected response format from get_record.")
+
+    live_name = str(ex_value.get("name") or "").strip()
+    live_desc = str(ex_value.get("description") or "").strip()
+
+    updates: dict = {}
+    if live_name and live_name != starter_cfg.get("name", ""):
+        updates["name"] = live_name
+    if live_desc != starter_cfg.get("description", ""):
+        updates["description"] = live_desc
+
+    return updates
+
+
+def write_starter_pack_config_updates(updates: dict) -> None:
+    """Apply *updates* (name/description) to the on-disk config file in place."""
+    try:
+        data = json.loads(_CONFIG_PATH.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        raise ValueError(
+            f"Failed to read starter-pack config for update: {exc}"
+        ) from exc
+
+    if not isinstance(data, dict) or not isinstance(data.get("starter_pack"), dict):
+        raise ValueError("Unexpected structure in jokebot_starter_pack.json.")
+
+    data["starter_pack"].update(updates)
+    _CONFIG_PATH.write_text(
+        json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
+
+
 def ensure_following_list_members(
     client,
     list_member_dids: set[str],
@@ -277,9 +356,13 @@ def _parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--mode",
-        choices=["setup", "sync"],
+        choices=["setup", "sync", "pull"],
         default="setup",
-        help="setup=upsert starter-pack record + sync follows, sync=follow-only unless config enables record upsert",
+        help=(
+            "setup=upsert starter-pack record + sync follows, "
+            "sync=follow-only unless config enables record upsert, "
+            "pull=fetch live name/description from Bluesky and update local config"
+        ),
     )
     return parser.parse_args()
 
@@ -296,6 +379,38 @@ def main() -> int:
             "Starter-pack integration is disabled in resources/jokebot_starter_pack.json."
         )
         return 0
+
+    # Pull mode: fetch live record from Bluesky and update local config.
+    if args.mode == "pull":
+        try:
+            client, _username = login_client()
+            print("Authenticated successfully.")
+            updates = pull_starter_pack_record(client, cfg, dry_run)
+            if not updates:
+                print(
+                    "Local config already matches the live starter-pack record. Nothing to update."
+                )
+                return 0
+            print(f"Pulled updates from Bluesky: {list(updates.keys())}")
+            for key, value in updates.items():
+                print(f"  {key}: {value!r}")
+            if dry_run:
+                print(
+                    "[DRY-RUN] Would write the above updates to resources/jokebot_starter_pack.json."
+                )
+            else:
+                write_starter_pack_config_updates(updates)
+                print("Updated resources/jokebot_starter_pack.json.")
+            return 0
+        except (
+            ValueError,
+            requests.RequestException,
+            TimeoutError,
+            atproto_client.exceptions.NetworkError,
+            atproto_client.exceptions.BadRequestError,
+        ) as exc:
+            print(f"Starter-pack pull failed: {exc}")
+            return 1
 
     source_list_uri = str(cfg.get("source_list_uri") or "").strip()
     if not source_list_uri:
