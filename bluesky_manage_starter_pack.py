@@ -232,7 +232,9 @@ def upsert_starter_pack_record(
     return created_uri or target_uri
 
 
-def pull_starter_pack_record(client, starter_cfg: dict, dry_run: bool) -> dict:
+def pull_starter_pack_record(
+    client, starter_cfg: dict, dry_run: bool
+) -> dict[str, str]:
     """Fetch the live starter-pack record from Bluesky and return the fields that
     differ from the local config.  The caller is responsible for persisting the
     result.
@@ -284,7 +286,7 @@ def pull_starter_pack_record(client, starter_cfg: dict, dry_run: bool) -> dict:
     live_name = str(ex_value.get("name") or "").strip()
     live_desc = str(ex_value.get("description") or "").strip()
 
-    updates: dict = {}
+    updates: dict[str, str] = {}
     if live_name and live_name != starter_cfg.get("name", ""):
         updates["name"] = live_name
     if live_desc != starter_cfg.get("description", ""):

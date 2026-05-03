@@ -400,7 +400,7 @@ class StarterPackManagerTests(unittest.TestCase):
         client.com.atproto.repo.create_record.assert_not_called()
 
 
-class PullStarterPackRecordTests(unittest.TestCase):
+class StarterPackPullModeTests(unittest.TestCase):
     """Tests for pull_starter_pack_record and write_starter_pack_config_updates."""
 
     def _make_client(self, did: str = "did:plc:test") -> mock.Mock:
@@ -410,7 +410,7 @@ class PullStarterPackRecordTests(unittest.TestCase):
 
     def test_pull_raises_when_no_uri_configured(self):
         client = self._make_client()
-        with self.assertRaises(ValueError, msg="Should require starter_pack_uri"):
+        with self.assertRaises(ValueError):
             bluesky_manage_starter_pack.pull_starter_pack_record(
                 client,
                 {"starter_pack_uri": "", "name": "Pack", "description": "Desc"},
