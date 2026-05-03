@@ -13,7 +13,10 @@ import bluesky_joke_providers
 import bluesky_state
 from bluesky_common import login_client
 
-DAYS_LIMIT = 90
+# Joke memory: keep 365 days of history to reduce repetition across
+# three primary providers in rotation. With thousands of unique jokes
+# across providers, a longer memory keeps content fresh for readers.
+DAYS_LIMIT = 365
 MAX_ATTEMPTS = 5
 BLUESKY_MAX_POST_CHARS = 300
 
@@ -140,7 +143,8 @@ def main():
     recent_b64s |= bluesky_denylist.get_denylisted_b64s(denylist_payload)
 
     # Determine provider order: explicit override or next primary provider in
-    # alternating rotation, followed by remaining primaries and then backups.
+    # alternating rotation, followed by remaining primaries, then backups,
+    # and finally the fallback jokebook.
     provider_override = os.getenv("BLUESKY_JOKE_PROVIDER", "").strip().lower() or None
     if provider_override in bluesky_joke_providers.PROVIDERS:
         providers_to_try = [provider_override]
@@ -148,9 +152,11 @@ def main():
         selected = bluesky_state.get_next_provider(state)
         primary_providers = list(bluesky_joke_providers.PRIMARY_PROVIDERS)
         backup_providers = list(bluesky_joke_providers.BACKUP_PROVIDERS)
+        fallback_provider = bluesky_joke_providers.FALLBACK_PROVIDER
         providers_to_try = [selected]
         providers_to_try += [p for p in primary_providers if p != selected]
         providers_to_try += backup_providers
+        providers_to_try += [fallback_provider]
 
     joke = None
     b64 = None

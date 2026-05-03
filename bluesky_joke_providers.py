@@ -36,10 +36,24 @@ _JOKEAPI_BLACKLIST = "nsfw,explicit,racist,sexist"
 _GROANDECK_URL = "https://groandeck.com/api/v1/random"
 
 
+# Provider configuration: three-tier fallback system
+#
+# PRIMARY PROVIDERS (normal rotation):
 # Single source of truth for primary-provider rotation order lives in
-# bluesky_state.PROVIDER_ROTATION_ORDER.
+# bluesky_state.PROVIDER_ROTATION_ORDER. These three providers form the
+# active rotation and should all be called equally often.
 PRIMARY_PROVIDERS = list(bluesky_state.PROVIDER_ROTATION_ORDER)
-BACKUP_PROVIDERS = ["syrsly", "api_ninjas", "jokebot_jokebook"]
+
+# BACKUP PROVIDERS (emergency fallback):
+# Only tried after all primaries fail. Used when providers are temporarily
+# down or rate-limited. Syrsly is preferred (family-friendly), followed by
+# API Ninjas (requires API key), and finally the bundled jokebook.
+BACKUP_PROVIDERS = ["syrsly", "api_ninjas"]
+
+# FALLBACK PROVIDER (last resort, always available):
+# Bundled offline joke list. Requires no network or API key. Should always
+# succeed, making it the final safety net in the provider chain.
+FALLBACK_PROVIDER = "jokebot_jokebook"
 
 _JOKEBOOK_PATH = pathlib.Path(__file__).parent / "resources" / "jokebot_jokebook.json"
 

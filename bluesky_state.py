@@ -78,6 +78,11 @@ def _normalise_state(state: dict) -> dict:
         if key not in provider:
             provider[key] = value
 
+    # Sync rotation_order if it has changed (e.g., when new providers are added).
+    saved_rotation = provider.get("rotation_order")
+    if saved_rotation != PROVIDER_ROTATION_ORDER:
+        provider["rotation_order"] = list(PROVIDER_ROTATION_ORDER)
+
     failures = provider.setdefault("failures", {})
     for provider_name in provider.get("rotation_order") or PROVIDER_ROTATION_ORDER:
         failures.setdefault(

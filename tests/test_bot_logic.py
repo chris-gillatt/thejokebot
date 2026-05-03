@@ -977,14 +977,14 @@ class JokeProviderTests(unittest.TestCase):
                 joke = bluesky_joke_providers.fetch_from_api_ninjas()
         self.assertEqual(joke, "Backup joke.")
 
-    def test_jokebot_jokebook_is_in_backup_providers_not_primary(self):
-        self.assertIn("jokebot_jokebook", bluesky_joke_providers.BACKUP_PROVIDERS)
-        self.assertNotIn("jokebot_jokebook", bluesky_joke_providers.PRIMARY_PROVIDERS)
-
-    def test_jokebot_jokebook_is_last_resort_backup(self):
+    def test_jokebot_jokebook_is_fallback_provider_not_primary_or_backup(
+        self,
+    ):
         self.assertEqual(
-            bluesky_joke_providers.BACKUP_PROVIDERS[-1], "jokebot_jokebook"
+            "jokebot_jokebook", bluesky_joke_providers.FALLBACK_PROVIDER
         )
+        self.assertNotIn("jokebot_jokebook", bluesky_joke_providers.PRIMARY_PROVIDERS)
+        self.assertNotIn("jokebot_jokebook", bluesky_joke_providers.BACKUP_PROVIDERS)
 
     def test_fetch_from_jokebot_jokebook_returns_decoded_joke(self):
         import base64
@@ -1511,13 +1511,14 @@ class JokeRetryChainTests(unittest.TestCase):
         next_provider = bluesky_state.get_next_provider(state)
         self.assertIn(next_provider, bluesky_joke_providers.PRIMARY_PROVIDERS)
 
-    def test_backup_providers_include_jokebook(self):
-        """Backup providers include jokebot_jokebook as fallback."""
-        self.assertIn("jokebot_jokebook", bluesky_joke_providers.BACKUP_PROVIDERS)
-        # jokebook must be last (final fallback)
+    def test_fallback_provider_separate_from_backups(self):
+        """Fallback provider (jokebook) is separate from backup providers."""
         self.assertEqual(
-            bluesky_joke_providers.BACKUP_PROVIDERS[-1], "jokebot_jokebook"
+            "jokebot_jokebook", bluesky_joke_providers.FALLBACK_PROVIDER
         )
+        self.assertNotIn("jokebot_jokebook", bluesky_joke_providers.BACKUP_PROVIDERS)
+        self.assertIn("syrsly", bluesky_joke_providers.BACKUP_PROVIDERS)
+        self.assertIn("api_ninjas", bluesky_joke_providers.BACKUP_PROVIDERS)
 
     def test_deduplication_includes_denylisted_jokes(self):
         """Deduplication set includes both recent and denylisted jokes."""
