@@ -1420,6 +1420,32 @@ class FollowGraceTests(unittest.TestCase):
         self.assertIn("entries", normalised["follow_grace"])
 
 
+class FollowFellowsTagRotationTests(unittest.TestCase):
+    def test_get_follow_fellows_tag_offset_returns_zero_initially(self):
+        state = bluesky_state._default_state()
+        self.assertEqual(bluesky_state.get_follow_fellows_tag_offset(state), 0)
+
+    def test_advance_follow_fellows_tag_offset_wraps_around(self):
+        state = bluesky_state._default_state()
+        bluesky_state.advance_follow_fellows_tag_offset(state, 8, 16)
+        self.assertEqual(bluesky_state.get_follow_fellows_tag_offset(state), 8)
+        bluesky_state.advance_follow_fellows_tag_offset(state, 8, 16)
+        self.assertEqual(bluesky_state.get_follow_fellows_tag_offset(state), 0)
+
+    def test_normalise_state_backfills_follow_fellows(self):
+        old_state = {
+            "posted_jokes": [],
+            "provider": {},
+            "reports": {},
+            "liked_replies": {},
+            "unfollow_history": {"entries": []},
+            "follow_grace": {"entries": []},
+        }
+        normalised = bluesky_state._normalise_state(old_state)
+        self.assertIn("follow_fellows", normalised)
+        self.assertIn("tag_offset", normalised["follow_fellows"])
+
+
 class JokeRetryChainTests(unittest.TestCase):
     def test_pick_joke_returns_new_joke(self):
         """pick_joke fetches and returns a non-duplicate joke."""

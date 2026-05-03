@@ -61,6 +61,9 @@ def _default_state() -> dict:
         "follow_grace": {
             "entries": [],
         },
+        "follow_fellows": {
+            "tag_offset": 0,
+        },
         "posted_jokes": [],
     }
 
@@ -110,6 +113,9 @@ def _normalise_state(state: dict) -> dict:
 
     follow_grace = state.setdefault("follow_grace", {})
     follow_grace.setdefault("entries", [])
+
+    follow_fellows_state = state.setdefault("follow_fellows", {})
+    follow_fellows_state.setdefault("tag_offset", 0)
 
     state.setdefault("posted_jokes", [])
     return state
@@ -437,3 +443,21 @@ def prune_follow_grace(
         entries.sort(key=lambda entry: entry.get("followed_at", 0))
         entries = entries[-max_entries:]
     follow_grace["entries"] = entries
+
+
+# ---------------------------------------------------------------------------
+# Follow-fellows tag rotation
+# ---------------------------------------------------------------------------
+
+
+def get_follow_fellows_tag_offset(state: dict) -> int:
+    """Return the current tag-rotation offset for the follow-fellows run."""
+    ff = state.setdefault("follow_fellows", {"tag_offset": 0})
+    return int(ff.get("tag_offset", 0))
+
+
+def advance_follow_fellows_tag_offset(state: dict, step: int, total_tags: int) -> None:
+    """Advance the tag-rotation offset by step, wrapping around total_tags."""
+    ff = state.setdefault("follow_fellows", {"tag_offset": 0})
+    current = int(ff.get("tag_offset", 0))
+    ff["tag_offset"] = (current + step) % total_tags

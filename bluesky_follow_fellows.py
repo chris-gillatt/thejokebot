@@ -13,9 +13,26 @@ from bluesky_common import (
 from bluesky_follower_utils import fetch_paginated_data
 
 # Limits
-soft_tag_limit = 15
-global_follow_limit = 60
-hashtags = ["followback", "dadjoke", "jokes", "funny"]
+soft_tag_limit = 12
+global_follow_limit = 150
+hashtags = [
+    "followback",
+    "dadjoke",
+    "dadjokes",
+    "joke",
+    "jokes",
+    "humour",
+    "humor",
+    "jokesky",
+    "momjokes",
+    "mumjokes",
+    "groan",
+    "puns",
+    "pun",
+    "punny",
+    "divertido",
+    "funny",
+]
 
 
 def fetch_users_for_tag(client, tag: str):
@@ -113,6 +130,8 @@ def main():
     state = bluesky_state.load_state()
     unfollowed_dids = bluesky_state.get_unfollowed_dids(state)
     state_changed = False
+    tag_offset = bluesky_state.get_follow_fellows_tag_offset(state)
+    rotated_hashtags = hashtags[tag_offset:] + hashtags[:tag_offset]
     if unfollowed_dids:
         print(
             f"{len(unfollowed_dids)} DID(s) in unfollow history — excluded from candidates."
@@ -132,7 +151,7 @@ def main():
 
     selected_users = select_users(
         tag_users,
-        hashtags,
+        rotated_hashtags,
         per_tag_limit=soft_tag_limit,
         overall_limit=global_follow_limit,
     )
@@ -159,6 +178,9 @@ def main():
             time.sleep(action_delay_seconds)
 
     if state_changed:
+        bluesky_state.advance_follow_fellows_tag_offset(
+            state, len(hashtags) // 2, len(hashtags)
+        )
         bluesky_state.prune_follow_grace(state)
         bluesky_state.save_state(state)
 

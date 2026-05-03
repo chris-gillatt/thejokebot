@@ -111,7 +111,7 @@ def _fetch_list_member_dids(client, list_uri):
 
 def unfollow_users():
     # List of usernames to ignore (configurable via BLUESKY_UNFOLLOW_IGNORE env var)
-    default_ignorable = ["theonion.bsky.social"]
+    default_ignorable = ["theonion.bsky.social", "groandeck.bsky.social"]
     env_ignorable = os.getenv("BLUESKY_UNFOLLOW_IGNORE", "")
     ignorable_usernames = default_ignorable + [
         u.strip() for u in env_ignorable.split(",") if u.strip()
