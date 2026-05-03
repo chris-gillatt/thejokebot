@@ -5,7 +5,7 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT"
 
-MISSING_OPTIONAL=()
+ALLOW_REDUCED_COVERAGE="${BLUESKY_PREFLIGHT_ALLOW_REDUCED_COVERAGE:-false}"
 
 fail_with_install_hint() {
   local dependency="$1"
@@ -72,15 +72,20 @@ if command -v codeql >/dev/null 2>&1; then
 
   echo "CodeQL SARIF written to: $CODEQL_TMP/results.sarif"
 else
-  MISSING_OPTIONAL+=("codeql")
-  echo "WARNING: Optional dependency missing: codeql"
-  echo "Install hint: brew install codeql"
-  echo "CodeQL checks were skipped, so local coverage is reduced."
+  if [[ "$ALLOW_REDUCED_COVERAGE" == "true" ]]; then
+    echo "WARNING: Missing dependency: codeql"
+    echo "Install hint: brew install codeql"
+    echo "Continuing with reduced coverage because BLUESKY_PREFLIGHT_ALLOW_REDUCED_COVERAGE=true"
+    echo "Local preflight checks passed with reduced coverage."
+  else
+    fail_with_install_hint \
+      "codeql" \
+      "brew install codeql (or set BLUESKY_PREFLIGHT_ALLOW_REDUCED_COVERAGE=true to bypass temporarily)"
+  fi
 fi
 
-if [[ "${#MISSING_OPTIONAL[@]}" -gt 0 ]]; then
-  echo "Local preflight checks passed with reduced coverage."
-  echo "Missing optional dependencies: ${MISSING_OPTIONAL[*]}"
+if [[ "$ALLOW_REDUCED_COVERAGE" == "true" ]] && ! command -v codeql >/dev/null 2>&1; then
+  echo "Reduced-coverage mode was used. Re-enable full coverage by installing CodeQL and unsetting BLUESKY_PREFLIGHT_ALLOW_REDUCED_COVERAGE."
 else
   echo "Local preflight checks passed with full coverage."
 fi

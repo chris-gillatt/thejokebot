@@ -46,7 +46,13 @@ This runs:
 - Ruff lint (`ruff check .`)
 - Ruff format check (`ruff format --check .`)
 - Unit tests (`pytest tests/ -v --tb=short`)
-- Local CodeQL analysis when the `codeql` CLI is installed
+- Local CodeQL analysis (required by default)
+
+If CodeQL is temporarily unavailable, you can explicitly run in reduced-coverage mode:
+
+- `BLUESKY_PREFLIGHT_ALLOW_REDUCED_COVERAGE=true ./scripts/preflight-local.sh`
+
+This should be exceptional; default behaviour fails fast with install hints for missing dependencies.
 
 If you only want tests after merges (for example Dependabot updates), run:
 
