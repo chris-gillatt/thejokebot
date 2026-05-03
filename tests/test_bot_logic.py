@@ -1,5 +1,6 @@
 import base64
 import datetime as dt
+import json
 import os
 import pathlib
 import re
@@ -397,6 +398,191 @@ class StarterPackManagerTests(unittest.TestCase):
         )
         client.com.atproto.repo.put_record.assert_not_called()
         client.com.atproto.repo.create_record.assert_not_called()
+
+    def test_pull_raises_when_no_uri_configured(self):
+        client = mock.Mock()
+        client.me.did = "did:plc:test"
+
+        with self.assertRaises(ValueError):
+            bluesky_manage_starter_pack.pull_starter_pack_record(
+                client,
+                {"starter_pack_uri": "", "name": "Pack", "description": "Desc"},
+            )
+
+    def test_pull_raises_on_invalid_uri(self):
+        client = mock.Mock()
+        client.me.did = "did:plc:test"
+
+        with self.assertRaises(ValueError):
+            bluesky_manage_starter_pack.pull_starter_pack_record(
+                client,
+                {
+                    "starter_pack_uri": "not-valid",
+                    "name": "Pack",
+                    "description": "Desc",
+                },
+            )
+
+    def test_pull_raises_on_did_mismatch(self):
+        client = mock.Mock()
+        client.me.did = "did:plc:actual"
+
+        with self.assertRaises(ValueError):
+            bluesky_manage_starter_pack.pull_starter_pack_record(
+                client,
+                {
+                    "starter_pack_uri": (
+                        "at://did:plc:other/app.bsky.graph.starterpack/3mkrjdntf7x2l"
+                    ),
+                    "name": "Pack",
+                    "description": "Desc",
+                },
+            )
+
+    def test_pull_returns_empty_when_live_matches_local(self):
+        client = mock.Mock()
+        client.me.did = "did:plc:test"
+        client.com.atproto.repo.get_record.return_value = SimpleNamespace(
+            value={"name": "Pack", "description": "Desc"}
+        )
+
+        with mock.patch(
+            "bluesky_manage_starter_pack.retry_network_call",
+            side_effect=lambda call, description: call(),
+        ):
+            result = bluesky_manage_starter_pack.pull_starter_pack_record(
+                client,
+                {
+                    "starter_pack_uri": (
+                        "at://did:plc:test/app.bsky.graph.starterpack/3mkrjdntf7x2l"
+                    ),
+                    "name": "Pack",
+                    "description": "Desc",
+                },
+            )
+
+        self.assertEqual(result, {})
+
+    def test_pull_returns_only_changed_fields(self):
+        client = mock.Mock()
+        client.me.did = "did:plc:test"
+        client.com.atproto.repo.get_record.return_value = SimpleNamespace(
+            value={"name": "Same Name", "description": "New description"}
+        )
+
+        with mock.patch(
+            "bluesky_manage_starter_pack.retry_network_call",
+            side_effect=lambda call, description: call(),
+        ):
+            result = bluesky_manage_starter_pack.pull_starter_pack_record(
+                client,
+                {
+                    "starter_pack_uri": (
+                        "at://did:plc:test/app.bsky.graph.starterpack/3mkrjdntf7x2l"
+                    ),
+                    "name": "Same Name",
+                    "description": "Old description",
+                },
+            )
+
+        self.assertEqual(result, {"description": "New description"})
+
+    def test_pull_allows_blank_live_fields_to_replace_local_values(self):
+        client = mock.Mock()
+        client.me.did = "did:plc:test"
+        client.com.atproto.repo.get_record.return_value = SimpleNamespace(
+            value={"name": "", "description": ""}
+        )
+
+        with mock.patch(
+            "bluesky_manage_starter_pack.retry_network_call",
+            side_effect=lambda call, description: call(),
+        ):
+            result = bluesky_manage_starter_pack.pull_starter_pack_record(
+                client,
+                {
+                    "starter_pack_uri": (
+                        "at://did:plc:test/app.bsky.graph.starterpack/3mkrjdntf7x2l"
+                    ),
+                    "name": "Local Name",
+                    "description": "Local description",
+                },
+            )
+
+        self.assertEqual(result, {"name": "", "description": ""})
+
+    def test_write_starter_pack_config_updates_persists_changes(self):
+        import tempfile
+
+        original = {
+            "starter_pack": {
+                "enabled": True,
+                "name": "Old Name",
+                "description": "Old desc",
+                "source_list_uri": "at://x",
+                "record_key": "",
+                "starter_pack_uri": "at://y",
+                "sync": {"follow_list_members": True, "upsert_record": True},
+            }
+        }
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".json", delete=False, encoding="utf-8"
+        ) as tmp:
+            json.dump(original, tmp)
+            tmp_path = pathlib.Path(tmp.name)
+
+        try:
+            with mock.patch("bluesky_manage_starter_pack._CONFIG_PATH", tmp_path):
+                bluesky_manage_starter_pack.write_starter_pack_config_updates(
+                    {"name": "New Name", "description": "New desc"}
+                )
+                updated = json.loads(tmp_path.read_text(encoding="utf-8"))
+        finally:
+            tmp_path.unlink(missing_ok=True)
+
+        self.assertEqual(updated["starter_pack"]["name"], "New Name")
+        self.assertEqual(updated["starter_pack"]["description"], "New desc")
+        self.assertTrue(updated["starter_pack"]["enabled"])
+        self.assertEqual(updated["starter_pack"]["source_list_uri"], "at://x")
+
+    def test_main_pull_mode_fetches_live_preview_without_source_list_uri(self):
+        with mock.patch("bluesky_manage_starter_pack._parse_args") as parse_args:
+            parse_args.return_value = SimpleNamespace(mode="pull")
+            with mock.patch(
+                "bluesky_manage_starter_pack.get_runtime_controls",
+                return_value={"dry_run": True, "action_delay_seconds": 0.0},
+            ):
+                with mock.patch(
+                    "bluesky_manage_starter_pack.load_starter_pack_config",
+                    return_value={
+                        "starter_pack": {
+                            "enabled": True,
+                            "name": "Local",
+                            "description": "Old",
+                            "source_list_uri": "",
+                            "starter_pack_uri": (
+                                "at://did:plc:test/app.bsky.graph.starterpack/3mkrjdntf7x2l"
+                            ),
+                            "sync": {},
+                        }
+                    },
+                ):
+                    with mock.patch(
+                        "bluesky_manage_starter_pack.login_client",
+                        return_value=(mock.Mock(), "user"),
+                    ):
+                        with mock.patch(
+                            "bluesky_manage_starter_pack.pull_starter_pack_record",
+                            return_value={"description": "Live"},
+                        ) as pull_record:
+                            with mock.patch(
+                                "bluesky_manage_starter_pack.write_starter_pack_config_updates"
+                            ) as write_updates:
+                                result = bluesky_manage_starter_pack.main()
+
+        self.assertEqual(result, 0)
+        pull_record.assert_called_once()
+        write_updates.assert_not_called()
 
 
 class StateProviderRotationTests(unittest.TestCase):

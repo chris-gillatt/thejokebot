@@ -229,6 +229,22 @@ dispatch and dry-run default (`apply_changes=false`) for safe roll-out.
 `resources/jokebot_starter_pack.json` when enabled and unions those DIDs with
 `BLUESKY_UNFOLLOW_IGNORE` protection, preventing accidental removals.
 
+### 5.22 Pull starter-pack metadata from Bluesky ✓ Complete
+**Priority: Medium**
+
+Issue #19 identified that the live starter-pack name/description on Bluesky had
+diverged from `resources/jokebot_starter_pack.json`, creating a risk that the
+existing setup/sync path would overwrite manual live edits on the next run.
+Bluesky should remain the source of truth for starter-pack metadata.
+
+**Resolution:** Added `pull_starter_pack_record()` and
+`write_starter_pack_config_updates()` to `bluesky_manage_starter_pack.py`.
+The new `--mode pull` path fetches the live starter-pack record, shows an
+actual dry-run preview of changed fields, and optionally writes those changes
+back to `resources/jokebot_starter_pack.json` without touching follows or
+source-list membership. The workflow now exposes `pull` mode and commits pulled
+config updates back to the branch only when `apply_changes=true`.
+
 ## 6. Explicit "Will Not Do" Decisions
 Do not revisit these without a concrete operational reason.
 
@@ -277,6 +293,7 @@ Do not revisit these without a concrete operational reason.
 - v1.19: Completed grapheme-aware post-length preflight (5.14) in `bluesky_post_joke.py` using `regex` grapheme-cluster counting so composed characters are measured by visible units instead of code points.
 - v1.20: Marked HumorAPI integration (5.12) as will-not-do due to terms-and-conditions concerns around content use/storage for that endpoint.
 - v1.21: Completed stale ignore-handle hygiene (5.15) by adding a dedicated validator script and monthly/manual workflow to surface and prune unresolved `BLUESKY_UNFOLLOW_IGNORE` entries.
+- v1.22: Completed starter-pack metadata pull support (5.22). `bluesky_manage_starter_pack.py` now supports `--mode pull` to preview and optionally persist live Bluesky name/description changes back into `resources/jokebot_starter_pack.json`, and the workflow can commit those updates back to the branch. Suite at 144 passing.
 
 ## 9. Whole-Project Code Review Findings
 

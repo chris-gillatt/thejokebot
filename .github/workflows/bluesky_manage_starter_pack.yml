@@ -11,6 +11,7 @@ on:
         options:
           - setup
           - sync
+          - pull
       apply_changes:
         description: "If true, execute live mutations (otherwise dry-run)."
         required: true
@@ -22,7 +23,7 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   bluesky_manage_starter_pack:
@@ -55,3 +56,18 @@ jobs:
             export BLUESKY_DRY_RUN="true"
           fi
           python bluesky_manage_starter_pack.py --mode "$MODE"
+
+      - name: Commit pulled config changes
+        if: ${{ inputs.mode == 'pull' && inputs.apply_changes == true }}
+        run: |
+          branch_name="${GITHUB_REF_NAME:-main}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add resources/jokebot_starter_pack.json
+          if git diff --cached --quiet; then
+            echo "No config changes to commit."
+          else
+            git commit -m "chore(starter-pack): pull live metadata from Bluesky [skip ci]"
+            git pull --rebase origin "$branch_name"
+            git push origin HEAD:"$branch_name"
+          fi
