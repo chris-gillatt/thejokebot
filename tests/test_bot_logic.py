@@ -1687,6 +1687,128 @@ class StarterPackFollowSyncTests(unittest.TestCase):
         self.assertEqual(captured_record.get("createdAt"), original_ts)
 
 
+class ReportNotificationCollectionTests(unittest.TestCase):
+    """Tests for collect_report_proposals (CS-9 coverage gap)."""
+
+    def test_respects_max_pages_limit(self):
+        """Stops paging when max_pages limit is reached."""
+        client = mock.Mock()
+        state = bluesky_state._default_state()
+        denylisted = set()
+
+        response1 = SimpleNamespace(notifications=[], cursor="cursor1")
+        response2 = SimpleNamespace(notifications=[], cursor="cursor2")
+
+        client.app.bsky.notification.list_notifications.side_effect = [
+            response1,
+            response2,
+        ]
+
+        with mock.patch(
+            "bluesky_process_reports.retry_network_call",
+            side_effect=lambda fn, description: fn(),
+        ):
+            with mock.patch.dict(os.environ, {"BLUESKY_REPORT_MAX_PAGES": "1"}):
+                proposals, processed, pages = (
+                    bluesky_process_reports.collect_report_proposals(
+                        client, state, denylisted
+                    )
+                )
+
+        self.assertEqual(pages, 1)
+        self.assertEqual(client.app.bsky.notification.list_notifications.call_count, 1)
+
+    def test_stops_on_empty_cursor(self):
+        """Stops paging when cursor becomes None."""
+        client = mock.Mock()
+        state = bluesky_state._default_state()
+        denylisted = set()
+
+        response = SimpleNamespace(notifications=[], cursor=None)
+
+        client.app.bsky.notification.list_notifications.return_value = response
+
+        with mock.patch(
+            "bluesky_process_reports.retry_network_call",
+            side_effect=lambda fn, description: fn(),
+        ):
+            proposals, processed, pages = (
+                bluesky_process_reports.collect_report_proposals(
+                    client, state, denylisted
+                )
+            )
+
+        self.assertEqual(pages, 1)
+        self.assertEqual(len(proposals), 0)
+
+    def test_marks_non_reply_notifications_as_processed(self):
+        """Non-reply notifications are marked processed even if skipped."""
+        client = mock.Mock()
+        state = bluesky_state._default_state()
+        denylisted = set()
+
+        non_reply_notif = SimpleNamespace(
+            uri="at://did:plc:bot/app.bsky.feed.post/notif1",
+            reason="like",
+            record=SimpleNamespace(),
+        )
+        response = SimpleNamespace(notifications=[non_reply_notif], cursor=None)
+
+        client.app.bsky.notification.list_notifications.return_value = response
+
+        with mock.patch(
+            "bluesky_process_reports.retry_network_call",
+            side_effect=lambda fn, description: fn(),
+        ):
+            with mock.patch(
+                "bluesky_process_reports._extract_notification",
+                return_value={
+                    "notification_uri": "at://did:plc:bot/app.bsky.feed.post/notif1",
+                    "reason": "like",
+                    "reply_text": "",
+                    "source_post_uri": None,
+                },
+            ):
+                proposals, processed, pages = (
+                    bluesky_process_reports.collect_report_proposals(
+                        client, state, denylisted
+                    )
+                )
+
+        self.assertIn("at://did:plc:bot/app.bsky.feed.post/notif1", processed)
+
+    def test_skips_already_processed_notification_uris(self):
+        """Already-processed notification URIs are skipped entirely."""
+        client = mock.Mock()
+        state = bluesky_state._default_state()
+        processed_uri = "at://did:plc:bot/app.bsky.feed.post/already_done"
+        bluesky_state.record_processed_notification(state, processed_uri)
+        denylisted = set()
+
+        notif = SimpleNamespace(
+            uri=processed_uri,
+            reason="reply",
+            record=SimpleNamespace(),
+        )
+        response = SimpleNamespace(notifications=[notif], cursor=None)
+
+        client.app.bsky.notification.list_notifications.return_value = response
+
+        with mock.patch(
+            "bluesky_process_reports.retry_network_call",
+            side_effect=lambda fn, description: fn(),
+        ):
+            proposals, processed, pages = (
+                bluesky_process_reports.collect_report_proposals(
+                    client, state, denylisted
+                )
+            )
+
+        # Already-processed URI should not be added to new processed set
+        self.assertNotIn(processed_uri, processed)
+        self.assertEqual(len(proposals), 0)
+
+
 class ApprovedReportDeletionTests(unittest.TestCase):
     """Tests for delete_approved_report_posts (CS-9 coverage gap)."""
 

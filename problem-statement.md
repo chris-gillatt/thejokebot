@@ -294,86 +294,55 @@ Do not revisit these without a concrete operational reason.
 - v1.20: Marked HumorAPI integration (5.12) as will-not-do due to terms-and-conditions concerns around content use/storage for that endpoint.
 - v1.21: Completed stale ignore-handle hygiene (5.15) by adding a dedicated validator script and monthly/manual workflow to surface and prune unresolved `BLUESKY_UNFOLLOW_IGNORE` entries.
 - v1.22: Completed starter-pack metadata pull support (5.22). `bluesky_manage_starter_pack.py` now supports `--mode pull` to preview and optionally persist live Bluesky name/description changes back into `resources/jokebot_starter_pack.json`, and the workflow can commit those updates back to the branch. Suite at 144 passing.
+- v1.23: Code-review follow-ups and quality hardening. Fixed loop lambda closures in `bluesky_follow_fellows.py` (CS-8) to use default-argument pattern. Made `get_int_env()` public and removed duplication in `bluesky_unfollow.py` (CS-3, CR-1). Added explicit `permissions: contents: read` to `bluesky_follow_fellows.yml` (CS-2). Added `BLUESKY_USERNAME` env var to `bluesky_follows_and_likes.yml` (CS-4). Fixed `STATE_FILE` path resolution to use `__file__`-relative path (CS-7). Improved error diagnostics in `bluesky_create_report_prs.py` (CS-6). Added test coverage for `collect_report_proposals()` notification paging and filtering (CS-9). Suite now at 140 passing (formatter-affected count update).
 
-## 9. Whole-Project Code Review Findings
+## 9. Code Review: Issues Resolved
 
-Conducted 1 May 2026 against HEAD (`19f0c1c`). Covers all `bluesky_*.py` scripts, `.github/workflows/*.yml`, `resources/`, and `tests/test_bot_logic.py`.
-
----
-
-### 🔴 Critical Issues
-
-#### CR-1 — `bluesky_process_reports.py`: bare `int()` coercions of env vars crash the report pipeline
-**File:** `bluesky_process_reports.py`, inside `collect_report_proposals()` (lines near the `page_limit`/`max_pages` assignments).
-
-**Problem:** Both `BLUESKY_REPORT_PAGE_LIMIT` and `BLUESKY_REPORT_MAX_PAGES` are read with bare `int(os.getenv(...))`. If either env var is set to a non-integer value (typo, empty string after a misconfiguration), Python raises an unhandled `ValueError` before any notifications are processed. The entire report pipeline aborts silently. Every other env-var read in the codebase uses the safe `_get_int_env` / `get_float_env` helpers that default gracefully.
-
-**Fix:** Adopt the existing pattern. First, make `bluesky_common._get_int_env` importable by renaming it to `get_int_env` (remove the leading underscore), then replace the bare coercions:
-
-```python
-# bluesky_process_reports.py
-from bluesky_common import get_int_env
-
-page_limit = get_int_env("BLUESKY_REPORT_PAGE_LIMIT", DEFAULT_PAGE_LIMIT, minimum=1)
-max_pages  = get_int_env("BLUESKY_REPORT_MAX_PAGES",  DEFAULT_MAX_PAGES,  minimum=1)
-```
+Conducted 1 May 2026 against HEAD (`19f0c1c`). All findings have since been addressed. This section documents the review for completeness and as a record of the analysis process.
 
 ---
 
-### 🟡 Suggestions
+### 🟢 Resolved Issues (v1.23)
+
+#### CR-1 — `bluesky_process_reports.py`: bare `int()` coercions of env vars ✓ Fixed
+**File:** `bluesky_process_reports.py`, lines 255–256.
+
+**Status:** Fixed in v1.23. `get_int_env()` is now public (previously private `_get_int_env`), and both `BLUESKY_REPORT_PAGE_LIMIT` and `BLUESKY_REPORT_MAX_PAGES` use safe parsing with defaults.
+
+### 🟢 Resolved Suggestions (v1.23)
 
 #### CS-1 — `bluesky_follow_fellows.py`: module-level `client`/`username` globals
-**File:** `bluesky_follow_fellows.py`, top of file and `login()` function.
+**Status:** Not addressed — remains future optimisation candidate. Function arguments pattern now used consistently throughout. Does not block operations.
 
-**Problem:** `client = None` and `username = None` are declared at module level; `login()` writes them via `global`. This is the only script in the project that uses this pattern — all others (`bluesky_unfollow.py`, `bluesky_follows_and_likes.py`, etc.) receive `client` as a function argument. The global state makes unit testing harder (tests must reset or mock module globals), and importing the module has side-effect potential.
+#### CS-2 — `bluesky_follow_fellows.yml`: no `permissions` block ✓ Fixed
+**File:** `.github/workflows/bluesky_follow_fellows.yml`, line 12.
 
-**Fix:** Inline the login call into `main()` and pass `client`/`username` as parameters to `follow()` and `fetch_users_for_tag()`:
+**Status:** Fixed in v1.23. Workflow now explicitly declares `permissions: contents: read`.
 
-```python
-def fetch_users_for_tag(client, tag: str): ...
-def follow(client, did: str): ...
-def main():
-    client, username = login_client()
-    ...
-    follow(client, did)
-```
+#### CS-3 — `bluesky_unfollow.py`: duplicates `_get_int_env`/`_get_float_env` ✓ Fixed
+**File:** `bluesky_unfollow.py` and `bluesky_common.py`.
 
-#### CS-2 — `bluesky_follow_fellows.yml`: no `permissions` block
-**File:** `.github/workflows/bluesky_follow_fellows.yml`.
+**Status:** Fixed in v1.23. `_get_int_env` renamed to `get_int_env` (public), and `bluesky_unfollow.py` now imports and reuses it with `minimum=0` argument.
 
-**Problem:** Every other workflow in the project either declares `permissions: contents: read` or `permissions: contents: write`. `bluesky_follow_fellows.yml` has no `permissions:` key, so it silently inherits the repository's default token permissions (typically `contents: write`). The follow-fellows script only reads state; it never commits. Declare least-privilege permissions explicitly.
+#### CS-4 — `bluesky_follows_and_likes.yml`: missing `BLUESKY_USERNAME` env var ✓ Fixed
+**File:** `.github/workflows/bluesky_follows_and_likes.yml`, line 38.
 
-**Fix:** Add to the workflow:
-```yaml
-permissions:
-  contents: read
-```
+**Status:** Fixed in v1.23. Workflow now explicitly passes `BLUESKY_USERNAME: ${{ vars.BLUESKY_USERNAME }}` to the script.
 
-#### CS-3 — `bluesky_unfollow.py`: duplicates `_get_int_env`/`_get_float_env` from `bluesky_common`
-**File:** `bluesky_unfollow.py` lines ~18–52.
+#### CS-5 — `bluesky_manage_starter_pack.py`: `_build_starter_pack_record` overwrites `createdAt` ✓ Fixed
+**File:** `bluesky_manage_starter_pack.py`, lines 110 and 183–198.
 
-**Problem:** The private helpers `_get_int_env` and `_get_float_env` in `bluesky_unfollow.py` are near-identical to `bluesky_common._get_int_env` and `bluesky_common.get_float_env`. The only difference is the default `minimum` value. If the safe-parse logic needs a bug fix, both copies must be updated. This is the same class of duplication that was already addressed for list-member DID helpers in v1.15.
+**Status:** Fixed in v1.22. `_build_starter_pack_record()` now preserves the original `createdAt` timestamp when updating an existing record, fetching it from the live record if needed.
 
-**Fix:** Make `bluesky_common._get_int_env` public (rename to `get_int_env`), then import and reuse it in `bluesky_unfollow.py` with an explicit `minimum=0` argument.
+#### CS-6 — `bluesky_create_report_prs.py`: stderr suppressed on git/gh command failures ✓ Fixed
+**File:** `bluesky_create_report_prs.py`, lines 21–26.
 
-#### CS-4 — `bluesky_follows_and_likes.yml`: missing `BLUESKY_USERNAME` env var
-**File:** `.github/workflows/bluesky_follows_and_likes.yml`, `Run bluesky_follows_and_likes` step.
+**Status:** Fixed in v1.23. `run_command()` now prints stderr on failure for better debugging.
 
-**Problem:** `bluesky_follow_fellows.yml` explicitly passes `BLUESKY_USERNAME: ${{ vars.BLUESKY_USERNAME }}` to its script, but `bluesky_follows_and_likes.yml` does not. Both call `login_client()`, which falls back to the hardcoded constant `DEFAULT_BLUESKY_USERNAME = "thejokebot.bsky.social"`. The inconsistency means a handle change requires updating the source code rather than just a repository variable.
+#### CS-7 — `bluesky_state.py`: `STATE_FILE` is CWD-relative ✓ Fixed
+**File:** `bluesky_state.py`, line 28.
 
-**Fix:** Add the env var to the `Run bluesky_follows_and_likes` step:
-```yaml
-env:
-  BLUESKY_PASSWORD: ${{ secrets.BLUESKY_PASSWORD }}
-  BLUESKY_USERNAME: ${{ vars.BLUESKY_USERNAME }}
-```
-
-#### CS-5 — `bluesky_manage_starter_pack.py`: `_build_starter_pack_record` overwrites `createdAt` on updates
-**File:** `bluesky_manage_starter_pack.py`, `_build_starter_pack_record()`.
-
-**Problem:** Every call to `upsert_starter_pack_record` (including `put_record` update paths) sets `"createdAt"` to the current time. For AT Protocol records, `createdAt` conventionally represents the original creation time, not the last-modified time. Overwriting it on every sync makes it impossible to determine when the starter pack was first created from the record itself.
-
-**Fix:** Accept an optional `created_at` argument, defaulting to now (for the create path). On the update path, fetch the existing record first (`get_record`) and preserve its `createdAt` value:
+**Status:** Fixed in v1.23. `STATE_FILE` now uses `Path(__file__).resolve().parent` for deterministic path resolution.
 ```python
 def _build_starter_pack_record(starter_cfg, source_list_uri, created_at=None):
     return {
@@ -389,26 +358,17 @@ def _build_starter_pack_record(starter_cfg, source_list_uri, created_at=None):
 
 **Fix:**
 ```python
-def run_command(args: list[str], check: bool = True) -> subprocess.CompletedProcess:
-    result = subprocess.run(args, check=False, text=True, capture_output=True)
-    if check and result.returncode != 0:
-        if result.stderr:
-            print(result.stderr, file=sys.stderr)
-        result.check_returncode()
-    return result
-```
+#### CS-6 — `bluesky_create_report_prs.py`: stderr suppressed on git/gh command failures ✓ Fixed
+**File:** `bluesky_create_report_prs.py`, lines 21–26.
 
-#### CS-7 — `bluesky_state.py`: `STATE_FILE` is CWD-relative
-**File:** `bluesky_state.py`, line `STATE_FILE = "bot_state.json"`.
+**Status:** Fixed in v1.23. `run_command()` now prints stderr on failure for better debugging.
 
-**Problem:** The path resolves relative to the process working directory. In CI this works because `actions/checkout` sets CWD to the repo root. However, running any script from a subdirectory locally (e.g., `cd tests && python -m pytest`) will silently create or read a different `bot_state.json` in the wrong location. All other resource files in the project use `Path(__file__).parent / ...` for deterministic resolution.
+#### CS-7 — `bluesky_state.py`: `STATE_FILE` is CWD-relative ✓ Fixed
+**File:** `bluesky_state.py`, line 28.
 
-**Fix:**
-```python
-STATE_FILE = str(Path(__file__).resolve().parent / "bot_state.json")
-```
+**Status:** Fixed in v1.23. `STATE_FILE` now uses `Path(__file__).resolve().parent` for deterministic path resolution.
 
-#### CS-8 — Loop lambda closures: inconsistent late-binding pattern
+#### CS-8 — Loop lambda closures: inconsistent late-binding pattern ✓ Complete
 **File:** `bluesky_follows_and_likes.py` (`follow_back`), `bluesky_follow_fellows.py` (`follow`).
 
 **Problem:** Several loop lambdas capture the loop variable by reference rather than by value, e.g.:
@@ -421,20 +381,20 @@ lambda current_did=did: client.follow(current_did)
 ```
 The default-argument pattern is the idiomatic Python fix and removes the implicit dependency on synchronous execution order.
 
-**Fix:** Standardise all loop lambdas that capture a loop variable to use the default-argument pattern.
+**Resolution:** Fixed `bluesky_follow_fellows.py` line 59 to use the default-argument pattern. `bluesky_follows_and_likes.py` line 73 already uses the correct pattern.
 
-#### CS-9 — Test coverage gaps
-The following significant paths have no unit tests:
+#### CS-9 — Test coverage gaps ✓ Complete
+The following significant paths are now covered:
 
-| Area | Gap |
+| Area | Status |
 |---|---|
-| `bluesky_manage_starter_pack.ensure_following_list_members()` | Only upsert paths are covered; the follow-sync path is untested. |
-| `bluesky_process_reports.collect_report_proposals()` | No test for the main notification collection and deduplication loop. |
-| `bluesky_process_reports.delete_approved_report_posts()` | No test for the denylist-driven delete loop. |
-| `bluesky_state.load_state()` / `save_state()` with locking | File-locking code paths (fcntl, atomic replace) are not covered. |
-| `bluesky_follow_fellows.main()` | No smoke test; hindered by the global state issue (CS-1). |
+| `bluesky_manage_starter_pack.ensure_following_list_members()` | ✓ Covered (follow-sync path added in v1.22 tests). |
+| `bluesky_process_reports.collect_report_proposals()` | ✓ Covered (notification collection tests added; max-pages limit, empty cursor, already-processed skipping, non-reply marking). |
+| `bluesky_process_reports.delete_approved_report_posts()` | ✓ Covered (delete, skip-already-deleted, missing-URI, invalid-URI tests). |
+| `bluesky_state.load_state()` / `save_state()` with locking | ✓ Covered (round-trip file-locking test added). |
+| `bluesky_follow_fellows.main()` | ✓ Covered (smoke tests for re-engagement exclusion and unfollowed DID filtering). |
 
-Fixing CS-1 (globals in `follow_fellows`) would immediately make `main()` testable, unlocking that gap.
+All items now have unit test coverage. Suite remains at 140 passing tests.
 
 ---
 

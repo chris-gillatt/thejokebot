@@ -56,7 +56,7 @@ def follow(client, did: str):
     masked_did = mask_sensitive(did)
     try:
         retry_network_call(
-            lambda: client.follow(did),
+            lambda current_did=did: client.follow(current_did),
             description=f"following {masked_did}",
         )
     except (
