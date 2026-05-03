@@ -37,7 +37,18 @@ Posts dad jokes to the Bluesky account [thejokebot.bsky.social](https://bsky.app
 
 ## Local validation helper
 
-After merges (for example Dependabot updates), run the local test helper:
+Before commit/push, run the local preflight gate:
+
+- `./scripts/preflight-local.sh`
+
+This runs:
+
+- Ruff lint (`ruff check .`)
+- Ruff format check (`ruff format --check .`)
+- Unit tests (`pytest tests/ -v --tb=short`)
+- Local CodeQL analysis when the `codeql` CLI is installed
+
+If you only want tests after merges (for example Dependabot updates), run:
 
 - `./scripts/test-local.sh`
 

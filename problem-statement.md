@@ -14,6 +14,7 @@ changelog in this file is intentionally brief.
 - Use British English in prose/documentation where practical.
 - Use Conventional Commits with commit messages that explain why.
 - Before push, sync with remote (`git pull --rebase`) because scheduled workflows can update `main`.
+- Before commit/push, run local quality checks (`ruff check`, `ruff format --check`, unit tests, and local CodeQL when available) and fix issues proactively.
 
 ## 3. Operational Constraints
 - The project is automation-first (GitHub Actions + script execution).
