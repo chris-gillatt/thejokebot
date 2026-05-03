@@ -980,9 +980,7 @@ class JokeProviderTests(unittest.TestCase):
     def test_jokebot_jokebook_is_fallback_provider_not_primary_or_backup(
         self,
     ):
-        self.assertEqual(
-            "jokebot_jokebook", bluesky_joke_providers.FALLBACK_PROVIDER
-        )
+        self.assertEqual("jokebot_jokebook", bluesky_joke_providers.FALLBACK_PROVIDER)
         self.assertNotIn("jokebot_jokebook", bluesky_joke_providers.PRIMARY_PROVIDERS)
         self.assertNotIn("jokebot_jokebook", bluesky_joke_providers.BACKUP_PROVIDERS)
 
@@ -1513,9 +1511,7 @@ class JokeRetryChainTests(unittest.TestCase):
 
     def test_fallback_provider_separate_from_backups(self):
         """Fallback provider (jokebook) is separate from backup providers."""
-        self.assertEqual(
-            "jokebot_jokebook", bluesky_joke_providers.FALLBACK_PROVIDER
-        )
+        self.assertEqual("jokebot_jokebook", bluesky_joke_providers.FALLBACK_PROVIDER)
         self.assertNotIn("jokebot_jokebook", bluesky_joke_providers.BACKUP_PROVIDERS)
         self.assertIn("syrsly", bluesky_joke_providers.BACKUP_PROVIDERS)
         self.assertIn("api_ninjas", bluesky_joke_providers.BACKUP_PROVIDERS)
