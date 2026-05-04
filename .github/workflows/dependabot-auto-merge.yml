@@ -1,4 +1,4 @@
-name: dependabot_auto_merge
+name: pr_auto_merge
 
 on:
   pull_request_target:
@@ -10,57 +10,19 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
 
 concurrency:
-  group: dependabot-auto-merge-${{ github.event.pull_request.number }}
+  group: pr-auto-merge-${{ github.event.pull_request.number }}
   cancel-in-progress: false
 
 jobs:
-  test_dependabot_update:
-    if: github.actor == 'dependabot[bot]'
+  enable_auto_merge:
+    if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
 
-    permissions:
-      contents: read
-
     steps:
-      - name: Checkout PR head
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          persist-credentials: false
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-      - name: Run tests
-        run: python -m pytest tests/ -v --tb=short
-
-  enable_automerge_for_patch_and_minor_updates:
-    needs: test_dependabot_update
-    if: github.actor == 'dependabot[bot]'
-    runs-on: ubuntu-latest
-
-    permissions:
-      contents: write
-      pull-requests: write
-
-    steps:
-      - name: Fetch Dependabot metadata
-        id: metadata
-        uses: dependabot/fetch-metadata@v3
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Enable auto-merge for patch and minor updates
-        if: steps.metadata.outputs.update-type == 'version-update:semver-patch' || steps.metadata.outputs.update-type == 'version-update:semver-minor'
+      - name: Enable squash auto-merge
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_URL: ${{ github.event.pull_request.html_url }}

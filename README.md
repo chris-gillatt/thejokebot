@@ -9,9 +9,10 @@
 | Engagement | `bluesky_follow_fellows` | [![bluesky_follow_fellows](https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_follow_fellows.yml/badge.svg)](https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_follow_fellows.yml) |
 | Housekeeping | `bluesky_unfollow` | [![bluesky_unfollow](https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_unfollow.yml/badge.svg)](https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_unfollow.yml) |
 | Reporting | `bluesky_process_reports` | [![bluesky_process_reports](https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_process_reports.yml/badge.svg)](https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_process_reports.yml) |
+| Quality | `python_tests` | [![python_tests](https://github.com/chris-gillatt/thejokebot/actions/workflows/python_tests.yml/badge.svg)](https://github.com/chris-gillatt/thejokebot/actions/workflows/python_tests.yml) |
 | Quality | `ruff_quality` | [![ruff_quality](https://github.com/chris-gillatt/thejokebot/actions/workflows/ruff_quality.yml/badge.svg)](https://github.com/chris-gillatt/thejokebot/actions/workflows/ruff_quality.yml) |
 | Security | `codeql` | [![codeql](https://github.com/chris-gillatt/thejokebot/actions/workflows/codeql.yml/badge.svg)](https://github.com/chris-gillatt/thejokebot/actions/workflows/codeql.yml) |
-| Repository maintenance | `dependabot-auto-merge` | [![dependabot_auto_merge](https://github.com/chris-gillatt/thejokebot/actions/workflows/dependabot-auto-merge.yml/badge.svg)](https://github.com/chris-gillatt/thejokebot/actions/workflows/dependabot-auto-merge.yml) |
+| Repository maintenance | `pr_auto_merge` | [![pr_auto_merge](https://github.com/chris-gillatt/thejokebot/actions/workflows/dependabot-auto-merge.yml/badge.svg)](https://github.com/chris-gillatt/thejokebot/actions/workflows/dependabot-auto-merge.yml) |
 
 Posts dad jokes to the Bluesky account [thejokebot.bsky.social](https://bsky.app/profile/thejokebot.bsky.social), plus account housekeeping automations.
 
@@ -56,9 +57,11 @@ If CodeQL is temporarily unavailable, you can explicitly run in reduced-coverage
 
 This should be exceptional; default behaviour fails fast with install hints for missing dependencies.
 
-If you only want tests after merges (for example Dependabot updates), run:
+If you only want to run the unit test suite locally (without Ruff/CodeQL), run:
 
 - `./scripts/test-local.sh`
+
+Equivalent GitHub Actions workflow: `python_tests` (runs `python -m pytest tests/ -v --tb=short` on PRs and `main`).
 
 If you prefer a direct one-liner without the helper script:
 
