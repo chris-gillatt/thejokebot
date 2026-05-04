@@ -23,6 +23,8 @@ hashtags = [
     "jokes",
     "humour",
     "humor",
+    "humoursky",
+    "humorsky",
     "jokesky",
     "momjokes",
     "mumjokes",
