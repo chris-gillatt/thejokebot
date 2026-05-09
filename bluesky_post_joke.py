@@ -89,7 +89,7 @@ def sanitise_joke_text(joke: str) -> str:
 
 
 def _normalise_joke_for_deduplication(joke: str) -> str:
-    """Return a lowercase duplicate key with punctuation, spaces, and underscores removed."""
+    """Return a case-folded duplicate key with punctuation, spaces, and underscores removed."""
     return _DEDUPE_NORMALISATION_PATTERN.sub("", joke.casefold())
 
 
