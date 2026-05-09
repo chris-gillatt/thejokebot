@@ -89,7 +89,7 @@ def sanitise_joke_text(joke: str) -> str:
 
 
 def _normalise_joke_for_deduplication(joke: str) -> str:
-    """Return a punctuation-insensitive key for duplicate joke checks."""
+    """Return a lowercase duplicate key with punctuation, spaces, and underscores removed."""
     return _DEDUPE_NORMALISATION_PATTERN.sub("", joke.casefold())
 
 
@@ -102,9 +102,9 @@ def _encode_deduplication_key(joke: str) -> str:
 def _normalise_stored_b64_for_deduplication(encoded_joke: str) -> str:
     """Normalise a stored joke b64 value for duplicate checks."""
     try:
-        decoded = base64.b64decode(encoded_joke).decode("utf-8")
+        decoded = base64.b64decode(encoded_joke, validate=True).decode("utf-8")
     except (ValueError, UnicodeError):
-        return encoded_joke
+        return ""
     return _encode_deduplication_key(decoded)
 
 
