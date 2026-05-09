@@ -1479,6 +1479,27 @@ class JokeRetryChainTests(unittest.TestCase):
         self.assertEqual(joke, "New joke")
         self.assertEqual(call_count[0], 2)
 
+    def test_pick_joke_skips_duplicates_with_only_punctuation_differences(self):
+        original = "What do you call a cow with no legs?\n\nGround beef!"
+        punctuated_variant = "What do you call a cow with no legs\n\nGround beef."
+        recent = {base64.b64encode(original.encode()).decode()}
+        call_count = [0]
+
+        def mock_fetch():
+            call_count[0] += 1
+            if call_count[0] == 1:
+                return punctuated_variant
+            return "A genuinely different joke."
+
+        with mock.patch.object(
+            bluesky_joke_providers, "PROVIDERS", {"test_provider": mock_fetch}
+        ):
+            joke, encoded = bluesky_post_joke.pick_joke(recent, "test_provider")
+
+        self.assertEqual(joke, "A genuinely different joke.")
+        self.assertEqual(encoded, base64.b64encode(joke.encode()).decode())
+        self.assertEqual(call_count[0], 2)
+
     def test_pick_joke_raises_when_all_duplicates(self):
         """pick_joke raises ValueError if MAX_ATTEMPTS are all duplicates."""
         joke = "All the same"
@@ -1487,6 +1508,26 @@ class JokeRetryChainTests(unittest.TestCase):
 
         with mock.patch.object(
             bluesky_joke_providers, "PROVIDERS", {"test_provider": lambda: joke}
+        ):
+            with self.assertRaises(ValueError) as ctx:
+                bluesky_post_joke.pick_joke(recent, "test_provider")
+
+        self.assertIn("duplicates", str(ctx.exception))
+
+    def test_pick_joke_raises_when_all_duplicates_differ_only_by_punctuation(self):
+        original = (
+            "Did you hear about the mathematician who's afraid of negative numbers?"
+        )
+        recent = {base64.b64encode(original.encode()).decode()}
+
+        with mock.patch.object(
+            bluesky_joke_providers,
+            "PROVIDERS",
+            {
+                "test_provider": lambda: (
+                    "Did you hear about the mathematician who's afraid of negative numbers."
+                )
+            },
         ):
             with self.assertRaises(ValueError) as ctx:
                 bluesky_post_joke.pick_joke(recent, "test_provider")

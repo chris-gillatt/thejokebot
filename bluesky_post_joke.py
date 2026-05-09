@@ -37,6 +37,7 @@ _HASHTAG_SUFFIX_LEN = 2 + _grapheme_len(" ".join(HASHTAGS))  # 2 newlines + tag 
 _MAX_JOKE_CHARS = BLUESKY_MAX_POST_CHARS - _HASHTAG_SUFFIX_LEN
 _MOJIBAKE_MARKERS = ("Ã", "Â", "â", "ð", "\x80", "\x99")
 _HTML_UNESCAPE_PASSES = 3
+_DEDUPE_NORMALISATION_PATTERN = regex.compile(r"[\p{P}\s_]+")
 
 
 def get_fallback_joke():
@@ -87,6 +88,26 @@ def sanitise_joke_text(joke: str) -> str:
     return cleaned
 
 
+def _normalise_joke_for_deduplication(joke: str) -> str:
+    """Return a punctuation-insensitive key for duplicate joke checks."""
+    return _DEDUPE_NORMALISATION_PATTERN.sub("", joke.casefold())
+
+
+def _encode_deduplication_key(joke: str) -> str:
+    """Encode the duplicate-check normal form as base64 for set membership."""
+    normalised = _normalise_joke_for_deduplication(joke)
+    return base64.b64encode(normalised.encode("utf-8")).decode()
+
+
+def _normalise_stored_b64_for_deduplication(encoded_joke: str) -> str:
+    """Normalise a stored joke b64 value for duplicate checks."""
+    try:
+        decoded = base64.b64decode(encoded_joke).decode("utf-8")
+    except (ValueError, UnicodeError):
+        return encoded_joke
+    return _encode_deduplication_key(decoded)
+
+
 def pick_joke(recent_b64s: set, provider_name: str) -> tuple:
     """
     Fetch up to MAX_ATTEMPTS jokes from provider_name, skipping recent duplicates
@@ -96,6 +117,9 @@ def pick_joke(recent_b64s: set, provider_name: str) -> tuple:
     are duplicates, too long, or the provider raises.
     """
     fetch_fn = bluesky_joke_providers.PROVIDERS[provider_name]
+    recent_dedupe_b64s = {
+        _normalise_stored_b64_for_deduplication(encoded) for encoded in recent_b64s
+    }
     for _ in range(MAX_ATTEMPTS):
         joke = sanitise_joke_text(fetch_fn())
         grapheme_count = _grapheme_len(joke)
@@ -106,7 +130,8 @@ def pick_joke(recent_b64s: set, provider_name: str) -> tuple:
             )
             continue
         encoded = base64.b64encode(joke.encode("utf-8")).decode()
-        if encoded not in recent_b64s:
+        dedupe_encoded = _encode_deduplication_key(joke)
+        if dedupe_encoded not in recent_dedupe_b64s:
             return joke, encoded
     raise ValueError(
         f"All {MAX_ATTEMPTS} jokes from '{provider_name}' were recent duplicates or too long"

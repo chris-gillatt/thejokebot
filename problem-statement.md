@@ -247,6 +247,22 @@ back to `resources/jokebot_starter_pack.json` without touching follows or
 source-list membership. The workflow now exposes `pull` mode and commits pulled
 config updates back to the branch only when `apply_changes=true`.
 
+---
+
+### 5.24 Similar jokes with different punctuation bypass deduplication ✓ Complete
+**Priority: Medium**
+
+Near-identical jokes from different providers can currently slip through the
+duplicate filter when the wording is unchanged but punctuation differs
+(for example `?` versus `.`, or a missing apostrophe/quote mark). That creates
+repetitive posts even though the joke content is effectively the same.
+
+**Resolution:** `bluesky_post_joke.py` now performs duplicate checks against a
+punctuation-insensitive normal form at comparison time, while still storing the
+original posted joke `b64` unchanged for report handling and state/history
+lookups. Added regression tests covering skip-and-retry behaviour and all-
+duplicate failure when punctuation is the only difference.
+
 ## 6. Explicit "Will Not Do" Decisions
 Do not revisit these without a concrete operational reason.
 
@@ -297,6 +313,7 @@ Do not revisit these without a concrete operational reason.
 - v1.21: Completed stale ignore-handle hygiene (5.15) by adding a dedicated validator script and monthly/manual workflow to surface and prune unresolved `BLUESKY_UNFOLLOW_IGNORE` entries.
 - v1.22: Completed starter-pack metadata pull support (5.22). `bluesky_manage_starter_pack.py` now supports `--mode pull` to preview and optionally persist live Bluesky name/description changes back into `resources/jokebot_starter_pack.json`, and the workflow can commit those updates back to the branch. Suite at 144 passing.
 - v1.23: Code-review follow-ups and quality hardening. Fixed loop lambda closures in `bluesky_follow_fellows.py` (CS-8) to use default-argument pattern. Made `get_int_env()` public and removed duplication in `bluesky_unfollow.py` (CS-3, CR-1). Added explicit `permissions: contents: read` to `bluesky_follow_fellows.yml` (CS-2). Added `BLUESKY_USERNAME` env var to `bluesky_follows_and_likes.yml` (CS-4). Fixed `STATE_FILE` path resolution to use `__file__`-relative path (CS-7). Improved error diagnostics in `bluesky_create_report_prs.py` (CS-6). Added test coverage for `collect_report_proposals()` notification paging and filtering (CS-9). Suite now at 140 passing (formatter-affected count update).
+- v1.24: Tightened joke deduplication (5.24) so punctuation-only variants now compare as duplicates during provider retry checks, while preserving the original stored `b64` for state and denylist/report flows. Added focused regression coverage for punctuation-only duplicate variants.
 
 ## 9. Code Review: Issues Resolved
 
