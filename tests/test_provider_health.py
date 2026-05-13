@@ -7,7 +7,6 @@ to alert maintainers of provider outages or consistent failures.
 """
 
 import unittest
-from unittest import mock
 
 import bluesky_joke_providers
 

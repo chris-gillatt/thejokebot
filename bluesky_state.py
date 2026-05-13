@@ -45,7 +45,11 @@ def _default_state() -> dict:
                 for p in PROVIDER_ROTATION_ORDER
             },
             "health_checks": {
-                p: {"last_check_at": None, "last_check_success": None, "consecutive_failures": 0}
+                p: {
+                    "last_check_at": None,
+                    "last_check_success": None,
+                    "consecutive_failures": 0,
+                }
                 for p in PROVIDER_ROTATION_ORDER + ["syrsly", "api_ninjas"]
             },
         },
@@ -103,11 +107,17 @@ def _normalise_state(state: dict) -> dict:
         )
 
     health_checks = provider.setdefault("health_checks", {})
-    all_providers = list((provider.get("rotation_order") or PROVIDER_ROTATION_ORDER)) + ["syrsly", "api_ninjas"]
+    all_providers = list(
+        (provider.get("rotation_order") or PROVIDER_ROTATION_ORDER)
+    ) + ["syrsly", "api_ninjas"]
     for provider_name in all_providers:
         health_checks.setdefault(
             provider_name,
-            {"last_check_at": None, "last_check_success": None, "consecutive_failures": 0},
+            {
+                "last_check_at": None,
+                "last_check_success": None,
+                "consecutive_failures": 0,
+            },
         )
 
     reports = state.setdefault("reports", {})
