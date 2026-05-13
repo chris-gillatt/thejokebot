@@ -1,0 +1,46 @@
+name: provider_health_check
+
+on:
+  schedule:
+    # Run daily at 08:00 UTC
+    - cron: "0 8 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  health_check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run provider health checks
+        id: health_check
+        run: python -m pytest tests/test_provider_health.py -v --tb=short
+
+      - name: Update health check state
+        if: always()
+        run: python scripts/update_provider_health.py
+
+      - name: Commit state if changed
+        if: always()
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          if git diff --quiet bot_state.json; then
+            echo "No changes to bot_state.json"
+          else
+            git add bot_state.json
+            git commit -m "chore: update provider health check state; GH run: ${{ github.run_number }}"
+            git push
+          fi
