@@ -208,6 +208,9 @@ class UnfollowIgnoreValidationTests(unittest.TestCase):
         state = bluesky_state._default_state()
         client = mock.Mock()
         client.me.did = "did:plc:test"
+        client.get_profile.side_effect = atproto_client.exceptions.BadRequestError(
+            mock.Mock()
+        )
 
         with mock.patch(
             "bluesky_unfollow.login_client",
@@ -228,9 +231,7 @@ class UnfollowIgnoreValidationTests(unittest.TestCase):
                     ):
                         with mock.patch(
                             "bluesky_unfollow.retry_network_call",
-                            side_effect=atproto_client.exceptions.BadRequestError(
-                                mock.Mock()
-                            ),
+                            side_effect=lambda call, description: call(),
                         ):
                             with mock.patch(
                                 "bluesky_unfollow._state.load_state", return_value=state
@@ -243,6 +244,14 @@ class UnfollowIgnoreValidationTests(unittest.TestCase):
                                     ) as save_state:
                                         bluesky_unfollow.unfollow_users()
 
+        resolved_handles = {call.args[0] for call in client.get_profile.call_args_list}
+        self.assertTrue(
+            {
+                "theonion.bsky.social",
+                "groandeck.bsky.social",
+                "nocontextbritss.bsky.social",
+            }.issubset(resolved_handles)
+        )
         save_state.assert_called_once_with(state)
 
     def test_load_source_list_uri_returns_empty_when_file_missing(self):
