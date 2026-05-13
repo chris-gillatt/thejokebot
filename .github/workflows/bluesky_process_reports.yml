@@ -35,6 +35,7 @@ jobs:
 
       - name: Process #report replies
         env:
+          BLUESKY_USERNAME: ${{ vars.BLUESKY_USERNAME }}
           BLUESKY_PASSWORD: ${{ secrets.BLUESKY_PASSWORD }}
           BLUESKY_REPORT_OUTPUT: .agent-tmp/report_proposals.json
         run: python bluesky_process_reports.py

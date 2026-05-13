@@ -7,7 +7,6 @@ import requests
 from atproto import Client
 from dotenv import load_dotenv
 
-DEFAULT_BLUESKY_USERNAME = "thejokebot.bsky.social"
 DEFAULT_LOGIN_RETRY_ATTEMPTS = 3
 DEFAULT_LOGIN_RETRY_DELAY_SECONDS = 2.0
 DEFAULT_NETWORK_RETRY_ATTEMPTS = 3
@@ -25,8 +24,14 @@ _load_local_env_file()
 
 
 def get_bluesky_credentials():
-    username = os.getenv("BLUESKY_USERNAME", DEFAULT_BLUESKY_USERNAME).strip()
+    username = os.getenv("BLUESKY_USERNAME", "").strip()
     password = os.getenv("BLUESKY_PASSWORD")
+
+    if not username:
+        raise ValueError(
+            "BLUESKY_USERNAME environment variable is not set. "
+            "Please configure it in GitHub Actions variables or local .env."
+        )
 
     if not password:
         raise ValueError(

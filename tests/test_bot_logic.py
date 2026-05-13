@@ -43,6 +43,20 @@ class RuntimeControlTests(unittest.TestCase):
 
 
 class LoginClientRetryTests(unittest.TestCase):
+    def test_get_bluesky_credentials_raises_when_username_missing(self):
+        with mock.patch.dict(
+            os.environ,
+            {
+                "BLUESKY_USERNAME": "",
+                "BLUESKY_PASSWORD": "test-password",
+            },
+            clear=True,
+        ):
+            with self.assertRaises(ValueError) as ctx:
+                bluesky_common.get_bluesky_credentials()
+
+        self.assertIn("BLUESKY_USERNAME", str(ctx.exception))
+
     def test_login_client_retries_after_transient_network_error(self):
         mock_client = mock.Mock()
         mock_client.login.side_effect = [

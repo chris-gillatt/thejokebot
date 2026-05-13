@@ -14,7 +14,7 @@
 | Security | `codeql` | [![codeql](https://github.com/chris-gillatt/thejokebot/actions/workflows/codeql.yml/badge.svg)](https://github.com/chris-gillatt/thejokebot/actions/workflows/codeql.yml) |
 | Repository maintenance | `pr_auto_merge` | [![pr_auto_merge](https://github.com/chris-gillatt/thejokebot/actions/workflows/dependabot-auto-merge.yml/badge.svg)](https://github.com/chris-gillatt/thejokebot/actions/workflows/dependabot-auto-merge.yml) |
 
-Posts dad jokes to the Bluesky account [thejokebot.bsky.social](https://bsky.app/profile/thejokebot.bsky.social), plus account housekeeping automations.
+Posts dad jokes to a configured Bluesky account, plus account housekeeping automations.
 
 ![joke bot](./images/jokebot-logo.png)
 
@@ -78,7 +78,7 @@ Set these in `.env` (keep values quoted):
 
 | Variable | Required | Description |
 |---|---|---|
-| `BLUESKY_USERNAME` | No | Account handle. Defaults to `thejokebot.bsky.social`. |
+| `BLUESKY_USERNAME` | Yes | Account handle for the bot account (for example `yourbot.bsky.social`). |
 | `BLUESKY_PASSWORD` | Yes | App password for the Bluesky account. |
 | `API_NINJAS_API_KEY` | No | API key for the API Ninjas jokes endpoint. Only needed if you want the `api_ninjas` backup provider. |
 | `BLUESKY_DRY_RUN` | No | Set to `true` to log actions without applying them (also used by `bluesky_manage_starter_pack.py` for preview mode). |
