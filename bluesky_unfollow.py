@@ -115,6 +115,7 @@ def unfollow_users():
         "theonion.bsky.social",
         "groandeck.bsky.social",
         "nocontextbritss.bsky.social",
+        "dehler55.bsky.social",
     ]
     env_ignorable = os.getenv("BLUESKY_UNFOLLOW_IGNORE", "")
     ignorable_usernames = default_ignorable + [
