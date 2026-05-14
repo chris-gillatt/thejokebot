@@ -30,6 +30,8 @@ jobs:
 
       - name: Update health check state
         if: always()
+        env:
+          PYTHONPATH: ${{ github.workspace }}
         run: python scripts/update_provider_health.py
 
       - name: Commit state if changed
