@@ -125,7 +125,7 @@ The report triggers an automated PR adding the joke to the denylist. Once a main
 | Script | Purpose |
 |---|---|
 | `bluesky_post_joke.py` | Fetch a joke, append hashtags, post to Bluesky, maintain `bot_state.json`. |
-| `bluesky_follows_and_likes.py` | Follow back new followers and like replies to the bot's posts. |
+| `bluesky_follows_and_likes.py` | Follow back new followers, follow users who interact with the bot's posts (replies, reposts, likes from the last 24 hours), and like replies to the bot's posts. |
 | `bluesky_unfollow.py` | Unfollow accounts that do not follow back, while respecting protected handles, starter-pack protections, and the 90-day follow grace window. |
 | `bluesky_follow_fellows.py` | Search a rotating set of humour/follow-back hashtags and follow up to the configured per-run cap. |
 | `bluesky_verify_latest_joke_post.py` | Read-only check that a recent joke post exists on the account. |

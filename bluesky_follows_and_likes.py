@@ -24,6 +24,13 @@ _DEFAULT_LIKE_PAGE_LIMIT = 100
 _LIKE_WINDOW_SECONDS = 24 * 60 * 60  # only like replies from the last 24 hours
 _LIKE_REASONS = ("reply", "repost")
 
+_INTERACTION_FOLLOW_REASONS = ("reply", "repost", "like")
+_INTERACTION_WINDOW_SECONDS = (
+    24 * 60 * 60
+)  # only follow interactors from the last 24 hours
+_INTERACTION_FOLLOW_MAX_PAGES = 5
+_INTERACTION_FOLLOW_PAGE_LIMIT = 100
+
 
 # ---------------------------------------------------------------------------
 # Follow-back
@@ -88,6 +95,155 @@ def follow_back(
             time.sleep(action_delay_seconds)
 
     print(f"{Fore.GREEN}Follow-back completed.{Style.RESET_ALL}")
+
+
+# ---------------------------------------------------------------------------
+# Follow interactors
+# ---------------------------------------------------------------------------
+
+
+def follow_interactors(
+    client,
+    state: dict,
+    dry_run: bool,
+    action_delay_seconds: float,
+) -> int:
+    """Follow users who have interacted with the bot's posts in the last 24 hours.
+
+    Notifications of type reply, repost, and like are considered. Interactors
+    who are already being followed, still within the follow-grace window, or
+    who appear in the unfollow history are skipped to prevent repeated
+    follow/unfollow churn.
+
+    Followed DIDs are recorded in follow_grace (source="interaction") so that
+    the unfollow script respects the standard grace window before unfollowing.
+
+    Returns the number of new follows performed.
+    """
+    user_did = client.me.did
+
+    grace_dids = bluesky_state.get_follow_grace_dids(state)
+    unfollowed_dids = bluesky_state.get_unfollowed_dids(state)
+
+    print(
+        f"{Fore.YELLOW}Fetching current follows for interaction-follow check.{Style.RESET_ALL}"
+    )
+    following = fetch_paginated_data(client.get_follows, user_did)
+    already_following = {f.did for f in following}
+
+    # Collect unique interactor DIDs from the last 24 hours.
+    cutoff_epoch = time.time() - _INTERACTION_WINDOW_SECONDS
+    interactor_dids: set[str] = set()
+    cursor = None
+
+    for _ in range(_INTERACTION_FOLLOW_MAX_PAGES):
+        try:
+            response = retry_network_call(
+                lambda: client.app.bsky.notification.list_notifications(
+                    params={
+                        "cursor": cursor,
+                        "limit": _INTERACTION_FOLLOW_PAGE_LIMIT,
+                        "reasons": list(_INTERACTION_FOLLOW_REASONS),
+                    }
+                ),
+                description="listing interaction notifications for follow",
+            )
+        except (
+            requests.RequestException,
+            TimeoutError,
+            atproto_client.exceptions.NetworkError,
+        ) as exc:
+            print(
+                f"{Fore.RED}Failed to fetch interaction notifications: {exc}{Style.RESET_ALL}"
+            )
+            break
+
+        notifications = _get_value(response, "notifications") or []
+        stop_paging = False
+
+        for notification in notifications:
+            reason = _get_value(notification, "reason")
+            if reason not in _INTERACTION_FOLLOW_REASONS:
+                continue
+
+            indexed_at = _get_value(notification, "indexed_at") or _get_value(
+                notification, "indexedAt"
+            )
+            if indexed_at:
+                try:
+                    ts = datetime.fromisoformat(indexed_at.replace("Z", "+00:00"))
+                    notification_epoch = ts.timestamp()
+                except (ValueError, AttributeError):
+                    notification_epoch = None
+            else:
+                notification_epoch = None
+
+            if notification_epoch is not None and notification_epoch < cutoff_epoch:
+                # Notifications are ordered newest-first; once we hit one
+                # older than the cutoff the rest will be too.
+                stop_paging = True
+                break
+
+            author_did = _get_value(notification, "author", "did")
+            if author_did and author_did != user_did:
+                interactor_dids.add(author_did)
+
+        if stop_paging:
+            break
+
+        cursor = _get_value(response, "cursor")
+        if not cursor:
+            break
+
+    # Determine which DIDs to follow: exclude anyone already followed, still in
+    # the grace window, or previously unfollowed (to avoid churn).
+    to_follow = sorted(
+        interactor_dids - already_following - grace_dids - unfollowed_dids
+    )
+
+    print(
+        f"{Fore.YELLOW}Found {len(interactor_dids)} unique interactor(s) in the last 24 hours, "
+        f"{len(to_follow)} new to follow.{Style.RESET_ALL}"
+    )
+
+    followed_count = 0
+    for i, did in enumerate(to_follow, start=1):
+        masked_did = mask_sensitive(did)
+        print(
+            f"{Fore.YELLOW}({i}/{len(to_follow)}) Following interactor {masked_did}...{Style.RESET_ALL}"
+        )
+        if dry_run:
+            print(
+                f"{Fore.YELLOW}[DRY-RUN] Would follow interactor {masked_did}{Style.RESET_ALL}"
+            )
+            followed_count += 1
+        else:
+            try:
+                retry_network_call(
+                    lambda current_did=did: client.follow(current_did),
+                    description=f"following interactor {masked_did}",
+                )
+                print(f"{Fore.GREEN}Followed interactor {masked_did}{Style.RESET_ALL}")
+                bluesky_state.record_follow_grace(state, did, source="interaction")
+                followed_count += 1
+            except (
+                requests.RequestException,
+                TimeoutError,
+                atproto_client.exceptions.NetworkError,
+            ) as exc:
+                print(
+                    f"{Fore.RED}Failed to follow interactor {masked_did}: {exc}{Style.RESET_ALL}"
+                )
+                continue
+
+        if action_delay_seconds > 0 and i < len(to_follow):
+            time.sleep(action_delay_seconds)
+
+    if followed_count > 0 and not dry_run:
+        bluesky_state.prune_follow_grace(state)
+
+    print(f"{Fore.GREEN}Interaction-follow completed.{Style.RESET_ALL}")
+    return followed_count
 
 
 # ---------------------------------------------------------------------------
@@ -279,6 +435,20 @@ def main() -> None:
         atproto_client.exceptions.NetworkError,
     ) as exc:
         print(f"{Fore.RED}Follow-back failed: {exc}{Style.RESET_ALL}")
+
+    try:
+        followed = follow_interactors(client, state, dry_run, action_delay_seconds)
+        print(
+            f"{Fore.GREEN}Followed {followed} new interactor"
+            f"{'s' if followed != 1 else ''}.{Style.RESET_ALL}"
+        )
+    except (
+        ValueError,
+        requests.RequestException,
+        TimeoutError,
+        atproto_client.exceptions.NetworkError,
+    ) as exc:
+        print(f"{Fore.RED}Interaction-follow failed: {exc}{Style.RESET_ALL}")
 
     try:
         liked = like_replies(client, state, dry_run, action_delay_seconds)
