@@ -105,7 +105,9 @@ class RuntimeConfigTests(unittest.TestCase):
                 bluesky_config.clear_runtime_config_cache()
                 config = bluesky_config.get_runtime_config()
 
-        self.assertEqual(config["posting"]["hashtags"], ["#jokes", "#dadjoke", "#funny"])
+        self.assertEqual(
+            config["posting"]["hashtags"], ["#jokes", "#dadjoke", "#funny"]
+        )
 
     def test_load_runtime_config_strict_raises_on_missing_file(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -142,7 +144,9 @@ class RuntimeConfigValidationScriptTests(unittest.TestCase):
             "bluesky_unfollow": "0 12 1 */3 *",
         }
 
-        errors = bluesky_validate_runtime_config._validate_guard_rails(config, schedules)
+        errors = bluesky_validate_runtime_config._validate_guard_rails(
+            config, schedules
+        )
 
         self.assertTrue(
             any("reports.max_pages" in message for message in errors),
@@ -161,7 +165,9 @@ class RuntimeConfigValidationScriptTests(unittest.TestCase):
             "bluesky_unfollow": "0 */6 * * *",
         }
 
-        errors = bluesky_validate_runtime_config._validate_guard_rails(config, schedules)
+        errors = bluesky_validate_runtime_config._validate_guard_rails(
+            config, schedules
+        )
 
         self.assertTrue(
             any("unfollow.max_actions" in message for message in errors),

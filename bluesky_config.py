@@ -2,7 +2,9 @@ import copy
 import json
 from pathlib import Path
 
-_CONFIG_PATH = Path(__file__).resolve().parent / "resources" / "jokebot_runtime_config.json"
+_CONFIG_PATH = (
+    Path(__file__).resolve().parent / "resources" / "jokebot_runtime_config.json"
+)
 
 _DEFAULT_CONFIG = {
     "schema_version": 1,
@@ -132,9 +134,7 @@ def _validate_config(payload):
     )
     for index, hashtag in enumerate(posting_hashtags):
         if not hashtag.startswith("#"):
-            raise ValueError(
-                f"posting.hashtags[{index}] must start with '#'."
-            )
+            raise ValueError(f"posting.hashtags[{index}] must start with '#'.")
     posting["hashtags"] = posting_hashtags
     cfg["posting"] = posting
 

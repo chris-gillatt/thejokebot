@@ -16,9 +16,7 @@ WORKFLOW_FILES = {
     "bluesky_validate_unfollow_ignore": ".github/workflows/bluesky_validate_unfollow_ignore.yml",
 }
 
-_CRON_PATTERN = re.compile(
-    r'^\s*-\s*cron:\s*"([^"]+)"(?:\s+#.*)?\s*$', re.MULTILINE
-)
+_CRON_PATTERN = re.compile(r'^\s*-\s*cron:\s*"([^"]+)"(?:\s+#.*)?\s*$', re.MULTILINE)
 
 
 def _parse_cron_parts(cron: str) -> tuple[str, str, str, str, str] | None:
