@@ -175,7 +175,9 @@ def upsert_starter_pack_record(
 
     if dry_run:
         if use_put_record:
-            print(f"[DRY-RUN] Would update starter-pack record: {target_uri}")
+            print(
+                f"[DRY-RUN] Would update starter-pack record: {mask_sensitive(target_uri)}"
+            )
             return target_uri
         print("[DRY-RUN] Would create starter-pack record (server-generated TID rkey).")
         return ""
@@ -438,7 +440,7 @@ def main() -> int:
             starter_pack_uri = upsert_starter_pack_record(
                 client, cfg, source_list_uri, dry_run
             )
-            print(f"Starter-pack URI: {starter_pack_uri}")
+            print(f"Starter-pack URI: {mask_sensitive(starter_pack_uri)}")
 
         already = 0
         followed_now = 0

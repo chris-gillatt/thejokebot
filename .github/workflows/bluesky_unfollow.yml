@@ -19,12 +19,12 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@75f3110429a8c10dc1a58609dae07b9a910ec5a0 # v6
         with:
           python-version: "3.12"
 

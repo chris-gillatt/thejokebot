@@ -14,7 +14,7 @@ import atproto_client.exceptions
 import bluesky_denylist
 import bluesky_state
 from atproto import models
-from bluesky_common import login_client, retry_network_call, get_int_env
+from bluesky_common import get_int_env, login_client, mask_sensitive, retry_network_call
 
 REPORT_TAG_PATTERN = re.compile(r"(?:^|\s)#report\b", re.IGNORECASE)
 TRAILING_TAGS_PATTERN = re.compile(r"\n\n(?:#\w+\s*)+$", re.IGNORECASE)
@@ -130,16 +130,17 @@ def _delete_post(client, post_uri: str) -> tuple[bool, bool]:
     - (False, True): Transient error (network/timeout); will retry on next run
     - (False, False): Permanent error (invalid URI/format); will not retry
     """
+    masked_post_uri = mask_sensitive(post_uri)
     try:
         parts = post_uri.split("/")
         if len(parts) < 4:
-            print(f"Warning: invalid post URI format, skipping: {post_uri}")
+            print(f"Warning: invalid post URI format, skipping: {masked_post_uri}")
             return False, False
         repo = parts[2]
         rkey = parts[-1]
         retry_network_call(
             lambda: client.app.bsky.feed.post.delete(repo=repo, rkey=rkey),
-            description=f"deleting post {post_uri}",
+            description=f"deleting post {masked_post_uri}",
         )
         return True, False
     except (
@@ -147,14 +148,18 @@ def _delete_post(client, post_uri: str) -> tuple[bool, bool]:
         TimeoutError,
         atproto_client.exceptions.NetworkError,
     ) as exc:
-        print(f"Warning: transient error deleting post {post_uri}, will retry: {exc}")
+        print(
+            f"Warning: transient error deleting post {masked_post_uri}, will retry: {exc}"
+        )
         return False, True
     except (
         ValueError,
         AttributeError,
         atproto_client.exceptions.BadRequestError,
     ) as exc:
-        print(f"Warning: permanent error deleting post {post_uri}, skipping: {exc}")
+        print(
+            f"Warning: permanent error deleting post {masked_post_uri}, skipping: {exc}"
+        )
         return False, False
 
 
@@ -175,6 +180,8 @@ def acknowledge_report(client, proposal: dict) -> tuple[bool, bool]:
     if not reply_uri or not reply_cid or not root_uri or not root_cid:
         return False, False
 
+    masked_reply_uri = mask_sensitive(reply_uri)
+
     try:
         reply_ref = models.AppBskyFeedPost.ReplyRef(
             parent=models.ComAtprotoRepoStrongRef.Main(uri=reply_uri, cid=reply_cid),
@@ -182,7 +189,7 @@ def acknowledge_report(client, proposal: dict) -> tuple[bool, bool]:
         )
         retry_network_call(
             lambda: client.send_post(text=_ACK_TEXT, reply_to=reply_ref),
-            description=f"acknowledging report {reply_uri}",
+            description=f"acknowledging report {masked_reply_uri}",
         )
         return True, False
     except (
@@ -190,14 +197,18 @@ def acknowledge_report(client, proposal: dict) -> tuple[bool, bool]:
         TimeoutError,
         atproto_client.exceptions.NetworkError,
     ) as exc:
-        print(f"Warning: transient error acknowledging {reply_uri}, will retry: {exc}")
+        print(
+            f"Warning: transient error acknowledging {masked_reply_uri}, will retry: {exc}"
+        )
         return False, True
     except (
         ValueError,
         AttributeError,
         atproto_client.exceptions.BadRequestError,
     ) as exc:
-        print(f"Warning: permanent error acknowledging {reply_uri}, skipping: {exc}")
+        print(
+            f"Warning: permanent error acknowledging {masked_reply_uri}, skipping: {exc}"
+        )
         return False, False
 
 
@@ -219,14 +230,15 @@ def delete_approved_report_posts(client, denylist: dict, state: dict) -> int:
         if not uri or uri in already_deleted:
             continue
         success, should_retry = _delete_post(client, uri)
+        masked_uri = mask_sensitive(uri)
         if success:
             bluesky_state.record_deleted_post_uri(state, uri)
             deleted_count += 1
-            print(f"Deleted approved report post: {uri}")
+            print(f"Deleted approved report post: {masked_uri}")
         elif not should_retry:
             # Mark permanent failures to avoid retrying forever
             bluesky_state.record_deleted_post_uri(state, uri)
-            print(f"Recorded permanent failure for: {uri}")
+            print(f"Recorded permanent failure for: {masked_uri}")
 
     return deleted_count
 
@@ -375,14 +387,15 @@ def main() -> None:
         reply_uri = proposal.get("source_reply_uri")
         if reply_uri and reply_uri not in acknowledged_uris:
             success, should_retry = acknowledge_report(client, proposal)
+            masked_reply_uri = mask_sensitive(reply_uri)
             if success:
                 bluesky_state.record_acknowledged_report_uri(state, reply_uri)
                 ack_count += 1
-                print(f"Acknowledged report reply: {reply_uri}")
+                print(f"Acknowledged report reply: {masked_reply_uri}")
             elif not should_retry:
                 # Mark permanent failures to avoid retrying forever
                 bluesky_state.record_acknowledged_report_uri(state, reply_uri)
-                print(f"Recorded permanent failure for: {reply_uri}")
+                print(f"Recorded permanent failure for: {masked_reply_uri}")
 
     bluesky_state.save_state(state)
 
