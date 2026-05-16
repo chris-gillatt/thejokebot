@@ -57,7 +57,7 @@ def get_bluesky_credentials(include_source=False):
 
 
 def login_client():
-    username, password, password_source = get_bluesky_credentials(include_source=True)
+    username, password = get_bluesky_credentials()
     raw_attempts = os.getenv(
         "BLUESKY_LOGIN_RETRY_ATTEMPTS", str(DEFAULT_LOGIN_RETRY_ATTEMPTS)
     )
