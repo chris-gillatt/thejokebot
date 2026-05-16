@@ -283,8 +283,8 @@ Guard rules to prevent churn:
 It fetches reply, repost, and like notifications from the last 24 hours, collects
 unique author DIDs, applies the three-way exclusion guard, then follows and
 records new follows in `follow_grace` with `source="interaction"`. Called from
-`main()` between `follow_back()` and `like_replies()`. 8 new focused tests added;
-suite at 161 passing.
+`main()` between `follow_back()` and `like_replies()`. 9 new focused tests added;
+suite at 167 passing.
 
 ## 6. Explicit "Will Not Do" Decisions
 Do not revisit these without a concrete operational reason.
@@ -337,7 +337,7 @@ Do not revisit these without a concrete operational reason.
 - v1.22: Completed starter-pack metadata pull support (5.22). `bluesky_manage_starter_pack.py` now supports `--mode pull` to preview and optionally persist live Bluesky name/description changes back into `resources/jokebot_starter_pack.json`, and the workflow can commit those updates back to the branch. Suite at 144 passing.
 - v1.23: Code-review follow-ups and quality hardening. Fixed loop lambda closures in `bluesky_follow_fellows.py` (CS-8) to use default-argument pattern. Made `get_int_env()` public and removed duplication in `bluesky_unfollow.py` (CS-3, CR-1). Added explicit `permissions: contents: read` to `bluesky_follow_fellows.yml` (CS-2). Added `BLUESKY_USERNAME` env var to `bluesky_follows_and_likes.yml` (CS-4). Fixed `STATE_FILE` path resolution to use `__file__`-relative path (CS-7). Improved error diagnostics in `bluesky_create_report_prs.py` (CS-6). Added test coverage for `collect_report_proposals()` notification paging and filtering (CS-9). Suite now at 140 passing (formatter-affected count update).
 - v1.24: Tightened joke deduplication (5.24) so punctuation-only variants now compare as duplicates during provider retry checks, while preserving the original stored `b64` for state and denylist/report flows. Added focused regression coverage for punctuation-only duplicate variants.
-- v1.25: Added interaction-follow feature (5.25). `follow_interactors()` added to `bluesky_follows_and_likes.py`. Fetches reply, repost, and like notifications from the last 24 hours and follows unique author DIDs not already being followed, in the grace window, or in the unfollow history. Followed DIDs recorded in `follow_grace` with `source="interaction"` so the standard 90-day grace period applies before any unfollow. 8 new focused tests added; suite at 161 passing.
+- v1.25: Added interaction-follow feature (5.25). `follow_interactors()` added to `bluesky_follows_and_likes.py`. Fetches reply, repost, and like notifications from the last 24 hours and follows unique author DIDs not already being followed, in the grace window, or in the unfollow history. Followed DIDs recorded in `follow_grace` with `source="interaction"` so the standard 90-day grace period applies before any unfollow. 9 new focused tests added; suite at 167 passing.
 
 ## 9. Code Review: Issues Resolved
 

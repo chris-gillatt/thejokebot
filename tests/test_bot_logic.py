@@ -1605,6 +1605,8 @@ class FollowInteractorsTests(unittest.TestCase):
         self.assertEqual(count, 1)
         client.follow.assert_called_once_with(author_did)
 
+
+class UnfollowHistoryTests(unittest.TestCase):
     def test_get_unfollowed_dids_returns_empty_set_initially(self):
         state = bluesky_state._default_state()
         self.assertEqual(bluesky_state.get_unfollowed_dids(state), set())
