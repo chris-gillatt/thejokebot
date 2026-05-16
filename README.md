@@ -120,6 +120,7 @@ Secrets are not stored in runtime config and must remain in GitHub Secrets/local
 Validation guard rail:
 
 - `bluesky_validate_runtime_config.py` validates runtime-config schema and checks that `workflow_schedules` metadata matches cron expressions in workflow files.
+- It also enforces cadence-aware guard rails for high-blast-radius controls (report paging and unfollow/follow action caps) so risky schedule+limit combinations fail fast.
 - GitHub Actions workflow `validate_runtime_config` runs this check on `pull_request`, `push` to `main`, and manual dispatch.
 
 ## Runtime safety controls

@@ -356,6 +356,7 @@ Do not revisit these without a concrete operational reason.
 - v1.25: Added interaction-follow feature (5.25). `follow_interactors()` added to `bluesky_follows_and_likes.py`. Fetches reply, repost, and like notifications from the last 24 hours and follows unique author DIDs not already being followed, in the grace window, or in the unfollow history. Followed DIDs recorded in `follow_grace` with `source="interaction"` so the standard 90-day grace period applies before any unfollow. 9 new focused tests added; suite at 167 passing.
 - v1.26: Started centralised config implementation for issue #38 (5.26). Added `resources/jokebot_runtime_config.json` and `bluesky_config.py` schema/loader with validation and safe fallback-to-defaults on invalid file data. Wired `bluesky_post_joke.py`, `bluesky_follow_fellows.py`, and `bluesky_unfollow.py` to consume central config defaults while retaining env-based runtime override behaviour.
 - v1.27: Extended centralised config rollout (5.26). `bluesky_process_reports.py` now consumes report default limits from central config, and new validator `bluesky_validate_runtime_config.py` enforces schema + workflow schedule metadata alignment in CI via `.github/workflows/validate_runtime_config.yml`.
+- v1.28: Added cadence-aware runtime guard rails to `bluesky_validate_runtime_config.py` (5.26 follow-on). Validator now fails fast when risky schedule/frequency changes are paired with aggressive report/unfollow/follow control values, reducing accidental high-blast-radius configuration drift.
 
 ## 9. Code Review: Issues Resolved
 

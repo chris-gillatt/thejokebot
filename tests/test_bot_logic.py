@@ -130,6 +130,44 @@ class RuntimeConfigValidationScriptTests(unittest.TestCase):
         errors = bluesky_validate_runtime_config.validate_runtime_config()
         self.assertEqual(errors, [])
 
+    def test_validate_guard_rails_fails_when_reports_too_aggressive_for_cadence(self):
+        config = {
+            "reports": {"max_pages": 5, "page_limit": 100},
+            "follow_fellows": {"global_follow_limit": 150},
+            "unfollow": {"max_actions": 200},
+        }
+        schedules = {
+            "bluesky_process_reports": "*/15 * * * *",
+            "bluesky_follow_fellows": "0 0 * * 3,5",
+            "bluesky_unfollow": "0 12 1 */3 *",
+        }
+
+        errors = bluesky_validate_runtime_config._validate_guard_rails(config, schedules)
+
+        self.assertTrue(
+            any("reports.max_pages" in message for message in errors),
+            msg=f"Expected reports guard-rail error, got: {errors}",
+        )
+
+    def test_validate_guard_rails_fails_when_unfollow_too_aggressive_for_cadence(self):
+        config = {
+            "reports": {"max_pages": 3, "page_limit": 100},
+            "follow_fellows": {"global_follow_limit": 150},
+            "unfollow": {"max_actions": 250},
+        }
+        schedules = {
+            "bluesky_process_reports": "*/30 * * * *",
+            "bluesky_follow_fellows": "0 0 * * 3,5",
+            "bluesky_unfollow": "0 */6 * * *",
+        }
+
+        errors = bluesky_validate_runtime_config._validate_guard_rails(config, schedules)
+
+        self.assertTrue(
+            any("unfollow.max_actions" in message for message in errors),
+            msg=f"Expected unfollow guard-rail error, got: {errors}",
+        )
+
 
 class LoginClientRetryTests(unittest.TestCase):
     def test_get_bluesky_credentials_prefers_app_password(self):
