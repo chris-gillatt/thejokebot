@@ -64,6 +64,12 @@ If you only want to run the unit test suite locally (without Ruff/CodeQL), run:
 
 Equivalent GitHub Actions workflow: `python_tests` (runs `python -m pytest tests/ -v --tb=short` on PRs and `main`).
 
+## Pull requests
+
+When a pull request implements tracked issue work, include a GitHub-recognised closing line in the PR body such as `Closes #38` so the issue closes automatically on merge.
+
+If a pull request genuinely has no tracked issue, add the exact line `Issue: none` in the PR body instead.
+
 If you prefer a direct one-liner without the helper script:
 
 - `.venv/bin/python -m pytest tests/ -v --tb=short`

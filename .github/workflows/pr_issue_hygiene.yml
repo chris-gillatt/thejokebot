@@ -1,0 +1,52 @@
+name: pr_issue_hygiene
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - edited
+      - reopened
+      - synchronize
+      - ready_for_review
+
+permissions:
+  pull-requests: read
+
+jobs:
+  validate_issue_linkage:
+    if: ${{ github.event.pull_request.user.type != 'Bot' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate issue linkage declaration
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const body = (context.payload.pull_request.body || '').trim();
+            const title = context.payload.pull_request.title || '';
+            const closingKeywordPattern = /\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+#\d+\b/i;
+            const noIssuePattern = /^Issue:\s*none$/im;
+            const issueReferencePattern = /#\d+/;
+
+            const guidance = [
+              'Pull requests must declare issue linkage in the PR body.',
+              'Use a GitHub closing keyword such as `Closes #38` so the linked issue closes automatically on merge.',
+              'If no tracked issue applies, add the line `Issue: none`.',
+            ].join('\n');
+
+            if (!body) {
+              core.setFailed(guidance);
+              return;
+            }
+
+            if (closingKeywordPattern.test(body) || noIssuePattern.test(body)) {
+              core.info('Issue linkage declaration found.');
+              return;
+            }
+
+            if (issueReferencePattern.test(title) || issueReferencePattern.test(body)) {
+              core.setFailed(`Found an issue reference without a closing keyword.\n${guidance}`);
+              return;
+            }
+
+            core.setFailed(guidance);
