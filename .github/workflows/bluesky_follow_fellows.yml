@@ -32,6 +32,7 @@ jobs:
 
       - name: Run bluesky_follow_fellows
         env:
+          BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
           BLUESKY_PASSWORD: ${{ secrets.BLUESKY_PASSWORD }}
           BLUESKY_USERNAME: ${{ vars.BLUESKY_USERNAME }}
         run: python bluesky_follow_fellows.py

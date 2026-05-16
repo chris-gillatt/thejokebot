@@ -23,9 +23,24 @@ def _load_local_env_file():
 _load_local_env_file()
 
 
-def get_bluesky_credentials():
-    username = os.getenv("BLUESKY_USERNAME", "").strip()
+def get_bluesky_password():
+    app_password = os.getenv("BLUESKY_APP_PASSWORD")
+    if app_password:
+        return app_password, "BLUESKY_APP_PASSWORD"
+
     password = os.getenv("BLUESKY_PASSWORD")
+    if password:
+        return password, "BLUESKY_PASSWORD"
+
+    raise ValueError(
+        "Neither BLUESKY_APP_PASSWORD nor BLUESKY_PASSWORD environment variable is set. "
+        "Please configure BLUESKY_APP_PASSWORD (preferred) or BLUESKY_PASSWORD in "
+        "GitHub Actions secrets or local .env."
+    )
+
+
+def get_bluesky_credentials(include_source=False):
+    username = os.getenv("BLUESKY_USERNAME", "").strip()
 
     if not username:
         raise ValueError(
@@ -33,17 +48,16 @@ def get_bluesky_credentials():
             "Please configure it in GitHub Actions variables or local .env."
         )
 
-    if not password:
-        raise ValueError(
-            "BLUESKY_PASSWORD environment variable is not set. "
-            "Please configure it in GitHub Actions secrets or local .env."
-        )
+    password, password_source = get_bluesky_password()
+
+    if include_source:
+        return username, password, password_source
 
     return username, password
 
 
 def login_client():
-    username, password = get_bluesky_credentials()
+    username, password, password_source = get_bluesky_credentials(include_source=True)
     raw_attempts = os.getenv(
         "BLUESKY_LOGIN_RETRY_ATTEMPTS", str(DEFAULT_LOGIN_RETRY_ATTEMPTS)
     )
@@ -59,6 +73,7 @@ def login_client():
     )
 
     client = Client()
+    print(f"Using {password_source} for Bluesky authentication.")
     for attempt in range(1, max_attempts + 1):
         try:
             client.login(username, password)

@@ -43,6 +43,57 @@ class RuntimeControlTests(unittest.TestCase):
 
 
 class LoginClientRetryTests(unittest.TestCase):
+    def test_get_bluesky_credentials_prefers_app_password(self):
+        with mock.patch.dict(
+            os.environ,
+            {
+                "BLUESKY_USERNAME": "thejokebot.bsky.social",
+                "BLUESKY_APP_PASSWORD": "preferred-app-password",
+                "BLUESKY_PASSWORD": "legacy-password",
+            },
+            clear=True,
+        ):
+            username, password, source = bluesky_common.get_bluesky_credentials(
+                include_source=True
+            )
+
+        self.assertEqual(username, "thejokebot.bsky.social")
+        self.assertEqual(password, "preferred-app-password")
+        self.assertEqual(source, "BLUESKY_APP_PASSWORD")
+
+    def test_get_bluesky_credentials_falls_back_to_legacy_password(self):
+        with mock.patch.dict(
+            os.environ,
+            {
+                "BLUESKY_USERNAME": "thejokebot.bsky.social",
+                "BLUESKY_PASSWORD": "legacy-password",
+            },
+            clear=True,
+        ):
+            username, password, source = bluesky_common.get_bluesky_credentials(
+                include_source=True
+            )
+
+        self.assertEqual(username, "thejokebot.bsky.social")
+        self.assertEqual(password, "legacy-password")
+        self.assertEqual(source, "BLUESKY_PASSWORD")
+
+    def test_get_bluesky_credentials_raises_when_password_missing(self):
+        with mock.patch.dict(
+            os.environ,
+            {
+                "BLUESKY_USERNAME": "thejokebot.bsky.social",
+                "BLUESKY_APP_PASSWORD": "",
+                "BLUESKY_PASSWORD": "",
+            },
+            clear=True,
+        ):
+            with self.assertRaises(ValueError) as ctx:
+                bluesky_common.get_bluesky_credentials()
+
+        self.assertIn("BLUESKY_APP_PASSWORD", str(ctx.exception))
+        self.assertIn("BLUESKY_PASSWORD", str(ctx.exception))
+
     def test_get_bluesky_credentials_raises_when_username_missing(self):
         with mock.patch.dict(
             os.environ,
@@ -79,6 +130,33 @@ class LoginClientRetryTests(unittest.TestCase):
         self.assertIs(client, mock_client)
         self.assertEqual(username, "thejokebot.bsky.social")
         self.assertEqual(mock_client.login.call_count, 2)
+
+    def test_login_client_uses_app_password_when_both_set(self):
+        mock_client = mock.Mock()
+        with mock.patch.dict(
+            os.environ,
+            {
+                "BLUESKY_USERNAME": "thejokebot.bsky.social",
+                "BLUESKY_APP_PASSWORD": "preferred-app-password",
+                "BLUESKY_PASSWORD": "legacy-password",
+                "BLUESKY_LOGIN_RETRY_ATTEMPTS": "1",
+                "BLUESKY_LOGIN_RETRY_DELAY_SECONDS": "0",
+            },
+            clear=True,
+        ):
+            with mock.patch("bluesky_common.Client", return_value=mock_client):
+                with mock.patch("builtins.print") as mock_print:
+                    bluesky_common.login_client()
+
+        mock_client.login.assert_called_once_with(
+            "thejokebot.bsky.social", "preferred-app-password"
+        )
+        self.assertTrue(
+            any(
+                call.args and "BLUESKY_APP_PASSWORD" in call.args[0]
+                for call in mock_print.call_args_list
+            )
+        )
 
     def test_login_client_raises_after_retry_exhausted(self):
         mock_client = mock.Mock()

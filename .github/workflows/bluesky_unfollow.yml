@@ -36,6 +36,7 @@ jobs:
       - name: Run bluesky_unfollow
         env:
           BLUESKY_USERNAME: ${{ vars.BLUESKY_USERNAME }}
+          BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
           BLUESKY_PASSWORD: ${{ secrets.BLUESKY_PASSWORD }}
           BLUESKY_ACTION_DELAY_SECONDS: "1"
           BLUESKY_UNFOLLOW_MAX_ACTIONS: "200"

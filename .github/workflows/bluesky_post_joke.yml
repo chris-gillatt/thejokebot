@@ -35,6 +35,7 @@ jobs:
       - name: Run bluesky_post_joke
         env:
           BLUESKY_USERNAME: ${{ vars.BLUESKY_USERNAME }}
+          BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
           BLUESKY_PASSWORD: ${{ secrets.BLUESKY_PASSWORD }}
           API_NINJAS_API_KEY: ${{ secrets.API_NINJAS_API_KEY }}
         run: python bluesky_post_joke.py

@@ -79,7 +79,8 @@ Set these in `.env` (keep values quoted):
 | Variable | Required | Description |
 |---|---|---|
 | `BLUESKY_USERNAME` | Yes | Account handle for the bot account (for example `yourbot.bsky.social`). |
-| `BLUESKY_PASSWORD` | Yes | App password for the Bluesky account. |
+| `BLUESKY_APP_PASSWORD` | Preferred | App password for the Bluesky account. Preferred in production and local runs. |
+| `BLUESKY_PASSWORD` | Fallback | Backward-compatible fallback when `BLUESKY_APP_PASSWORD` is not set. |
 | `API_NINJAS_API_KEY` | No | API key for the API Ninjas jokes endpoint. Only needed if you want the `api_ninjas` backup provider. |
 | `BLUESKY_DRY_RUN` | No | Set to `true` to log actions without applying them (also used by `bluesky_manage_starter_pack.py` for preview mode). |
 | `BLUESKY_ACTION_DELAY_SECONDS` | No | Seconds to wait between follow/unfollow actions. |
@@ -93,6 +94,8 @@ Set these in `.env` (keep values quoted):
 | `BLUESKY_JOKE_PROVIDER` | No | Force a specific provider by name (`icanhazdadjoke`, `jokeapi`, `groandeck`, `syrsly`, `api_ninjas`, `jokebot_jokebook`). Leave unset for normal rotation. |
 | `BLUESKY_REPORT_MAX_PAGES` | No | Max notification pages to fetch per report run (default `3`). |
 | `BLUESKY_REPORT_PAGE_LIMIT` | No | Notifications per page when polling for reports (default `100`). |
+
+Credential selection order: the bot uses `BLUESKY_APP_PASSWORD` first and falls back to `BLUESKY_PASSWORD` only when the app password variable is not set.
 
 ## Runtime safety controls
 

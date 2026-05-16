@@ -45,6 +45,7 @@ jobs:
 
       - name: Run starter-pack manager
         env:
+          BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
           BLUESKY_PASSWORD: ${{ secrets.BLUESKY_PASSWORD }}
           BLUESKY_USERNAME: ${{ vars.BLUESKY_USERNAME }}
           MODE: ${{ inputs.mode }}

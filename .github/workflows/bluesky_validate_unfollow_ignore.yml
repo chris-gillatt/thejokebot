@@ -28,6 +28,7 @@ jobs:
 
       - name: Validate unfollow ignore handles
         env:
+          BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
           BLUESKY_PASSWORD: ${{ secrets.BLUESKY_PASSWORD }}
           BLUESKY_USERNAME: ${{ vars.BLUESKY_USERNAME }}
           BLUESKY_UNFOLLOW_IGNORE_SECRET: ${{ secrets.BLUESKY_UNFOLLOW_IGNORE }}
