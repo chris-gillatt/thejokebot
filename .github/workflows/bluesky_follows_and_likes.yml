@@ -35,7 +35,6 @@ jobs:
       - name: Run bluesky_follows_and_likes
         env:
           BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
-          BLUESKY_PASSWORD: ${{ secrets.BLUESKY_PASSWORD }}
           BLUESKY_USERNAME: ${{ vars.BLUESKY_USERNAME }}
         run: python bluesky_follows_and_likes.py
 
