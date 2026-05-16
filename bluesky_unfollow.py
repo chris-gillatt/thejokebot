@@ -4,6 +4,7 @@ import json
 import pathlib
 import requests
 import atproto_client.exceptions
+import bluesky_config
 from colorama import Fore, Style
 from bluesky_follower_utils import (
     extract_list_member_did,
@@ -20,10 +21,11 @@ from bluesky_common import (
 )
 import bluesky_state as _state
 
-
-DEFAULT_UNFOLLOW_MAX_ACTIONS = 200
-DEFAULT_UNFOLLOW_BATCH_SIZE = 50
-DEFAULT_UNFOLLOW_BATCH_PAUSE_SECONDS = 60.0
+_UNFOLLOW_CONFIG = bluesky_config.get_unfollow_config()
+DEFAULT_UNFOLLOW_MAX_ACTIONS = _UNFOLLOW_CONFIG["max_actions"]
+DEFAULT_UNFOLLOW_BATCH_SIZE = _UNFOLLOW_CONFIG["batch_size"]
+DEFAULT_UNFOLLOW_BATCH_PAUSE_SECONDS = _UNFOLLOW_CONFIG["batch_pause_seconds"]
+DEFAULT_IGNORABLE_USERNAMES = tuple(_UNFOLLOW_CONFIG["default_ignorable_handles"])
 _STARTER_PACK_CONFIG_PATH = (
     pathlib.Path(__file__).parent / "resources" / "jokebot_starter_pack.json"
 )
@@ -111,12 +113,7 @@ def _fetch_list_member_dids(client, list_uri):
 
 def unfollow_users():
     # List of usernames to ignore (configurable via BLUESKY_UNFOLLOW_IGNORE env var)
-    default_ignorable = [
-        "theonion.bsky.social",
-        "groandeck.bsky.social",
-        "nocontextbritss.bsky.social",
-        "dehler55.bsky.social",
-    ]
+    default_ignorable = list(DEFAULT_IGNORABLE_USERNAMES)
     env_ignorable = os.getenv("BLUESKY_UNFOLLOW_IGNORE", "")
     ignorable_usernames = default_ignorable + [
         u.strip() for u in env_ignorable.split(",") if u.strip()

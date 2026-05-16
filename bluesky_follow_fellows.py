@@ -3,6 +3,7 @@ import time
 import requests
 
 import atproto_client.exceptions
+import bluesky_config
 import bluesky_state
 from bluesky_common import (
     get_runtime_controls,
@@ -12,29 +13,13 @@ from bluesky_common import (
 )
 from bluesky_follower_utils import fetch_paginated_data
 
+_FOLLOW_FELLOWS_CONFIG = bluesky_config.get_follow_fellows_config()
+
 # Limits
-soft_tag_limit = 12
-global_follow_limit = 150
-hashtags = [
-    "followback",
-    "dadjoke",
-    "dadjokes",
-    "joke",
-    "jokes",
-    "humour",
-    "humor",
-    "humoursky",
-    "humorsky",
-    "jokesky",
-    "momjokes",
-    "mumjokes",
-    "groan",
-    "puns",
-    "pun",
-    "punny",
-    "divertido",
-    "funny",
-]
+soft_tag_limit = _FOLLOW_FELLOWS_CONFIG["per_tag_limit"]
+global_follow_limit = _FOLLOW_FELLOWS_CONFIG["global_follow_limit"]
+search_limit = _FOLLOW_FELLOWS_CONFIG["search_limit"]
+hashtags = _FOLLOW_FELLOWS_CONFIG["hashtags"]
 
 
 def fetch_users_for_tag(client, tag: str):
@@ -42,7 +27,12 @@ def fetch_users_for_tag(client, tag: str):
     try:
         resp = retry_network_call(
             lambda: client.app.bsky.feed.search_posts(
-                {"q": f"#{tag}", "tag": [tag], "limit": 100, "sort": "latest"}
+                {
+                    "q": f"#{tag}",
+                    "tag": [tag],
+                    "limit": search_limit,
+                    "sort": "latest",
+                }
             ),
             description=f"searching posts for #{tag}",
         )
@@ -180,8 +170,9 @@ def main():
             time.sleep(action_delay_seconds)
 
     if state_changed:
+        rotation_step = max(1, len(hashtags) // 2)
         bluesky_state.advance_follow_fellows_tag_offset(
-            state, len(hashtags) // 2, len(hashtags)
+            state, rotation_step, len(hashtags)
         )
         bluesky_state.prune_follow_grace(state)
         bluesky_state.save_state(state)

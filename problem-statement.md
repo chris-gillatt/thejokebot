@@ -286,6 +286,22 @@ records new follows in `follow_grace` with `source="interaction"`. Called from
 `main()` between `follow_back()` and `like_replies()`. 9 new focused tests added;
 suite at 167 passing.
 
+---
+
+### 5.26 Centralised runtime config foundation (Issue #38) ⏳ In Progress
+**Priority: Medium**
+
+Issue #38 requests centralised, safer configuration for cadence and operational
+controls. Initial implementation creates a shared, versioned runtime config file
+for non-secret defaults and starts migrating script defaults to consume it while
+preserving existing environment-variable overrides.
+
+Guard-rail intent for this phase:
+- Keep behavioural drift minimal by preserving current defaults.
+- Keep secrets out of central config.
+- Keep env overrides operational for emergency adjustments.
+- Add schema validation for core numeric/list fields.
+
 ## 6. Explicit "Will Not Do" Decisions
 Do not revisit these without a concrete operational reason.
 
@@ -338,6 +354,8 @@ Do not revisit these without a concrete operational reason.
 - v1.23: Code-review follow-ups and quality hardening. Fixed loop lambda closures in `bluesky_follow_fellows.py` (CS-8) to use default-argument pattern. Made `get_int_env()` public and removed duplication in `bluesky_unfollow.py` (CS-3, CR-1). Added explicit `permissions: contents: read` to `bluesky_follow_fellows.yml` (CS-2). Added `BLUESKY_USERNAME` env var to `bluesky_follows_and_likes.yml` (CS-4). Fixed `STATE_FILE` path resolution to use `__file__`-relative path (CS-7). Improved error diagnostics in `bluesky_create_report_prs.py` (CS-6). Added test coverage for `collect_report_proposals()` notification paging and filtering (CS-9). Suite now at 140 passing (formatter-affected count update).
 - v1.24: Tightened joke deduplication (5.24) so punctuation-only variants now compare as duplicates during provider retry checks, while preserving the original stored `b64` for state and denylist/report flows. Added focused regression coverage for punctuation-only duplicate variants.
 - v1.25: Added interaction-follow feature (5.25). `follow_interactors()` added to `bluesky_follows_and_likes.py`. Fetches reply, repost, and like notifications from the last 24 hours and follows unique author DIDs not already being followed, in the grace window, or in the unfollow history. Followed DIDs recorded in `follow_grace` with `source="interaction"` so the standard 90-day grace period applies before any unfollow. 9 new focused tests added; suite at 167 passing.
+- v1.26: Started centralised config implementation for issue #38 (5.26). Added `resources/jokebot_runtime_config.json` and `bluesky_config.py` schema/loader with validation and safe fallback-to-defaults on invalid file data. Wired `bluesky_post_joke.py`, `bluesky_follow_fellows.py`, and `bluesky_unfollow.py` to consume central config defaults while retaining env-based runtime override behaviour.
+- v1.27: Extended centralised config rollout (5.26). `bluesky_process_reports.py` now consumes report default limits from central config, and new validator `bluesky_validate_runtime_config.py` enforces schema + workflow schedule metadata alignment in CI via `.github/workflows/validate_runtime_config.yml`.
 
 ## 9. Code Review: Issues Resolved
 

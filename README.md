@@ -11,6 +11,7 @@
 | Reporting | `bluesky_process_reports` | [![bluesky_process_reports](https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_process_reports.yml/badge.svg)](https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_process_reports.yml) |
 | Quality | `python_tests` | [![python_tests](https://github.com/chris-gillatt/thejokebot/actions/workflows/python_tests.yml/badge.svg)](https://github.com/chris-gillatt/thejokebot/actions/workflows/python_tests.yml) |
 | Quality | `ruff_quality` | [![ruff_quality](https://github.com/chris-gillatt/thejokebot/actions/workflows/ruff_quality.yml/badge.svg)](https://github.com/chris-gillatt/thejokebot/actions/workflows/ruff_quality.yml) |
+| Quality | `validate_runtime_config` | [![validate_runtime_config](https://github.com/chris-gillatt/thejokebot/actions/workflows/validate_runtime_config.yml/badge.svg)](https://github.com/chris-gillatt/thejokebot/actions/workflows/validate_runtime_config.yml) |
 | Security | `codeql` | [![codeql](https://github.com/chris-gillatt/thejokebot/actions/workflows/codeql.yml/badge.svg)](https://github.com/chris-gillatt/thejokebot/actions/workflows/codeql.yml) |
 | Repository maintenance | `pr_auto_merge` | [![pr_auto_merge](https://github.com/chris-gillatt/thejokebot/actions/workflows/dependabot-auto-merge.yml/badge.svg)](https://github.com/chris-gillatt/thejokebot/actions/workflows/dependabot-auto-merge.yml) |
 
@@ -97,13 +98,37 @@ Set these in `.env` (keep values quoted):
 
 Credential selection order: the bot uses `BLUESKY_APP_PASSWORD` first and falls back to `BLUESKY_PASSWORD` only when the app password variable is not set.
 
+## Central runtime config
+
+Shared non-secret defaults now live in `resources/jokebot_runtime_config.json`.
+
+Current coverage in this first implementation phase:
+
+- `posting` defaults (history window, provider retry attempts, post character budget, hashtags).
+- `follow_fellows` defaults (per-tag/global follow limits, search page limit, hashtag set).
+- `unfollow` defaults (per-run cap, batching controls, baseline protected handles).
+- `reports` defaults (page and pagination limits).
+- `workflow_schedules` metadata for cadence visibility.
+
+Precedence model for runtime behaviour:
+
+1. Values in `resources/jokebot_runtime_config.json` are loaded as defaults.
+2. Existing environment variables continue to override where supported by scripts (for example `BLUESKY_UNFOLLOW_MAX_ACTIONS`, `BLUESKY_REPORT_MAX_PAGES`, `BLUESKY_JOKE_PROVIDER`).
+
+Secrets are not stored in runtime config and must remain in GitHub Secrets/local `.env`.
+
+Validation guard rail:
+
+- `bluesky_validate_runtime_config.py` validates runtime-config schema and checks that `workflow_schedules` metadata matches cron expressions in workflow files.
+- GitHub Actions workflow `validate_runtime_config` runs this check on `pull_request`, `push` to `main`, and manual dispatch.
+
 ## Runtime safety controls
 
 - **Dry run:** set `BLUESKY_DRY_RUN='true'` to log actions without applying them. Applies to `bluesky_follows_and_likes.py`, `bluesky_unfollow.py`, and `bluesky_follow_fellows.py`.
 - **Throttling:** set `BLUESKY_ACTION_DELAY_SECONDS='1.5'` (example) to slow follow/unfollow/like loops.
 - **Network retries:** set `BLUESKY_NETWORK_RETRY_ATTEMPTS`, `BLUESKY_NETWORK_RETRY_DELAY_SECONDS`, and `BLUESKY_NETWORK_RETRY_BACKOFF_FACTOR` to tune bounded retries for transient network/API failures.
 - **Unfollow batching:** `bluesky_unfollow.py` is capped and batched by default (`BLUESKY_UNFOLLOW_MAX_ACTIONS=200`, `BLUESKY_UNFOLLOW_BATCH_SIZE=50`, `BLUESKY_UNFOLLOW_BATCH_PAUSE_SECONDS=60`) to reduce throttle risk on large clean-ups.
-- **Follow-fellows cadence:** `bluesky_follow_fellows.py` runs twice weekly, rotates tag priority between runs, and currently caps follows at `150` per run across `16` hashtags.
+- **Follow-fellows cadence:** `bluesky_follow_fellows.py` runs twice weekly, rotates tag priority between runs, and uses the configured per-run cap and hashtag set from `resources/jokebot_runtime_config.json`.
 - **Starter-pack/list protection:** if `resources/jokebot_starter_pack.json` is enabled and points to a valid source list URI, all members of that list are automatically protected from unfollowing (unioned with `BLUESKY_UNFOLLOW_IGNORE`).
 - **Follow grace protection:** `bluesky_unfollow.py` skips accounts followed by `bluesky_follow_fellows.py` for `90` days before they can become eligible for unfollow.
 - **Post length preflight:** `bluesky_post_joke.py` skips over-long jokes and retries provider fetches before posting, using grapheme-aware length checks so posts stay within Bluesky's 300-character limit after hashtags are appended.

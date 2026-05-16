@@ -9,19 +9,17 @@ import atproto_client.exceptions
 import regex
 
 import bluesky_denylist
+import bluesky_config
 import bluesky_joke_providers
 import bluesky_state
 from bluesky_common import login_client
 
-# Joke memory: keep 365 days of history to reduce repetition across
-# three primary providers in rotation. With thousands of unique jokes
-# across providers, a longer memory keeps content fresh for readers.
-DAYS_LIMIT = 365
-MAX_ATTEMPTS = 5
-BLUESKY_MAX_POST_CHARS = 300
-
-# Hashtags
-HASHTAGS = ["#jokes", "#dadjoke", "#funny"]
+# Joke memory and posting defaults now come from central runtime config.
+_POSTING_CONFIG = bluesky_config.get_posting_config()
+DAYS_LIMIT = _POSTING_CONFIG["days_limit"]
+MAX_ATTEMPTS = _POSTING_CONFIG["max_attempts"]
+BLUESKY_MAX_POST_CHARS = _POSTING_CONFIG["max_post_chars"]
+HASHTAGS = _POSTING_CONFIG["hashtags"]
 
 # Bluesky character limits are based on user-visible characters, not code points.
 _GRAPHEME_PATTERN = regex.compile(r"\X")

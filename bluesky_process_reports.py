@@ -11,6 +11,7 @@ from pathlib import Path
 import requests
 import atproto_client.exceptions
 
+import bluesky_config
 import bluesky_denylist
 import bluesky_state
 from atproto import models
@@ -19,8 +20,9 @@ from bluesky_common import get_int_env, login_client, mask_sensitive, retry_netw
 REPORT_TAG_PATTERN = re.compile(r"(?:^|\s)#report\b", re.IGNORECASE)
 TRAILING_TAGS_PATTERN = re.compile(r"\n\n(?:#\w+\s*)+$", re.IGNORECASE)
 DEFAULT_OUTPUT_PATH = Path(".agent-tmp/report_proposals.json")
-DEFAULT_MAX_PAGES = 3
-DEFAULT_PAGE_LIMIT = 100
+_REPORTS_CONFIG = bluesky_config.get_reports_config()
+DEFAULT_MAX_PAGES = _REPORTS_CONFIG["max_pages"]
+DEFAULT_PAGE_LIMIT = _REPORTS_CONFIG["page_limit"]
 
 _ACK_TEXT = "Eek! Thanks for flagging that \U0001f648 I'll get it sent for review!"
 

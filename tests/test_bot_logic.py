@@ -4,12 +4,14 @@ import json
 import os
 import pathlib
 import re
+import tempfile
 import unittest
 from types import SimpleNamespace
 from unittest import mock
 
 import atproto_client.exceptions
 import bluesky_common
+import bluesky_config
 import bluesky_create_report_prs
 import bluesky_denylist
 import bluesky_follower_utils
@@ -22,6 +24,7 @@ import bluesky_process_reports
 import bluesky_state
 import bluesky_unfollow
 import bluesky_validate_unfollow_ignore
+import bluesky_validate_runtime_config
 import bluesky_verify_latest_joke_post
 from bluesky_follower_utils import extract_list_member_did
 
@@ -40,6 +43,92 @@ class RuntimeControlTests(unittest.TestCase):
 
         self.assertTrue(controls["dry_run"])
         self.assertEqual(controls["action_delay_seconds"], 1.5)
+
+
+class RuntimeConfigTests(unittest.TestCase):
+    def tearDown(self):
+        bluesky_config.clear_runtime_config_cache()
+
+    def test_runtime_config_defaults_include_expected_sections(self):
+        config = bluesky_config.get_runtime_config()
+
+        self.assertIn("posting", config)
+        self.assertIn("follow_fellows", config)
+        self.assertIn("unfollow", config)
+        self.assertIn("reports", config)
+        self.assertIn("workflow_schedules", config)
+        self.assertEqual(config["posting"]["days_limit"], 365)
+
+    def test_runtime_config_file_overrides_merge_with_defaults(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = pathlib.Path(temp_dir) / "runtime.json"
+            config_path.write_text(
+                json.dumps(
+                    {
+                        "posting": {
+                            "max_attempts": 7,
+                            "hashtags": ["#jokes", "#testing"],
+                        },
+                        "follow_fellows": {
+                            "per_tag_limit": 4,
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            with mock.patch("bluesky_config._CONFIG_PATH", config_path):
+                bluesky_config.clear_runtime_config_cache()
+                config = bluesky_config.get_runtime_config()
+
+        self.assertEqual(config["posting"]["max_attempts"], 7)
+        self.assertEqual(config["posting"]["days_limit"], 365)
+        self.assertEqual(config["posting"]["hashtags"], ["#jokes", "#testing"])
+        self.assertEqual(config["follow_fellows"]["per_tag_limit"], 4)
+        self.assertEqual(config["follow_fellows"]["global_follow_limit"], 150)
+
+    def test_runtime_config_invalid_values_fall_back_to_defaults(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = pathlib.Path(temp_dir) / "runtime-invalid.json"
+            config_path.write_text(
+                json.dumps(
+                    {
+                        "posting": {
+                            "hashtags": ["nohash"],
+                        }
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            with mock.patch("bluesky_config._CONFIG_PATH", config_path):
+                bluesky_config.clear_runtime_config_cache()
+                config = bluesky_config.get_runtime_config()
+
+        self.assertEqual(config["posting"]["hashtags"], ["#jokes", "#dadjoke", "#funny"])
+
+    def test_load_runtime_config_strict_raises_on_missing_file(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            missing_path = pathlib.Path(temp_dir) / "missing.json"
+            with self.assertRaises(FileNotFoundError):
+                bluesky_config.load_runtime_config(missing_path, strict=True)
+
+    def test_load_runtime_config_strict_raises_on_invalid_data(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = pathlib.Path(temp_dir) / "runtime-invalid.json"
+            config_path.write_text(
+                json.dumps({"posting": {"hashtags": ["missinghash"]}}),
+                encoding="utf-8",
+            )
+
+            with self.assertRaises(ValueError):
+                bluesky_config.load_runtime_config(config_path, strict=True)
+
+
+class RuntimeConfigValidationScriptTests(unittest.TestCase):
+    def test_validate_runtime_config_returns_no_errors_for_current_repo(self):
+        errors = bluesky_validate_runtime_config.validate_runtime_config()
+        self.assertEqual(errors, [])
 
 
 class LoginClientRetryTests(unittest.TestCase):
