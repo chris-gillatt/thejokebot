@@ -1335,7 +1335,274 @@ class LikeRepliesTests(unittest.TestCase):
         self.assertGreater(recent_time, cutoff)
 
 
-class UnfollowHistoryTests(unittest.TestCase):
+class FollowInteractorsTests(unittest.TestCase):
+    def _make_notification(self, reason, author_did, indexed_at=None):
+        if indexed_at is None:
+            indexed_at = (
+                dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00", "Z")
+            )
+        author = SimpleNamespace(did=author_did)
+        return SimpleNamespace(
+            reason=reason,
+            indexed_at=indexed_at,
+            author=author,
+        )
+
+    def test_follow_interactors_follows_new_reply_author(self):
+        """A reply author not yet followed should be followed."""
+        interactor_did = "did:plc:interactor1"
+        notification = self._make_notification("reply", interactor_did)
+        response = SimpleNamespace(notifications=[notification], cursor=None)
+
+        state = bluesky_state._default_state()
+        client = mock.Mock()
+        client.me.did = "did:plc:bot"
+        client.get_follows.return_value = SimpleNamespace(follows=[], cursor=None)
+        client.app.bsky.notification.list_notifications.return_value = response
+
+        with mock.patch(
+            "bluesky_follows_and_likes.fetch_paginated_data", return_value=[]
+        ):
+            with mock.patch(
+                "bluesky_follows_and_likes.retry_network_call",
+                side_effect=lambda fn, description: fn(),
+            ):
+                with mock.patch("bluesky_state.save_state"):
+                    count = bluesky_follows_and_likes.follow_interactors(
+                        client, state, dry_run=False, action_delay_seconds=0
+                    )
+
+        self.assertEqual(count, 1)
+        client.follow.assert_called_once_with(interactor_did)
+        self.assertIn(
+            interactor_did, bluesky_state.get_follow_grace_dids(state, cutoff_ts=0)
+        )
+        self.assertEqual(state["follow_grace"]["entries"][0]["source"], "interaction")
+
+    def test_follow_interactors_follows_repost_and_like_authors(self):
+        """Repost and like notifications should both trigger a follow."""
+        repost_did = "did:plc:reposter"
+        like_did = "did:plc:liker"
+        now = dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00", "Z")
+        notifications = [
+            self._make_notification("repost", repost_did, now),
+            self._make_notification("like", like_did, now),
+        ]
+        response = SimpleNamespace(notifications=notifications, cursor=None)
+
+        state = bluesky_state._default_state()
+        client = mock.Mock()
+        client.me.did = "did:plc:bot"
+        client.app.bsky.notification.list_notifications.return_value = response
+
+        with mock.patch(
+            "bluesky_follows_and_likes.fetch_paginated_data", return_value=[]
+        ):
+            with mock.patch(
+                "bluesky_follows_and_likes.retry_network_call",
+                side_effect=lambda fn, description: fn(),
+            ):
+                with mock.patch("bluesky_state.save_state"):
+                    count = bluesky_follows_and_likes.follow_interactors(
+                        client, state, dry_run=False, action_delay_seconds=0
+                    )
+
+        self.assertEqual(count, 2)
+        followed_dids = {call.args[0] for call in client.follow.call_args_list}
+        self.assertIn(repost_did, followed_dids)
+        self.assertIn(like_did, followed_dids)
+
+    def test_follow_interactors_skips_already_following(self):
+        """Interactors already being followed should not be followed again."""
+        interactor_did = "did:plc:existing"
+        notification = self._make_notification("reply", interactor_did)
+        response = SimpleNamespace(notifications=[notification], cursor=None)
+
+        already_following_profile = SimpleNamespace(did=interactor_did)
+        state = bluesky_state._default_state()
+        client = mock.Mock()
+        client.me.did = "did:plc:bot"
+        client.app.bsky.notification.list_notifications.return_value = response
+
+        with mock.patch(
+            "bluesky_follows_and_likes.fetch_paginated_data",
+            return_value=[already_following_profile],
+        ):
+            with mock.patch(
+                "bluesky_follows_and_likes.retry_network_call",
+                side_effect=lambda fn, description: fn(),
+            ):
+                count = bluesky_follows_and_likes.follow_interactors(
+                    client, state, dry_run=False, action_delay_seconds=0
+                )
+
+        self.assertEqual(count, 0)
+        client.follow.assert_not_called()
+
+    def test_follow_interactors_skips_dids_in_follow_grace(self):
+        """Interactors already in the follow-grace window should be skipped."""
+        interactor_did = "did:plc:graced"
+        notification = self._make_notification("like", interactor_did)
+        response = SimpleNamespace(notifications=[notification], cursor=None)
+
+        state = bluesky_state._default_state()
+        bluesky_state.record_follow_grace(state, interactor_did, source="interaction")
+        client = mock.Mock()
+        client.me.did = "did:plc:bot"
+        client.app.bsky.notification.list_notifications.return_value = response
+
+        with mock.patch(
+            "bluesky_follows_and_likes.fetch_paginated_data", return_value=[]
+        ):
+            with mock.patch(
+                "bluesky_follows_and_likes.retry_network_call",
+                side_effect=lambda fn, description: fn(),
+            ):
+                count = bluesky_follows_and_likes.follow_interactors(
+                    client, state, dry_run=False, action_delay_seconds=0
+                )
+
+        self.assertEqual(count, 0)
+        client.follow.assert_not_called()
+
+    def test_follow_interactors_skips_dids_in_unfollow_history(self):
+        """Previously unfollowed interactors must not be re-followed to prevent churn."""
+        interactor_did = "did:plc:unfollowed"
+        notification = self._make_notification("repost", interactor_did)
+        response = SimpleNamespace(notifications=[notification], cursor=None)
+
+        state = bluesky_state._default_state()
+        bluesky_state.record_unfollow(
+            state, interactor_did, reason="not_following_back"
+        )
+        client = mock.Mock()
+        client.me.did = "did:plc:bot"
+        client.app.bsky.notification.list_notifications.return_value = response
+
+        with mock.patch(
+            "bluesky_follows_and_likes.fetch_paginated_data", return_value=[]
+        ):
+            with mock.patch(
+                "bluesky_follows_and_likes.retry_network_call",
+                side_effect=lambda fn, description: fn(),
+            ):
+                count = bluesky_follows_and_likes.follow_interactors(
+                    client, state, dry_run=False, action_delay_seconds=0
+                )
+
+        self.assertEqual(count, 0)
+        client.follow.assert_not_called()
+
+    def test_follow_interactors_skips_stale_notifications(self):
+        """Notifications older than 24 hours should be skipped."""
+        old_ts = (
+            (dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=25))
+            .isoformat()
+            .replace("+00:00", "Z")
+        )
+        notification = self._make_notification("reply", "did:plc:old", old_ts)
+        response = SimpleNamespace(notifications=[notification], cursor=None)
+
+        state = bluesky_state._default_state()
+        client = mock.Mock()
+        client.me.did = "did:plc:bot"
+        client.app.bsky.notification.list_notifications.return_value = response
+
+        with mock.patch(
+            "bluesky_follows_and_likes.fetch_paginated_data", return_value=[]
+        ):
+            with mock.patch(
+                "bluesky_follows_and_likes.retry_network_call",
+                side_effect=lambda fn, description: fn(),
+            ):
+                count = bluesky_follows_and_likes.follow_interactors(
+                    client, state, dry_run=False, action_delay_seconds=0
+                )
+
+        self.assertEqual(count, 0)
+        client.follow.assert_not_called()
+
+    def test_follow_interactors_skips_bot_own_did(self):
+        """The bot must not follow itself."""
+        bot_did = "did:plc:bot"
+        notification = self._make_notification("reply", bot_did)
+        response = SimpleNamespace(notifications=[notification], cursor=None)
+
+        state = bluesky_state._default_state()
+        client = mock.Mock()
+        client.me.did = bot_did
+        client.app.bsky.notification.list_notifications.return_value = response
+
+        with mock.patch(
+            "bluesky_follows_and_likes.fetch_paginated_data", return_value=[]
+        ):
+            with mock.patch(
+                "bluesky_follows_and_likes.retry_network_call",
+                side_effect=lambda fn, description: fn(),
+            ):
+                count = bluesky_follows_and_likes.follow_interactors(
+                    client, state, dry_run=False, action_delay_seconds=0
+                )
+
+        self.assertEqual(count, 0)
+        client.follow.assert_not_called()
+
+    def test_follow_interactors_dry_run_does_not_call_follow(self):
+        """In dry-run mode, client.follow must not be called."""
+        interactor_did = "did:plc:dryrunuser"
+        notification = self._make_notification("reply", interactor_did)
+        response = SimpleNamespace(notifications=[notification], cursor=None)
+
+        state = bluesky_state._default_state()
+        client = mock.Mock()
+        client.me.did = "did:plc:bot"
+        client.app.bsky.notification.list_notifications.return_value = response
+
+        with mock.patch(
+            "bluesky_follows_and_likes.fetch_paginated_data", return_value=[]
+        ):
+            with mock.patch(
+                "bluesky_follows_and_likes.retry_network_call",
+                side_effect=lambda fn, description: fn(),
+            ):
+                count = bluesky_follows_and_likes.follow_interactors(
+                    client, state, dry_run=True, action_delay_seconds=0
+                )
+
+        self.assertEqual(count, 1)
+        client.follow.assert_not_called()
+
+    def test_follow_interactors_deduplicates_same_author(self):
+        """Multiple notifications from the same author should only trigger one follow."""
+        author_did = "did:plc:talkative"
+        now = dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00", "Z")
+        notifications = [
+            self._make_notification("reply", author_did, now),
+            self._make_notification("like", author_did, now),
+            self._make_notification("repost", author_did, now),
+        ]
+        response = SimpleNamespace(notifications=notifications, cursor=None)
+
+        state = bluesky_state._default_state()
+        client = mock.Mock()
+        client.me.did = "did:plc:bot"
+        client.app.bsky.notification.list_notifications.return_value = response
+
+        with mock.patch(
+            "bluesky_follows_and_likes.fetch_paginated_data", return_value=[]
+        ):
+            with mock.patch(
+                "bluesky_follows_and_likes.retry_network_call",
+                side_effect=lambda fn, description: fn(),
+            ):
+                with mock.patch("bluesky_state.save_state"):
+                    count = bluesky_follows_and_likes.follow_interactors(
+                        client, state, dry_run=False, action_delay_seconds=0
+                    )
+
+        self.assertEqual(count, 1)
+        client.follow.assert_called_once_with(author_did)
+
     def test_get_unfollowed_dids_returns_empty_set_initially(self):
         state = bluesky_state._default_state()
         self.assertEqual(bluesky_state.get_unfollowed_dids(state), set())
