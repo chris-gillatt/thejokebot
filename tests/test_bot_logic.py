@@ -153,7 +153,9 @@ class LoginClientRetryTests(unittest.TestCase):
         )
         self.assertTrue(
             any(
-                call.args and "BLUESKY_APP_PASSWORD" in call.args[0]
+                call.args
+                and "Using configured credentials for Bluesky authentication."
+                in call.args[0]
                 for call in mock_print.call_args_list
             )
         )
