@@ -1336,6 +1336,8 @@ class LikeRepliesTests(unittest.TestCase):
 
 
 class FollowInteractorsTests(unittest.TestCase):
+    """Tests for follow_interactors(): follows users who interact with bot posts."""
+
     def _make_notification(self, reason, author_did, indexed_at=None):
         if indexed_at is None:
             indexed_at = (

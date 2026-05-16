@@ -28,6 +28,8 @@ _INTERACTION_FOLLOW_REASONS = ("reply", "repost", "like")
 _INTERACTION_WINDOW_SECONDS = (
     24 * 60 * 60
 )  # only follow interactors from the last 24 hours
+_INTERACTION_FOLLOW_MAX_PAGES = 5
+_INTERACTION_FOLLOW_PAGE_LIMIT = 100
 
 
 # ---------------------------------------------------------------------------
@@ -134,13 +136,13 @@ def follow_interactors(
     interactor_dids: set[str] = set()
     cursor = None
 
-    for _ in range(_DEFAULT_LIKE_MAX_PAGES):
+    for _ in range(_INTERACTION_FOLLOW_MAX_PAGES):
         try:
             response = retry_network_call(
                 lambda: client.app.bsky.notification.list_notifications(
                     params={
                         "cursor": cursor,
-                        "limit": _DEFAULT_LIKE_PAGE_LIMIT,
+                        "limit": _INTERACTION_FOLLOW_PAGE_LIMIT,
                         "reasons": list(_INTERACTION_FOLLOW_REASONS),
                     }
                 ),
