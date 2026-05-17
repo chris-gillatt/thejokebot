@@ -29,7 +29,7 @@ jobs:
 
       - name: Test Bluesky API through proxy
         env:
-          BLUESKY_USERNAME: solex.bsky.social
+          BLUESKY_USERNAME: ${{ secrets.BLUESKY_USERNAME }}
           BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
           HTTPS_PROXY: ${{ github.event.inputs.proxy_url }}
           HTTP_PROXY: ${{ github.event.inputs.proxy_url }}
