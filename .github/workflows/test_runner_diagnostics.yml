@@ -1,0 +1,33 @@
+name: test_runner_diagnostics
+
+on:
+  workflow_dispatch:
+
+jobs:
+  diagnose_runner:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Capture runner diagnostics
+        run: |
+          echo "=== Runner Environment ==="
+          uname -a
+          echo ""
+          echo "=== Python Version ==="
+          python3 --version
+          echo ""
+          echo "=== Network Configuration ==="
+          hostname
+          ip addr show 2>/dev/null | grep -E "inet " || ifconfig 2>/dev/null | grep inet
+          echo ""
+          echo "=== DNS Resolution ==="
+          nslookup bsky.social || dig bsky.social
+          echo ""
+          echo "=== Connectivity Test to Bluesky ==="
+          curl -v https://bsky.social/xrpc/com.atproto.server.describeServer 2>&1 | head -30
+          echo ""
+          echo "=== TLS Certificate Check ==="
+          openssl s_client -connect bsky.social:443 -servername bsky.social < /dev/null 2>&1 | openssl x509 -text -noout 2>&1 | grep -E "Subject:|Issuer:|Not Before|Not After"
+          echo ""
+          echo "=== HTTP Status Code to Bluesky ==="
+          curl -s -o /dev/null -w "HTTP Status: %{http_code}\n" https://bsky.social/xrpc/com.atproto.server.describeServer
