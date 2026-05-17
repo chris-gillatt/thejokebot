@@ -29,34 +29,36 @@ jobs:
 
       - name: Test Bluesky API through proxy
         env:
-          BLUESKY_USERNAME: ${{ secrets.BLUESKY_USERNAME }}
+          BLUESKY_USERNAME: solex.bsky.social
           BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
-          HTTPS_PROXY: ${{ github.event.inputs.proxy_url || secrets.TEST_PROXY_URL || '' }}
-          HTTP_PROXY: ${{ github.event.inputs.proxy_url || secrets.TEST_PROXY_URL || '' }}
-          ALL_PROXY: ${{ github.event.inputs.proxy_url || secrets.TEST_PROXY_URL || '' }}
+          HTTPS_PROXY: ${{ github.event.inputs.proxy_url }}
+          HTTP_PROXY: ${{ github.event.inputs.proxy_url }}
+          ALL_PROXY: ${{ github.event.inputs.proxy_url }}
         run: |
           echo "Testing Bluesky API with proxy..."
           if [ -z "$HTTPS_PROXY" ]; then
-            echo "No proxy URL provided - using direct connection for comparison"
+            echo "No proxy URL provided - using direct connection"
           else
             echo "Using proxy: $HTTPS_PROXY"
           fi
           
-          python -c "
+          python << 'PYTHON_EOF'
           import os
           import sys
           from bluesky_common import login_client
           
-          print(f'HTTPS_PROXY: {os.getenv(\"HTTPS_PROXY\", \"(not set)\")}')
-          print(f'HTTP_PROXY: {os.getenv(\"HTTP_PROXY\", \"(not set)\")}')
+          https_proxy = os.getenv("HTTPS_PROXY", "(not set)")
+          http_proxy = os.getenv("HTTP_PROXY", "(not set)")
+          print(f"HTTPS_PROXY: {https_proxy}")
+          print(f"HTTP_PROXY: {http_proxy}")
           
           try:
               client, username = login_client()
-              print(f'✓ Successfully authenticated as {username}')
+              print(f"✓ Successfully authenticated as {username}")
               sys.exit(0)
           except Exception as e:
-              print(f'✗ Authentication failed: {type(e).__name__}: {e}')
+              print(f"✗ Authentication failed: {type(e).__name__}: {e}")
               import traceback
               traceback.print_exc()
               sys.exit(1)
-          "
+          PYTHON_EOF
