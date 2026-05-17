@@ -3,8 +3,10 @@ import time
 from pathlib import Path
 
 import atproto_client.exceptions
+import httpx
 import requests
 from atproto import Client
+from atproto_client.request import Request as _AtprotoRequest
 from dotenv import load_dotenv
 
 DEFAULT_LOGIN_RETRY_ATTEMPTS = 3
@@ -21,6 +23,56 @@ def _load_local_env_file():
 
 
 _load_local_env_file()
+
+# ---------------------------------------------------------------------------
+# TLS fingerprint workaround
+# ---------------------------------------------------------------------------
+# Bluesky's AWS WAF blocks Python httpx by its JA3/JA4 TLS fingerprint.
+# requests/urllib3 generates a different fingerprint that is not blocked.
+# We bridge the two by providing a custom httpx transport that delegates all
+# network I/O to a requests.Session.
+# ---------------------------------------------------------------------------
+_STRIP_RESP_HEADERS = frozenset(
+    ("content-length", "content-encoding", "transfer-encoding")
+)
+
+
+class _RequestsTransport(httpx.BaseTransport):
+    """httpx transport that delegates to requests/urllib3.
+
+    Passes a different TLS client-hello fingerprint (JA3/JA4) than the
+    default httpx transport, bypassing the AWS WAF Bot Control rule that
+    blocks httpx on bsky.social.
+    """
+
+    def __init__(self) -> None:
+        self._session = requests.Session()
+
+    def handle_request(self, request: httpx.Request) -> httpx.Response:
+        resp = self._session.request(
+            method=request.method,
+            url=str(request.url),
+            headers=dict(request.headers),
+            data=request.content,
+            allow_redirects=True,
+            timeout=30.0,
+        )
+        # requests already decompresses the body; strip encoding/length headers
+        # so httpx does not attempt to process them a second time.
+        headers = [
+            (k, v)
+            for k, v in resp.headers.items()
+            if k.lower() not in _STRIP_RESP_HEADERS
+        ]
+        return httpx.Response(
+            status_code=resp.status_code,
+            headers=headers,
+            content=resp.content,
+            request=request,
+        )
+
+    def close(self) -> None:
+        self._session.close()
 
 
 def get_bluesky_password():
@@ -72,7 +124,7 @@ def login_client():
         minimum=0.0,
     )
 
-    client = Client()
+    client = Client(request=_AtprotoRequest(transport=_RequestsTransport()))
     print("Using configured credentials for Bluesky authentication.")
     for attempt in range(1, max_attempts + 1):
         try:

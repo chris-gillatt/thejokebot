@@ -82,46 +82,6 @@ jobs:
           curl -4fsS https://ifconfig.me
           echo
 
-      - name: Diagnose Bluesky connectivity
-        run: |
-          set +e
-          URL="https://bsky.social/xrpc/com.atproto.server.describeServer"
-
-          echo "=== curl (baseline) ==="
-          curl -s -o /dev/null -w "http_code=%{http_code}\n" "$URL"
-
-          echo "=== httpx default (HTTP/2 + atproto UA) ==="
-          python - <<'PYEOF'
-          import httpx
-          r = httpx.get(
-              "https://bsky.social/xrpc/com.atproto.server.describeServer",
-              headers={"User-Agent": "atproto/0.0.65 Python SDK (atproto.blue)"},
-          )
-          print(f"http_code={r.status_code} server={r.headers.get('server','n/a')}")
-          PYEOF
-
-          echo "=== httpx HTTP/1.1 forced (no h2 ALPN) ==="
-          python - <<'PYEOF'
-          import httpx
-          with httpx.Client(http2=False) as client:
-              r = client.get(
-                  "https://bsky.social/xrpc/com.atproto.server.describeServer",
-                  headers={"User-Agent": "atproto/0.0.65 Python SDK (atproto.blue)"},
-              )
-          print(f"http_code={r.status_code} server={r.headers.get('server','n/a')}")
-          PYEOF
-
-          echo "=== requests (urllib3, no h2 ALPN) ==="
-          python - <<'PYEOF'
-          import requests
-          r = requests.get(
-              "https://bsky.social/xrpc/com.atproto.server.describeServer",
-              headers={"User-Agent": "atproto/0.0.65 Python SDK (atproto.blue)"},
-          )
-          print(f"http_code={r.status_code} server={r.headers.get('server','n/a')}")
-          PYEOF
-          exit 0
-
       - name: Run bluesky_post_joke
         env:
           BLUESKY_USERNAME: ${{ vars.BLUESKY_USERNAME }}
