@@ -82,6 +82,25 @@ jobs:
           curl -4fsS https://ifconfig.me
           echo
 
+      - name: Diagnose Bluesky connectivity
+        run: |
+          echo "=== curl GET describeServer (no credentials) ==="
+          curl -sv "https://bsky.social/xrpc/com.atproto.server.describeServer" 2>&1 \
+            | grep -E "^[<>*]|HTTP/"
+
+          echo ""
+          echo "=== Python httpx GET describeServer ==="
+          python - <<'PYEOF'
+          import httpx
+          r = httpx.get(
+              "https://bsky.social/xrpc/com.atproto.server.describeServer",
+              headers={"User-Agent": "atproto/0.0.65 Python SDK (atproto.blue)"},
+          )
+          print(f"status={r.status_code}")
+          print(f"server={r.headers.get('server', 'n/a')}")
+          print(f"body_start={r.text[:80]}")
+          PYEOF
+
       - name: Run bluesky_post_joke
         env:
           BLUESKY_USERNAME: ${{ vars.BLUESKY_USERNAME }}
