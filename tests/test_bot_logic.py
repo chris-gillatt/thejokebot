@@ -2728,5 +2728,21 @@ class FollowFellowsMainTests(unittest.TestCase):
         client.follow.assert_called_once_with(followed_did)
 
 
+class FollowsAndLikesMainTests(unittest.TestCase):
+    def test_main_handles_unauthorised_login_failure(self):
+        with mock.patch(
+            "bluesky_follows_and_likes.get_runtime_controls",
+            return_value={"dry_run": False, "action_delay_seconds": 0.0},
+        ):
+            with mock.patch(
+                "bluesky_follows_and_likes.login_client",
+                side_effect=atproto_client.exceptions.UnauthorizedError("forbidden"),
+            ):
+                with mock.patch("bluesky_follows_and_likes.bluesky_state.load_state") as load_state:
+                    bluesky_follows_and_likes.main()
+
+        load_state.assert_not_called()
+
+
 if __name__ == "__main__":
     unittest.main()

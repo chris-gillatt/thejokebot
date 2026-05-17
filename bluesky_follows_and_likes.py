@@ -419,6 +419,7 @@ def main() -> None:
         requests.RequestException,
         TimeoutError,
         atproto_client.exceptions.NetworkError,
+        atproto_client.exceptions.UnauthorizedError,
     ) as exc:
         print(f"{Fore.RED}Login failed: {exc}{Style.RESET_ALL}")
         return
