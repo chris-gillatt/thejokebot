@@ -53,7 +53,7 @@ jobs:
           chmod 600 "$AUTH_FILE"
 
           sudo openvpn \
-            --config vpn/uk2725.nordvpn.com.tcp.ovpn \
+            --config vpn/sg527.nordvpn.com.tcp.ovpn \
             --auth-user-pass "$AUTH_FILE" \
             --daemon \
             --writepid "$PID_FILE" \
