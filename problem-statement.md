@@ -26,6 +26,7 @@ changelog in this file is intentionally brief.
 1. Dependency drift and workflow/runtime skew.
 2. Behaviour regressions when touching posting/report/follow flows.
 3. Scope creep during multi-file maintenance work.
+4. **httpx TLS fingerprint workaround fragility** — all Bluesky API calls currently route through a custom `_RequestsTransport` in `bluesky_common.py` that delegates to `requests`/urllib3. If AWS WAF Bot Control later adds urllib3's JA3/JA4 fingerprint to its block-list, every workflow will break again. Fallback option is `curl_cffi`, which can impersonate a real browser TLS stack.
 
 ## 5. Active Backlog
 
@@ -287,6 +288,35 @@ unique author DIDs, applies the three-way exclusion guard, then follows and
 records new follows in `follow_grace` with `source="interaction"`. Called from
 `main()` between `follow_back()` and `like_replies()`. 9 new focused tests added;
 suite at 167 passing.
+
+---
+
+### 5.27 Review and revert httpx WAF workaround when safe to do so ⏳ Deferred
+**Priority: Low**
+
+On 2026-05-17T03:42 UTC, Bluesky's AWS WAF Bot Control began blocking Python
+httpx's TLS fingerprint (JA3/JA4). The block was introduced by an AWS managed-rule
+update — no code in this repo changed. The simpler original approach was:
+
+```python
+client = Client()
+client.login(username, password)
+```
+
+The current workaround adds a `_RequestsTransport` to `bluesky_common.login_client()`
+that routes all httpx I/O through `requests.Session` (urllib3 stack), which presents
+a fingerprint that WAF does not currently block.
+
+**When to revisit:** Periodically (e.g. after a new atproto SDK release, or after any
+Bluesky infrastructure announcement), test whether a plain `Client()` login succeeds
+from a GitHub Actions runner without the transport override. If it does, remove
+`_RequestsTransport`, the `httpx`/`requests` bridge code, and the `_STRIP_RESP_HEADERS`
+constant from `bluesky_common.py`. Check whether the `requests` dependency can also be
+removed from `requirements.txt` at that point.
+
+**Quick smoke-test:** add a temporary workflow step that runs
+`python -c "from atproto import Client; Client().login('$U', '$P')"` with real
+credentials and checks for a 200 response before removing the workaround.
 
 ---
 
