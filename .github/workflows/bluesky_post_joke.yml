@@ -84,21 +84,36 @@ jobs:
 
       - name: Diagnose Bluesky connectivity
         run: |
-          echo "=== curl GET describeServer (no credentials) ==="
-          curl -sv "https://bsky.social/xrpc/com.atproto.server.describeServer" 2>&1 \
-            | grep -E "^[<>*]|HTTP/"
+          URL="https://bsky.social/xrpc/com.atproto.server.describeServer"
 
-          echo ""
-          echo "=== Python httpx GET describeServer ==="
+          echo "=== curl (curl UA) ==="
+          curl -s -o /dev/null -w "http_code=%{http_code}\n" "$URL"
+
+          echo "=== httpx with atproto UA ==="
           python - <<'PYEOF'
           import httpx
           r = httpx.get(
               "https://bsky.social/xrpc/com.atproto.server.describeServer",
               headers={"User-Agent": "atproto/0.0.65 Python SDK (atproto.blue)"},
           )
-          print(f"status={r.status_code}")
-          print(f"server={r.headers.get('server', 'n/a')}")
-          print(f"body_start={r.text[:80]}")
+          print(f"http_code={r.status_code} server={r.headers.get('server','n/a')}")
+          PYEOF
+
+          echo "=== httpx with curl UA ==="
+          python - <<'PYEOF'
+          import httpx
+          r = httpx.get(
+              "https://bsky.social/xrpc/com.atproto.server.describeServer",
+              headers={"User-Agent": "curl/8.5.0"},
+          )
+          print(f"http_code={r.status_code} server={r.headers.get('server','n/a')}")
+          PYEOF
+
+          echo "=== httpx with no explicit UA (httpx default) ==="
+          python - <<'PYEOF'
+          import httpx
+          r = httpx.get("https://bsky.social/xrpc/com.atproto.server.describeServer")
+          print(f"http_code={r.status_code} server={r.headers.get('server','n/a')}")
           PYEOF
 
       - name: Run bluesky_post_joke
