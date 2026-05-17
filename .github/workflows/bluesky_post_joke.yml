@@ -32,76 +32,12 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
 
-      - name: Install OpenVPN
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends openvpn ca-certificates
-
-      - name: Connect NordVPN
-        env:
-          VPN_USERNAME: ${{ secrets.VPN_USERNAME }}
-          VPN_PASSWORD: ${{ secrets.VPN_PASSWORD }}
-        run: |
-          set -euo pipefail
-
-          AUTH_FILE="$(mktemp)"
-          PID_FILE="$RUNNER_TEMP/openvpn.pid"
-          LOG_FILE="$RUNNER_TEMP/openvpn.log"
-
-          # OpenVPN auth files are two lines: username then password.
-          printf '%s\n%s\n' "$VPN_USERNAME" "$VPN_PASSWORD" > "$AUTH_FILE"
-          chmod 600 "$AUTH_FILE"
-
-          sudo openvpn \
-            --config vpn/sg527.nordvpn.com.tcp.ovpn \
-            --auth-user-pass "$AUTH_FILE" \
-            --daemon \
-            --writepid "$PID_FILE" \
-            --log "$LOG_FILE"
-
-          for i in $(seq 1 30); do
-            if ip link show tun0 >/dev/null 2>&1; then
-              break
-            fi
-            sleep 1
-          done
-
-          if ! ip link show tun0 >/dev/null 2>&1; then
-            echo "VPN tunnel did not come up."
-            sudo tail -n 120 "$LOG_FILE" || true
-            rm -f "$AUTH_FILE"
-            exit 1
-          fi
-
-          echo "VPN_PID_FILE=$PID_FILE" >> "$GITHUB_ENV"
-          echo "VPN_LOG_FILE=$LOG_FILE" >> "$GITHUB_ENV"
-
-          rm -f "$AUTH_FILE"
-
-          echo "Egress IP after VPN connect:"
-          curl -4fsS https://ifconfig.me
-          echo
-
       - name: Run bluesky_post_joke
         env:
           BLUESKY_USERNAME: ${{ vars.BLUESKY_USERNAME }}
           BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
           API_NINJAS_API_KEY: ${{ secrets.API_NINJAS_API_KEY }}
         run: python bluesky_post_joke.py
-
-      - name: Disconnect NordVPN
-        if: always()
-        run: |
-          set -euo pipefail
-
-          if [ -n "${VPN_PID_FILE:-}" ] && [ -f "$VPN_PID_FILE" ]; then
-            sudo kill "$(cat "$VPN_PID_FILE")" || true
-          fi
-
-          if [ -n "${VPN_LOG_FILE:-}" ] && [ -f "$VPN_LOG_FILE" ]; then
-            echo "Last OpenVPN log lines:"
-            sudo tail -n 60 "$VPN_LOG_FILE" || true
-          fi
 
       - name: Update bot_state.json
         run: |
