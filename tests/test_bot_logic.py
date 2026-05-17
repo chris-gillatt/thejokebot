@@ -2738,7 +2738,9 @@ class FollowsAndLikesMainTests(unittest.TestCase):
                 "bluesky_follows_and_likes.login_client",
                 side_effect=atproto_client.exceptions.UnauthorizedError("forbidden"),
             ):
-                with mock.patch("bluesky_follows_and_likes.bluesky_state.load_state") as load_state:
+                with mock.patch(
+                    "bluesky_follows_and_likes.bluesky_state.load_state"
+                ) as load_state:
                     bluesky_follows_and_likes.main()
 
         load_state.assert_not_called()
