@@ -86,10 +86,10 @@ jobs:
         run: |
           URL="https://bsky.social/xrpc/com.atproto.server.describeServer"
 
-          echo "=== curl (curl UA) ==="
+          echo "=== curl (baseline) ==="
           curl -s -o /dev/null -w "http_code=%{http_code}\n" "$URL"
 
-          echo "=== httpx with atproto UA ==="
+          echo "=== httpx default (HTTP/2 + atproto UA) ==="
           python - <<'PYEOF'
           import httpx
           r = httpx.get(
@@ -99,20 +99,24 @@ jobs:
           print(f"http_code={r.status_code} server={r.headers.get('server','n/a')}")
           PYEOF
 
-          echo "=== httpx with curl UA ==="
+          echo "=== httpx HTTP/1.1 forced (no h2 ALPN) ==="
           python - <<'PYEOF'
           import httpx
           r = httpx.get(
               "https://bsky.social/xrpc/com.atproto.server.describeServer",
-              headers={"User-Agent": "curl/8.5.0"},
+              headers={"User-Agent": "atproto/0.0.65 Python SDK (atproto.blue)"},
+              http2=False,
           )
           print(f"http_code={r.status_code} server={r.headers.get('server','n/a')}")
           PYEOF
 
-          echo "=== httpx with no explicit UA (httpx default) ==="
+          echo "=== requests (urllib3, no h2 ALPN) ==="
           python - <<'PYEOF'
-          import httpx
-          r = httpx.get("https://bsky.social/xrpc/com.atproto.server.describeServer")
+          import requests
+          r = requests.get(
+              "https://bsky.social/xrpc/com.atproto.server.describeServer",
+              headers={"User-Agent": "atproto/0.0.65 Python SDK (atproto.blue)"},
+          )
           print(f"http_code={r.status_code} server={r.headers.get('server','n/a')}")
           PYEOF
 
