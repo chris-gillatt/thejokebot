@@ -3,6 +3,8 @@ name: workflows_disabled
 on:
   workflow_dispatch:
 
+permissions: {}
+
 jobs:
   disabled:
     if: ${{ false }}
