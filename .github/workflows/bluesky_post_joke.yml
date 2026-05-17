@@ -84,6 +84,7 @@ jobs:
 
       - name: Diagnose Bluesky connectivity
         run: |
+          set +e
           URL="https://bsky.social/xrpc/com.atproto.server.describeServer"
 
           echo "=== curl (baseline) ==="
@@ -102,11 +103,11 @@ jobs:
           echo "=== httpx HTTP/1.1 forced (no h2 ALPN) ==="
           python - <<'PYEOF'
           import httpx
-          r = httpx.get(
-              "https://bsky.social/xrpc/com.atproto.server.describeServer",
-              headers={"User-Agent": "atproto/0.0.65 Python SDK (atproto.blue)"},
-              http2=False,
-          )
+          with httpx.Client(http2=False) as client:
+              r = client.get(
+                  "https://bsky.social/xrpc/com.atproto.server.describeServer",
+                  headers={"User-Agent": "atproto/0.0.65 Python SDK (atproto.blue)"},
+              )
           print(f"http_code={r.status_code} server={r.headers.get('server','n/a')}")
           PYEOF
 
@@ -119,6 +120,7 @@ jobs:
           )
           print(f"http_code={r.status_code} server={r.headers.get('server','n/a')}")
           PYEOF
+          exit 0
 
       - name: Run bluesky_post_joke
         env:
