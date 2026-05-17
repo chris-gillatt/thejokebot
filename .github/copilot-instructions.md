@@ -13,6 +13,7 @@
 - Use Conventional Commits for every commit subject line.
 - Subject format: `<type>(<optional-scope>): <imperative summary>`.
 - Every commit message must explain why the change is being made.
+- When a commit resolves a tracked GitHub issue, include a closing keyword in the commit body (for example `Closes #38` or `Resolves #15`). This allows GitHub to automatically close the issue when the commit lands on the default branch.
 - Keep unrelated changes in separate commits.
 - Before any `git push`, sync with the remote first (`git pull --rebase` unless there is a deliberate reason not to) because the bot's GitHub Actions workflows can update the branch between local changes and push time.
 

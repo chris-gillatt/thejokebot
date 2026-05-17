@@ -15,7 +15,6 @@ changelog in this file is intentionally brief.
 - Use Conventional Commits with commit messages that explain why.
 - Before push, sync with remote (`git pull --rebase`) because scheduled workflows can update `main`.
 - Before commit/push, run local quality checks (`ruff check`, `ruff format --check`, unit tests, and local CodeQL when available) and fix issues proactively.
-- For issue-backed work, include a GitHub closing keyword in the PR body (for example `Closes #38`); only use `Issue: none` when no tracked issue applies.
 
 ## 3. Operational Constraints
 - The project is automation-first (GitHub Actions + script execution).
@@ -220,20 +219,7 @@ Issue #14 requested converting The Joke Bot's existing Bluesky list ("Funnies")
 into a starter pack, plus operational guardrails so list accounts are followed and
 not accidentally removed by unfollow automation.
 
----
 
-### 5.20 Enforce PR issue-linkage hygiene ✓ Complete
-**Priority: High**
-
-Issue-backed changes previously relied on commit intent alone, which does not close
-GitHub issues unless a merged pull request (or merged commit message on the default
-branch) uses recognised closing keywords. This allowed issue #38 to remain open
-after the implementation landed.
-
-**Resolution:** Added `.github/workflows/pr_issue_hygiene.yml` to require human
-pull requests to declare either a closing reference such as `Closes #38` or the
-explicit exemption line `Issue: none`. Added `.github/pull_request_template.md`
-and README guidance so the expected wording is visible during PR authoring.
 
 **Resolution:** Added `resources/jokebot_starter_pack.json` and a new script
 `bluesky_manage_starter_pack.py` with hybrid operation (one-time setup and manual
