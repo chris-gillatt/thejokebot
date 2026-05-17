@@ -1,0 +1,14 @@
+name: workflows_disabled
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  disabled:
+    if: ${{ false }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Disabled
+        run: echo 'All workflows are disabled in this branch.'
