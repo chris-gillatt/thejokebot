@@ -28,14 +28,10 @@ def get_bluesky_password():
     if app_password:
         return app_password, "BLUESKY_APP_PASSWORD"
 
-    password = os.getenv("BLUESKY_PASSWORD")
-    if password:
-        return password, "BLUESKY_PASSWORD"
-
     raise ValueError(
-        "Neither BLUESKY_APP_PASSWORD nor BLUESKY_PASSWORD environment variable is set. "
-        "Please configure BLUESKY_APP_PASSWORD (preferred) or BLUESKY_PASSWORD in "
-        "GitHub Actions secrets or local .env."
+        "BLUESKY_APP_PASSWORD environment variable is not set. "
+        "Please configure it in GitHub Actions secrets or local .env. "
+        "(Note: BLUESKY_PASSWORD is deprecated; use BLUESKY_APP_PASSWORD.)"
     )
 
 
