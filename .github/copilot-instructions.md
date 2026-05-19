@@ -32,6 +32,16 @@
 - Keep `.agent-tmp/` out of commits except for `.agent-tmp/.gitkeep`.
 - Treat `git pull --rebase` before `git push` as the default terminal workflow for this repository unless the user explicitly asks for a different git strategy.
 
+## References Directory Policy
+- The `references/` directory contains read-only external resources (submodules, documentation, cookbooks).
+- Never make changes to content within `references/`. All content is considered read-only.
+- Only pull in updates from upstream sources. Changes should only flow in one direction: from upstream → local.
+- If any changes appear pending in submodules under `references/`, clear them immediately using:
+  - `git restore references/`
+  - `git submodule update --init --recursive`
+  - `git -C references/<submodule> clean -fd && git -C references/<submodule> reset --hard`
+- If you detect drift in `references/`, reset to committed state before proceeding with other work.
+
 ## Problem Statement Workflow
 - Keep `problem-statement.md` current as the source of truth for scope, decisions, risks, and deferred work.
 - Add TODOs and out-of-scope items there as they arise.
