@@ -312,6 +312,103 @@ class LoginClientRetryTests(unittest.TestCase):
 
         self.assertEqual(mock_client.login.call_count, 2)
 
+    def test_login_client_restores_session_when_enabled(self):
+        mock_client = mock.Mock()
+
+        with mock.patch.dict(
+            os.environ,
+            {
+                "BLUESKY_USERNAME": "thejokebot.bsky.social",
+                "BLUESKY_PASSWORD": "test-password",
+                "BLUESKY_SESSION_RESTORE_ENABLED": "true",
+                "BLUESKY_SESSION_PERSIST_ENABLED": "false",
+                "BLUESKY_LOGIN_RETRY_ATTEMPTS": "1",
+                "BLUESKY_LOGIN_RETRY_DELAY_SECONDS": "0",
+            },
+            clear=True,
+        ):
+            with mock.patch("bluesky_common.Client", return_value=mock_client):
+                with mock.patch(
+                    "bluesky_common._load_session_string_from_file",
+                    return_value="session-token",
+                ):
+                    client, username = bluesky_common.login_client()
+
+        self.assertIs(client, mock_client)
+        self.assertEqual(username, "thejokebot.bsky.social")
+        mock_client.login.assert_called_once_with(session_string="session-token")
+
+    def test_login_client_falls_back_to_credentials_when_restore_fails(self):
+        mock_client = mock.Mock()
+        mock_client.login.side_effect = [
+            RuntimeError("invalid session"),
+            None,
+        ]
+
+        with mock.patch.dict(
+            os.environ,
+            {
+                "BLUESKY_USERNAME": "thejokebot.bsky.social",
+                "BLUESKY_PASSWORD": "test-password",
+                "BLUESKY_SESSION_RESTORE_ENABLED": "true",
+                "BLUESKY_SESSION_PERSIST_ENABLED": "false",
+                "BLUESKY_LOGIN_RETRY_ATTEMPTS": "1",
+                "BLUESKY_LOGIN_RETRY_DELAY_SECONDS": "0",
+            },
+            clear=True,
+        ):
+            with mock.patch("bluesky_common.Client", return_value=mock_client):
+                with mock.patch(
+                    "bluesky_common._load_session_string_from_file",
+                    return_value="session-token",
+                ):
+                    client, username = bluesky_common.login_client()
+
+        self.assertIs(client, mock_client)
+        self.assertEqual(username, "thejokebot.bsky.social")
+        self.assertEqual(mock_client.login.call_count, 2)
+        first_call = mock_client.login.call_args_list[0]
+        second_call = mock_client.login.call_args_list[1]
+        self.assertEqual(first_call, mock.call(session_string="session-token"))
+        self.assertEqual(
+            second_call,
+            mock.call("thejokebot.bsky.social", "test-password"),
+        )
+
+    def test_login_client_persists_and_registers_when_enabled(self):
+        mock_client = mock.Mock()
+
+        with mock.patch.dict(
+            os.environ,
+            {
+                "BLUESKY_USERNAME": "thejokebot.bsky.social",
+                "BLUESKY_PASSWORD": "test-password",
+                "BLUESKY_SESSION_RESTORE_ENABLED": "false",
+                "BLUESKY_SESSION_PERSIST_ENABLED": "true",
+                "BLUESKY_LOGIN_RETRY_ATTEMPTS": "1",
+                "BLUESKY_LOGIN_RETRY_DELAY_SECONDS": "0",
+            },
+            clear=True,
+        ):
+            with mock.patch("bluesky_common.Client", return_value=mock_client):
+                with mock.patch(
+                    "bluesky_common._persist_session_string_to_file",
+                    return_value=True,
+                ) as persist_mock:
+                    with mock.patch(
+                        "bluesky_common._register_session_persistence_callback",
+                        return_value=True,
+                    ) as register_mock:
+                        client, username = bluesky_common.login_client()
+
+        self.assertIs(client, mock_client)
+        self.assertEqual(username, "thejokebot.bsky.social")
+        mock_client.login.assert_called_once_with(
+            "thejokebot.bsky.social", "test-password"
+        )
+        persist_mock.assert_called_once()
+        register_mock.assert_called_once()
+
 
 class NetworkRetryHelperTests(unittest.TestCase):
     def test_retry_network_call_succeeds_after_transient_error(self):

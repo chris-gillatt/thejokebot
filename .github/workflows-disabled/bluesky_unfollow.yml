@@ -33,15 +33,41 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
 
+      - name: Restore Bluesky session cache
+        id: bluesky_session_cache
+        uses: actions/cache/restore@v5
+        with:
+          path: .agent-tmp/bluesky_session.txt
+          key: bluesky-session-${{ github.workflow }}-${{ github.ref_name }}-${{ github.sha }}
+          restore-keys: |
+            bluesky-session-${{ github.workflow }}-${{ github.ref_name }}-
+            bluesky-session-${{ github.ref_name }}-
+
       - name: Run bluesky_unfollow
         env:
           BLUESKY_USERNAME: ${{ vars.BLUESKY_USERNAME }}
           BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
+          BLUESKY_SESSION_RESTORE_ENABLED: "true"
+          BLUESKY_SESSION_PERSIST_ENABLED: "true"
+          BLUESKY_SESSION_FILE_PATH: .agent-tmp/bluesky_session.txt
           BLUESKY_ACTION_DELAY_SECONDS: "1"
           BLUESKY_UNFOLLOW_MAX_ACTIONS: "200"
           BLUESKY_UNFOLLOW_BATCH_SIZE: "50"
           BLUESKY_UNFOLLOW_BATCH_PAUSE_SECONDS: "60"
         run: python bluesky_unfollow.py
+
+      - name: Ensure session cache path exists
+        if: always()
+        run: |
+          mkdir -p .agent-tmp
+          touch .agent-tmp/bluesky_session.txt
+
+      - name: Save Bluesky session cache
+        if: always() && steps.bluesky_session_cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: .agent-tmp/bluesky_session.txt
+          key: bluesky-session-${{ github.workflow }}-${{ github.ref_name }}-${{ github.sha }}
 
       - name: Persist unfollow history state
         run: |

@@ -9,6 +9,11 @@
 - Avoid speculative refactors.
 - Capture out-of-scope ideas in `problem-statement.md` under a deferred backlog section rather than mixing them into active work.
 
+## Version Currency Policy
+- For any newly introduced workflow element, GitHub Action, dependency, SDK, or tooling reference, always check and use the latest stable available version at implementation time.
+- If the latest version is not used, include an explicit justification in the change notes (for example known vulnerability, incompatibility, upstream regression, or required temporary workaround).
+- Treat unverified or stale versions as technical debt; do not introduce them by default.
+
 ## Git Commit Policy
 - Use Conventional Commits for every commit subject line.
 - Subject format: `<type>(<optional-scope>): <imperative summary>`.

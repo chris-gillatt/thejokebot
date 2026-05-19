@@ -14,6 +14,7 @@ DEFAULT_LOGIN_RETRY_DELAY_SECONDS = 2.0
 DEFAULT_NETWORK_RETRY_ATTEMPTS = 3
 DEFAULT_NETWORK_RETRY_DELAY_SECONDS = 1.0
 DEFAULT_NETWORK_RETRY_BACKOFF_FACTOR = 2.0
+DEFAULT_SESSION_FILE_PATH = ".agent-tmp/bluesky_session.txt"
 
 
 def _load_local_env_file():
@@ -108,6 +109,63 @@ def get_bluesky_credentials(include_source=False):
     return username, password
 
 
+def _get_session_file_path():
+    raw_path = os.getenv("BLUESKY_SESSION_FILE_PATH", DEFAULT_SESSION_FILE_PATH).strip()
+    if not raw_path:
+        raw_path = DEFAULT_SESSION_FILE_PATH
+    return Path(raw_path)
+
+
+def _load_session_string_from_file(path):
+    try:
+        session_string = path.read_text(encoding="utf-8").strip()
+    except OSError:
+        return None
+    if not session_string:
+        return None
+    return session_string
+
+
+def _persist_session_string_to_file(client, path):
+    try:
+        session_string = client.export_session_string().strip()
+    except Exception as exc:
+        print(
+            f"Warning: failed to export Bluesky session string for persistence: {type(exc).__name__}: {exc}."
+        )
+        return False
+
+    if not session_string:
+        print("Warning: Bluesky session export returned an empty value; skipping persistence.")
+        return False
+
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(f"{session_string}\n", encoding="utf-8")
+    except OSError as exc:
+        print(
+            f"Warning: failed to write Bluesky session file at {path}: {type(exc).__name__}: {exc}."
+        )
+        return False
+
+    return True
+
+
+def _register_session_persistence_callback(client, path):
+    def _on_session_change(*_args, **_kwargs):
+        _persist_session_string_to_file(client, path)
+
+    try:
+        client.on_session_change(_on_session_change)
+    except Exception as exc:
+        print(
+            f"Warning: failed to register Bluesky session change callback: {type(exc).__name__}: {exc}."
+        )
+        return False
+
+    return True
+
+
 def login_client():
     username, password = get_bluesky_credentials()
     raw_attempts = os.getenv(
@@ -123,12 +181,42 @@ def login_client():
         default=DEFAULT_LOGIN_RETRY_DELAY_SECONDS,
         minimum=0.0,
     )
+    session_restore_enabled = get_bool_env(
+        "BLUESKY_SESSION_RESTORE_ENABLED", default=False
+    )
+    session_persist_enabled = get_bool_env(
+        "BLUESKY_SESSION_PERSIST_ENABLED", default=False
+    )
+    session_file_path = _get_session_file_path()
 
     client = Client(request=_AtprotoRequest(transport=_RequestsTransport()))
+
+    if session_restore_enabled:
+        session_string = _load_session_string_from_file(session_file_path)
+        if session_string:
+            print(
+                f"Attempting Bluesky session restore from {session_file_path}."
+            )
+            try:
+                client.login(session_string=session_string)
+                print("Bluesky session restore succeeded.")
+                if session_persist_enabled:
+                    _persist_session_string_to_file(client, session_file_path)
+                    _register_session_persistence_callback(client, session_file_path)
+                return client, username
+            except Exception as exc:
+                print(
+                    "Warning: Bluesky session restore failed; falling back to credential login "
+                    f"({type(exc).__name__}: {exc})."
+                )
+
     print("Using configured credentials for Bluesky authentication.")
     for attempt in range(1, max_attempts + 1):
         try:
             client.login(username, password)
+            if session_persist_enabled:
+                _persist_session_string_to_file(client, session_file_path)
+                _register_session_persistence_callback(client, session_file_path)
             return client, username
         except atproto_client.exceptions.NetworkError as exc:
             if attempt >= max_attempts:

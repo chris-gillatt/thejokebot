@@ -16,6 +16,9 @@ WORKFLOW_FILES = {
     "bluesky_validate_unfollow_ignore": ".github/workflows/bluesky_validate_unfollow_ignore.yml",
 }
 
+_WORKFLOW_PATH_PREFIX = ".github/workflows/"
+_WORKFLOW_FALLBACK_PREFIX = ".github/workflows-disabled/"
+
 _CRON_PATTERN = re.compile(r'^\s*-\s*cron:\s*"([^"]+)"(?:\s+#.*)?\s*$', re.MULTILINE)
 
 
@@ -136,6 +139,24 @@ def _extract_cron(workflow_path: Path) -> str | None:
     return match.group(1).strip()
 
 
+def _extract_cron_with_fallback(relative_path: str) -> tuple[str | None, str]:
+    primary = Path(relative_path)
+    actual = _extract_cron(primary)
+    if actual:
+        return actual, relative_path
+
+    if relative_path.startswith(_WORKFLOW_PATH_PREFIX):
+        fallback_path = (
+            _WORKFLOW_FALLBACK_PREFIX + relative_path[len(_WORKFLOW_PATH_PREFIX) :]
+        )
+        fallback = Path(fallback_path)
+        actual = _extract_cron(fallback)
+        if actual:
+            return actual, fallback_path
+
+    return None, relative_path
+
+
 def validate_runtime_config() -> list[str]:
     errors: list[str] = []
 
@@ -154,7 +175,7 @@ def validate_runtime_config() -> list[str]:
             errors.append(f"Missing workflow_schedules.{key} in runtime config.")
             continue
 
-        actual = _extract_cron(Path(relative_path))
+        actual, resolved_path = _extract_cron_with_fallback(relative_path)
         if not actual:
             errors.append(
                 f"Could not read cron schedule from workflow file: {relative_path}"
@@ -163,7 +184,7 @@ def validate_runtime_config() -> list[str]:
 
         if configured != actual:
             errors.append(
-                f"Schedule mismatch for {key}: config='{configured}' workflow='{actual}'"
+                f"Schedule mismatch for {key}: config='{configured}' workflow='{actual}' (from {resolved_path})"
             )
 
     errors.extend(_validate_guard_rails(config, schedules))

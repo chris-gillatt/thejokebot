@@ -145,22 +145,23 @@ Expected: `200 None/Cloudfront` (not `403 awselb/2.0`).
 
 ---
 
-### Step 2 — Lightweight CI connectivity probe 🔲
+### Step 2 — Lightweight CI connectivity probe ✅ (implemented, pending execution)
 
 **Why:** Before re-enabling the full bot, confirm the transport layer is actually
 passing before committing to further implementation work.
 
-**Action:** Add a temporary `bluesky_connectivity_probe.yml` workflow (manual dispatch
-only, no schedule) that:
+**Implemented:** Added a temporary `bluesky_connectivity_probe.yml` workflow (manual
+dispatch only, no schedule) that:
 1. Installs deps
 2. Runs `python -c "import requests; r = requests.post('https://bsky.social/xrpc/com.atproto.server.createSession', json={...}); print(r.status_code, r.headers.get('server'))"` (with secrets)
 3. Runs the atproto login via `login_client()` and prints the result
 
-Remove this workflow after confirming the fix works end-to-end in CI.
+**Remaining action:** Dispatch this workflow in CI and capture status/header output.
+Remove it after recovery stabilises.
 
 ---
 
-### Step 3 — Implement session persistence (resumeSession pattern) 🔲
+### Step 3 — Implement session persistence (resumeSession pattern) 🟡 (partially complete)
 
 **Why:** The Bluesky bot guide explicitly recommends persisting and resuming sessions
 rather than calling `login()` on every run. We currently call `login_client()` (which
@@ -196,9 +197,23 @@ artifact or Actions cache. Evaluate options carefully before implementing.
 - **Recommended approach:** cache-backed session file plus `on_session_change` write-back,
   with automatic fallback to full login on cache miss/invalid session.
 
+**Implemented so far:**
+- `login_client()` now supports optional restore-first auth with fallback to
+  credential login.
+- Session export/persist hooks are implemented, including
+  `client.on_session_change(...)` write-back.
+- Session handling is feature-flagged to preserve safe rollout defaults:
+  `BLUESKY_SESSION_RESTORE_ENABLED`, `BLUESKY_SESSION_PERSIST_ENABLED`, and
+  `BLUESKY_SESSION_FILE_PATH`.
+- Disabled Bluesky workflows now include cache restore/save wiring for
+  `.agent-tmp/bluesky_session.txt` to support cross-run reuse.
+
+**Remaining action:** validate this end-to-end through manual probe + staged re-enable
+before promoting from implementation-ready to operationally proven.
+
 ---
 
-### Step 4 — Reduce `bluesky_process_reports` frequency 🔲
+### Step 4 — Reduce `bluesky_process_reports` frequency ✅ (implemented)
 
 **Why:** Running every 30 minutes (48×/day) is the single largest contributor to our
 API call volume and login frequency. Reports are user-generated content and do not
@@ -206,6 +221,9 @@ require a sub-hour response time. Even hourly is fast for a small bot.
 
 **Action:** Change `*/30 * * * *` to `0 */4 * * *` (every 4 hours, matching
 `bluesky_post_joke`). This reduces report-workflow logins from 48 to 6 per day.
+
+**Implemented:** cadence updated in central runtime config and the disabled reports
+workflow so re-enable inherits the lower-frequency schedule.
 
 **Impact:** Total daily logins drop from ~67 to ~25, a 63% reduction in login volume.
 
@@ -285,6 +303,12 @@ future policy guidance requires it.
 ---
 
 ### Step 9 — Re-enable workflows incrementally 🔲
+
+**Readiness update:** prerequisites for first re-enable gate are now in place:
+- Manual connectivity probe workflow exists and is ready to dispatch.
+- Session restore/persist code path is implemented behind feature flags.
+- Session cache restore/save wiring is in disabled Bluesky workflows.
+- `bluesky_process_reports` cadence has been reduced to every 4 hours.
 
 **Order:**
 1. `bluesky_post_joke` only (core function, lowest frequency)

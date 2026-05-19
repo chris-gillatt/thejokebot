@@ -32,11 +32,37 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
 
+      - name: Restore Bluesky session cache
+        id: bluesky_session_cache
+        uses: actions/cache/restore@v5
+        with:
+          path: .agent-tmp/bluesky_session.txt
+          key: bluesky-session-${{ github.workflow }}-${{ github.ref_name }}-${{ github.sha }}
+          restore-keys: |
+            bluesky-session-${{ github.workflow }}-${{ github.ref_name }}-
+            bluesky-session-${{ github.ref_name }}-
+
       - name: Run bluesky_follows_and_likes
         env:
           BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
           BLUESKY_USERNAME: ${{ vars.BLUESKY_USERNAME }}
+          BLUESKY_SESSION_RESTORE_ENABLED: "true"
+          BLUESKY_SESSION_PERSIST_ENABLED: "true"
+          BLUESKY_SESSION_FILE_PATH: .agent-tmp/bluesky_session.txt
         run: python bluesky_follows_and_likes.py
+
+      - name: Ensure session cache path exists
+        if: always()
+        run: |
+          mkdir -p .agent-tmp
+          touch .agent-tmp/bluesky_session.txt
+
+      - name: Save Bluesky session cache
+        if: always() && steps.bluesky_session_cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: .agent-tmp/bluesky_session.txt
+          key: bluesky-session-${{ github.workflow }}-${{ github.ref_name }}-${{ github.sha }}
 
       - name: Persist liked-reply state
         run: |
