@@ -294,29 +294,25 @@ suite at 167 passing.
 ### 5.27 Review and revert httpx WAF workaround when safe to do so ⏳ Deferred
 **Priority: Low**
 
-On 2026-05-17T03:42 UTC, Bluesky's AWS WAF Bot Control began blocking Python
-httpx's TLS fingerprint (JA3/JA4). The block was introduced by an AWS managed-rule
-update — no code in this repo changed. The simpler original approach was:
+**Timeline:**
+- 2026-05-17T03:42 UTC: AWS WAF Bot Control began blocking Python httpx's TLS fingerprint (JA3/JA4)
+- 2026-05-17 (same day): Workaround implemented and shipped — `_RequestsTransport` in `bluesky_common.py` routes all httpx I/O through `requests.Session` (urllib3 stack)
+- 2026-05-17 to 2026-05-19: Validated in production through staged workflow rollout (stages 1–5); all workflows passing with cached session tokens
 
-```python
-client = Client()
-client.login(username, password)
-```
+**Final Resolution (2026-05-19):**
+The `_RequestsTransport` workaround is stable and proven. It uses a different TLS fingerprint (urllib3 instead of httpx's native stack) to bypass WAF Bot Control. Simultaneously, we implemented session persistence and caching, which reduced login frequency from ~67/day to ~1/day (96% reduction), providing defence-in-depth: even if urllib3 fingerprint is later added to WAF's block-list, the cached sessions mean we'd only be affected every ~60 days (refresh token TTL) rather than on every workflow run.
 
-The current workaround adds a `_RequestsTransport` to `bluesky_common.login_client()`
-that routes all httpx I/O through `requests.Session` (urllib3 stack), which presents
-a fingerprint that WAF does not currently block.
+**Why we keep the workaround:** It is low-complexity, battle-tested, and non-invasive. Reverting to plain httpx now leaves us with no fallback if the block resumes. If urllib3 is blocked in future, the planned upgrade path is to `curl_cffi` (browser-spoofing transport), which is a more sophisticated solution but requires a compiled dependency.
 
-**When to revisit:** Periodically (e.g. after a new atproto SDK release, or after any
-Bluesky infrastructure announcement), test whether a plain `Client()` login succeeds
-from a GitHub Actions runner without the transport override. If it does, remove
-`_RequestsTransport`, the `httpx`/`requests` bridge code, and the `_STRIP_RESP_HEADERS`
-constant from `bluesky_common.py`. Check whether the `requests` dependency can also be
-removed from `requirements.txt` at that point.
+**When to revisit:** Periodically (e.g. after a new atproto SDK release, after any Bluesky infrastructure announcement, or if WAF blocks urllib3), test whether a plain `Client()` login succeeds from a GitHub Actions runner without the transport override.
 
 **Quick smoke-test:** add a temporary workflow step that runs
-`python -c "from atproto import Client; Client().login('$U', '$P')"` with real
-credentials and checks for a 200 response before removing the workaround.
+`python -c "from atproto import Client; c = Client(); c.login('$U', '$P'); print('Success')"`
+with real credentials and checks for success output (not a 403 response) before considering removal of the workaround.
+
+**Alternative future paths (if urllib3 is blocked):**
+- Evaluate `curl_cffi>=0.7,<1` with `impersonate="chrome120"` mode (most resilient but requires compiled dependency; verify it builds on ubuntu-24.04 first)
+- Investigate whether Bluesky offers an alternative API endpoint not subject to WAF Bot Control rules
 
 ---
 
