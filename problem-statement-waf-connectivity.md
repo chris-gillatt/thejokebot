@@ -27,7 +27,9 @@ This is a **WAF Bot Control block**, not a Bluesky rate-limit (which would retur
 | 2026-05-17 (morning) | Confirmed block **is** TLS-fingerprint based: httpx (any config) → 403, requests/urllib3 → 200 |
 | 2026-05-17 | Fix shipped: `_RequestsTransport` in `bluesky_common.py`. CI run 25986602247 → `"Joke successfully posted!"` ✅ |
 | 2026-05-17 | NordVPN workaround removed (now redundant). |
-| 2026-05-19 | Block returns. All workflows disabled manually (PR #43). |
+| 2026-05-18 02:36-05:28 (GMT+8) | Overnight failure wave: multiple scheduled jobs fail with `403 awselb/2.0` at login (`createSession`). |
+| 2026-05-18 06:29-07:35 (GMT+8) | Scheduled jobs recover and pass again without a code change. |
+| 2026-05-18 07:54 (GMT+8) | Workflows disabled manually in `36d1c83` (`chore(actions): disable all workflows`) to prevent further damage while investigating. |
 
 ---
 
@@ -42,19 +44,25 @@ This is a **WAF Bot Control block**, not a Bluesky rate-limit (which would retur
 - **The block is at the WAF layer.** HTML body + `awselb/2.0` server header = AWS ELB
   WAF blocking before Bluesky application code is reached.
 - **curl is never blocked.** libcurl's TLS fingerprint is not on the block-list.
+- **Failure windows are intermittent.** We observed an overnight failure wave on
+  2026-05-18 (GMT+8), followed by successful scheduled runs before workflows were
+  disabled. This suggests dynamic rule/reputation scoring, not a permanent hard block.
 
-### 3.2 Current best hypothesis for the second block
+### 3.2 Current best hypotheses for the overnight failure wave
 
 One or more of the following:
 
-1. **urllib3 fingerprint now also blocked.** AWS WAF Bot Control rule sets are updated
-   regularly. After we switched to urllib3, a subsequent rule update may have added
-   urllib3's JA3/JA4 as well.
-2. **Behavioural/volume pattern triggering bot scoring.** AWS WAF Bot Control uses
+1. **Dynamic WAF bot scoring / reputation windows.** A temporary block window followed
+  by spontaneous recovery is consistent with managed-rule score thresholds and
+  periodically refreshed reputation signals.
+2. **urllib3 fingerprint now also intermittently penalised.** AWS WAF Bot Control rule
+  sets are updated regularly. urllib3 may be newly detected in some windows or at
+  certain score thresholds.
+3. **Behavioural/volume pattern triggering bot scoring.** AWS WAF Bot Control uses
    heuristics beyond TLS fingerprint — request volume, frequency, lack of browser-like
    behaviour (cookies, JS challenges, etc.). Our request pattern is highly repetitive
    and login-heavy.
-3. **Shared runner IP pool reputation.** GitHub Actions runners share Azure IP ranges
+4. **Shared runner IP pool reputation.** GitHub Actions runners share Azure IP ranges
    with many other users. If those IPs have a low reputation score at the WAF, all
    bots running on them may be blocked regardless of content.
 
@@ -74,6 +82,10 @@ that limit, but **each of these is a fresh `login()` call that creates a new ses
 The Bluesky bot guide explicitly warns against this pattern and recommends persisting
 and resuming sessions.
 
+Importantly, in the captured failures the request is blocked at login with
+`403 awselb/2.0` immediately, so session-creation frequency is likely a contributing
+signal rather than the sole trigger.
+
 ### 3.4 Bot policy compliance review
 
 From https://docs.bsky.app/docs/starter-templates/bots:
@@ -84,15 +96,17 @@ From https://docs.bsky.app/docs/starter-templates/bots:
 > etc.) if the user has tagged the bot account. It must be an opt-in interaction, or
 > else your bot may be taken for spam."
 
-⚠️ **Potential policy concern:** `bluesky_follows_and_likes.py` calls `like_replies()`
-(likes replies directed at the bot — opt-in ✅) and `follow_interactors()` (follows
-users who liked or reposted the bot's posts). Reacting to likes/reposts is **not** an
-opt-in interaction from the user's perspective. They did not tag the bot. This could
-be considered spammy follow behaviour by the WAF's behavioural scoring engine.
-
 > "As a best practice, bot accounts should identify themselves by adding a self-label
-> to their profile." — ⚠️ **Unverified.** The bot's profile has not been audited for
-> the `bot` self-label. This should be checked.
+> to their profile." — ✅ **Confirmed enabled by account owner.** This appears to be
+> best-practice metadata and is unlikely to be the root cause of a pre-auth WAF block.
+
+Current assessment of `like_replies()`/`follow_interactors()`:
+- `like_replies()` is scoped to replies directed at the bot and appears compliant.
+- Interactions are sourced from the bot's own engagement feed; this is treated as
+  directed engagement for current policy interpretation.
+- The account owner reports this behaviour is not running as a broad "like spree".
+- Since failures occur before action logic executes (at login), this interaction logic
+  is unlikely to be the immediate trigger for the observed 403 events.
 
 ---
 
@@ -104,7 +118,7 @@ be considered spammy follow behaviour by the WAF's behavioural scoring engine.
 | NordVPN SG exit node in CI | 403 — same block. |
 | httpx with custom User-Agent | 403 — UA makes no difference. |
 | httpx with HTTP/1.1 forced (no h2 ALPN) | 403 — HTTP version makes no difference. |
-| `_RequestsTransport` (urllib3 stack) | ✅ 200 on first fix. Broke again by 2026-05-19. |
+| `_RequestsTransport` (urllib3 stack) | ✅ Restored access after first block; later saw an overnight failure wave on 2026-05-18 (GMT+8), then spontaneous recovery before workflows were disabled. |
 | Disabling all workflows | ✅ Stopped making things worse while we investigate. |
 
 ---
@@ -162,10 +176,12 @@ session_string = client.export_session_string()
 # Restore in next run:
 client = Client()
 client.login(session_string=session_string)
-# or: client.resume_session(session_string)  # check exact method name
 ```
-The session string should be stored in `bot_state.json` under a `bluesky_session`
-key. On restore failure (expired token), fall back to full `login()`.
+The SDK also provides `client.on_session_change(callback)`, which can be used to
+persist refreshed tokens whenever the client rotates them.
+
+The session string should be stored outside git-tracked files. On restore failure
+(expired/invalid refresh token), fall back to full `login(login=..., password=...)`.
 
 **Risk:** `bot_state.json` is committed to the repo. **The session string contains
 JWT tokens and must NOT be committed.** It must be stored as a GitHub Actions secret
@@ -173,11 +189,12 @@ or written to a file that is gitignored, then uploaded/downloaded as a workflow
 artifact or Actions cache. Evaluate options carefully before implementing.
 
 **Alternative storage options:**
-- GitHub Actions secret (single value, requires API call to update — complex)
-- GitHub Actions cache (keyed by date, auto-expires — good fit)
-- A separate private repo or Gist — overkill
-- **Recommended approach:** Use GitHub Actions cache with a fixed key that refreshes
-  daily; fall back to full login on cache miss.
+- GitHub Actions secret: secure but awkward to update each refresh (requires API/CLI write).
+- GitHub Actions artifact: simple for per-run handoff but less convenient for long-lived state.
+- GitHub Actions cache: practical for persisted state between scheduled runs.
+- Private external store: possible but out of scope for this repo.
+- **Recommended approach:** cache-backed session file plus `on_session_change` write-back,
+  with automatic fallback to full login on cache miss/invalid session.
 
 ---
 
@@ -240,30 +257,30 @@ redirect those to `public.api.bsky.app`.
 
 ### Step 7 — Audit and confirm bot self-labeling 🔲
 
-**Why:** Bluesky recommends bots self-label their profile as `bot`. Failure to do so
-may cause the account to be treated as a human account operating at bot volumes, which
-could trigger stricter bot-control rules.
+**Why:** Keep a verifiable record of policy alignment and avoid rechecking assumptions.
 
-**Action:** Run the starter-pack management script or a one-off command to check:
+**Current state:** Account owner reports the `bot` self-label is already enabled.
+
+**Action:** Keep a one-off verification command in the runbook:
 ```python
 profile = client.get_profile(actor=username)
 print(profile.labels)
 ```
-If the `bot` label is absent, add it using `client.upsert_profile()` with the
-`com.atproto.label.defs#selfLabels` value.
+If absent, add it using `client.upsert_profile()` with
+`com.atproto.label.defs#selfLabels`.
 
 ---
 
 ### Step 8 — Review `follow_interactors()` policy compliance 🔲
 
-**Why:** Following users who liked/reposted (but did not tag) the bot may be
-considered a non-opt-in interaction by Bluesky's community guidelines and could be
-feeding bot-behaviour scoring in AWS WAF. This feature was added in v1.25.
+**Why:** Keep this as a secondary policy-risk check, not a primary WAF hypothesis.
 
-**Action:** Review whether `follow_interactors()` should be scoped to only follow
-users who *replied* to (i.e. explicitly engaged with) the bot, rather than passive
-interactions like likes and reposts. Consider making this behaviour configurable via
-`BLUESKY_FOLLOW_INTERACTORS_MODE=replies_only|all|off`.
+**Current assessment:** This is unlikely to explain current failures because the
+403 occurs during login before any follow/like action code runs.
+
+**Action:** Optionally add a mode switch
+`BLUESKY_FOLLOW_INTERACTORS_MODE=replies_only|all|off` to tighten behaviour if
+future policy guidance requires it.
 
 ---
 
