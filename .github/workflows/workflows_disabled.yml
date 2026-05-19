@@ -7,7 +7,6 @@ permissions: {}
 
 jobs:
   disabled:
-    if: ${{ false }}
     runs-on: ubuntu-latest
     steps:
       - name: Disabled

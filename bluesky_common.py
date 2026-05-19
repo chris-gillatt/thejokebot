@@ -136,7 +136,9 @@ def _persist_session_string_to_file(client, path):
         return False
 
     if not session_string:
-        print("Warning: Bluesky session export returned an empty value; skipping persistence.")
+        print(
+            "Warning: Bluesky session export returned an empty value; skipping persistence."
+        )
         return False
 
     try:
@@ -194,9 +196,7 @@ def login_client():
     if session_restore_enabled:
         session_string = _load_session_string_from_file(session_file_path)
         if session_string:
-            print(
-                f"Attempting Bluesky session restore from {session_file_path}."
-            )
+            print(f"Attempting Bluesky session restore from {session_file_path}.")
             try:
                 client.login(session_string=session_string)
                 print("Bluesky session restore succeeded.")

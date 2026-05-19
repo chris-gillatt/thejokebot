@@ -49,6 +49,7 @@ This runs:
 
 - Ruff lint (`ruff check .`)
 - Ruff format check (`ruff format --check .`)
+- Workflow lint (`./scripts/lint-workflows.sh`, powered by actionlint)
 - Unit tests (`pytest tests/ -v --tb=short`)
 - Local CodeQL analysis (required by default)
 
@@ -72,6 +73,10 @@ For local code-quality checks aligned with CI:
 
 - `.venv/bin/ruff check .`
 - `.venv/bin/ruff format --check .`
+- `./scripts/lint-workflows.sh`
+
+Workflow lint uses `actionlint` when installed locally and falls back to
+`rhysd/actionlint:latest` via Docker when available.
 
 ## Environment variables
 

@@ -40,6 +40,8 @@ echo "==> Ruff lint"
 echo "==> Ruff format check"
 "${PYTHON[@]}" -m ruff format --check .
 
+"$REPO_ROOT/scripts/lint-workflows.sh"
+
 echo "==> Unit tests"
 "${PYTHON[@]}" -m pytest tests/ -v --tb=short
 
