@@ -29,17 +29,7 @@ jobs:
           BLUESKY_USERNAME: ${{ vars.BLUESKY_USERNAME }}
           BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
         run: |
-          python -c 'import os, requests
-u = os.environ.get("BLUESKY_USERNAME")
-p = os.environ.get("BLUESKY_APP_PASSWORD")
-r = requests.post(
-    "https://bsky.social/xrpc/com.atproto.server.createSession",
-    json={"identifier": u, "password": p},
-    timeout=30,
-)
-print("CREATE_SESSION_STATUS", r.status_code)
-print("CREATE_SESSION_SERVER", r.headers.get("server", ""))
-print("CREATE_SESSION_CONTENT_TYPE", r.headers.get("content-type", ""))'
+          python -c "import os, requests; u=os.environ.get('BLUESKY_USERNAME'); p=os.environ.get('BLUESKY_APP_PASSWORD'); r=requests.post('https://bsky.social/xrpc/com.atproto.server.createSession', json={'identifier': u, 'password': p}, timeout=30); print('CREATE_SESSION_STATUS', r.status_code); print('CREATE_SESSION_SERVER', r.headers.get('server', '')); print('CREATE_SESSION_CONTENT_TYPE', r.headers.get('content-type', ''))"
 
       - name: Probe shared login_client path
         env:
@@ -48,6 +38,4 @@ print("CREATE_SESSION_CONTENT_TYPE", r.headers.get("content-type", ""))'
           BLUESKY_LOGIN_RETRY_ATTEMPTS: "1"
           BLUESKY_LOGIN_RETRY_DELAY_SECONDS: "0"
         run: |
-          python -c 'from bluesky_common import login_client
-_client, username = login_client()
-print("LOGIN_CLIENT_OK", username)'
+          python -c "from bluesky_common import login_client; _client, username = login_client(); print('LOGIN_CLIENT_OK', username)"
