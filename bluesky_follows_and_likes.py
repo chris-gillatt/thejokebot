@@ -10,6 +10,7 @@ import requests
 import atproto_client.exceptions
 from colorama import Fore, Style
 
+import bluesky_config
 import bluesky_state
 from bluesky_common import (
     get_runtime_controls,
@@ -19,8 +20,10 @@ from bluesky_common import (
 )
 from bluesky_follower_utils import fetch_paginated_data
 
-_DEFAULT_LIKE_MAX_PAGES = 5
-_DEFAULT_LIKE_PAGE_LIMIT = 100
+_FOLLOWS_AND_LIKES_CONFIG = bluesky_config.get_follows_and_likes_config()
+
+_DEFAULT_LIKE_MAX_PAGES = _FOLLOWS_AND_LIKES_CONFIG["like_max_pages"]
+_DEFAULT_LIKE_PAGE_LIMIT = _FOLLOWS_AND_LIKES_CONFIG["like_page_limit"]
 _LIKE_WINDOW_SECONDS = 24 * 60 * 60  # only like replies from the last 24 hours
 _LIKE_REASONS = ("reply", "repost")
 
@@ -28,8 +31,8 @@ _INTERACTION_FOLLOW_REASONS = ("reply", "repost", "like")
 _INTERACTION_WINDOW_SECONDS = (
     24 * 60 * 60
 )  # only follow interactors from the last 24 hours
-_INTERACTION_FOLLOW_MAX_PAGES = 5
-_INTERACTION_FOLLOW_PAGE_LIMIT = 100
+_INTERACTION_FOLLOW_MAX_PAGES = _FOLLOWS_AND_LIKES_CONFIG["interaction_follow_max_pages"]
+_INTERACTION_FOLLOW_PAGE_LIMIT = _FOLLOWS_AND_LIKES_CONFIG["interaction_follow_page_limit"]
 
 
 # ---------------------------------------------------------------------------

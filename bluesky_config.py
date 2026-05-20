@@ -50,6 +50,12 @@ _DEFAULT_CONFIG = {
             "dehler55.bsky.social",
         ],
     },
+    "follows_and_likes": {
+        "like_max_pages": 5,
+        "like_page_limit": 100,
+        "interaction_follow_max_pages": 5,
+        "interaction_follow_page_limit": 100,
+    },
     "reports": {
         "max_pages": 3,
         "page_limit": 100,
@@ -184,6 +190,33 @@ def _validate_config(payload):
     )
     cfg["unfollow"] = unfollow
 
+    follows_and_likes = cfg.get("follows_and_likes", {})
+    follows_and_likes["like_max_pages"] = _ensure_int(
+        follows_and_likes.get("like_max_pages", 5),
+        minimum=1,
+        field_name="follows_and_likes.like_max_pages",
+    )
+    follows_and_likes["like_page_limit"] = _ensure_int(
+        follows_and_likes.get("like_page_limit", 100),
+        minimum=1,
+        field_name="follows_and_likes.like_page_limit",
+    )
+    if follows_and_likes["like_page_limit"] > 100:
+        raise ValueError("follows_and_likes.like_page_limit must be <= 100.")
+    follows_and_likes["interaction_follow_max_pages"] = _ensure_int(
+        follows_and_likes.get("interaction_follow_max_pages", 5),
+        minimum=1,
+        field_name="follows_and_likes.interaction_follow_max_pages",
+    )
+    follows_and_likes["interaction_follow_page_limit"] = _ensure_int(
+        follows_and_likes.get("interaction_follow_page_limit", 100),
+        minimum=1,
+        field_name="follows_and_likes.interaction_follow_page_limit",
+    )
+    if follows_and_likes["interaction_follow_page_limit"] > 100:
+        raise ValueError("follows_and_likes.interaction_follow_page_limit must be <= 100.")
+    cfg["follows_and_likes"] = follows_and_likes
+
     reports = cfg.get("reports", {})
     reports["max_pages"] = _ensure_int(
         reports.get("max_pages", 3), minimum=1, field_name="reports.max_pages"
@@ -286,6 +319,10 @@ def get_follow_fellows_config():
 
 def get_unfollow_config():
     return get_runtime_config()["unfollow"]
+
+
+def get_follows_and_likes_config():
+    return get_runtime_config()["follows_and_likes"]
 
 
 def get_reports_config():

@@ -3,9 +3,10 @@ import datetime as dt
 import sys
 from typing import Optional
 
+import bluesky_config
 from bluesky_common import login_client
 
-DEFAULT_HASHTAGS = ("#jokes", "#dadjoke", "#funny")
+DEFAULT_HASHTAGS = tuple(bluesky_config.get_posting_config()["hashtags"])
 
 
 def parse_args():
