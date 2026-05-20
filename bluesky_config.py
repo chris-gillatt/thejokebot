@@ -84,7 +84,7 @@ def _deep_merge(base, override):
 
 
 def _ensure_int(value, minimum, field_name):
-    if not isinstance(value, int):
+    if isinstance(value, bool) or not isinstance(value, int):
         raise ValueError(f"{field_name} must be an integer.")
     if value < minimum:
         raise ValueError(f"{field_name} must be >= {minimum}.")
@@ -92,7 +92,7 @@ def _ensure_int(value, minimum, field_name):
 
 
 def _ensure_number(value, minimum, field_name):
-    if not isinstance(value, (int, float)):
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise ValueError(f"{field_name} must be a number.")
     if value < minimum:
         raise ValueError(f"{field_name} must be >= {minimum}.")

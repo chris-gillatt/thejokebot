@@ -200,8 +200,12 @@ def upsert_starter_pack_record(
             existing_created_at = ex_value.get("createdAt") or ex_value.get(
                 "created_at"
             )
-        except Exception:  # noqa: BLE001 — transient or not-found; fall back to current time
+        except (ValueError, AttributeError):
+            # Permanent format error — record is unreadable; fall back to current time.
             pass
+        except Exception:  # noqa: BLE001 — transient network error
+            # Abort the update rather than silently resetting createdAt.
+            raise
 
     record = _build_starter_pack_record(
         starter_cfg, source_list_uri, created_at=existing_created_at
