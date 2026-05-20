@@ -107,10 +107,11 @@ Credential selection order: the bot uses `BLUESKY_APP_PASSWORD` first and falls 
 
 Shared non-secret defaults now live in `resources/jokebot_runtime_config.json`.
 
-Current coverage in this first implementation phase:
+Current config sections:
 
 - `posting` defaults (history window, provider retry attempts, post character budget, hashtags).
 - `follow_fellows` defaults (per-tag/global follow limits, search page limit, hashtag set).
+- `follows_and_likes` defaults (like and interaction-follow page/pagination limits).
 - `unfollow` defaults (per-run cap, batching controls, baseline protected handles).
 - `reports` defaults (page and pagination limits).
 - `workflow_schedules` metadata for cadence visibility.

@@ -316,7 +316,7 @@ with real credentials and checks for success output (not a 403 response) before 
 
 ---
 
-### 5.26 Centralised runtime config foundation (Issue #38) ⏳ In Progress
+### 5.26 Centralised runtime config foundation (Issue #38) ✓ Complete
 **Priority: Medium**
 
 Issue #38 requests centralised, safer configuration for cadence and operational
@@ -329,6 +329,15 @@ Guard-rail intent for this phase:
 - Keep secrets out of central config.
 - Keep env overrides operational for emergency adjustments.
 - Add schema validation for core numeric/list fields.
+
+**Resolution:** All scripts with operational defaults now consume from
+`resources/jokebot_runtime_config.json` via `bluesky_config.py`. The config
+schema covers `posting`, `follow_fellows`, `follows_and_likes`, `unfollow`,
+`reports`, and `workflow_schedules`. `bluesky_follows_and_likes.py` now derives
+its four page/limit constants from the new `follows_and_likes` config section.
+`bluesky_verify_latest_joke_post.py` derives its hashtag list from
+`posting.hashtags`. Schema validation, deep-merge with built-in defaults, and
+a safe fallback-to-defaults path are all implemented.
 
 ## 6. Explicit "Will Not Do" Decisions
 Do not revisit these without a concrete operational reason.
@@ -385,6 +394,7 @@ Do not revisit these without a concrete operational reason.
 - v1.26: Started centralised config implementation for issue #38 (5.26). Added `resources/jokebot_runtime_config.json` and `bluesky_config.py` schema/loader with validation and safe fallback-to-defaults on invalid file data. Wired `bluesky_post_joke.py`, `bluesky_follow_fellows.py`, and `bluesky_unfollow.py` to consume central config defaults while retaining env-based runtime override behaviour.
 - v1.27: Extended centralised config rollout (5.26). `bluesky_process_reports.py` now consumes report default limits from central config, and new validator `bluesky_validate_runtime_config.py` enforces schema + workflow schedule metadata alignment in CI via `.github/workflows/validate_runtime_config.yml`.
 - v1.28: Added cadence-aware runtime guard rails to `bluesky_validate_runtime_config.py` (5.26 follow-on). Validator now fails fast when risky schedule/frequency changes are paired with aggressive report/unfollow/follow control values, reducing accidental high-blast-radius configuration drift.
+- v1.29: Completed centralised config rollout (5.26). Added `follows_and_likes` config section to `bluesky_config.py` and `resources/jokebot_runtime_config.json`. Wired `bluesky_follows_and_likes.py` to consume page/limit constants from config instead of hardcoding them. Wired `bluesky_verify_latest_joke_post.py` to derive its hashtag list from `posting.hashtags`. All scripts with operational defaults now consume from central config. Closes #38.
 
 ## 9. Code Review: Issues Resolved
 
