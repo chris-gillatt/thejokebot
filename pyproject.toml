@@ -1,3 +1,14 @@
 [tool.ruff]
 # Exclude read-only reference submodules from all checks.
 exclude = ["references/"]
+
+[tool.ruff.lint]
+# C901: flag functions whose McCabe complexity exceeds max-complexity.
+extend-select = ["C901"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.coverage.run]
+# Measure all first-party source files; skip read-only submodules.
+omit = ["references/*"]

@@ -109,7 +109,7 @@ def follow_back(
 # ---------------------------------------------------------------------------
 
 
-def follow_interactors(
+def follow_interactors(  # noqa: C901
     client,
     state: dict,
     dry_run: bool,
@@ -270,7 +270,7 @@ def _get_value(obj, *path):
     return cur
 
 
-def like_replies(
+def like_replies(  # noqa: C901
     client, state: dict, dry_run: bool, action_delay_seconds: float
 ) -> int:
     """Like replies/reposts of the bot's posts from the last 24 hours.

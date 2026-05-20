@@ -249,7 +249,7 @@ def delete_approved_report_posts(client, denylist: dict, state: dict) -> int:
     return deleted_count
 
 
-def collect_report_proposals(
+def collect_report_proposals(  # noqa: C901
     client, state: dict, denylisted_b64s: set[str]
 ) -> tuple[list[dict], set[str], int]:
     """

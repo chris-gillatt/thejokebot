@@ -168,7 +168,7 @@ def _register_session_persistence_callback(client, path):
     return True
 
 
-def login_client():
+def login_client():  # noqa: C901
     username, password = get_bluesky_credentials()
     raw_attempts = os.getenv(
         "BLUESKY_LOGIN_RETRY_ATTEMPTS", str(DEFAULT_LOGIN_RETRY_ATTEMPTS)

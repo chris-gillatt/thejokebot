@@ -111,7 +111,7 @@ def _fetch_list_member_dids(client, list_uri):
     )
 
 
-def unfollow_users():
+def unfollow_users():  # noqa: C901
     # List of usernames to ignore (configurable via BLUESKY_UNFOLLOW_IGNORE env var)
     default_ignorable = list(DEFAULT_IGNORABLE_USERNAMES)
     env_ignorable = os.getenv("BLUESKY_UNFOLLOW_IGNORE", "")

@@ -4,7 +4,7 @@ import atproto_client.exceptions
 from bluesky_common import retry_network_call
 
 
-def fetch_paginated_data(
+def fetch_paginated_data(  # noqa: C901
     client_method,
     actor,
     limit=100,

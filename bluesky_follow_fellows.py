@@ -105,7 +105,7 @@ def select_users(tag_users, tag_order, per_tag_limit, overall_limit):
     return selected_users[:overall_limit]
 
 
-def main():
+def main():  # noqa: C901
     print("Starting fellow-follow discovery script...")
     client, username = login_client()
     print("Authenticated successfully.")

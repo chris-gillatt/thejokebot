@@ -143,7 +143,7 @@ def _extract_record_value(record_response) -> dict:
     return value
 
 
-def upsert_starter_pack_record(
+def upsert_starter_pack_record(  # noqa: C901
     client, starter_cfg: dict, source_list_uri: str, dry_run: bool
 ):
     """Create/update starter-pack record in the bot's repo."""
@@ -373,7 +373,7 @@ def _parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main() -> int:
+def main() -> int:  # noqa: C901
     args = _parse_args()
     controls = get_runtime_controls()
     dry_run = controls["dry_run"]
