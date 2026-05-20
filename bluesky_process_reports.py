@@ -27,6 +27,10 @@ DEFAULT_PAGE_LIMIT = _REPORTS_CONFIG["page_limit"]
 _ACK_TEXT = "Eek! Thanks for flagging that \U0001f648 I'll get it sent for review!"
 
 
+def _exc_name(exc: Exception) -> str:
+    return type(exc).__name__
+
+
 def _get_value(data, *path):
     """Safely read nested values from dict or model-like objects."""
     cur = data
@@ -151,7 +155,7 @@ def _delete_post(client, post_uri: str) -> tuple[bool, bool]:
         atproto_client.exceptions.NetworkError,
     ) as exc:
         print(
-            f"Warning: transient error deleting post {masked_post_uri}, will retry: {exc}"
+            f"Warning: transient error deleting post {masked_post_uri}, will retry: {_exc_name(exc)}"
         )
         return False, True
     except (
@@ -160,7 +164,7 @@ def _delete_post(client, post_uri: str) -> tuple[bool, bool]:
         atproto_client.exceptions.BadRequestError,
     ) as exc:
         print(
-            f"Warning: permanent error deleting post {masked_post_uri}, skipping: {exc}"
+            f"Warning: permanent error deleting post {masked_post_uri}, skipping: {_exc_name(exc)}"
         )
         return False, False
 
@@ -200,7 +204,7 @@ def acknowledge_report(client, proposal: dict) -> tuple[bool, bool]:
         atproto_client.exceptions.NetworkError,
     ) as exc:
         print(
-            f"Warning: transient error acknowledging {masked_reply_uri}, will retry: {exc}"
+            f"Warning: transient error acknowledging {masked_reply_uri}, will retry: {_exc_name(exc)}"
         )
         return False, True
     except (
@@ -209,7 +213,7 @@ def acknowledge_report(client, proposal: dict) -> tuple[bool, bool]:
         atproto_client.exceptions.BadRequestError,
     ) as exc:
         print(
-            f"Warning: permanent error acknowledging {masked_reply_uri}, skipping: {exc}"
+            f"Warning: permanent error acknowledging {masked_reply_uri}, skipping: {_exc_name(exc)}"
         )
         return False, False
 
@@ -292,7 +296,10 @@ def collect_report_proposals(
             TimeoutError,
             atproto_client.exceptions.NetworkError,
         ) as exc:
-            print(f"Warning: failed to list report notifications after retries: {exc}")
+            print(
+                "Warning: failed to list report notifications after retries: "
+                f"{_exc_name(exc)}"
+            )
             break
         pages_fetched += 1
 
