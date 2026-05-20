@@ -1,5 +1,7 @@
 # The Joke Bot
 
+![joke bot](./images/jokebot-logo.png)
+
 ## Workflow status
 
 | Category | Workflow | Status |
@@ -16,8 +18,6 @@
 | Repository maintenance | `pr_auto_merge` | [![pr_auto_merge](https://github.com/chris-gillatt/thejokebot/actions/workflows/dependabot-auto-merge.yml/badge.svg)](https://github.com/chris-gillatt/thejokebot/actions/workflows/dependabot-auto-merge.yml) |
 
 Posts dad jokes to a configured Bluesky account, plus account housekeeping automations.
-
-![joke bot](./images/jokebot-logo.png)
 
 ## Functionality
 
