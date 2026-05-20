@@ -1,0 +1,3 @@
+[tool.ruff]
+# Exclude read-only reference submodules from all checks.
+exclude = ["references/"]

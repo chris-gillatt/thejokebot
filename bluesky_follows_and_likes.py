@@ -31,8 +31,12 @@ _INTERACTION_FOLLOW_REASONS = ("reply", "repost", "like")
 _INTERACTION_WINDOW_SECONDS = (
     24 * 60 * 60
 )  # only follow interactors from the last 24 hours
-_INTERACTION_FOLLOW_MAX_PAGES = _FOLLOWS_AND_LIKES_CONFIG["interaction_follow_max_pages"]
-_INTERACTION_FOLLOW_PAGE_LIMIT = _FOLLOWS_AND_LIKES_CONFIG["interaction_follow_page_limit"]
+_INTERACTION_FOLLOW_MAX_PAGES = _FOLLOWS_AND_LIKES_CONFIG[
+    "interaction_follow_max_pages"
+]
+_INTERACTION_FOLLOW_PAGE_LIMIT = _FOLLOWS_AND_LIKES_CONFIG[
+    "interaction_follow_page_limit"
+]
 
 
 # ---------------------------------------------------------------------------

@@ -214,7 +214,9 @@ def _validate_config(payload):
         field_name="follows_and_likes.interaction_follow_page_limit",
     )
     if follows_and_likes["interaction_follow_page_limit"] > 100:
-        raise ValueError("follows_and_likes.interaction_follow_page_limit must be <= 100.")
+        raise ValueError(
+            "follows_and_likes.interaction_follow_page_limit must be <= 100."
+        )
     cfg["follows_and_likes"] = follows_and_likes
 
     reports = cfg.get("reports", {})
