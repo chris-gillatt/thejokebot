@@ -109,37 +109,22 @@ def follow_back(
 # ---------------------------------------------------------------------------
 
 
-def follow_interactors(  # noqa: C901
-    client,
-    state: dict,
-    dry_run: bool,
-    action_delay_seconds: float,
-) -> int:
-    """Follow users who have interacted with the bot's posts in the last 24 hours.
-
-    Notifications of type reply, repost, and like are considered. Interactors
-    who are already being followed, still within the follow-grace window, or
-    who appear in the unfollow history are skipped to prevent repeated
-    follow/unfollow churn.
-
-    Followed DIDs are recorded in follow_grace (source="interaction") so that
-    the unfollow script respects the standard grace window before unfollowing.
-
-    Returns the number of new follows performed.
-    """
-    user_did = client.me.did
-
-    grace_dids = bluesky_state.get_follow_grace_dids(state)
-    unfollowed_dids = bluesky_state.get_unfollowed_dids(state)
-
-    print(
-        f"{Fore.YELLOW}Fetching current follows for interaction-follow check.{Style.RESET_ALL}"
+def _parse_notification_epoch(notification):
+    """Parse the indexed_at field of a notification into a Unix timestamp, or None."""
+    indexed_at = _get_value(notification, "indexed_at") or _get_value(
+        notification, "indexedAt"
     )
-    following = fetch_paginated_data(client.get_follows, user_did)
-    already_following = {f.did for f in following}
+    if not indexed_at:
+        return None
+    try:
+        ts = datetime.fromisoformat(indexed_at.replace("Z", "+00:00"))
+        return ts.timestamp()
+    except (ValueError, AttributeError):
+        return None
 
-    # Collect unique interactor DIDs from the last 24 hours.
-    cutoff_epoch = time.time() - _INTERACTION_WINDOW_SECONDS
+
+def _collect_interactor_dids(client, user_did, cutoff_epoch):
+    """Page through interaction notifications; return unique author DIDs within the cutoff."""
     interactor_dids: set[str] = set()
     cursor = None
 
@@ -173,18 +158,7 @@ def follow_interactors(  # noqa: C901
             if reason not in _INTERACTION_FOLLOW_REASONS:
                 continue
 
-            indexed_at = _get_value(notification, "indexed_at") or _get_value(
-                notification, "indexedAt"
-            )
-            if indexed_at:
-                try:
-                    ts = datetime.fromisoformat(indexed_at.replace("Z", "+00:00"))
-                    notification_epoch = ts.timestamp()
-                except (ValueError, AttributeError):
-                    notification_epoch = None
-            else:
-                notification_epoch = None
-
+            notification_epoch = _parse_notification_epoch(notification)
             if notification_epoch is not None and notification_epoch < cutoff_epoch:
                 # Notifications are ordered newest-first; once we hit one
                 # older than the cutoff the rest will be too.
@@ -202,17 +176,11 @@ def follow_interactors(  # noqa: C901
         if not cursor:
             break
 
-    # Determine which DIDs to follow: exclude anyone already followed, still in
-    # the grace window, or previously unfollowed (to avoid churn).
-    to_follow = sorted(
-        interactor_dids - already_following - grace_dids - unfollowed_dids
-    )
+    return interactor_dids
 
-    print(
-        f"{Fore.YELLOW}Found {len(interactor_dids)} unique interactor(s) in the last 24 hours, "
-        f"{len(to_follow)} new to follow.{Style.RESET_ALL}"
-    )
 
+def _follow_did_list(client, state, to_follow, dry_run, action_delay_seconds):
+    """Follow each DID in to_follow; return the count of follows performed."""
     followed_count = 0
     for i, did in enumerate(to_follow, start=1):
         masked_did = mask_sensitive(did)
@@ -246,6 +214,55 @@ def follow_interactors(  # noqa: C901
         if action_delay_seconds > 0 and i < len(to_follow):
             time.sleep(action_delay_seconds)
 
+    return followed_count
+
+
+def follow_interactors(
+    client,
+    state: dict,
+    dry_run: bool,
+    action_delay_seconds: float,
+) -> int:
+    """Follow users who have interacted with the bot's posts in the last 24 hours.
+
+    Notifications of type reply, repost, and like are considered. Interactors
+    who are already being followed, still within the follow-grace window, or
+    who appear in the unfollow history are skipped to prevent repeated
+    follow/unfollow churn.
+
+    Followed DIDs are recorded in follow_grace (source="interaction") so that
+    the unfollow script respects the standard grace window before unfollowing.
+
+    Returns the number of new follows performed.
+    """
+    user_did = client.me.did
+    grace_dids = bluesky_state.get_follow_grace_dids(state)
+    unfollowed_dids = bluesky_state.get_unfollowed_dids(state)
+
+    print(
+        f"{Fore.YELLOW}Fetching current follows for interaction-follow check.{Style.RESET_ALL}"
+    )
+    following = fetch_paginated_data(client.get_follows, user_did)
+    already_following = {f.did for f in following}
+
+    cutoff_epoch = time.time() - _INTERACTION_WINDOW_SECONDS
+    interactor_dids = _collect_interactor_dids(client, user_did, cutoff_epoch)
+
+    # Exclude anyone already followed, still in the grace window, or
+    # previously unfollowed (to avoid churn).
+    to_follow = sorted(
+        interactor_dids - already_following - grace_dids - unfollowed_dids
+    )
+
+    print(
+        f"{Fore.YELLOW}Found {len(interactor_dids)} unique interactor(s) in the last 24 hours, "
+        f"{len(to_follow)} new to follow.{Style.RESET_ALL}"
+    )
+
+    followed_count = _follow_did_list(
+        client, state, to_follow, dry_run, action_delay_seconds
+    )
+
     if followed_count > 0 and not dry_run:
         bluesky_state.prune_follow_grace(state)
 
@@ -270,7 +287,79 @@ def _get_value(obj, *path):
     return cur
 
 
-def like_replies(  # noqa: C901
+def _process_like_page(
+    client,
+    state,
+    notifications,
+    cutoff_epoch,
+    already_liked,
+    dry_run,
+    action_delay_seconds,
+):
+    """Process one page of notifications, liking applicable items.
+
+    Mutates ``already_liked`` to track URIs liked during this call.
+    Returns ``(new_likes_count, stop_paging)``.
+    """
+    new_likes = 0
+    stop_paging = False
+
+    for notification in notifications:
+        reason = _get_value(notification, "reason")
+        if reason not in _LIKE_REASONS:
+            continue
+
+        notification_epoch = _parse_notification_epoch(notification)
+        if notification_epoch is not None and notification_epoch < cutoff_epoch:
+            # Notifications are ordered newest-first; once we hit one
+            # older than the cutoff the rest will be too.
+            stop_paging = True
+            break
+
+        uri = _get_value(notification, "uri")
+        cid = _get_value(notification, "cid")
+        if not uri or not cid:
+            continue
+        masked_uri = mask_sensitive(uri)
+
+        # Never like #report replies — those are handled by the reports workflow.
+        reply_text = _get_value(notification, "record", "text") or ""
+        if re.search(r"(?:^|\s)#report\b", reply_text, re.IGNORECASE):
+            continue
+
+        if uri in already_liked:
+            continue
+
+        if dry_run:
+            print(
+                f"{Fore.YELLOW}[DRY-RUN] Would like {reason}: {masked_uri}{Style.RESET_ALL}"
+            )
+        else:
+            try:
+                retry_network_call(
+                    lambda u=uri, c=cid: client.like(uri=u, cid=c),
+                    description=f"liking {reason} {masked_uri}",
+                )
+                print(f"{Fore.GREEN}Liked {reason}: {masked_uri}{Style.RESET_ALL}")
+            except (
+                requests.RequestException,
+                TimeoutError,
+                atproto_client.exceptions.NetworkError,
+            ) as exc:
+                print(f"{Fore.RED}Failed to like {masked_uri}: {exc}{Style.RESET_ALL}")
+                continue
+
+        bluesky_state.record_liked_reply_uri(state, uri)
+        already_liked.add(uri)
+        new_likes += 1
+
+        if action_delay_seconds > 0:
+            time.sleep(action_delay_seconds)
+
+    return new_likes, stop_paging
+
+
+def like_replies(
     client, state: dict, dry_run: bool, action_delay_seconds: float
 ) -> int:
     """Like replies/reposts of the bot's posts from the last 24 hours.
@@ -284,18 +373,15 @@ def like_replies(  # noqa: C901
     already_liked = bluesky_state.get_liked_reply_uris(state)
     liked_count = 0
     cutoff_epoch = time.time() - _LIKE_WINDOW_SECONDS
-
-    max_pages = _DEFAULT_LIKE_MAX_PAGES
-    page_limit = _DEFAULT_LIKE_PAGE_LIMIT
     cursor = None
 
-    for _ in range(max_pages):
+    for _ in range(_DEFAULT_LIKE_MAX_PAGES):
         try:
             response = retry_network_call(
                 lambda: client.app.bsky.notification.list_notifications(
                     params={
                         "cursor": cursor,
-                        "limit": page_limit,
+                        "limit": _DEFAULT_LIKE_PAGE_LIMIT,
                         "reasons": list(_LIKE_REASONS),
                     }
                 ),
@@ -312,75 +398,16 @@ def like_replies(  # noqa: C901
             break
 
         notifications = _get_value(response, "notifications") or []
-        page_new_likes = 0
-        stop_paging = False
-
-        for notification in notifications:
-            reason = _get_value(notification, "reason")
-            if reason not in _LIKE_REASONS:
-                continue
-
-            # Parse indexed_at to epoch for age check.
-            indexed_at = _get_value(notification, "indexed_at") or _get_value(
-                notification, "indexedAt"
-            )
-            if indexed_at:
-                try:
-                    ts = datetime.fromisoformat(indexed_at.replace("Z", "+00:00"))
-                    notification_epoch = ts.timestamp()
-                except (ValueError, AttributeError):
-                    notification_epoch = None
-            else:
-                notification_epoch = None
-
-            if notification_epoch is not None and notification_epoch < cutoff_epoch:
-                # Notifications are ordered newest-first; once we hit one
-                # older than the cutoff the rest will be too.
-                stop_paging = True
-                break
-
-            uri = _get_value(notification, "uri")
-            cid = _get_value(notification, "cid")
-            if not uri or not cid:
-                continue
-            masked_uri = mask_sensitive(uri)
-
-            # Never like #report replies — those are handled by the reports workflow.
-            reply_text = _get_value(notification, "record", "text") or ""
-            if re.search(r"(?:^|\s)#report\b", reply_text, re.IGNORECASE):
-                continue
-
-            if uri in already_liked:
-                continue
-
-            if dry_run:
-                print(
-                    f"{Fore.YELLOW}[DRY-RUN] Would like {reason}: {masked_uri}{Style.RESET_ALL}"
-                )
-            else:
-                try:
-                    retry_network_call(
-                        lambda u=uri, c=cid: client.like(uri=u, cid=c),
-                        description=f"liking {reason} {masked_uri}",
-                    )
-                    print(f"{Fore.GREEN}Liked {reason}: {masked_uri}{Style.RESET_ALL}")
-                except (
-                    requests.RequestException,
-                    TimeoutError,
-                    atproto_client.exceptions.NetworkError,
-                ) as exc:
-                    print(
-                        f"{Fore.RED}Failed to like {masked_uri}: {exc}{Style.RESET_ALL}"
-                    )
-                    continue
-
-            bluesky_state.record_liked_reply_uri(state, uri)
-            already_liked.add(uri)
-            liked_count += 1
-            page_new_likes += 1
-
-            if action_delay_seconds > 0:
-                time.sleep(action_delay_seconds)
+        page_new_likes, stop_paging = _process_like_page(
+            client,
+            state,
+            notifications,
+            cutoff_epoch,
+            already_liked,
+            dry_run,
+            action_delay_seconds,
+        )
+        liked_count += page_new_likes
 
         # Persist after each page so progress survives an interruption.
         if page_new_likes > 0:

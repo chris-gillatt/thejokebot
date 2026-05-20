@@ -143,18 +143,12 @@ def _extract_record_value(record_response) -> dict:
     return value
 
 
-def upsert_starter_pack_record(  # noqa: C901
-    client, starter_cfg: dict, source_list_uri: str, dry_run: bool
-):
-    """Create/update starter-pack record in the bot's repo."""
-    repo_did = client.me.did
-    configured_uri = str(starter_cfg.get("starter_pack_uri") or "").strip()
-    configured_rkey = str(starter_cfg.get("record_key") or "").strip()
+def _resolve_upsert_target(configured_uri, configured_rkey, repo_did):
+    """Determine the rkey, full AT URI, and whether to use put_record vs create_record.
 
-    target_rkey = ""
-    target_uri = ""
-    use_put_record = False
-
+    Returns ``(target_rkey, target_uri, use_put_record)``.
+    Raises ``ValueError`` for invalid or mismatched URIs.
+    """
     if configured_uri:
         parsed_uri = _parse_at_uri(configured_uri)
         if not parsed_uri:
@@ -165,13 +159,48 @@ def upsert_starter_pack_record(  # noqa: C901
             )
         if parsed_uri["collection"] != _STARTERPACK_COLLECTION:
             raise ValueError("starter_pack_uri must target app.bsky.graph.starterpack.")
-        target_rkey = parsed_uri["rkey"]
-        target_uri = configured_uri
-        use_put_record = True
-    elif _looks_like_tid(configured_rkey):
-        target_rkey = configured_rkey
-        target_uri = f"at://{repo_did}/{_STARTERPACK_COLLECTION}/{target_rkey}"
-        use_put_record = True
+        return parsed_uri["rkey"], configured_uri, True
+    if _looks_like_tid(configured_rkey):
+        target_uri = f"at://{repo_did}/{_STARTERPACK_COLLECTION}/{configured_rkey}"
+        return configured_rkey, target_uri, True
+    return "", "", False
+
+
+def _fetch_existing_created_at(client, repo_did, target_rkey):
+    """Return the createdAt from the existing starter-pack record, or None on format error.
+
+    Any exception other than ValueError/AttributeError (e.g. network errors)
+    propagates to the caller so it can abort rather than silently resetting the field.
+    """
+    try:
+        existing = retry_network_call(
+            lambda: client.com.atproto.repo.get_record(
+                {
+                    "repo": repo_did,
+                    "collection": _STARTERPACK_COLLECTION,
+                    "rkey": target_rkey,
+                }
+            ),
+            description="fetching existing starter-pack record",
+        )
+        ex_value = _extract_record_value(existing)
+        return ex_value.get("createdAt") or ex_value.get("created_at")
+    except (ValueError, AttributeError):
+        # Permanent format error — record is unreadable; fall back to current time.
+        return None
+
+
+def upsert_starter_pack_record(
+    client, starter_cfg: dict, source_list_uri: str, dry_run: bool
+):
+    """Create/update starter-pack record in the bot's repo."""
+    repo_did = client.me.did
+    configured_uri = str(starter_cfg.get("starter_pack_uri") or "").strip()
+    configured_rkey = str(starter_cfg.get("record_key") or "").strip()
+
+    target_rkey, target_uri, use_put_record = _resolve_upsert_target(
+        configured_uri, configured_rkey, repo_did
+    )
 
     if dry_run:
         if use_put_record:
@@ -185,27 +214,7 @@ def upsert_starter_pack_record(  # noqa: C901
     # Preserve the original createdAt timestamp when updating an existing record.
     existing_created_at = None
     if use_put_record:
-        try:
-            existing = retry_network_call(
-                lambda: client.com.atproto.repo.get_record(
-                    {
-                        "repo": repo_did,
-                        "collection": _STARTERPACK_COLLECTION,
-                        "rkey": target_rkey,
-                    }
-                ),
-                description="fetching existing starter-pack record",
-            )
-            ex_value = _extract_record_value(existing)
-            existing_created_at = ex_value.get("createdAt") or ex_value.get(
-                "created_at"
-            )
-        except (ValueError, AttributeError):
-            # Permanent format error — record is unreadable; fall back to current time.
-            pass
-        except Exception:  # noqa: BLE001 — transient network error
-            # Abort the update rather than silently resetting createdAt.
-            raise
+        existing_created_at = _fetch_existing_created_at(client, repo_did, target_rkey)
 
     record = _build_starter_pack_record(
         starter_cfg, source_list_uri, created_at=existing_created_at
@@ -373,62 +382,44 @@ def _parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main() -> int:  # noqa: C901
-    args = _parse_args()
-    controls = get_runtime_controls()
-    dry_run = controls["dry_run"]
-    action_delay_seconds = controls["action_delay_seconds"]
-
-    cfg = load_starter_pack_config().get("starter_pack", {})
-    if not cfg.get("enabled"):
-        print(
-            "Starter-pack integration is disabled in resources/jokebot_starter_pack.json."
-        )
-        return 0
-
-    if args.mode == "pull":
-        try:
-            client, _username = login_client()
-            print("Authenticated successfully.")
-            updates = pull_starter_pack_record(client, cfg)
-            if not updates:
-                print(
-                    "Local config already matches the live starter-pack record. Nothing to update."
-                )
-                return 0
-
-            print("Pulled updates from Bluesky:")
-            for key, value in updates.items():
-                old_value = str(cfg.get(key) or "").strip()
-                print(f"  {key}: {old_value!r} -> {value!r}")
-
-            if dry_run:
-                print(
-                    "[DRY-RUN] Would write the above updates to resources/jokebot_starter_pack.json."
-                )
-            else:
-                write_starter_pack_config_updates(updates)
-                print("Updated resources/jokebot_starter_pack.json.")
+def _handle_pull_mode(cfg, dry_run):
+    """Login, pull the live starter-pack record, and persist any updates. Returns exit code."""
+    try:
+        client, _username = login_client()
+        print("Authenticated successfully.")
+        updates = pull_starter_pack_record(client, cfg)
+        if not updates:
+            print(
+                "Local config already matches the live starter-pack record. Nothing to update."
+            )
             return 0
-        except (
-            ValueError,
-            requests.RequestException,
-            TimeoutError,
-            atproto_client.exceptions.NetworkError,
-            atproto_client.exceptions.BadRequestError,
-        ) as exc:
-            print(f"Starter-pack pull failed: {exc}")
-            return 1
 
-    source_list_uri = str(cfg.get("source_list_uri") or "").strip()
-    if not source_list_uri:
-        print("source_list_uri is required in resources/jokebot_starter_pack.json.")
-        return 2
+        print("Pulled updates from Bluesky:")
+        for key, value in updates.items():
+            old_value = str(cfg.get(key) or "").strip()
+            print(f"  {key}: {old_value!r} -> {value!r}")
 
-    if not source_list_uri.startswith("at://"):
-        print("source_list_uri must be a valid at:// URI.")
-        return 2
+        if dry_run:
+            print(
+                "[DRY-RUN] Would write the above updates to resources/jokebot_starter_pack.json."
+            )
+        else:
+            write_starter_pack_config_updates(updates)
+            print("Updated resources/jokebot_starter_pack.json.")
+        return 0
+    except (
+        ValueError,
+        requests.RequestException,
+        TimeoutError,
+        atproto_client.exceptions.NetworkError,
+        atproto_client.exceptions.BadRequestError,
+    ) as exc:
+        print(f"Starter-pack pull failed: {exc}")
+        return 1
 
+
+def _handle_setup_sync_mode(cfg, source_list_uri, args, dry_run, action_delay_seconds):
+    """Login, fetch list members, upsert/follow as configured. Returns exit code."""
     try:
         client, username = login_client()
         print("Authenticated successfully.")
@@ -473,6 +464,35 @@ def main() -> int:  # noqa: C901
     ) as exc:
         print(f"Starter-pack management failed: {exc}")
         return 1
+
+
+def main() -> int:
+    args = _parse_args()
+    controls = get_runtime_controls()
+    dry_run = controls["dry_run"]
+    action_delay_seconds = controls["action_delay_seconds"]
+
+    cfg = load_starter_pack_config().get("starter_pack", {})
+    if not cfg.get("enabled"):
+        print(
+            "Starter-pack integration is disabled in resources/jokebot_starter_pack.json."
+        )
+        return 0
+
+    if args.mode == "pull":
+        return _handle_pull_mode(cfg, dry_run)
+
+    source_list_uri = str(cfg.get("source_list_uri") or "").strip()
+    if not source_list_uri:
+        print("source_list_uri is required in resources/jokebot_starter_pack.json.")
+        return 2
+    if not source_list_uri.startswith("at://"):
+        print("source_list_uri must be a valid at:// URI.")
+        return 2
+
+    return _handle_setup_sync_mode(
+        cfg, source_list_uri, args, dry_run, action_delay_seconds
+    )
 
 
 if __name__ == "__main__":

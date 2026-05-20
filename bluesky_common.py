@@ -168,7 +168,34 @@ def _register_session_persistence_callback(client, path):
     return True
 
 
-def login_client():  # noqa: C901
+def _attempt_session_restore(
+    client, username, session_file_path, session_persist_enabled
+):
+    """Try to restore a Bluesky session from a saved session string.
+
+    Returns ``(client, username)`` on success, ``None`` if the session string
+    is missing or if login with it fails.
+    """
+    session_string = _load_session_string_from_file(session_file_path)
+    if not session_string:
+        return None
+    print(f"Attempting Bluesky session restore from {session_file_path}.")
+    try:
+        client.login(session_string=session_string)
+        print("Bluesky session restore succeeded.")
+        if session_persist_enabled:
+            _persist_session_string_to_file(client, session_file_path)
+            _register_session_persistence_callback(client, session_file_path)
+        return client, username
+    except Exception as exc:
+        print(
+            "Warning: Bluesky session restore failed; falling back to credential login "
+            f"({type(exc).__name__}: {exc})."
+        )
+        return None
+
+
+def login_client():
     username, password = get_bluesky_credentials()
     raw_attempts = os.getenv(
         "BLUESKY_LOGIN_RETRY_ATTEMPTS", str(DEFAULT_LOGIN_RETRY_ATTEMPTS)
@@ -194,21 +221,11 @@ def login_client():  # noqa: C901
     client = Client(request=_AtprotoRequest(transport=_RequestsTransport()))
 
     if session_restore_enabled:
-        session_string = _load_session_string_from_file(session_file_path)
-        if session_string:
-            print(f"Attempting Bluesky session restore from {session_file_path}.")
-            try:
-                client.login(session_string=session_string)
-                print("Bluesky session restore succeeded.")
-                if session_persist_enabled:
-                    _persist_session_string_to_file(client, session_file_path)
-                    _register_session_persistence_callback(client, session_file_path)
-                return client, username
-            except Exception as exc:
-                print(
-                    "Warning: Bluesky session restore failed; falling back to credential login "
-                    f"({type(exc).__name__}: {exc})."
-                )
+        result = _attempt_session_restore(
+            client, username, session_file_path, session_persist_enabled
+        )
+        if result is not None:
+            return result
 
     print("Using configured credentials for Bluesky authentication.")
     for attempt in range(1, max_attempts + 1):

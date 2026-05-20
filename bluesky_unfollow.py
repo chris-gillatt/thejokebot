@@ -111,7 +111,124 @@ def _fetch_list_member_dids(client, list_uri):
     )
 
 
-def unfollow_users():  # noqa: C901
+def _resolve_ignorable_dids(client, ignorable_usernames):
+    """Resolve a list of usernames to DIDs; return them as a set."""
+    ignorable_dids: set[str] = set()
+    for ignorable_username in ignorable_usernames:
+        masked_handle = mask_sensitive(ignorable_username)
+        try:
+            profile = retry_network_call(
+                lambda: client.get_profile(ignorable_username),
+                description=f"resolving profile {masked_handle}",
+            )
+            did = getattr(profile, "did", None)
+            if not did and isinstance(profile, dict):
+                did = profile.get("did")
+            if did:
+                ignorable_dids.add(did)
+                print(
+                    f"{Fore.GREEN}Resolved username {masked_handle} to DID {mask_sensitive(did)}{Style.RESET_ALL}"
+                )
+            else:
+                print(
+                    f"{Fore.RED}No DID found for username {masked_handle}, skipping ignore rule.{Style.RESET_ALL}"
+                )
+        except (
+            ValueError,
+            requests.RequestException,
+            TimeoutError,
+            atproto_client.exceptions.NetworkError,
+            atproto_client.exceptions.BadRequestError,
+        ) as e:
+            print(
+                f"{Fore.RED}Failed to resolve username {masked_handle}: {e}{Style.RESET_ALL}"
+            )
+    return ignorable_dids
+
+
+def _execute_unfollow_loop(
+    client,
+    state,
+    to_unfollow,
+    following_map,
+    dry_run,
+    action_delay_seconds,
+    batch_size,
+    batch_pause_seconds,
+):
+    """Iterate over to_unfollow and perform unfollow actions.
+
+    Returns ``(unfollowed_count, failed_count, skipped_missing_uri, stop_early)``.
+    """
+    unfollowed_count = 0
+    failed_count = 0
+    skipped_missing_uri = 0
+    stop_early = False
+
+    for i, did in enumerate(to_unfollow, start=1):
+        masked_did = mask_sensitive(did)
+        uri = following_map.get(did)
+        if uri:
+            print(
+                f"{Fore.YELLOW}({i}/{len(to_unfollow)}) Unfollowing {masked_did}...{Style.RESET_ALL}"
+            )
+            if dry_run:
+                print(
+                    f"{Fore.YELLOW}[DRY-RUN] Would unfollow {masked_did}{Style.RESET_ALL}"
+                )
+                unfollowed_count += 1
+            else:
+                try:
+                    retry_network_call(
+                        lambda u=uri: client.unfollow(u),
+                        description=f"unfollowing {masked_did}",
+                    )
+                    print(f"{Fore.GREEN}Unfollowed {masked_did}{Style.RESET_ALL}")
+                    unfollowed_count += 1
+                    _state.record_unfollow(state, did)
+                except (
+                    ValueError,
+                    requests.RequestException,
+                    TimeoutError,
+                    atproto_client.exceptions.NetworkError,
+                    atproto_client.exceptions.BadRequestError,
+                ) as e:
+                    failed_count += 1
+                    print(
+                        f"{Fore.RED}Failed to unfollow {masked_did}: {e}{Style.RESET_ALL}"
+                    )
+                    if _is_rate_limited_error(e):
+                        print(
+                            f"{Fore.RED}Rate limit/throttle detected. "
+                            f"Stopping early to avoid account risk.{Style.RESET_ALL}"
+                        )
+                        stop_early = True
+                        break
+
+            if action_delay_seconds > 0 and i < len(to_unfollow):
+                time.sleep(action_delay_seconds)
+
+            if (
+                batch_size > 0
+                and batch_pause_seconds > 0
+                and i % batch_size == 0
+                and i < len(to_unfollow)
+            ):
+                print(
+                    f"{Fore.YELLOW}Batch boundary reached ({i}/{len(to_unfollow)}). "
+                    f"Pausing for {batch_pause_seconds:.2f}s.{Style.RESET_ALL}"
+                )
+                time.sleep(batch_pause_seconds)
+        else:
+            print(
+                f"{Fore.RED}No URI found for {masked_did}, skipping...{Style.RESET_ALL}"
+            )
+            skipped_missing_uri += 1
+
+    return unfollowed_count, failed_count, skipped_missing_uri, stop_early
+
+
+def unfollow_users():
     # List of usernames to ignore (configurable via BLUESKY_UNFOLLOW_IGNORE env var)
     default_ignorable = list(DEFAULT_IGNORABLE_USERNAMES)
     env_ignorable = os.getenv("BLUESKY_UNFOLLOW_IGNORE", "")
@@ -163,47 +280,13 @@ def unfollow_users():  # noqa: C901
             f"{Fore.YELLOW}Fetching followers and following for account.{Style.RESET_ALL}"
         )
 
-        # Fetch followers and following
         followers = fetch_paginated_data(client.get_followers, user_did)
         following = fetch_paginated_data(client.get_follows, user_did)
 
-        # Extract follower DIDs
         follower_dids = {follower.did for follower in followers}
-        # Extract following DIDs and URIs
         following_map = {follow.did: follow.viewer.following for follow in following}
 
-        # Map usernames to DIDs for ignorable accounts
-        ignorable_dids = set()
-        for ignorable_username in ignorable_usernames:
-            masked_handle = mask_sensitive(ignorable_username)
-            try:
-                profile = retry_network_call(
-                    lambda: client.get_profile(ignorable_username),
-                    description=f"resolving profile {masked_handle}",
-                )
-                did = getattr(profile, "did", None)
-                if not did and isinstance(profile, dict):
-                    did = profile.get("did")
-
-                if did:
-                    ignorable_dids.add(did)
-                    print(
-                        f"{Fore.GREEN}Resolved username {masked_handle} to DID {mask_sensitive(did)}{Style.RESET_ALL}"
-                    )
-                else:
-                    print(
-                        f"{Fore.RED}No DID found for username {masked_handle}, skipping ignore rule.{Style.RESET_ALL}"
-                    )
-            except (
-                ValueError,
-                requests.RequestException,
-                TimeoutError,
-                atproto_client.exceptions.NetworkError,
-                atproto_client.exceptions.BadRequestError,
-            ) as e:
-                print(
-                    f"{Fore.RED}Failed to resolve username {masked_handle}: {e}{Style.RESET_ALL}"
-                )
+        ignorable_dids = _resolve_ignorable_dids(client, ignorable_usernames)
 
         source_list_uri = _load_source_list_uri()
         if source_list_uri:
@@ -227,16 +310,10 @@ def unfollow_users():  # noqa: C901
                 )
 
         to_unfollow_all = select_unfollow_candidates(
-            following_map,
-            follower_dids,
-            ignorable_dids,
-            max_actions=0,
+            following_map, follower_dids, ignorable_dids, max_actions=0
         )
         to_unfollow = select_unfollow_candidates(
-            following_map,
-            follower_dids,
-            ignorable_dids,
-            max_actions=max_actions,
+            following_map, follower_dids, ignorable_dids, max_actions=max_actions
         )
 
         print(
@@ -249,11 +326,6 @@ def unfollow_users():  # noqa: C901
                 f"Re-run workflow for next batch.{Style.RESET_ALL}"
             )
 
-        unfollowed_count = 0
-        failed_count = 0
-        skipped_missing_uri = 0
-        stop_early = False
-
         state = _state.load_state()
         _state.prune_follow_grace(state)
         follow_grace_dids = _state.get_follow_grace_dids(state)
@@ -264,65 +336,18 @@ def unfollow_users():  # noqa: C901
                 f"within the {_state.FOLLOW_RESPONSE_GRACE_PERIOD_DAYS}-day response window.{Style.RESET_ALL}"
             )
 
-        for i, did in enumerate(to_unfollow, start=1):
-            masked_did = mask_sensitive(did)
-            uri = following_map.get(did)
-            if uri:
-                print(
-                    f"{Fore.YELLOW}({i}/{len(to_unfollow)}) Unfollowing {masked_did}...{Style.RESET_ALL}"
-                )
-                if dry_run:
-                    print(
-                        f"{Fore.YELLOW}[DRY-RUN] Would unfollow {masked_did}{Style.RESET_ALL}"
-                    )
-                    unfollowed_count += 1
-                else:
-                    try:
-                        retry_network_call(
-                            lambda u=uri: client.unfollow(u),
-                            description=f"unfollowing {masked_did}",
-                        )
-                        print(f"{Fore.GREEN}Unfollowed {masked_did}{Style.RESET_ALL}")
-                        unfollowed_count += 1
-                        _state.record_unfollow(state, did)
-                    except (
-                        ValueError,
-                        requests.RequestException,
-                        TimeoutError,
-                        atproto_client.exceptions.NetworkError,
-                        atproto_client.exceptions.BadRequestError,
-                    ) as e:
-                        failed_count += 1
-                        print(
-                            f"{Fore.RED}Failed to unfollow {masked_did}: {e}{Style.RESET_ALL}"
-                        )
-                        if _is_rate_limited_error(e):
-                            print(
-                                f"{Fore.RED}Rate limit/throttle detected. "
-                                f"Stopping early to avoid account risk.{Style.RESET_ALL}"
-                            )
-                            stop_early = True
-                            break
-
-                if action_delay_seconds > 0 and i < len(to_unfollow):
-                    time.sleep(action_delay_seconds)
-
-                if (
-                    batch_size > 0
-                    and batch_pause_seconds > 0
-                    and i % batch_size == 0
-                    and i < len(to_unfollow)
-                ):
-                    print(
-                        f"{Fore.YELLOW}Batch boundary reached ({i}/{len(to_unfollow)}). "
-                        f"Pausing for {batch_pause_seconds:.2f}s.{Style.RESET_ALL}"
-                    )
-                    time.sleep(batch_pause_seconds)
-            else:
-                print(
-                    f"{Fore.RED}No URI found for {masked_did}, skipping...{Style.RESET_ALL}"
-                )
-                skipped_missing_uri += 1
+        unfollowed_count, failed_count, skipped_missing_uri, stop_early = (
+            _execute_unfollow_loop(
+                client,
+                state,
+                to_unfollow,
+                following_map,
+                dry_run,
+                action_delay_seconds,
+                batch_size,
+                batch_pause_seconds,
+            )
+        )
 
         if stop_early:
             print(

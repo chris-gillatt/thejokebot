@@ -105,7 +105,37 @@ def select_users(tag_users, tag_order, per_tag_limit, overall_limit):
     return selected_users[:overall_limit]
 
 
-def main():  # noqa: C901
+def _build_eligible_tag_users(client, hashtags, already_following, unfollowed_dids):
+    """Fetch users per hashtag, excluding already-followed and previously unfollowed DIDs."""
+    return {
+        tag: [
+            u
+            for u in fetch_users_for_tag(client, tag)
+            if u not in already_following and u not in unfollowed_dids
+        ]
+        for tag in hashtags
+    }
+
+
+def _execute_follow_loop(client, selected_users, dry_run, action_delay_seconds, state):
+    """Follow selected_users; return True if any state changes were recorded."""
+    state_changed = False
+    for i, (tag, did) in enumerate(selected_users, start=1):
+        masked_did = mask_sensitive(did)
+        if dry_run:
+            print(f"[DRY-RUN] Would follow {masked_did} (#{tag})")
+        else:
+            if follow(client, did):
+                bluesky_state.record_follow_grace(state, did)
+                state_changed = True
+
+        if action_delay_seconds > 0 and i < len(selected_users):
+            time.sleep(action_delay_seconds)
+
+    return state_changed
+
+
+def main():
     print("Starting fellow-follow discovery script...")
     client, username = login_client()
     print("Authenticated successfully.")
@@ -121,7 +151,6 @@ def main():  # noqa: C901
     already_following = get_following(client)
     state = bluesky_state.load_state()
     unfollowed_dids = bluesky_state.get_unfollowed_dids(state)
-    state_changed = False
     tag_offset = bluesky_state.get_follow_fellows_tag_offset(state)
     rotated_hashtags = hashtags[tag_offset:] + hashtags[:tag_offset]
     if unfollowed_dids:
@@ -129,13 +158,9 @@ def main():  # noqa: C901
             f"{len(unfollowed_dids)} DID(s) in unfollow history — excluded from candidates."
         )
 
-    tag_users = {}
-    for tag in hashtags:
-        users = fetch_users_for_tag(client, tag)
-        eligible_users = [
-            u for u in users if u not in already_following and u not in unfollowed_dids
-        ]
-        tag_users[tag] = eligible_users
+    tag_users = _build_eligible_tag_users(
+        client, hashtags, already_following, unfollowed_dids
+    )
 
     print("\nEligible users before redistribution:")
     for tag, users in tag_users.items():
@@ -157,17 +182,9 @@ def main():  # noqa: C901
 
     print(f"Total users to follow: {len(selected_users)}\n")
 
-    for i, (tag, did) in enumerate(selected_users, start=1):
-        masked_did = mask_sensitive(did)
-        if dry_run:
-            print(f"[DRY-RUN] Would follow {masked_did} (#{tag})")
-        else:
-            if follow(client, did):
-                bluesky_state.record_follow_grace(state, did)
-                state_changed = True
-
-        if action_delay_seconds > 0 and i < len(selected_users):
-            time.sleep(action_delay_seconds)
+    state_changed = _execute_follow_loop(
+        client, selected_users, dry_run, action_delay_seconds, state
+    )
 
     if state_changed:
         rotation_step = max(1, len(hashtags) // 2)
@@ -179,11 +196,7 @@ def main():  # noqa: C901
 
     print("\nFollowed users by tag:")
     for tag in hashtags:
-        count = tag_counts[tag]
-        if count == 0:
-            print(f"  #{tag}: 0 users")
-        else:
-            print(f"  #{tag}: {count} users")
+        print(f"  #{tag}: {tag_counts[tag]} users")
 
     print("\nFollow fellows script completed.")
 

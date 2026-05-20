@@ -4,7 +4,16 @@ import atproto_client.exceptions
 from bluesky_common import retry_network_call
 
 
-def fetch_paginated_data(  # noqa: C901
+def _extract_page_items(response):
+    """Return the items list from a paginated follower/following response, or None."""
+    if hasattr(response, "followers"):
+        return response.followers
+    if hasattr(response, "follows"):
+        return response.follows
+    return None
+
+
+def fetch_paginated_data(
     client_method,
     actor,
     limit=100,
@@ -46,19 +55,20 @@ def fetch_paginated_data(  # noqa: C901
             break
 
         next_cursor = getattr(response, "cursor", None)
+
+        # Detect cursor stall before committing this page's items so we don't
+        # collect a duplicate page.
         if cursor is not None and next_cursor == cursor:
             print("Repeated pagination cursor detected; stopping early.")
             break
 
-        if hasattr(response, "followers"):
-            data.extend(response.followers)
-        elif hasattr(response, "follows"):
-            data.extend(response.follows)
-        else:
+        items = _extract_page_items(response)
+        if items is None:
             print("Unexpected paginated response format; stopping early.")
             break
+        data.extend(items)
 
-        if not next_cursor or next_cursor == cursor:
+        if not next_cursor:
             break
         cursor = next_cursor
 

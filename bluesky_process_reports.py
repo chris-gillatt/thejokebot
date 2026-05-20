@@ -249,7 +249,55 @@ def delete_approved_report_posts(client, denylist: dict, state: dict) -> int:
     return deleted_count
 
 
-def collect_report_proposals(  # noqa: C901
+def _resolve_notification_proposal(
+    parsed, post_uri_index, denylisted_b64s, seen_b64s, client
+):
+    """Evaluate a single notification and return a ``(proposal_or_None, should_mark_processed)`` tuple.
+
+    ``should_mark_processed=True`` means the caller should record the notification URI
+    as processed so it is skipped on the next run.
+    ``should_mark_processed=False`` means the notification should be retried (transient failure).
+    """
+    if parsed["reason"] != "reply":
+        return None, True
+    if not has_report_tag(parsed["reply_text"]):
+        return None, True
+
+    source_post_uri = parsed["source_post_uri"]
+    if not source_post_uri:
+        return None, True
+
+    posted_entry = post_uri_index.get(source_post_uri)
+    b64_value = posted_entry.get("b64") if posted_entry else None
+    if not b64_value:
+        fetched_text = _extract_thread_post_text(client, source_post_uri)
+        b64_value = _encode_text_b64(fetched_text)
+
+    if not b64_value:
+        # Keep retriable — transient API failure may prevent b64 resolution.
+        return None, False
+
+    if b64_value in denylisted_b64s or b64_value in seen_b64s:
+        return None, True
+
+    proposal = {
+        "b64": b64_value,
+        "source_provider": posted_entry.get("provider") if posted_entry else "unknown",
+        "source_post_uri": source_post_uri,
+        "source_reply_uri": parsed["reply_uri"],
+        "reply_cid": parsed["reply_cid"],
+        "root_uri": parsed["root_uri"] or source_post_uri,
+        "root_cid": parsed["root_cid"],
+        "reporter_did": parsed["author_did"],
+        "reply_text": parsed["reply_text"],
+        "reply_indexed_at": parsed["indexed_at"],
+        "joke_preview": _decode_joke_preview(b64_value),
+        "reason": "user_reply_report",
+    }
+    return proposal, True
+
+
+def collect_report_proposals(
     client, state: dict, denylisted_b64s: set[str]
 ) -> tuple[list[dict], set[str], int]:
     """
@@ -311,48 +359,15 @@ def collect_report_proposals(  # noqa: C901
                 continue
             if notification_uri in processed_uris:
                 continue
-            if parsed["reason"] != "reply":
-                processed_notifications.add(notification_uri)
-                continue
-            if not has_report_tag(parsed["reply_text"]):
-                processed_notifications.add(notification_uri)
-                continue
 
-            source_post_uri = parsed["source_post_uri"]
-            if not source_post_uri:
+            proposal, should_mark = _resolve_notification_proposal(
+                parsed, post_uri_index, denylisted_b64s, seen_b64s, client
+            )
+            if should_mark:
                 processed_notifications.add(notification_uri)
-                continue
-            posted_entry = post_uri_index.get(source_post_uri)
-            b64_value = posted_entry.get("b64") if posted_entry else None
-            if not b64_value:
-                fetched_text = _extract_thread_post_text(client, source_post_uri)
-                b64_value = _encode_text_b64(fetched_text)
-            if not b64_value:
-                # Keep this notification retriable in case of transient API issues.
-                continue
-            if not b64_value or b64_value in denylisted_b64s or b64_value in seen_b64s:
-                processed_notifications.add(notification_uri)
-                continue
-
-            proposal = {
-                "b64": b64_value,
-                "source_provider": posted_entry.get("provider")
-                if posted_entry
-                else "unknown",
-                "source_post_uri": source_post_uri,
-                "source_reply_uri": parsed["reply_uri"],
-                "reply_cid": parsed["reply_cid"],
-                "root_uri": parsed["root_uri"] or source_post_uri,
-                "root_cid": parsed["root_cid"],
-                "reporter_did": parsed["author_did"],
-                "reply_text": parsed["reply_text"],
-                "reply_indexed_at": parsed["indexed_at"],
-                "joke_preview": _decode_joke_preview(b64_value),
-                "reason": "user_reply_report",
-            }
-            proposals.append(proposal)
-            seen_b64s.add(b64_value)
-            processed_notifications.add(notification_uri)
+            if proposal is not None:
+                proposals.append(proposal)
+                seen_b64s.add(proposal["b64"])
 
         cursor = _get_value(response, "cursor")
         if not cursor:
