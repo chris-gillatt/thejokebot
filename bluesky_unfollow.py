@@ -146,6 +146,69 @@ def _resolve_ignorable_dids(client, ignorable_usernames):
     return ignorable_dids
 
 
+def _reconcile_follow_grace_from_following(state, following_map):
+    """Reconcile follow-grace entries using observed current follows.
+
+    Returns a tuple ``(newly_graced_count, is_bootstrap)`` where bootstrap means
+    this run had no previous following snapshot and used a one-time full backfill.
+    """
+    _state.prune_follow_grace(state)
+
+    current_following_dids = set(following_map)
+    previous_snapshot_dids = _state.get_following_snapshot_dids(state)
+    is_bootstrap = len(previous_snapshot_dids) == 0
+    if is_bootstrap:
+        newly_followed_dids = current_following_dids
+    else:
+        newly_followed_dids = current_following_dids - previous_snapshot_dids
+
+    active_grace_dids = _state.get_follow_grace_dids(state)
+    newly_graced_count = 0
+    for did in sorted(newly_followed_dids):
+        if did in active_grace_dids:
+            continue
+        _state.record_follow_grace(state, did, source="manual_reconciled")
+        newly_graced_count += 1
+
+    _state.set_following_snapshot_dids(state, current_following_dids)
+    return newly_graced_count, is_bootstrap
+
+
+def _prepare_unfollow_candidates(
+    following_map, follower_dids, ignorable_dids, max_actions
+):
+    """Load state, reconcile grace entries, and compute candidate lists."""
+    state = _state.load_state()
+    newly_graced_count, is_bootstrap = _reconcile_follow_grace_from_following(
+        state, following_map
+    )
+    if is_bootstrap:
+        print(
+            f"{Fore.YELLOW}No previous follow snapshot found; bootstrapped grace for current follows.{Style.RESET_ALL}"
+        )
+    if newly_graced_count > 0:
+        print(
+            f"{Fore.GREEN}Reconciled {newly_graced_count} newly observed follow(s) into grace.{Style.RESET_ALL}"
+        )
+
+    follow_grace_dids = _state.get_follow_grace_dids(state)
+    if follow_grace_dids:
+        ignorable_dids |= follow_grace_dids
+        print(
+            f"{Fore.GREEN}Loaded {len(follow_grace_dids)} follow-grace DID(s) "
+            f"within the {_state.FOLLOW_RESPONSE_GRACE_PERIOD_DAYS}-day response window.{Style.RESET_ALL}"
+        )
+
+    to_unfollow_all = select_unfollow_candidates(
+        following_map, follower_dids, ignorable_dids, max_actions=0
+    )
+    to_unfollow = select_unfollow_candidates(
+        following_map, follower_dids, ignorable_dids, max_actions=max_actions
+    )
+
+    return state, to_unfollow_all, to_unfollow
+
+
 def _execute_unfollow_loop(
     client,
     state,
@@ -309,11 +372,11 @@ def unfollow_users():
                     f"Continuing with env-based ignores only.{Style.RESET_ALL}"
                 )
 
-        to_unfollow_all = select_unfollow_candidates(
-            following_map, follower_dids, ignorable_dids, max_actions=0
-        )
-        to_unfollow = select_unfollow_candidates(
-            following_map, follower_dids, ignorable_dids, max_actions=max_actions
+        state, to_unfollow_all, to_unfollow = _prepare_unfollow_candidates(
+            following_map,
+            follower_dids,
+            ignorable_dids,
+            max_actions,
         )
 
         print(
@@ -324,16 +387,6 @@ def unfollow_users():
             print(
                 f"{Fore.YELLOW}Safety cap active: processing first {len(to_unfollow)} this run. "
                 f"Re-run workflow for next batch.{Style.RESET_ALL}"
-            )
-
-        state = _state.load_state()
-        _state.prune_follow_grace(state)
-        follow_grace_dids = _state.get_follow_grace_dids(state)
-        if follow_grace_dids:
-            ignorable_dids |= follow_grace_dids
-            print(
-                f"{Fore.GREEN}Loaded {len(follow_grace_dids)} follow-grace DID(s) "
-                f"within the {_state.FOLLOW_RESPONSE_GRACE_PERIOD_DAYS}-day response window.{Style.RESET_ALL}"
             )
 
         unfollowed_count, failed_count, skipped_missing_uri, stop_early = (

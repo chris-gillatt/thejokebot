@@ -496,6 +496,93 @@ class UnfollowControlTests(unittest.TestCase):
             bluesky_unfollow._is_rate_limited_error(RuntimeError("Connection timeout"))
         )
 
+    def test_reconcile_follow_grace_bootstraps_when_snapshot_missing(self):
+        state = bluesky_state._default_state()
+        following_map = {
+            "did:plc:one": "at://did:plc:bot/app.bsky.graph.follow/1",
+            "did:plc:two": "at://did:plc:bot/app.bsky.graph.follow/2",
+        }
+
+        newly_graced_count, is_bootstrap = (
+            bluesky_unfollow._reconcile_follow_grace_from_following(
+                state, following_map
+            )
+        )
+
+        self.assertTrue(is_bootstrap)
+        self.assertEqual(newly_graced_count, 2)
+        self.assertEqual(
+            bluesky_state.get_follow_grace_dids(state, cutoff_ts=0),
+            {"did:plc:one", "did:plc:two"},
+        )
+        self.assertEqual(
+            bluesky_state.get_following_snapshot_dids(state),
+            {"did:plc:one", "did:plc:two"},
+        )
+        sources = {entry["source"] for entry in state["follow_grace"]["entries"]}
+        self.assertEqual(sources, {"manual_reconciled"})
+
+    def test_reconcile_follow_grace_only_adds_newly_observed_follows(self):
+        state = bluesky_state._default_state()
+        bluesky_state.record_follow_grace(
+            state, "did:plc:existing", source="interaction"
+        )
+        bluesky_state.set_following_snapshot_dids(state, {"did:plc:existing"})
+        following_map = {
+            "did:plc:existing": "at://did:plc:bot/app.bsky.graph.follow/existing",
+            "did:plc:new": "at://did:plc:bot/app.bsky.graph.follow/new",
+        }
+
+        newly_graced_count, is_bootstrap = (
+            bluesky_unfollow._reconcile_follow_grace_from_following(
+                state, following_map
+            )
+        )
+
+        self.assertFalse(is_bootstrap)
+        self.assertEqual(newly_graced_count, 1)
+        self.assertEqual(
+            bluesky_state.get_follow_grace_dids(state, cutoff_ts=0),
+            {"did:plc:existing", "did:plc:new"},
+        )
+        existing_entry = next(
+            entry
+            for entry in state["follow_grace"]["entries"]
+            if entry["did"] == "did:plc:existing"
+        )
+        self.assertEqual(existing_entry["source"], "interaction")
+
+    def test_reconcile_follow_grace_does_not_readd_when_snapshot_unchanged(self):
+        state = bluesky_state._default_state()
+        following_map = {
+            "did:plc:one": "at://did:plc:bot/app.bsky.graph.follow/1",
+            "did:plc:two": "at://did:plc:bot/app.bsky.graph.follow/2",
+        }
+
+        first_count, first_bootstrap = (
+            bluesky_unfollow._reconcile_follow_grace_from_following(
+                state, following_map
+            )
+        )
+        second_count, second_bootstrap = (
+            bluesky_unfollow._reconcile_follow_grace_from_following(
+                state, following_map
+            )
+        )
+
+        self.assertEqual(first_count, 2)
+        self.assertTrue(first_bootstrap)
+        self.assertEqual(second_count, 0)
+        self.assertFalse(second_bootstrap)
+        self.assertEqual(
+            len(state["follow_grace"]["entries"]),
+            2,
+        )
+        self.assertEqual(
+            {entry["did"] for entry in state["follow_grace"]["entries"]},
+            {"did:plc:one", "did:plc:two"},
+        )
+
 
 class UnfollowIgnoreValidationTests(unittest.TestCase):
     def test_parse_ignore_handles_deduplicates_and_sorts(self):
@@ -591,6 +678,74 @@ class UnfollowIgnoreValidationTests(unittest.TestCase):
         )
         self.assertEqual(did_str, "did:plc:abc")
         self.assertEqual(did_obj, "did:plc:def")
+
+    def test_unfollow_users_applies_reconciled_grace_before_candidate_selection(self):
+        state = bluesky_state._default_state()
+        followed_did = "did:plc:manual"
+        client = mock.Mock()
+        client.me.did = "did:plc:test"
+
+        followers = []
+        following = [
+            SimpleNamespace(
+                did=followed_did,
+                viewer=SimpleNamespace(
+                    following="at://did:plc:test/app.bsky.graph.follow/abc"
+                ),
+            )
+        ]
+
+        with mock.patch(
+            "bluesky_unfollow.login_client",
+            return_value=(client, "thejokebot.bsky.social"),
+        ):
+            with mock.patch(
+                "bluesky_unfollow.fetch_paginated_data",
+                side_effect=[followers, following],
+            ):
+                with mock.patch(
+                    "bluesky_unfollow._resolve_ignorable_dids", return_value=set()
+                ):
+                    with mock.patch(
+                        "bluesky_unfollow._load_source_list_uri", return_value=""
+                    ):
+                        with mock.patch(
+                            "bluesky_unfollow.get_runtime_controls",
+                            return_value={"dry_run": True, "action_delay_seconds": 0.0},
+                        ):
+                            with mock.patch(
+                                "bluesky_unfollow.get_unfollow_controls",
+                                return_value={
+                                    "max_actions": 0,
+                                    "batch_size": 50,
+                                    "batch_pause_seconds": 0.0,
+                                },
+                            ):
+                                with mock.patch(
+                                    "bluesky_unfollow._state.load_state",
+                                    return_value=state,
+                                ):
+                                    with mock.patch(
+                                        "bluesky_unfollow._state.prune_unfollow_history"
+                                    ):
+                                        with mock.patch(
+                                            "bluesky_unfollow._state.save_state"
+                                        ) as save_state:
+                                            with mock.patch(
+                                                "bluesky_unfollow._execute_unfollow_loop",
+                                                return_value=(0, 0, 0, False),
+                                            ) as execute_unfollow_loop:
+                                                bluesky_unfollow.unfollow_users()
+
+        self.assertIn(
+            followed_did,
+            bluesky_state.get_follow_grace_dids(state, cutoff_ts=0),
+        )
+        self.assertEqual(
+            execute_unfollow_loop.call_args.args[2],
+            [],
+        )
+        save_state.assert_called_once_with(state)
 
 
 class StarterPackManagerTests(unittest.TestCase):
@@ -2022,6 +2177,42 @@ class FollowGraceTests(unittest.TestCase):
 
         self.assertIn("follow_grace", normalised)
         self.assertIn("entries", normalised["follow_grace"])
+
+    def test_get_following_snapshot_dids_returns_empty_set_initially(self):
+        state = bluesky_state._default_state()
+        self.assertEqual(bluesky_state.get_following_snapshot_dids(state), set())
+
+    def test_set_following_snapshot_dids_saves_sorted_deterministic_values(self):
+        state = bluesky_state._default_state()
+
+        bluesky_state.set_following_snapshot_dids(
+            state,
+            {"did:plc:zzz", "did:plc:aaa", "did:plc:aaa"},
+        )
+
+        self.assertEqual(
+            state["follow_tracking"]["following_snapshot_dids"],
+            ["did:plc:aaa", "did:plc:zzz"],
+        )
+        self.assertEqual(
+            bluesky_state.get_following_snapshot_dids(state),
+            {"did:plc:aaa", "did:plc:zzz"},
+        )
+
+    def test_normalise_state_backfills_follow_tracking(self):
+        old_state = {
+            "posted_jokes": [],
+            "provider": {},
+            "reports": {},
+            "liked_replies": {},
+            "unfollow_history": {"entries": []},
+            "follow_grace": {"entries": []},
+        }
+
+        normalised = bluesky_state._normalise_state(old_state)
+
+        self.assertIn("follow_tracking", normalised)
+        self.assertIn("following_snapshot_dids", normalised["follow_tracking"])
 
 
 class FollowFellowsTagRotationTests(unittest.TestCase):

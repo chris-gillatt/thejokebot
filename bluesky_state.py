@@ -69,6 +69,9 @@ def _default_state() -> dict:
         "follow_grace": {
             "entries": [],
         },
+        "follow_tracking": {
+            "following_snapshot_dids": [],
+        },
         "follow_fellows": {
             "tag_offset": 0,
         },
@@ -135,6 +138,9 @@ def _normalise_state(state: dict) -> dict:
 
     follow_grace = state.setdefault("follow_grace", {})
     follow_grace.setdefault("entries", [])
+
+    follow_tracking = state.setdefault("follow_tracking", {})
+    follow_tracking.setdefault("following_snapshot_dids", [])
 
     follow_fellows_state = state.setdefault("follow_fellows", {})
     follow_fellows_state.setdefault("tag_offset", 0)
@@ -380,6 +386,26 @@ def set_likes_checked_now(state: dict) -> None:
     """Set the reply-like polling timestamp to current epoch."""
     liked_replies = state.setdefault("liked_replies", {})
     liked_replies["last_checked_at"] = int(time.time())
+
+
+# ---------------------------------------------------------------------------
+# Follow tracking snapshots
+# ---------------------------------------------------------------------------
+
+
+def get_following_snapshot_dids(state: dict) -> set[str]:
+    """Return the previous unfollow-run snapshot of currently followed DIDs."""
+    follow_tracking = state.setdefault("follow_tracking", {})
+    dids = follow_tracking.setdefault("following_snapshot_dids", [])
+    return {str(did).strip() for did in dids if str(did).strip()}
+
+
+def set_following_snapshot_dids(state: dict, dids: set[str]) -> None:
+    """Persist a deterministic snapshot of currently followed DIDs."""
+    follow_tracking = state.setdefault("follow_tracking", {})
+    follow_tracking["following_snapshot_dids"] = sorted(
+        {str(did).strip() for did in dids if str(did).strip()}
+    )
 
 
 # ---------------------------------------------------------------------------
