@@ -1,6 +1,6 @@
 # The Joke Bot
 
-![joke bot](./images/jokebot-logo.png)
+![joke bot](./images/tjb-logo-transparent-bg.png)
 
 ## Workflow status
 
