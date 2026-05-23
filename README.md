@@ -1,29 +1,24 @@
 # The Joke Bot
 
-![joke bot](./images/tjb-logo-transparent-bg.png)
-
-## Workflow status
-
-**Core:**  
-[![bluesky_post_joke](https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_post_joke.yml/badge.svg)](https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_post_joke.yml)
-
-**Engagement:**  
-[![bluesky_follows_and_likes](https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_follows_and_likes.yml/badge.svg)](https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_follows_and_likes.yml) [![bluesky_follow_fellows](https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_follow_fellows.yml/badge.svg)](https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_follow_fellows.yml)
-
-**Housekeeping:**  
-[![bluesky_unfollow](https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_unfollow.yml/badge.svg)](https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_unfollow.yml)
-
-**Reporting:**  
-[![bluesky_process_reports](https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_process_reports.yml/badge.svg)](https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_process_reports.yml)
-
-**Quality:**  
-[![python_tests](https://github.com/chris-gillatt/thejokebot/actions/workflows/python_tests.yml/badge.svg)](https://github.com/chris-gillatt/thejokebot/actions/workflows/python_tests.yml) [![ruff_quality](https://github.com/chris-gillatt/thejokebot/actions/workflows/ruff_quality.yml/badge.svg)](https://github.com/chris-gillatt/thejokebot/actions/workflows/ruff_quality.yml) [![validate_runtime_config](https://github.com/chris-gillatt/thejokebot/actions/workflows/validate_runtime_config.yml/badge.svg)](https://github.com/chris-gillatt/thejokebot/actions/workflows/validate_runtime_config.yml)
-
-**Security:**  
-[![codeql](https://github.com/chris-gillatt/thejokebot/actions/workflows/codeql.yml/badge.svg)](https://github.com/chris-gillatt/thejokebot/actions/workflows/codeql.yml)
-
-**Repository maintenance:**  
-[![pr_auto_merge](https://github.com/chris-gillatt/thejokebot/actions/workflows/dependabot-auto-merge.yml/badge.svg)](https://github.com/chris-gillatt/thejokebot/actions/workflows/dependabot-auto-merge.yml)
+<table>
+	<tr>
+		<td width="280" valign="top" align="center">
+			<img src="./images/tjb-logo-transparent-bg.png" alt="The Joke Bot logo" width="240" />
+		</td>
+		<td valign="top">
+			<a href="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_post_joke.yml"><img src="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_post_joke.yml/badge.svg" alt="bluesky_post_joke" /></a><br />
+			<a href="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_follows_and_likes.yml"><img src="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_follows_and_likes.yml/badge.svg" alt="bluesky_follows_and_likes" /></a>
+			<a href="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_follow_fellows.yml"><img src="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_follow_fellows.yml/badge.svg" alt="bluesky_follow_fellows" /></a><br />
+			<a href="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_unfollow.yml"><img src="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_unfollow.yml/badge.svg" alt="bluesky_unfollow" /></a><br />
+			<a href="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_process_reports.yml"><img src="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_process_reports.yml/badge.svg" alt="bluesky_process_reports" /></a><br />
+			<a href="https://github.com/chris-gillatt/thejokebot/actions/workflows/python_tests.yml"><img src="https://github.com/chris-gillatt/thejokebot/actions/workflows/python_tests.yml/badge.svg" alt="python_tests" /></a>
+			<a href="https://github.com/chris-gillatt/thejokebot/actions/workflows/ruff_quality.yml"><img src="https://github.com/chris-gillatt/thejokebot/actions/workflows/ruff_quality.yml/badge.svg" alt="ruff_quality" /></a>
+			<a href="https://github.com/chris-gillatt/thejokebot/actions/workflows/validate_runtime_config.yml"><img src="https://github.com/chris-gillatt/thejokebot/actions/workflows/validate_runtime_config.yml/badge.svg" alt="validate_runtime_config" /></a><br />
+			<a href="https://github.com/chris-gillatt/thejokebot/actions/workflows/codeql.yml"><img src="https://github.com/chris-gillatt/thejokebot/actions/workflows/codeql.yml/badge.svg" alt="codeql" /></a><br />
+			<a href="https://github.com/chris-gillatt/thejokebot/actions/workflows/dependabot-auto-merge.yml"><img src="https://github.com/chris-gillatt/thejokebot/actions/workflows/dependabot-auto-merge.yml/badge.svg" alt="pr_auto_merge" /></a>
+		</td>
+	</tr>
+</table>
 
 Posts dad jokes to a configured Bluesky account, plus account housekeeping automations.
 
