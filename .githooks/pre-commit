@@ -1,0 +1,13 @@
+#!/bin/sh
+# Prevent accidental commits that touch anything under references/.
+# The references/ directory contains read-only external submodules; changes
+# must only flow from upstream via Dependabot, never from local edits.
+
+if git diff --cached --name-only | grep -q '^references/'; then
+    echo ""
+    echo "ERROR: Staged changes detected under references/ — this directory is read-only."
+    echo "       Run: git restore --staged references/ && git restore references/"
+    echo "       Then: git submodule update --init --recursive"
+    echo ""
+    exit 1
+fi

@@ -1,4 +1,13 @@
 {
   "python.envFile": "${workspaceFolder}/.env",
-  "python.terminal.useEnvFile": true
+  "python.terminal.useEnvFile": true,
+  "git.ignoredRepositories": [
+    "${workspaceFolder}/references/atproto",
+    "${workspaceFolder}/references/bsky-docs",
+    "${workspaceFolder}/references/cookbook",
+    "${workspaceFolder}/references/cookbook/nextjs-oauth"
+  ],
+  "files.watcherExclude": {
+    "**/references/**": true
+  }
 }
