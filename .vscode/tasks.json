@@ -4,7 +4,7 @@
     {
       "label": "Sync repo and submodules",
       "type": "shell",
-      "command": "git config core.hooksPath .githooks && git pull --rebase && git submodule update --init --recursive",
+      "command": "git pull --rebase && git submodule update --init --recursive",
       "group": "none",
       "presentation": {
         "reveal": "always",
