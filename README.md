@@ -42,6 +42,18 @@ Posts dad jokes to a configured Bluesky account, plus account housekeeping autom
 4. Run a script:
 	- `python bluesky_post_joke.py`
 
+## Syncing repo and submodules
+
+To keep your working copy up to date with the remote (including read-only reference submodules), run:
+
+```bash
+git pull --rebase && git submodule update --init --recursive
+```
+
+This is also available as a VS Code task: **Terminal → Run Task → Sync repo and submodules**.
+
+Run this at the start of each development session to ensure `references/` (atproto, bsky-docs, cookbook) are at their current upstream versions.
+
 ## Local validation helper
 
 Before commit/push, run the local preflight gate:
