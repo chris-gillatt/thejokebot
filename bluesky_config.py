@@ -9,7 +9,7 @@ _CONFIG_PATH = (
 _DEFAULT_CONFIG = {
     "schema_version": 1,
     "posting": {
-        "days_limit": 365,
+        "days_limit": 730,
         "max_attempts": 5,
         "max_post_chars": 300,
         "hashtags": ["#jokes", "#dadjoke", "#funny"],
@@ -64,7 +64,7 @@ _DEFAULT_CONFIG = {
         "bluesky_post_joke": "0 0,4,8,12,16,20 * * *",
         "bluesky_follows_and_likes": "0 */2 * * *",
         "bluesky_follow_fellows": "0 0 * * 3,5",
-        "bluesky_unfollow": "0 12 1 */3 *",
+        "bluesky_unfollow": "0 12 1 * *",
         "bluesky_process_reports": "0 */4 * * *",
         "bluesky_validate_unfollow_ignore": "0 9 1 * *",
     },
@@ -125,7 +125,7 @@ def _validate_config(payload):
 
     posting = cfg.get("posting", {})
     posting["days_limit"] = _ensure_int(
-        posting.get("days_limit", 365), minimum=1, field_name="posting.days_limit"
+        posting.get("days_limit", 730), minimum=1, field_name="posting.days_limit"
     )
     posting["max_attempts"] = _ensure_int(
         posting.get("max_attempts", 5), minimum=1, field_name="posting.max_attempts"

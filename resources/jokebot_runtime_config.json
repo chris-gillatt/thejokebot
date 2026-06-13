@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "posting": {
-    "days_limit": 365,
+    "days_limit": 730,
     "max_attempts": 5,
     "max_post_chars": 300,
     "hashtags": [
@@ -60,7 +60,7 @@
     "bluesky_post_joke": "0 0,4,8,12,16,20 * * *",
     "bluesky_follows_and_likes": "0 */2 * * *",
     "bluesky_follow_fellows": "0 0 * * 3,5",
-    "bluesky_unfollow": "0 12 1 */3 *",
+    "bluesky_unfollow": "0 12 1 * *",
     "bluesky_process_reports": "0 */4 * * *",
     "bluesky_validate_unfollow_ignore": "0 9 1 * *"
   }

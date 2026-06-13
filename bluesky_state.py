@@ -26,7 +26,7 @@ else:
     fcntl = None  # type: ignore
 
 STATE_FILE = str(Path(__file__).resolve().parent / "bot_state.json")
-FOLLOW_RESPONSE_GRACE_PERIOD_DAYS = 90
+FOLLOW_RESPONSE_GRACE_PERIOD_DAYS = 30
 FOLLOW_RESPONSE_GRACE_PERIOD_SECONDS = FOLLOW_RESPONSE_GRACE_PERIOD_DAYS * 24 * 60 * 60
 
 # Canonical provider order — the rotation wraps around this list.

@@ -57,7 +57,7 @@ class RuntimeConfigTests(unittest.TestCase):
         self.assertIn("unfollow", config)
         self.assertIn("reports", config)
         self.assertIn("workflow_schedules", config)
-        self.assertEqual(config["posting"]["days_limit"], 365)
+        self.assertEqual(config["posting"]["days_limit"], 730)
 
     def test_runtime_config_file_overrides_merge_with_defaults(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -82,7 +82,7 @@ class RuntimeConfigTests(unittest.TestCase):
                 config = bluesky_config.get_runtime_config()
 
         self.assertEqual(config["posting"]["max_attempts"], 7)
-        self.assertEqual(config["posting"]["days_limit"], 365)
+        self.assertEqual(config["posting"]["days_limit"], 730)
         self.assertEqual(config["posting"]["hashtags"], ["#jokes", "#testing"])
         self.assertEqual(config["follow_fellows"]["per_tag_limit"], 4)
         self.assertEqual(config["follow_fellows"]["global_follow_limit"], 150)
@@ -141,7 +141,7 @@ class RuntimeConfigValidationScriptTests(unittest.TestCase):
         schedules = {
             "bluesky_process_reports": "*/15 * * * *",
             "bluesky_follow_fellows": "0 0 * * 3,5",
-            "bluesky_unfollow": "0 12 1 */3 *",
+            "bluesky_unfollow": "0 12 1 * *",
         }
 
         errors = bluesky_validate_runtime_config._validate_guard_rails(
