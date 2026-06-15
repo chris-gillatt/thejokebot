@@ -1,7 +1,7 @@
 {
   "provider": {
     "last_used": "icanhazdadjoke",
-    "last_used_at": 1781495746,
+    "last_used_at": 1781518926,
     "rotation_order": [
       "icanhazdadjoke",
       "jokeapi",
@@ -14,9 +14,9 @@
         "last_error": "502 Server Error: Bad Gateway for url: https://icanhazdadjoke.com/"
       },
       "jokeapi": {
-        "count": 1,
-        "last_failure_at": 1781275923,
-        "last_error": "HTTPSConnectionPool(host='v2.jokeapi.dev', port=443): Read timed out. (read timeout=15)"
+        "count": 2,
+        "last_failure_at": 1781518926,
+        "last_error": "All 5 jokes from 'jokeapi' were recent duplicates or too long"
       },
       "groandeck": {
         "count": 0,
@@ -3213,6 +3213,13 @@
       "provider": "icanhazdadjoke",
       "post_uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mocfamqsjc2r",
       "post_cid": "bafyreihaurpbgb56ptizbteivubmagayx5yyfis5fk4wp7lsifkxu67ppe"
+    },
+    {
+      "ts": 1781518926,
+      "b64": "SSB3b24gYW4gYXJndW1lbnQgd2l0aCBhIHdlYXRoZXIgZm9yZWNhc3RlciBvbmNlLiBIaXMgbG9naWMgd2FzIGNsb3VkeS4uLg==",
+      "provider": "icanhazdadjoke",
+      "post_uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mod2tgsvah2v",
+      "post_cid": "bafyreiaklugxcacdcppt3hswyzvhfapsddgycq22aze2lza6tfwzfnoqdy"
     }
   ],
   "reports": {
