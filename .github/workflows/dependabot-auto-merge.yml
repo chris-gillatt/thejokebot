@@ -30,4 +30,22 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_URL: ${{ github.event.pull_request.html_url }}
-        run: gh pr merge --auto --squash "$PR_URL"
+        run: |
+          set +e
+          merge_output="$(gh pr merge --auto --squash "$PR_URL" 2>&1)"
+          exit_code=$?
+          set -e
+
+          echo "$merge_output"
+
+          if [ "$exit_code" -eq 0 ]; then
+            exit 0
+          fi
+
+          if echo "$merge_output" | grep -Eqi "Auto merge is not allowed|Base branch was modified|Review and try the merge again"; then
+            echo "::notice::Auto-merge could not be enabled for this PR yet; leaving PR checks green."
+            exit 0
+          fi
+
+          echo "::error::Unexpected failure while enabling auto-merge."
+          exit "$exit_code"
