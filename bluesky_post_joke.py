@@ -20,6 +20,8 @@ DAYS_LIMIT = _POSTING_CONFIG["days_limit"]
 MAX_ATTEMPTS = _POSTING_CONFIG["max_attempts"]
 BLUESKY_MAX_POST_CHARS = _POSTING_CONFIG["max_post_chars"]
 HASHTAGS = _POSTING_CONFIG["hashtags"]
+ROTATED_POST_TAG_COUNT = 3
+POSTING_TAG_ROTATION_STEP = 1
 
 # Bluesky character limits are based on user-visible characters, not code points.
 _GRAPHEME_PATTERN = regex.compile(r"\X")
@@ -36,6 +38,46 @@ _MAX_JOKE_CHARS = BLUESKY_MAX_POST_CHARS - _HASHTAG_SUFFIX_LEN
 _MOJIBAKE_MARKERS = ("Ã", "Â", "â", "ð", "\x80", "\x99")
 _HTML_UNESCAPE_PASSES = 3
 _DEDUPE_NORMALISATION_PATTERN = regex.compile(r"[\p{P}\s_]+")
+
+
+def get_max_joke_chars(hashtags: list[str]) -> int:
+    """Return maximum grapheme length available for joke text with selected hashtags."""
+    hashtag_suffix_len = 2 + _grapheme_len(" ".join(hashtags))
+    return BLUESKY_MAX_POST_CHARS - hashtag_suffix_len
+
+
+def get_posting_hashtag_pool() -> list[str]:
+    """Build deterministic post-tag pool from follow-fellows hashtags."""
+    follow_fellows_tags = bluesky_config.get_follow_fellows_config().get("hashtags", [])
+    if not follow_fellows_tags:
+        return list(HASHTAGS)
+
+    pool = []
+    seen = set()
+    for tag in follow_fellows_tags:
+        normalised = f"#{str(tag).strip().lstrip('#')}"
+        if normalised == "#" or normalised in seen:
+            continue
+        seen.add(normalised)
+        pool.append(normalised)
+
+    return pool or list(HASHTAGS)
+
+
+def select_posting_hashtags(
+    hashtag_pool: list[str],
+    offset: int,
+    count: int = ROTATED_POST_TAG_COUNT,
+) -> list[str]:
+    """Select a deterministic rotated window of hashtags for the next post."""
+    if not hashtag_pool:
+        return list(HASHTAGS)
+
+    total_tags = len(hashtag_pool)
+    safe_offset = offset % total_tags
+    rotated = hashtag_pool[safe_offset:] + hashtag_pool[:safe_offset]
+    tag_count = max(1, min(int(count), total_tags))
+    return rotated[:tag_count]
 
 
 def get_fallback_joke():
@@ -106,7 +148,9 @@ def _normalise_stored_b64_for_deduplication(encoded_joke: str) -> str:
     return _encode_deduplication_key(decoded)
 
 
-def pick_joke(recent_b64s: set, provider_name: str) -> tuple:
+def pick_joke(
+    recent_b64s: set, provider_name: str, hashtags: list[str] | None = None
+) -> tuple:
     """
     Fetch up to MAX_ATTEMPTS jokes from provider_name, skipping recent duplicates
     and jokes that would exceed the Bluesky post character limit once hashtags
@@ -115,16 +159,18 @@ def pick_joke(recent_b64s: set, provider_name: str) -> tuple:
     are duplicates, too long, or the provider raises.
     """
     fetch_fn = bluesky_joke_providers.PROVIDERS[provider_name]
+    selected_hashtags = hashtags or HASHTAGS
+    max_joke_chars = get_max_joke_chars(selected_hashtags)
     recent_dedupe_b64s = {
         _normalise_stored_b64_for_deduplication(encoded) for encoded in recent_b64s
     }
     for _ in range(MAX_ATTEMPTS):
         joke = sanitise_joke_text(fetch_fn())
         grapheme_count = _grapheme_len(joke)
-        if grapheme_count > _MAX_JOKE_CHARS:
+        if grapheme_count > max_joke_chars:
             print(
                 f"Skipping joke from '{provider_name}': "
-                f"{grapheme_count} graphemes exceeds limit of {_MAX_JOKE_CHARS}"
+                f"{grapheme_count} graphemes exceeds limit of {max_joke_chars}"
             )
             continue
         encoded = base64.b64encode(joke.encode("utf-8")).decode()
@@ -161,6 +207,9 @@ def build_hashtag_facets(joke_text, hashtags):
 def main():
     state = bluesky_state.load_state()
     cutoff = get_current_epoch() - (DAYS_LIMIT * 86400)
+    posting_hashtag_pool = get_posting_hashtag_pool()
+    tag_offset = bluesky_state.get_posting_tag_offset(state)
+    hashtags_for_post = select_posting_hashtags(posting_hashtag_pool, tag_offset)
     recent_b64s = bluesky_state.get_recent_b64s(state, cutoff)
     denylist_payload = bluesky_denylist.load_denylist()
     recent_b64s |= bluesky_denylist.get_denylisted_b64s(denylist_payload)
@@ -187,7 +236,9 @@ def main():
 
     for provider_name in providers_to_try:
         try:
-            joke, b64 = pick_joke(recent_b64s, provider_name)
+            joke, b64 = pick_joke(
+                recent_b64s, provider_name, hashtags=hashtags_for_post
+            )
             used_provider = provider_name
             break
         except (
@@ -208,9 +259,9 @@ def main():
     if used_provider != "fallback":
         bluesky_state.record_provider_used(state, used_provider)
 
-    hashtags_string = " ".join(HASHTAGS)
+    hashtags_string = " ".join(hashtags_for_post)
     joke_with_tags = f"{joke}\n\n{hashtags_string}"
-    facets = build_hashtag_facets(joke, HASHTAGS)
+    facets = build_hashtag_facets(joke, hashtags_for_post)
 
     try:
         client, _ = login_client()
@@ -234,6 +285,11 @@ def main():
             used_provider,
             post_uri=post_uri,
             post_cid=post_cid,
+        )
+        bluesky_state.advance_posting_tag_offset(
+            state,
+            POSTING_TAG_ROTATION_STEP,
+            len(posting_hashtag_pool),
         )
     except (
         ValueError,

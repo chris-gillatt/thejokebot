@@ -2241,6 +2241,34 @@ class FollowFellowsTagRotationTests(unittest.TestCase):
         self.assertIn("tag_offset", normalised["follow_fellows"])
 
 
+class PostingTagRotationTests(unittest.TestCase):
+    def test_get_posting_tag_offset_returns_zero_initially(self):
+        state = bluesky_state._default_state()
+        self.assertEqual(bluesky_state.get_posting_tag_offset(state), 0)
+
+    def test_advance_posting_tag_offset_wraps_around(self):
+        state = bluesky_state._default_state()
+        bluesky_state.advance_posting_tag_offset(state, 7, 18)
+        self.assertEqual(bluesky_state.get_posting_tag_offset(state), 7)
+        bluesky_state.advance_posting_tag_offset(state, 12, 18)
+        self.assertEqual(bluesky_state.get_posting_tag_offset(state), 1)
+
+    def test_normalise_state_backfills_posting_rotation(self):
+        old_state = {
+            "posted_jokes": [],
+            "provider": {},
+            "reports": {},
+            "liked_replies": {},
+            "unfollow_history": {"entries": []},
+            "follow_grace": {"entries": []},
+            "follow_fellows": {"tag_offset": 0},
+        }
+
+        normalised = bluesky_state._normalise_state(old_state)
+        self.assertIn("posting", normalised)
+        self.assertIn("tag_offset", normalised["posting"])
+
+
 class JokeRetryChainTests(unittest.TestCase):
     def test_pick_joke_returns_new_joke(self):
         """pick_joke fetches and returns a non-duplicate joke."""
@@ -2428,6 +2456,60 @@ class JokeRetryChainTests(unittest.TestCase):
         ):
             with self.assertRaises(ValueError):
                 bluesky_post_joke.pick_joke(set(), "test_provider")
+
+        def test_pick_joke_uses_selected_hashtags_for_length_budget(self):
+            joke = "x" * 120
+            long_hashtags = ["#" + ("x" * 90), "#" + ("y" * 90), "#" + ("z" * 90)]
+
+            with mock.patch.object(
+                bluesky_joke_providers,
+                "PROVIDERS",
+                {"test_provider": lambda: joke},
+            ):
+                with self.assertRaises(ValueError):
+                    bluesky_post_joke.pick_joke(
+                        set(),
+                        "test_provider",
+                        hashtags=long_hashtags,
+                    )
+
+            with mock.patch.object(
+                bluesky_joke_providers,
+                "PROVIDERS",
+                {"test_provider": lambda: joke},
+            ):
+                selected_joke, _ = bluesky_post_joke.pick_joke(
+                    set(),
+                    "test_provider",
+                    hashtags=["#jokes", "#dadjoke", "#funny"],
+                )
+
+            self.assertEqual(selected_joke, joke)
+
+        def test_select_posting_hashtags_rotates_by_offset(self):
+            pool = ["#one", "#two", "#three", "#four"]
+            selected = bluesky_post_joke.select_posting_hashtags(
+                pool, offset=2, count=3
+            )
+            self.assertEqual(selected, ["#three", "#four", "#one"])
+
+        def test_get_posting_hashtag_pool_uses_follow_fellows_config(self):
+            with mock.patch(
+                "bluesky_post_joke.bluesky_config.get_follow_fellows_config",
+                return_value={"hashtags": ["dadjokes", "punny", "dadjokes"]},
+            ):
+                pool = bluesky_post_joke.get_posting_hashtag_pool()
+
+            self.assertEqual(pool, ["#dadjokes", "#punny"])
+
+        def test_get_posting_hashtag_pool_falls_back_to_posting_hashtags(self):
+            with mock.patch(
+                "bluesky_post_joke.bluesky_config.get_follow_fellows_config",
+                return_value={"hashtags": []},
+            ):
+                pool = bluesky_post_joke.get_posting_hashtag_pool()
+
+            self.assertEqual(pool, bluesky_post_joke.HASHTAGS)
 
     def test_provider_fallback_chain_tries_primaries_first(self):
         """Provider fallback tries primary providers before backups."""

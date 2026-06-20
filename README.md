@@ -29,6 +29,7 @@ Posts dad jokes to a configured Bluesky account, plus account housekeeping autom
 - Rotates across multiple live joke APIs with a bundled offline fallback.
 - Supports follow-back, reply liking, unfollow, and fellow-follow discovery scripts.
 - Uses a rotating set of 16 joke/follow-back hashtags for fellow-follow discovery, with a conservative per-run cap and state-backed tag rotation so the same tags do not always get first priority.
+- Rotates the hashtags appended to joke posts, using the broader tag pool with deterministic per-post progression.
 - Gives newly followed accounts a 30-day grace period before they become eligible for unfollow if they still do not follow back.
 - Lets followers report unsuitable jokes via a `#report` reply, which triggers an automated PR to add the joke to a permanent denylist.
 
@@ -151,6 +152,7 @@ Validation guard rail:
 - **Network retries:** set `BLUESKY_NETWORK_RETRY_ATTEMPTS`, `BLUESKY_NETWORK_RETRY_DELAY_SECONDS`, and `BLUESKY_NETWORK_RETRY_BACKOFF_FACTOR` to tune bounded retries for transient network/API failures.
 - **Unfollow batching:** `bluesky_unfollow.py` is capped and batched by default (`BLUESKY_UNFOLLOW_MAX_ACTIONS=200`, `BLUESKY_UNFOLLOW_BATCH_SIZE=50`, `BLUESKY_UNFOLLOW_BATCH_PAUSE_SECONDS=60`) to reduce throttle risk on large clean-ups.
 - **Follow-fellows cadence:** `bluesky_follow_fellows.py` runs twice weekly, rotates tag priority between runs, and uses the configured per-run cap and hashtag set from `resources/jokebot_runtime_config.json`.
+- **Post hashtag rotation:** `bluesky_post_joke.py` rotates the hashtag window on each successful post and calculates per-post length budget from the selected tags before accepting a joke candidate.
 - **Starter-pack/list protection:** if `resources/jokebot_starter_pack.json` is enabled and points to a valid source list URI, all members of that list are automatically protected from unfollowing (unioned with `BLUESKY_UNFOLLOW_IGNORE`).
 - **Follow grace protection:** `bluesky_unfollow.py` skips accounts followed by `bluesky_follow_fellows.py` for `30` days before they can become eligible for unfollow.
 - **Post length preflight:** `bluesky_post_joke.py` skips over-long jokes and retries provider fetches before posting, using grapheme-aware length checks so posts stay within Bluesky's 300-character limit after hashtags are appended.
@@ -174,7 +176,7 @@ The report triggers an automated PR adding the joke to the denylist. Once a main
 
 | Script | Purpose |
 |---|---|
-| `bluesky_post_joke.py` | Fetch a joke, append hashtags, post to Bluesky, maintain `bot_state.json`. |
+| `bluesky_post_joke.py` | Fetch a joke, append a rotated hashtag window, post to Bluesky, maintain `bot_state.json`. |
 | `bluesky_follows_and_likes.py` | Follow back new followers, follow users who interact with the bot's posts (replies, reposts, likes from the last 24 hours), and like replies to the bot's posts. |
 | `bluesky_unfollow.py` | Unfollow accounts that do not follow back, while respecting protected handles, starter-pack protections, and the 30-day follow grace window. |
 | `bluesky_follow_fellows.py` | Search a rotating set of humour/follow-back hashtags and follow up to the configured per-run cap. |

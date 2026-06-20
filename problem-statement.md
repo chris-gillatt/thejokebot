@@ -291,6 +291,23 @@ suite at 167 passing.
 
 ---
 
+### 5.30 Rotate hashtags used in joke posts ✓ Complete
+**Priority: Medium**
+
+Issue #50 requested broader hashtag rotation for joke posts so discovery does not
+rely on the same fixed trio every run.
+
+**Resolution:** `bluesky_post_joke.py` now builds a deterministic rotating post-tag
+window from the configured follow-fellows hashtag pool, tracks progression in
+`bot_state.json` via a dedicated `posting.tag_offset`, and advances offset after
+successful posts. Post-length preflight now calculates the joke budget per post
+from the selected hashtags (grapheme-aware), reducing avoidable rejections while
+preserving Bluesky 300-character safety checks. Added focused regression tests for
+posting offset backfill/wraparound, rotated hashtag selection, and dynamic length
+budget behaviour.
+
+---
+
 ### 5.27 Review and revert httpx WAF workaround when safe to do so ⏳ Deferred
 **Priority: Low**
 
@@ -395,6 +412,7 @@ Do not revisit these without a concrete operational reason.
 - v1.27: Extended centralised config rollout (5.26). `bluesky_process_reports.py` now consumes report default limits from central config, and new validator `bluesky_validate_runtime_config.py` enforces schema + workflow schedule metadata alignment in CI via `.github/workflows/validate_runtime_config.yml`.
 - v1.28: Added cadence-aware runtime guard rails to `bluesky_validate_runtime_config.py` (5.26 follow-on). Validator now fails fast when risky schedule/frequency changes are paired with aggressive report/unfollow/follow control values, reducing accidental high-blast-radius configuration drift.
 - v1.29: Completed centralised config rollout (5.26). Added `follows_and_likes` config section to `bluesky_config.py` and `resources/jokebot_runtime_config.json`. Wired `bluesky_follows_and_likes.py` to consume page/limit constants from config instead of hardcoding them. Wired `bluesky_verify_latest_joke_post.py` to derive its hashtag list from `posting.hashtags`. All scripts with operational defaults now consume from central config. Closes #38.
+- v1.31: Completed hashtag-rotation rollout for issue #50. `bluesky_post_joke.py` now rotates post hashtags deterministically from the configured pool, tracks posting tag offset in state, and computes per-post grapheme-aware length budget from selected tags before accepting joke candidates. Added focused tests and documentation updates.
 - v1.30: Completed configuration tuning for issue #52. Extended joke deduplication window from 365 to 730 days (`posting.days_limit`), reduced follow grace from 90 to 30 days (`FOLLOW_RESPONSE_GRACE_PERIOD_DAYS`), and moved unfollow cadence from quarterly to monthly (`0 12 1 * *`) to smooth clean-up volume. Updated runtime config defaults, unfollow workflow schedule, docs, and tests.
 
 ## 9. Code Review: Issues Resolved

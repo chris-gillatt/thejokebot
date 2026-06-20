@@ -75,6 +75,9 @@ def _default_state() -> dict:
         "follow_fellows": {
             "tag_offset": 0,
         },
+        "posting": {
+            "tag_offset": 0,
+        },
         "posted_jokes": [],
     }
 
@@ -144,6 +147,9 @@ def _normalise_state(state: dict) -> dict:
 
     follow_fellows_state = state.setdefault("follow_fellows", {})
     follow_fellows_state.setdefault("tag_offset", 0)
+
+    posting_state = state.setdefault("posting", {})
+    posting_state.setdefault("tag_offset", 0)
 
     state.setdefault("posted_jokes", [])
     return state
@@ -509,3 +515,21 @@ def advance_follow_fellows_tag_offset(state: dict, step: int, total_tags: int) -
     ff = state.setdefault("follow_fellows", {"tag_offset": 0})
     current = int(ff.get("tag_offset", 0))
     ff["tag_offset"] = (current + step) % total_tags
+
+
+# ---------------------------------------------------------------------------
+# Posting tag rotation
+# ---------------------------------------------------------------------------
+
+
+def get_posting_tag_offset(state: dict) -> int:
+    """Return the current tag-rotation offset for post hashtags."""
+    posting = state.setdefault("posting", {"tag_offset": 0})
+    return int(posting.get("tag_offset", 0))
+
+
+def advance_posting_tag_offset(state: dict, step: int, total_tags: int) -> None:
+    """Advance post tag-rotation offset by step, wrapping around total_tags."""
+    posting = state.setdefault("posting", {"tag_offset": 0})
+    current = int(posting.get("tag_offset", 0))
+    posting["tag_offset"] = (current + step) % total_tags
