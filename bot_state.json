@@ -1,7 +1,7 @@
 {
   "provider": {
-    "last_used": "groandeck",
-    "last_used_at": 1782319558,
+    "last_used": "jokeapi",
+    "last_used_at": 1782333372,
     "rotation_order": [
       "icanhazdadjoke",
       "jokeapi",
@@ -9,9 +9,9 @@
     ],
     "failures": {
       "icanhazdadjoke": {
-        "count": 1,
-        "last_failure_at": 1776705046,
-        "last_error": "502 Server Error: Bad Gateway for url: https://icanhazdadjoke.com/"
+        "count": 2,
+        "last_failure_at": 1782333371,
+        "last_error": "All 5 jokes from 'icanhazdadjoke' were recent duplicates or too long"
       },
       "jokeapi": {
         "count": 3,
@@ -3577,6 +3577,13 @@
       "provider": "groandeck",
       "post_uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mp2ei5h3qv2b",
       "post_cid": "bafyreicvuqxpiwqfwqlczf5agelvvsmtko7237k7pqbhyhku7avvxsptxe"
+    },
+    {
+      "ts": 1782333373,
+      "b64": "SSBhc2tlZCBteSB3aWZlIGlmIEkgd2FzIHRoZSBvbmx5IG9uZSBzaGUncyBiZWVuIHdpdGguCgpTaGUgc2FpZCwgIlllcywgdGhlIG90aGVycyB3ZXJlIGF0IGxlYXN0IHNldmVucyBvciBlaWdodHMuIg==",
+      "provider": "jokeapi",
+      "post_uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mp2rdt5mim24",
+      "post_cid": "bafyreiapklq33s6c6emmegjq7ppxbbwtbdggavrnkh57ehah4cekoweorq"
     }
   ],
   "reports": {
@@ -30676,6 +30683,6 @@
     "following_snapshot_dids": []
   },
   "posting": {
-    "tag_offset": 8
+    "tag_offset": 9
   }
 }
