@@ -35,7 +35,7 @@ jobs:
 
       - name: Restore Bluesky session cache
         id: bluesky_session_cache
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@v6
         with:
           path: .agent-tmp/bluesky_session.txt
           key: bluesky-session-${{ github.workflow }}-${{ github.ref_name }}-${{ github.sha }}
@@ -61,7 +61,7 @@ jobs:
 
       - name: Save Bluesky session cache
         if: always() && steps.bluesky_session_cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v5
+        uses: actions/cache/save@v6
         with:
           path: .agent-tmp/bluesky_session.txt
           key: bluesky-session-${{ github.workflow }}-${{ github.ref_name }}-${{ github.sha }}
