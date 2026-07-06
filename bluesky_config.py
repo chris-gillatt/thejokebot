@@ -13,6 +13,17 @@ _DEFAULT_CONFIG = {
         "max_attempts": 5,
         "max_post_chars": 300,
         "hashtags": ["#jokes", "#dadjoke", "#funny"],
+        "tag_fallback": "#joke",
+        "tag_default": "#dadjoke",
+        "tag_max_count": 3,
+        "tag_similarity_groups": [
+            ["dadjoke", "dadjokes"],
+            ["joke", "jokes"],
+            ["humour", "humor"],
+            ["humoursky", "humorsky"],
+            ["pun", "puns"],
+            ["momjokes", "mumjokes"],
+        ],
     },
     "follow_fellows": {
         "per_tag_limit": 12,
@@ -114,6 +125,44 @@ def _ensure_string_list(value, field_name):
     return result
 
 
+def _validate_posting_tag_config(posting: dict) -> None:
+    """Validate and normalise the posting tag fields in place."""
+    for field in ("tag_fallback", "tag_default"):
+        raw = posting.get(field, "")
+        if not isinstance(raw, str) or not raw.strip():
+            raise ValueError(f"posting.{field} must be a non-empty string.")
+        raw = raw.strip()
+        if not raw.startswith("#"):
+            raise ValueError(f"posting.{field} must start with '#'.")
+        posting[field] = raw
+
+    posting["tag_max_count"] = _ensure_int(
+        posting.get("tag_max_count", 3), minimum=1, field_name="posting.tag_max_count"
+    )
+
+    raw_groups = posting.get("tag_similarity_groups", [])
+    if not isinstance(raw_groups, list):
+        raise ValueError("posting.tag_similarity_groups must be a list.")
+    validated_groups = []
+    for gi, group in enumerate(raw_groups):
+        if not isinstance(group, list):
+            raise ValueError(f"posting.tag_similarity_groups[{gi}] must be a list.")
+        validated_group = []
+        for ti, item in enumerate(group):
+            if not isinstance(item, str) or not item.strip():
+                raise ValueError(
+                    f"posting.tag_similarity_groups[{gi}][{ti}] must be a non-empty string."
+                )
+            item = item.strip()
+            if item.startswith("#"):
+                raise ValueError(
+                    f"posting.tag_similarity_groups[{gi}][{ti}] must not start with '#'."
+                )
+            validated_group.append(item)
+        validated_groups.append(validated_group)
+    posting["tag_similarity_groups"] = validated_groups
+
+
 def _validate_config(payload):
     if not isinstance(payload, dict):
         raise ValueError("Runtime config must be a JSON object.")
@@ -142,6 +191,8 @@ def _validate_config(payload):
         if not hashtag.startswith("#"):
             raise ValueError(f"posting.hashtags[{index}] must start with '#'.")
     posting["hashtags"] = posting_hashtags
+
+    _validate_posting_tag_config(posting)
     cfg["posting"] = posting
 
     follow_fellows = cfg.get("follow_fellows", {})

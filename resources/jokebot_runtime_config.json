@@ -8,6 +8,17 @@
       "#jokes",
       "#dadjoke",
       "#funny"
+    ],
+    "tag_fallback": "#joke",
+    "tag_default": "#dadjoke",
+    "tag_max_count": 3,
+    "tag_similarity_groups": [
+      ["dadjoke", "dadjokes"],
+      ["joke", "jokes"],
+      ["humour", "humor"],
+      ["humoursky", "humorsky"],
+      ["pun", "puns"],
+      ["momjokes", "mumjokes"]
     ]
   },
   "follow_fellows": {

@@ -20,8 +20,6 @@ DAYS_LIMIT = _POSTING_CONFIG["days_limit"]
 MAX_ATTEMPTS = _POSTING_CONFIG["max_attempts"]
 BLUESKY_MAX_POST_CHARS = _POSTING_CONFIG["max_post_chars"]
 HASHTAGS = _POSTING_CONFIG["hashtags"]
-ROTATED_POST_TAG_COUNT = 3
-POSTING_TAG_ROTATION_STEP = 1
 
 # Bluesky character limits are based on user-visible characters, not code points.
 _GRAPHEME_PATTERN = regex.compile(r"\X")
@@ -64,20 +62,94 @@ def get_posting_hashtag_pool() -> list[str]:
     return pool or list(HASHTAGS)
 
 
-def select_posting_hashtags(
+def _build_group_lookup(similarity_groups: list[list[str]]) -> dict[str, int]:
+    """Map each lowercased tag (without #) to its similarity group index."""
+    lookup: dict[str, int] = {}
+    for gi, group in enumerate(similarity_groups):
+        for tag in group:
+            lookup[tag.lower()] = gi
+    return lookup
+
+
+def shuffle_posting_hashtags(
     hashtag_pool: list[str],
     offset: int,
-    count: int = ROTATED_POST_TAG_COUNT,
+    similarity_groups: list[list[str]],
 ) -> list[str]:
-    """Select a deterministic rotated window of hashtags for the next post."""
+    """Return the pool shuffled by seed=offset with at most one tag per similarity group."""
     if not hashtag_pool:
-        return list(HASHTAGS)
+        return []
 
-    total_tags = len(hashtag_pool)
-    safe_offset = offset % total_tags
-    rotated = hashtag_pool[safe_offset:] + hashtag_pool[:safe_offset]
-    tag_count = max(1, min(int(count), total_tags))
-    return rotated[:tag_count]
+    group_lookup = _build_group_lookup(similarity_groups)
+    pool_copy = list(hashtag_pool)
+    random.Random(offset).shuffle(pool_copy)
+
+    result = []
+    seen_groups: set[int] = set()
+    for tag in pool_copy:
+        tag_key = tag.lstrip("#").lower()
+        group_id = group_lookup.get(tag_key)
+        if group_id is not None:
+            if group_id in seen_groups:
+                continue
+            seen_groups.add(group_id)
+        result.append(tag)
+
+    return result
+
+
+def fit_hashtags_to_joke(
+    joke_text: str,
+    shuffled_pool: list[str],
+    tag_default: str,
+    tag_fallback: str,
+    max_count: int,
+    similarity_groups: list[list[str]],
+) -> list[str]:
+    """
+    Select up to max_count whole hashtags that fit within the post character limit.
+
+    Decision tree:
+    - If tag_default fits alongside the joke: start with [tag_default] and greedily
+      add tags from shuffled_pool up to max_count, skipping group-duplicates.
+    - If tag_default does not fit: return [tag_fallback] (last resort).
+
+    Minimum 1 tag. Never returns a partial tag.
+    """
+    max_chars = BLUESKY_MAX_POST_CHARS
+    joke_graphemes = _grapheme_len(joke_text)
+
+    def _post_len(tags: list[str]) -> int:
+        return joke_graphemes + 2 + _grapheme_len(" ".join(tags))
+
+    if _post_len([tag_default]) > max_chars:
+        return [tag_fallback]
+
+    group_lookup = _build_group_lookup(similarity_groups)
+    selected = [tag_default]
+    seen_groups: set[int] = set()
+    default_key = tag_default.lstrip("#").lower()
+    if default_key in group_lookup:
+        seen_groups.add(group_lookup[default_key])
+
+    skip = {tag_default.lower(), tag_fallback.lower()}
+
+    for candidate in shuffled_pool:
+        if len(selected) >= max_count:
+            break
+        if candidate.lower() in skip:
+            continue
+        candidate_key = candidate.lstrip("#").lower()
+        group_id = group_lookup.get(candidate_key)
+        if group_id is not None and group_id in seen_groups:
+            continue
+        if _post_len(selected + [candidate]) <= max_chars:
+            selected.append(candidate)
+            skip.add(candidate.lower())
+            if group_id is not None:
+                seen_groups.add(group_id)
+
+    return selected
 
 
 def get_fallback_joke():
@@ -207,9 +279,19 @@ def build_hashtag_facets(joke_text, hashtags):
 def main():
     state = bluesky_state.load_state()
     cutoff = get_current_epoch() - (DAYS_LIMIT * 86400)
+
+    posting_config = bluesky_config.get_posting_config()
+    tag_fallback = posting_config["tag_fallback"]
+    tag_default = posting_config["tag_default"]
+    tag_max_count = posting_config["tag_max_count"]
+    tag_similarity_groups = posting_config["tag_similarity_groups"]
+
     posting_hashtag_pool = get_posting_hashtag_pool()
     tag_offset = bluesky_state.get_posting_tag_offset(state)
-    hashtags_for_post = select_posting_hashtags(posting_hashtag_pool, tag_offset)
+    shuffled_pool = shuffle_posting_hashtags(
+        posting_hashtag_pool, tag_offset, tag_similarity_groups
+    )
+
     recent_b64s = bluesky_state.get_recent_b64s(state, cutoff)
     denylist_payload = bluesky_denylist.load_denylist()
     recent_b64s |= bluesky_denylist.get_denylisted_b64s(denylist_payload)
@@ -236,9 +318,7 @@ def main():
 
     for provider_name in providers_to_try:
         try:
-            joke, b64 = pick_joke(
-                recent_b64s, provider_name, hashtags=hashtags_for_post
-            )
+            joke, b64 = pick_joke(recent_b64s, provider_name, hashtags=[tag_fallback])
             used_provider = provider_name
             break
         except (
@@ -259,6 +339,14 @@ def main():
     if used_provider != "fallback":
         bluesky_state.record_provider_used(state, used_provider)
 
+    hashtags_for_post = fit_hashtags_to_joke(
+        joke,
+        shuffled_pool,
+        tag_default,
+        tag_fallback,
+        tag_max_count,
+        tag_similarity_groups,
+    )
     hashtags_string = " ".join(hashtags_for_post)
     joke_with_tags = f"{joke}\n\n{hashtags_string}"
     facets = build_hashtag_facets(joke, hashtags_for_post)
@@ -288,7 +376,7 @@ def main():
         )
         bluesky_state.advance_posting_tag_offset(
             state,
-            POSTING_TAG_ROTATION_STEP,
+            1,
             len(posting_hashtag_pool),
         )
     except (

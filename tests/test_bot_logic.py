@@ -2269,6 +2269,134 @@ class PostingTagRotationTests(unittest.TestCase):
         self.assertIn("tag_offset", normalised["posting"])
 
 
+class PostingTagSelectionTests(unittest.TestCase):
+    """Tests for shuffle_posting_hashtags and fit_hashtags_to_joke (Issue #63)."""
+
+    _GROUPS = [
+        ["dadjoke", "dadjokes"],
+        ["joke", "jokes"],
+        ["humour", "humor"],
+    ]
+
+    def test_shuffle_same_seed_gives_same_order(self):
+        pool = ["#a", "#b", "#c", "#d", "#e"]
+        result1 = bluesky_post_joke.shuffle_posting_hashtags(pool, 7, [])
+        result2 = bluesky_post_joke.shuffle_posting_hashtags(pool, 7, [])
+        self.assertEqual(result1, result2)
+
+    def test_shuffle_different_seeds_give_different_orders(self):
+        pool = ["#a", "#b", "#c", "#d", "#e", "#f", "#g"]
+        orders = set()
+        for seed in range(20):
+            result = bluesky_post_joke.shuffle_posting_hashtags(pool, seed, [])
+            orders.add(tuple(result))
+        # 20 different seeds across a 7-item pool should yield multiple orderings
+        self.assertGreater(len(orders), 1)
+
+    def test_shuffle_removes_group_duplicate(self):
+        pool = ["#dadjoke", "#dadjokes", "#funny"]
+        result = bluesky_post_joke.shuffle_posting_hashtags(pool, 0, self._GROUPS)
+        # Only one of dadjoke/dadjokes should appear
+        group_hits = sum(1 for t in result if t in ("#dadjoke", "#dadjokes"))
+        self.assertEqual(group_hits, 1)
+
+    def test_shuffle_keeps_all_singletons(self):
+        pool = ["#funny", "#groan", "#punny"]
+        result = bluesky_post_joke.shuffle_posting_hashtags(pool, 0, self._GROUPS)
+        self.assertEqual(sorted(result), sorted(pool))
+
+    def test_shuffle_empty_pool_returns_empty(self):
+        self.assertEqual(bluesky_post_joke.shuffle_posting_hashtags([], 0, []), [])
+
+    def test_fit_returns_default_when_joke_is_short(self):
+        joke = "Why did the chicken cross the road? To get to the other side."
+        pool = ["#funny", "#groan"]
+        result = bluesky_post_joke.fit_hashtags_to_joke(
+            joke, pool, "#dadjoke", "#joke", 3, []
+        )
+        self.assertIn("#dadjoke", result)
+        self.assertLessEqual(len(result), 3)
+        self.assertGreaterEqual(len(result), 1)
+
+    def test_fit_returns_fallback_when_joke_is_very_long(self):
+        # Joke just fits with #joke (5 chars) but not with #dadjoke (8 chars)
+        # 300 - 2 (\n\n) - 8 (#dadjoke) = 290 chars for joke → use 291 chars
+        joke = "x" * 291
+        pool = ["#funny"]
+        result = bluesky_post_joke.fit_hashtags_to_joke(
+            joke, pool, "#dadjoke", "#joke", 3, []
+        )
+        self.assertEqual(result, ["#joke"])
+
+    def test_fit_respects_max_count(self):
+        joke = "Short joke"
+        pool = ["#a", "#bb", "#ccc", "#dddd", "#eeeee"]
+        result = bluesky_post_joke.fit_hashtags_to_joke(
+            joke, pool, "#dadjoke", "#joke", 3, []
+        )
+        self.assertLessEqual(len(result), 3)
+
+    def test_fit_no_group_duplicates_with_default(self):
+        # default is #dadjoke; pool contains #dadjokes (same group)
+        joke = "Short joke"
+        pool = ["#dadjokes", "#funny"]
+        result = bluesky_post_joke.fit_hashtags_to_joke(
+            joke, pool, "#dadjoke", "#joke", 3, self._GROUPS
+        )
+        group_hits = sum(1 for t in result if t in ("#dadjoke", "#dadjokes"))
+        self.assertEqual(group_hits, 1)
+
+    def test_fit_skips_fallback_from_pool(self):
+        joke = "Short joke"
+        pool = ["#joke", "#funny"]
+        result = bluesky_post_joke.fit_hashtags_to_joke(
+            joke, pool, "#dadjoke", "#joke", 3, []
+        )
+        # #joke (fallback) should not appear alongside #dadjoke (default)
+        self.assertNotIn("#joke", result)
+        self.assertIn("#dadjoke", result)
+
+    def test_fit_post_never_exceeds_300_chars(self):
+        # Use a joke that leaves very little space
+        joke = "x" * 280
+        pool = ["#funny", "#groan", "#punny"]
+        result = bluesky_post_joke.fit_hashtags_to_joke(
+            joke, pool, "#dadjoke", "#joke", 3, []
+        )
+        full_post = joke + "\n\n" + " ".join(result)
+        self.assertLessEqual(len(full_post), 300)
+
+    def test_config_tag_fallback_must_start_with_hash(self):
+        with self.assertRaises(ValueError):
+            bluesky_config.load_runtime_config(config_path="/dev/null", strict=False)
+            # Directly test validation
+            bluesky_config._validate_config(
+                {
+                    **bluesky_config._DEFAULT_CONFIG,
+                    "posting": {
+                        **bluesky_config._DEFAULT_CONFIG["posting"],
+                        "tag_fallback": "joke",
+                    },
+                }
+            )
+
+    def test_config_tag_default_must_start_with_hash(self):
+        import copy
+
+        bad_config = copy.deepcopy(bluesky_config._DEFAULT_CONFIG)
+        bad_config["posting"]["tag_default"] = "dadjoke"
+        with self.assertRaises(ValueError):
+            bluesky_config._validate_config(bad_config)
+
+    def test_config_similarity_group_items_must_not_start_with_hash(self):
+        import copy
+
+        bad_config = copy.deepcopy(bluesky_config._DEFAULT_CONFIG)
+        bad_config["posting"]["tag_similarity_groups"] = [["#dadjoke", "dadjokes"]]
+        with self.assertRaises(ValueError):
+            bluesky_config._validate_config(bad_config)
+
+
 class JokeRetryChainTests(unittest.TestCase):
     def test_pick_joke_returns_new_joke(self):
         """pick_joke fetches and returns a non-duplicate joke."""
