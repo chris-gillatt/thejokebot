@@ -125,21 +125,17 @@ def _ensure_string_list(value, field_name):
     return result
 
 
-def _validate_posting_tag_config(posting: dict) -> None:
-    """Validate and normalise the posting tag fields in place."""
-    for field in ("tag_fallback", "tag_default"):
-        raw = posting.get(field, "")
-        if not isinstance(raw, str) or not raw.strip():
-            raise ValueError(f"posting.{field} must be a non-empty string.")
-        raw = raw.strip()
-        if not raw.startswith("#"):
-            raise ValueError(f"posting.{field} must start with '#'.")
-        posting[field] = raw
+def _validate_posting_tag_field(posting: dict, field: str) -> None:
+    raw = posting.get(field, "")
+    if not isinstance(raw, str) or not raw.strip():
+        raise ValueError(f"posting.{field} must be a non-empty string.")
+    raw = raw.strip()
+    if not raw.startswith("#"):
+        raise ValueError(f"posting.{field} must start with '#'.")
+    posting[field] = raw
 
-    posting["tag_max_count"] = _ensure_int(
-        posting.get("tag_max_count", 3), minimum=1, field_name="posting.tag_max_count"
-    )
 
+def _validate_posting_similarity_groups(posting: dict) -> None:
     raw_groups = posting.get("tag_similarity_groups", [])
     if not isinstance(raw_groups, list):
         raise ValueError("posting.tag_similarity_groups must be a list.")
@@ -161,6 +157,23 @@ def _validate_posting_tag_config(posting: dict) -> None:
             validated_group.append(item)
         validated_groups.append(validated_group)
     posting["tag_similarity_groups"] = validated_groups
+
+
+def _validate_posting_tag_config(posting: dict) -> None:
+    """Validate and normalise the posting tag fields in place."""
+    _validate_posting_tag_field(posting, "tag_fallback")
+    _validate_posting_tag_field(posting, "tag_default")
+
+    posting["tag_max_count"] = _ensure_int(
+        posting.get("tag_max_count", 3), minimum=1, field_name="posting.tag_max_count"
+    )
+    if posting["tag_max_count"] > 3:
+        raise ValueError("posting.tag_max_count must be <= 3.")
+
+    if posting["tag_default"].casefold() == posting["tag_fallback"].casefold():
+        raise ValueError("posting.tag_default must differ from posting.tag_fallback.")
+
+    _validate_posting_similarity_groups(posting)
 
 
 def _validate_config(payload):

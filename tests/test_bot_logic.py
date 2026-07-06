@@ -2367,18 +2367,12 @@ class PostingTagSelectionTests(unittest.TestCase):
         self.assertLessEqual(len(full_post), 300)
 
     def test_config_tag_fallback_must_start_with_hash(self):
+        import copy
+
+        bad_config = copy.deepcopy(bluesky_config._DEFAULT_CONFIG)
+        bad_config["posting"]["tag_fallback"] = "joke"
         with self.assertRaises(ValueError):
-            bluesky_config.load_runtime_config(config_path="/dev/null", strict=False)
-            # Directly test validation
-            bluesky_config._validate_config(
-                {
-                    **bluesky_config._DEFAULT_CONFIG,
-                    "posting": {
-                        **bluesky_config._DEFAULT_CONFIG["posting"],
-                        "tag_fallback": "joke",
-                    },
-                }
-            )
+            bluesky_config._validate_config(bad_config)
 
     def test_config_tag_default_must_start_with_hash(self):
         import copy
@@ -2395,6 +2389,91 @@ class PostingTagSelectionTests(unittest.TestCase):
         bad_config["posting"]["tag_similarity_groups"] = [["#dadjoke", "dadjokes"]]
         with self.assertRaises(ValueError):
             bluesky_config._validate_config(bad_config)
+
+    def test_config_tag_default_and_fallback_must_differ(self):
+        import copy
+
+        bad_config = copy.deepcopy(bluesky_config._DEFAULT_CONFIG)
+        bad_config["posting"]["tag_default"] = "#joke"
+        bad_config["posting"]["tag_fallback"] = "#joke"
+        with self.assertRaises(ValueError):
+            bluesky_config._validate_config(bad_config)
+
+    def test_config_tag_max_count_must_be_at_most_three(self):
+        import copy
+
+        bad_config = copy.deepcopy(bluesky_config._DEFAULT_CONFIG)
+        bad_config["posting"]["tag_max_count"] = 4
+        with self.assertRaises(ValueError):
+            bluesky_config._validate_config(bad_config)
+
+    def test_main_posts_fallback_tag_when_default_would_overflow(self):
+        # 291 graphemes means #dadjoke overflows 300 once "\n\n" is included,
+        # but #joke still fits.
+        long_joke = "x" * 291
+        mock_client = mock.Mock()
+        mock_client.me = SimpleNamespace(handle="bot.test")
+        mock_client.send_post.return_value = {"uri": "at://post/1", "cid": "cid1"}
+
+        with mock.patch(
+            "bluesky_post_joke.login_client", return_value=(mock_client, None)
+        ):
+            with mock.patch(
+                "bluesky_post_joke.bluesky_joke_providers.PROVIDERS",
+                {"test_provider": lambda: long_joke},
+            ):
+                with mock.patch(
+                    "bluesky_post_joke.bluesky_joke_providers.PRIMARY_PROVIDERS",
+                    ["test_provider"],
+                ):
+                    with mock.patch(
+                        "bluesky_post_joke.bluesky_joke_providers.BACKUP_PROVIDERS", []
+                    ):
+                        with mock.patch(
+                            "bluesky_post_joke.bluesky_joke_providers.FALLBACK_PROVIDER",
+                            "test_provider",
+                        ):
+                            with mock.patch(
+                                "bluesky_post_joke.bluesky_state.load_state",
+                                return_value=bluesky_state._default_state(),
+                            ):
+                                with mock.patch(
+                                    "bluesky_post_joke.bluesky_state.get_next_provider",
+                                    return_value="test_provider",
+                                ):
+                                    with mock.patch(
+                                        "bluesky_post_joke.bluesky_state.get_recent_b64s",
+                                        return_value=set(),
+                                    ):
+                                        with mock.patch(
+                                            "bluesky_post_joke.bluesky_denylist.load_denylist",
+                                            return_value={"jokes": []},
+                                        ):
+                                            with mock.patch(
+                                                "bluesky_post_joke.bluesky_denylist.get_denylisted_b64s",
+                                                return_value=set(),
+                                            ):
+                                                with mock.patch(
+                                                    "bluesky_post_joke.bluesky_state.record_provider_used"
+                                                ):
+                                                    with mock.patch(
+                                                        "bluesky_post_joke.bluesky_state.add_posted_joke"
+                                                    ):
+                                                        with mock.patch(
+                                                            "bluesky_post_joke.bluesky_state.advance_posting_tag_offset"
+                                                        ):
+                                                            with mock.patch(
+                                                                "bluesky_post_joke.bluesky_state.prune_old_jokes"
+                                                            ):
+                                                                with mock.patch(
+                                                                    "bluesky_post_joke.bluesky_state.save_state"
+                                                                ):
+                                                                    bluesky_post_joke.main()
+
+        _, kwargs = mock_client.send_post.call_args
+        posted_text = kwargs["text"]
+        self.assertIn("\n\n#joke", posted_text)
+        self.assertNotIn("#dadjoke", posted_text)
 
 
 class JokeRetryChainTests(unittest.TestCase):
