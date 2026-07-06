@@ -69,6 +69,9 @@ This runs:
 - Unit tests (`pytest tests/ -v --tb=short`)
 - Local CodeQL analysis (required by default)
 
+Linting/format checks and tests are a single validation gate in this repository;
+running only tests is not considered sufficient before commit/push.
+
 If CodeQL is temporarily unavailable, you can explicitly run in reduced-coverage mode:
 
 - `BLUESKY_PREFLIGHT_ALLOW_REDUCED_COVERAGE=true ./scripts/preflight-local.sh`

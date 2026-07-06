@@ -15,6 +15,7 @@ changelog in this file is intentionally brief.
 - Use Conventional Commits with commit messages that explain why.
 - Before push, sync with remote (`git pull --rebase`) because scheduled workflows can update `main`.
 - Before commit/push, run local quality checks (`ruff check`, `ruff format --check`, unit tests, and local CodeQL when available) and fix issues proactively.
+- Treat lint and tests as a combined gate for all code changes: do not consider a change validated if only tests ran without lint/format checks.
 
 ## 3. Operational Constraints
 - The project is automation-first (GitHub Actions + script execution).
