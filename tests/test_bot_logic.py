@@ -668,6 +668,16 @@ class UnfollowControlTests(unittest.TestCase):
 
 
 class UnfollowIgnoreValidationTests(unittest.TestCase):
+    def test_default_ignorable_handles_include_dad_reply_bot(self):
+        self.assertIn(
+            "dadreplybot.bsky.social",
+            bluesky_unfollow.DEFAULT_IGNORABLE_USERNAMES,
+        )
+        self.assertIn(
+            "dadreplybot.bsky.social",
+            bluesky_validate_unfollow_ignore.DEFAULT_IGNORABLE_HANDLES,
+        )
+
     def test_parse_ignore_handles_deduplicates_and_sorts(self):
         handles = bluesky_validate_unfollow_ignore.parse_ignore_handles(
             " Example.Bsky.Social ,foo.bsky.social,foo.bsky.social",
