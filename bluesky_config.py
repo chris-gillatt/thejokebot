@@ -59,6 +59,7 @@ _DEFAULT_CONFIG = {
             "groandeck.bsky.social",
             "nocontextbritss.bsky.social",
             "dehler55.bsky.social",
+            "dadreplybot.bsky.social",
         ],
     },
     "follows_and_likes": {
