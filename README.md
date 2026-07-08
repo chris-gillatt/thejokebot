@@ -28,8 +28,8 @@ Posts dad jokes to a configured Bluesky account, plus account housekeeping autom
 - Avoids duplicating jokes within a rolling 730-day window.
 - Rotates across multiple live joke APIs with a bundled offline fallback.
 - Supports follow-back, reply liking, unfollow, and fellow-follow discovery scripts.
-- Uses a rotating set of 16 joke/follow-back hashtags for fellow-follow discovery, with a conservative per-run cap and state-backed tag rotation so the same tags do not always get first priority.
-- Rotates the hashtags appended to joke posts, using the broader tag pool with deterministic per-post progression.
+- Uses a rotating set of configured humour/follow-back hashtags for fellow-follow discovery, with a conservative per-run cap and state-backed tag rotation so the same tags do not always get first priority.
+- Rotates hashtags appended to joke posts using the posting runtime-config tag pool, with deterministic per-post progression and grapheme-aware length fitting.
 - Gives newly followed accounts a 30-day grace period before they become eligible for unfollow if they still do not follow back.
 - Lets followers report unsuitable jokes via a `#report` reply, which triggers an automated PR to add the joke to a permanent denylist.
 
@@ -119,6 +119,7 @@ Set these in `.env` (keep values quoted):
 | `BLUESKY_JOKE_PROVIDER` | No | Force a specific provider by name (`icanhazdadjoke`, `jokeapi`, `groandeck`, `syrsly`, `api_ninjas`, `jokebot_jokebook`). Leave unset for normal rotation. |
 | `BLUESKY_REPORT_MAX_PAGES` | No | Max notification pages to fetch per report run (default `3`). |
 | `BLUESKY_REPORT_PAGE_LIMIT` | No | Notifications per page when polling for reports (default `100`). |
+| `BLUESKY_REPORT_MAX_UNRESOLVED_ATTEMPTS` | No | Max retries for unresolved report notifications before they are marked processed to prevent indefinite retry loops (default `3`). |
 
 Credential selection order: the bot uses `BLUESKY_APP_PASSWORD` first and falls back to `BLUESKY_PASSWORD` only when the app password variable is not set.
 
@@ -156,6 +157,7 @@ Validation guard rail:
 - **Unfollow batching:** `bluesky_unfollow.py` is capped and batched by default (`BLUESKY_UNFOLLOW_MAX_ACTIONS=200`, `BLUESKY_UNFOLLOW_BATCH_SIZE=50`, `BLUESKY_UNFOLLOW_BATCH_PAUSE_SECONDS=60`) to reduce throttle risk on large clean-ups.
 - **Follow-fellows cadence:** `bluesky_follow_fellows.py` runs twice weekly, rotates tag priority between runs, and uses the configured per-run cap and hashtag set from `resources/jokebot_runtime_config.json`.
 - **Post hashtag rotation:** `bluesky_post_joke.py` rotates the hashtag window on each successful post and calculates per-post length budget from the selected tags before accepting a joke candidate.
+- **Report retry bound:** `bluesky_process_reports.py` retries unresolved report notifications up to `BLUESKY_REPORT_MAX_UNRESOLVED_ATTEMPTS` before marking them processed to avoid infinite retry churn.
 - **Starter-pack/list protection:** if `resources/jokebot_starter_pack.json` is enabled and points to a valid source list URI, all members of that list are automatically protected from unfollowing (unioned with `BLUESKY_UNFOLLOW_IGNORE`).
 - **Follow grace protection:** `bluesky_unfollow.py` skips accounts followed by `bluesky_follow_fellows.py` for `30` days before they can become eligible for unfollow.
 - **Post length preflight:** `bluesky_post_joke.py` skips over-long jokes and retries provider fetches before posting, using grapheme-aware length checks so posts stay within Bluesky's 300-character limit after hashtags are appended.
@@ -171,7 +173,7 @@ Bluesky rate-limit context (as documented):
 If a posted joke is unsuitable, any Bluesky user can flag it:
 
 1. Reply to the joke post with the hashtag `#report` (case-insensitive, standalone — e.g. `#report this is offensive`).
-2. That's it. The bot picks up the reply automatically within 30 minutes.
+2. That's it. The bot picks up the reply on the next scheduled report run (currently every 4 hours).
 
 The report triggers an automated PR adding the joke to the denylist. Once a maintainer merges the PR, the joke will never be posted again and the original post is deleted from the account on the next report run.
 
@@ -208,11 +210,12 @@ Run it via workflow dispatch: `bluesky_manage_starter_pack`.
 
 ## Report workflow (technical detail)
 
-The report pipeline runs every 30 minutes via `bluesky_process_reports`.
+The report pipeline runs every 4 hours via `bluesky_process_reports`.
 
 1. It scans replies for `#report`, maps each report to a posted joke, and ignores duplicates.
 2. It writes proposals to `.agent-tmp/report_proposals.json` and opens denylist PRs via `bluesky_create_report_prs.py`.
 3. It updates state in `bot_state.json` so notifications and deletions are not reprocessed.
+4. Unresolved notifications are retried up to `BLUESKY_REPORT_MAX_UNRESOLVED_ATTEMPTS` before being marked processed.
 
 `bluesky_follow_fellows` currently runs every Wednesday and Friday at 00:00 UTC. `bluesky_unfollow` currently runs monthly on the first day at 12:00 UTC.
 
@@ -220,7 +223,7 @@ The report pipeline runs every 30 minutes via `bluesky_process_reports`.
 
 | File | Purpose |
 |---|---|
-| `bot_state.json` | Runtime state: posted joke history (b64, deduplication), provider rotation, report notification checkpoints, deleted post URIs, liked reply URIs, unfollow history, follow-grace entries, and follow-fellows tag-rotation offset. |
+| `bot_state.json` | Runtime state: posted joke history (b64, deduplication), provider rotation, report notification checkpoints, unresolved report-attempt counters, deleted post URIs, liked reply URIs, unfollow history, follow-grace entries, and follow-fellows/posting tag-rotation offsets. |
 | `resources/jokebot_denylist.json` | Repository-backed denylist. Jokes added here are permanently excluded from posting. |
 | `resources/jokebot_jokebook.json` | Bundled offline joke pool (446 jokes). Used as final fallback when all live APIs are unavailable. |
 
