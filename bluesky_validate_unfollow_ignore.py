@@ -7,6 +7,7 @@ import os
 import atproto_client.exceptions
 import requests
 
+import bluesky_config
 from bluesky_common import (
     get_bool_env,
     login_client,
@@ -14,7 +15,9 @@ from bluesky_common import (
     retry_network_call,
 )
 
-DEFAULT_IGNORABLE_HANDLES = ("theonion.bsky.social",)
+DEFAULT_IGNORABLE_HANDLES = tuple(
+    bluesky_config.get_unfollow_config()["default_ignorable_handles"]
+)
 _STALE_ERROR_MARKERS = (
     "profile not found",
     "not found",

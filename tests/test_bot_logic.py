@@ -4,6 +4,7 @@ import json
 import os
 import pathlib
 import re
+import subprocess
 import tempfile
 import unittest
 from types import SimpleNamespace
@@ -674,6 +675,12 @@ class UnfollowIgnoreValidationTests(unittest.TestCase):
         )
         self.assertEqual(handles, ["example.bsky.social", "foo.bsky.social"])
 
+    def test_default_ignorable_handles_are_loaded_from_runtime_config(self):
+        self.assertEqual(
+            list(bluesky_validate_unfollow_ignore.DEFAULT_IGNORABLE_HANDLES),
+            bluesky_config.get_unfollow_config()["default_ignorable_handles"],
+        )
+
     def test_extract_profile_did_supports_object_and_dict(self):
         object_profile = SimpleNamespace(did="did:plc:abc")
         dict_profile = {"did": "did:plc:def"}
@@ -1247,6 +1254,43 @@ class StateJokeHistoryTests(unittest.TestCase):
         uris = state["reports"]["processed_notification_uris"]
         self.assertEqual(uris, ["at://notif/1"])
 
+    def test_unresolved_notification_attempts_can_increment_and_clear(self):
+        state = bluesky_state._default_state()
+        first = bluesky_state.increment_unresolved_notification_attempt(
+            state, "at://notif/unresolved"
+        )
+        second = bluesky_state.increment_unresolved_notification_attempt(
+            state, "at://notif/unresolved"
+        )
+
+        self.assertEqual(first, 1)
+        self.assertEqual(second, 2)
+        self.assertEqual(
+            bluesky_state.get_unresolved_notification_attempts(state).get(
+                "at://notif/unresolved"
+            ),
+            2,
+        )
+
+        bluesky_state.clear_unresolved_notification_attempt(
+            state, "at://notif/unresolved"
+        )
+        self.assertNotIn(
+            "at://notif/unresolved",
+            bluesky_state.get_unresolved_notification_attempts(state),
+        )
+
+    def test_prune_unresolved_notification_attempts_keeps_latest_entries(self):
+        state = bluesky_state._default_state()
+        bluesky_state.increment_unresolved_notification_attempt(state, "at://notif/1")
+        bluesky_state.increment_unresolved_notification_attempt(state, "at://notif/2")
+        bluesky_state.increment_unresolved_notification_attempt(state, "at://notif/3")
+
+        bluesky_state.prune_unresolved_notification_attempts(state, max_entries=2)
+
+        attempts = bluesky_state.get_unresolved_notification_attempts(state)
+        self.assertEqual(set(attempts.keys()), {"at://notif/2", "at://notif/3"})
+
     def test_get_acknowledged_report_uris_returns_empty_set_initially(self):
         state = bluesky_state._default_state()
         result = bluesky_state.get_acknowledged_report_uris(state)
@@ -1345,6 +1389,68 @@ class ReportPrRoutingTests(unittest.TestCase):
         removed = bluesky_create_report_prs.remove_jokebook_entry(payload, "c")
         self.assertFalse(removed)
         self.assertEqual(payload["jokes"], ["a", "b"])
+
+    def test_cleanup_local_branch_checks_out_main_then_deletes_branch(self):
+        with mock.patch("bluesky_create_report_prs.run_command") as run_command:
+            bluesky_create_report_prs._cleanup_local_branch("chore/report-denylist-abc")
+
+        run_command.assert_has_calls(
+            [
+                mock.call(["git", "checkout", "main"], check=False),
+                mock.call(
+                    ["git", "branch", "-D", "chore/report-denylist-abc"],
+                    check=False,
+                ),
+            ]
+        )
+
+    def test_create_pr_for_proposal_cleans_up_after_push_failure(self):
+        proposal = {
+            "b64": "dGVzdA==",
+            "source_provider": "jokeapi",
+            "source_post_uri": "at://post/1",
+            "source_reply_uri": "at://reply/1",
+            "reporter_did": "did:plc:abc",
+        }
+        branch_name = bluesky_create_report_prs.branch_name_for_b64(
+            proposal["b64"], "denylist"
+        )
+
+        def _run_side_effect(args, check=True):
+            if args[:3] == ["git", "push", "-u"]:
+                raise subprocess.CalledProcessError(returncode=1, cmd=args)
+            return subprocess.CompletedProcess(args=args, returncode=0)
+
+        with mock.patch(
+            "bluesky_create_report_prs.has_remote_branch", return_value=False
+        ):
+            with mock.patch(
+                "bluesky_create_report_prs.has_open_pr_for_branch", return_value=False
+            ):
+                with mock.patch(
+                    "bluesky_create_report_prs.bluesky_denylist.load_denylist",
+                    return_value={"version": 1, "jokes": []},
+                ):
+                    with mock.patch(
+                        "bluesky_create_report_prs.bluesky_denylist.add_denylist_entry",
+                        return_value=True,
+                    ):
+                        with mock.patch(
+                            "bluesky_create_report_prs.bluesky_denylist.save_denylist"
+                        ):
+                            with mock.patch(
+                                "bluesky_create_report_prs._cleanup_local_branch"
+                            ) as cleanup:
+                                with mock.patch(
+                                    "bluesky_create_report_prs.run_command",
+                                    side_effect=_run_side_effect,
+                                ):
+                                    result = bluesky_create_report_prs.create_pr_for_proposal(
+                                        proposal
+                                    )
+
+        self.assertFalse(result)
+        cleanup.assert_called_once_with(branch_name)
 
 
 class ReportParsingTests(unittest.TestCase):
@@ -2705,7 +2811,10 @@ class JokeRetryChainTests(unittest.TestCase):
 
     def test_pick_joke_skips_joke_exceeding_char_limit(self):
         """pick_joke skips jokes that are too long and retries for a short one."""
-        long_joke = "x" * (bluesky_post_joke._MAX_JOKE_CHARS + 1)
+        max_joke_chars = bluesky_post_joke.get_max_joke_chars(
+            bluesky_post_joke.DEFAULT_POSTING_HASHTAGS
+        )
+        long_joke = "x" * (max_joke_chars + 1)
         short_joke = "A short joke."
         call_count = [0]
 
@@ -2723,7 +2832,10 @@ class JokeRetryChainTests(unittest.TestCase):
 
     def test_pick_joke_raises_when_all_jokes_too_long(self):
         """pick_joke raises ValueError when every attempt exceeds the char limit."""
-        long_joke = "x" * (bluesky_post_joke._MAX_JOKE_CHARS + 1)
+        max_joke_chars = bluesky_post_joke.get_max_joke_chars(
+            bluesky_post_joke.DEFAULT_POSTING_HASHTAGS
+        )
+        long_joke = "x" * (max_joke_chars + 1)
 
         with mock.patch.object(
             bluesky_joke_providers, "PROVIDERS", {"test_provider": lambda: long_joke}
@@ -2736,7 +2848,10 @@ class JokeRetryChainTests(unittest.TestCase):
 
     def test_pick_joke_accepts_combining_sequence_at_grapheme_limit(self):
         # Each "e\u0301" is one grapheme, despite being two code points.
-        grapheme_limited_joke = "e\u0301" * bluesky_post_joke._MAX_JOKE_CHARS
+        max_joke_chars = bluesky_post_joke.get_max_joke_chars(
+            bluesky_post_joke.DEFAULT_POSTING_HASHTAGS
+        )
+        grapheme_limited_joke = "e\u0301" * max_joke_chars
 
         with mock.patch.object(
             bluesky_joke_providers,
@@ -2748,7 +2863,10 @@ class JokeRetryChainTests(unittest.TestCase):
         self.assertEqual(joke, grapheme_limited_joke)
 
     def test_pick_joke_rejects_grapheme_over_limit(self):
-        over_limit_joke = "x" * (bluesky_post_joke._MAX_JOKE_CHARS + 1)
+        max_joke_chars = bluesky_post_joke.get_max_joke_chars(
+            bluesky_post_joke.DEFAULT_POSTING_HASHTAGS
+        )
+        over_limit_joke = "x" * (max_joke_chars + 1)
 
         with mock.patch.object(
             bluesky_joke_providers,
@@ -3119,6 +3237,115 @@ class ReportNotificationCollectionTests(unittest.TestCase):
         # Already-processed URI should not be added to new processed set
         self.assertNotIn(processed_uri, processed)
         self.assertEqual(len(proposals), 0)
+
+    def test_tracks_unresolved_notification_attempts_before_threshold(self):
+        client = mock.Mock()
+        state = bluesky_state._default_state()
+        denylisted = set()
+        notification_uri = "at://did:plc:bot/app.bsky.feed.post/unresolved1"
+
+        notif = SimpleNamespace(uri=notification_uri, reason="reply", record=object())
+        client.app.bsky.notification.list_notifications.return_value = SimpleNamespace(
+            notifications=[notif],
+            cursor=None,
+        )
+
+        with mock.patch(
+            "bluesky_process_reports.retry_network_call",
+            side_effect=lambda fn, description: fn(),
+        ):
+            with mock.patch(
+                "bluesky_process_reports._extract_notification",
+                return_value={
+                    "notification_uri": notification_uri,
+                    "reason": "reply",
+                    "reply_text": "#report",
+                    "source_post_uri": "at://did:plc:bot/app.bsky.feed.post/source",
+                    "reply_uri": "at://did:plc:bot/app.bsky.feed.post/reply",
+                    "reply_cid": "cid-reply",
+                    "root_uri": "at://did:plc:bot/app.bsky.feed.post/root",
+                    "root_cid": "cid-root",
+                    "author_did": "did:plc:user",
+                    "indexed_at": "2025-01-01T00:00:00Z",
+                },
+            ):
+                with mock.patch(
+                    "bluesky_process_reports._resolve_notification_proposal",
+                    return_value=(None, False),
+                ):
+                    with mock.patch.dict(
+                        os.environ,
+                        {"BLUESKY_REPORT_MAX_UNRESOLVED_ATTEMPTS": "2"},
+                    ):
+                        proposals, processed, pages = (
+                            bluesky_process_reports.collect_report_proposals(
+                                client, state, denylisted
+                            )
+                        )
+
+        self.assertEqual(pages, 1)
+        self.assertEqual(proposals, [])
+        self.assertEqual(processed, set())
+        self.assertEqual(
+            bluesky_state.get_unresolved_notification_attempts(state).get(
+                notification_uri
+            ),
+            1,
+        )
+
+    def test_marks_unresolved_notification_processed_at_retry_threshold(self):
+        client = mock.Mock()
+        state = bluesky_state._default_state()
+        denylisted = set()
+        notification_uri = "at://did:plc:bot/app.bsky.feed.post/unresolved2"
+        state["reports"]["unresolved_notification_attempts"] = {notification_uri: 1}
+
+        notif = SimpleNamespace(uri=notification_uri, reason="reply", record=object())
+        client.app.bsky.notification.list_notifications.return_value = SimpleNamespace(
+            notifications=[notif],
+            cursor=None,
+        )
+
+        with mock.patch(
+            "bluesky_process_reports.retry_network_call",
+            side_effect=lambda fn, description: fn(),
+        ):
+            with mock.patch(
+                "bluesky_process_reports._extract_notification",
+                return_value={
+                    "notification_uri": notification_uri,
+                    "reason": "reply",
+                    "reply_text": "#report",
+                    "source_post_uri": "at://did:plc:bot/app.bsky.feed.post/source",
+                    "reply_uri": "at://did:plc:bot/app.bsky.feed.post/reply",
+                    "reply_cid": "cid-reply",
+                    "root_uri": "at://did:plc:bot/app.bsky.feed.post/root",
+                    "root_cid": "cid-root",
+                    "author_did": "did:plc:user",
+                    "indexed_at": "2025-01-01T00:00:00Z",
+                },
+            ):
+                with mock.patch(
+                    "bluesky_process_reports._resolve_notification_proposal",
+                    return_value=(None, False),
+                ):
+                    with mock.patch.dict(
+                        os.environ,
+                        {"BLUESKY_REPORT_MAX_UNRESOLVED_ATTEMPTS": "2"},
+                    ):
+                        proposals, processed, pages = (
+                            bluesky_process_reports.collect_report_proposals(
+                                client, state, denylisted
+                            )
+                        )
+
+        self.assertEqual(pages, 1)
+        self.assertEqual(proposals, [])
+        self.assertEqual(processed, {notification_uri})
+        self.assertNotIn(
+            notification_uri,
+            bluesky_state.get_unresolved_notification_attempts(state),
+        )
 
 
 class ApprovedReportDeletionTests(unittest.TestCase):

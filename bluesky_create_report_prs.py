@@ -71,6 +71,12 @@ def branch_name_for_b64(b64_value: str, target: str) -> str:
     return f"chore/report-denylist-{suffix}"
 
 
+def _cleanup_local_branch(branch_name: str) -> None:
+    """Best-effort return to main and delete temporary branch."""
+    run_command(["git", "checkout", "main"], check=False)
+    run_command(["git", "branch", "-D", branch_name], check=False)
+
+
 def load_jokebook(file_path: Path | None = None) -> dict:
     """Load jokebook payload from disk, defaulting to an empty list."""
     path = file_path or JOKEBOOK_PATH
@@ -151,58 +157,62 @@ def create_pr_for_proposal(proposal: dict) -> bool:
         pr_title = f"chore(denylist): add reported joke {joke_hash}"
     pr_body = build_pr_body(proposal, joke_hash)
 
-    run_command(["git", "checkout", "-b", branch_name])
+    branch_created = False
+    try:
+        run_command(["git", "checkout", "-b", branch_name])
+        branch_created = True
 
-    if target == "jokebook":
-        jokebook = load_jokebook(JOKEBOOK_PATH)
-        removed = remove_jokebook_entry(jokebook, b64_value)
-        if not removed:
-            run_command(["git", "checkout", "main"])
-            run_command(["git", "branch", "-D", branch_name], check=False)
-            print(f"Skipping joke hash {joke_hash}; not found in jokebook")
-            return False
-        save_jokebook(jokebook, JOKEBOOK_PATH)
-        run_command(["git", "add", str(JOKEBOOK_PATH)])
-    else:
-        denylist = bluesky_denylist.load_denylist(DENYLIST_PATH)
-        added = bluesky_denylist.add_denylist_entry(
-            denylist,
-            b64=b64_value,
-            source_post_uri=proposal.get("source_post_uri") or "",
-            source_reply_uri=proposal.get("source_reply_uri") or "",
-            reporter_did=proposal.get("reporter_did") or "unknown",
-            reason=proposal.get("reason") or "user_reply_report",
+        if target == "jokebook":
+            jokebook = load_jokebook(JOKEBOOK_PATH)
+            removed = remove_jokebook_entry(jokebook, b64_value)
+            if not removed:
+                print(f"Skipping joke hash {joke_hash}; not found in jokebook")
+                return False
+            save_jokebook(jokebook, JOKEBOOK_PATH)
+            run_command(["git", "add", str(JOKEBOOK_PATH)])
+        else:
+            denylist = bluesky_denylist.load_denylist(DENYLIST_PATH)
+            added = bluesky_denylist.add_denylist_entry(
+                denylist,
+                b64=b64_value,
+                source_post_uri=proposal.get("source_post_uri") or "",
+                source_reply_uri=proposal.get("source_reply_uri") or "",
+                reporter_did=proposal.get("reporter_did") or "unknown",
+                reason=proposal.get("reason") or "user_reply_report",
+            )
+            if not added:
+                print(f"Skipping already denylisted joke hash {joke_hash}")
+                return False
+
+            bluesky_denylist.save_denylist(denylist, DENYLIST_PATH)
+            run_command(["git", "add", str(DENYLIST_PATH)])
+
+        run_command(["git", "commit", "-m", pr_title])
+        run_command(["git", "push", "-u", "origin", branch_name])
+        run_command(
+            [
+                "gh",
+                "pr",
+                "create",
+                "--base",
+                "main",
+                "--head",
+                branch_name,
+                "--title",
+                pr_title,
+                "--body",
+                pr_body,
+            ]
         )
-        if not added:
-            run_command(["git", "checkout", "main"])
-            run_command(["git", "branch", "-D", branch_name], check=False)
-            print(f"Skipping already denylisted joke hash {joke_hash}")
-            return False
 
-        bluesky_denylist.save_denylist(denylist, DENYLIST_PATH)
-        run_command(["git", "add", str(DENYLIST_PATH)])
-    run_command(["git", "commit", "-m", pr_title])
-    run_command(["git", "push", "-u", "origin", branch_name])
-    run_command(
-        [
-            "gh",
-            "pr",
-            "create",
-            "--base",
-            "main",
-            "--head",
-            branch_name,
-            "--title",
-            pr_title,
-            "--body",
-            pr_body,
-        ]
-    )
-
-    run_command(["git", "checkout", "main"])
-    run_command(["git", "branch", "-D", branch_name], check=False)
-    print(f"Created PR for {joke_hash}")
-    return True
+        print(f"Created PR for {joke_hash}")
+        return True
+    except subprocess.CalledProcessError as exc:
+        print(f"Failed to create PR for {joke_hash}: {exc}")
+        return False
+    finally:
+        if branch_created:
+            _cleanup_local_branch(branch_name)
 
 
 def main() -> None:

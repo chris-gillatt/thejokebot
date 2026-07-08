@@ -55,6 +55,7 @@ def _default_state() -> dict:
         },
         "reports": {
             "processed_notification_uris": [],
+            "unresolved_notification_attempts": {},
             "last_checked_at": None,
             "deleted_post_uris": [],
             "acknowledged_report_uris": [],
@@ -128,6 +129,7 @@ def _normalise_state(state: dict) -> dict:
 
     reports = state.setdefault("reports", {})
     reports.setdefault("processed_notification_uris", [])
+    reports.setdefault("unresolved_notification_attempts", {})
     reports.setdefault("last_checked_at", None)
     reports.setdefault("deleted_post_uris", [])
     reports.setdefault("acknowledged_report_uris", [])
@@ -313,6 +315,52 @@ def record_processed_notification(state: dict, notification_uri: str) -> None:
     uris = reports.setdefault("processed_notification_uris", [])
     if notification_uri and notification_uri not in uris:
         uris.append(notification_uri)
+
+
+def get_unresolved_notification_attempts(state: dict) -> dict[str, int]:
+    """Return per-notification unresolved-attempt counters for report ingestion."""
+    reports = state.setdefault("reports", {})
+    attempts = reports.setdefault("unresolved_notification_attempts", {})
+    if not isinstance(attempts, dict):
+        reports["unresolved_notification_attempts"] = {}
+        attempts = reports["unresolved_notification_attempts"]
+    return attempts
+
+
+def increment_unresolved_notification_attempt(
+    state: dict, notification_uri: str
+) -> int:
+    """Increment unresolved-attempt counter for a notification URI."""
+    if not notification_uri:
+        return 0
+    attempts = get_unresolved_notification_attempts(state)
+    previous = attempts.get(notification_uri, 0)
+    if not isinstance(previous, int) or previous < 0:
+        previous = 0
+    current = previous + 1
+    attempts[notification_uri] = current
+    return current
+
+
+def clear_unresolved_notification_attempt(state: dict, notification_uri: str) -> None:
+    """Clear unresolved-attempt counter for a notification URI."""
+    if not notification_uri:
+        return
+    attempts = get_unresolved_notification_attempts(state)
+    attempts.pop(notification_uri, None)
+
+
+def prune_unresolved_notification_attempts(
+    state: dict, max_entries: int = 5000
+) -> None:
+    """Keep only the most recent unresolved-attempt entries."""
+    reports = state.setdefault("reports", {})
+    attempts = get_unresolved_notification_attempts(state)
+    if len(attempts) > max_entries:
+        keys_to_keep = list(attempts.keys())[-max_entries:]
+        reports["unresolved_notification_attempts"] = {
+            key: attempts[key] for key in keys_to_keep
+        }
 
 
 def prune_processed_notifications(state: dict, max_entries: int = 5000) -> None:

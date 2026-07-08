@@ -23,6 +23,7 @@ DEFAULT_OUTPUT_PATH = Path(".agent-tmp/report_proposals.json")
 _REPORTS_CONFIG = bluesky_config.get_reports_config()
 DEFAULT_MAX_PAGES = _REPORTS_CONFIG["max_pages"]
 DEFAULT_PAGE_LIMIT = _REPORTS_CONFIG["page_limit"]
+DEFAULT_MAX_UNRESOLVED_ATTEMPTS = 3
 
 _ACK_TEXT = "Eek! Thanks for flagging that \U0001f648 I'll get it sent for review!"
 
@@ -320,6 +321,11 @@ def collect_report_proposals(
 
     page_limit = get_int_env("BLUESKY_REPORT_PAGE_LIMIT", DEFAULT_PAGE_LIMIT, minimum=1)
     max_pages = get_int_env("BLUESKY_REPORT_MAX_PAGES", DEFAULT_MAX_PAGES, minimum=1)
+    max_unresolved_attempts = get_int_env(
+        "BLUESKY_REPORT_MAX_UNRESOLVED_ATTEMPTS",
+        DEFAULT_MAX_UNRESOLVED_ATTEMPTS,
+        minimum=1,
+    )
 
     cursor = None
     proposals: list[dict] = []
@@ -358,6 +364,9 @@ def collect_report_proposals(
             if not notification_uri:
                 continue
             if notification_uri in processed_uris:
+                bluesky_state.clear_unresolved_notification_attempt(
+                    state, notification_uri
+                )
                 continue
 
             proposal, should_mark = _resolve_notification_proposal(
@@ -365,6 +374,25 @@ def collect_report_proposals(
             )
             if should_mark:
                 processed_notifications.add(notification_uri)
+                bluesky_state.clear_unresolved_notification_attempt(
+                    state, notification_uri
+                )
+            else:
+                unresolved_attempts = (
+                    bluesky_state.increment_unresolved_notification_attempt(
+                        state, notification_uri
+                    )
+                )
+                if unresolved_attempts >= max_unresolved_attempts:
+                    processed_notifications.add(notification_uri)
+                    bluesky_state.clear_unresolved_notification_attempt(
+                        state, notification_uri
+                    )
+                    masked_uri = mask_sensitive(notification_uri)
+                    print(
+                        "Warning: giving up on unresolved report notification "
+                        f"after {unresolved_attempts} attempt(s): {masked_uri}"
+                    )
             if proposal is not None:
                 proposals.append(proposal)
                 seen_b64s.add(proposal["b64"])
@@ -403,6 +431,7 @@ def main() -> None:
     for notification_uri in processed_notifications:
         bluesky_state.record_processed_notification(state, notification_uri)
     bluesky_state.prune_processed_notifications(state)
+    bluesky_state.prune_unresolved_notification_attempts(state)
     bluesky_state.set_reports_checked_now(state)
 
     acknowledged_uris = bluesky_state.get_acknowledged_report_uris(state)

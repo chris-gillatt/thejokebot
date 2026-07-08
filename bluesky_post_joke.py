@@ -30,9 +30,6 @@ def _grapheme_len(text: str) -> int:
     return len(_GRAPHEME_PATTERN.findall(text))
 
 
-# Graphemes consumed by "\n\n" + space-joined hashtags appended to every post.
-_HASHTAG_SUFFIX_LEN = 2 + _grapheme_len(" ".join(DEFAULT_POSTING_HASHTAGS))
-_MAX_JOKE_CHARS = BLUESKY_MAX_POST_CHARS - _HASHTAG_SUFFIX_LEN
 _MOJIBAKE_MARKERS = ("Ã", "Â", "â", "ð", "\x80", "\x99")
 _HTML_UNESCAPE_PASSES = 3
 _DEDUPE_NORMALISATION_PATTERN = regex.compile(r"[\p{P}\s_]+")
