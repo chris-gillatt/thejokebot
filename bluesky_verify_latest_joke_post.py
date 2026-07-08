@@ -1,12 +1,26 @@
 import argparse
 import datetime as dt
+import re
 import sys
 from typing import Optional
 
 import bluesky_config
 from bluesky_common import login_client
 
-DEFAULT_HASHTAGS = tuple(bluesky_config.get_posting_config()["hashtags"])
+_POSTING_TAG_RUNTIME = bluesky_config.get_posting_tag_runtime_config()
+_HASHTAG_PATTERN = re.compile(r"(?:^|\s)(#[\w]+)\b")
+
+# A valid post should include at least one configured posting tag.
+_VERIFICATION_HASHTAGS = tuple(
+    dict.fromkeys(
+        [
+            _POSTING_TAG_RUNTIME["tag_default"],
+            _POSTING_TAG_RUNTIME["tag_fallback"],
+            *_POSTING_TAG_RUNTIME["tag_pool"],
+        ]
+    )
+)
+_VERIFICATION_HASHTAGS_CASEFOLDED = {tag.casefold() for tag in _VERIFICATION_HASHTAGS}
 
 
 def parse_args():
@@ -55,8 +69,10 @@ def extract_text(feed_item) -> str:
 
 
 def has_required_hashtags(text: str) -> bool:
-    lowered = text.lower()
-    return all(tag in lowered for tag in DEFAULT_HASHTAGS)
+    matched_hashtags = {
+        match.group(1).casefold() for match in _HASHTAG_PATTERN.finditer(text or "")
+    }
+    return bool(matched_hashtags.intersection(_VERIFICATION_HASHTAGS_CASEFOLDED))
 
 
 def to_post_url(handle: str, uri: str) -> Optional[str]:

@@ -144,9 +144,10 @@ def _persist_session_string_to_file(client, path):
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(f"{session_string}\n", encoding="utf-8")
+        path.chmod(0o600)
     except OSError as exc:
         print(
-            f"Warning: failed to write Bluesky session file at {path}: {type(exc).__name__}: {exc}."
+            f"Warning: failed to persist Bluesky session file at {path}: {type(exc).__name__}: {exc}."
         )
         return False
 

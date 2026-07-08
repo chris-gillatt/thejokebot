@@ -451,6 +451,46 @@ class LoginClientRetryTests(unittest.TestCase):
         persist_mock.assert_called_once()
         register_mock.assert_called_once()
 
+    def test_persist_session_string_to_file_sets_owner_only_permissions(self):
+        mock_client = mock.Mock()
+        mock_client.export_session_string.return_value = "session-token"
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            session_path = pathlib.Path(temp_dir) / "bluesky_session.txt"
+            persisted = bluesky_common._persist_session_string_to_file(
+                mock_client, session_path
+            )
+
+            self.assertTrue(persisted)
+            self.assertEqual(
+                session_path.read_text(encoding="utf-8"), "session-token\n"
+            )
+            self.assertEqual(session_path.stat().st_mode & 0o777, 0o600)
+
+    def test_persist_session_string_to_file_returns_false_when_chmod_fails(self):
+        mock_client = mock.Mock()
+        mock_client.export_session_string.return_value = "session-token"
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            session_path = pathlib.Path(temp_dir) / "bluesky_session.txt"
+            with mock.patch.object(
+                pathlib.Path,
+                "chmod",
+                side_effect=OSError("permission denied"),
+            ):
+                with mock.patch("builtins.print") as print_mock:
+                    persisted = bluesky_common._persist_session_string_to_file(
+                        mock_client, session_path
+                    )
+
+        self.assertFalse(persisted)
+        self.assertTrue(
+            any(
+                call.args and "failed to persist Bluesky session file" in call.args[0]
+                for call in print_mock.call_args_list
+            )
+        )
+
 
 class NetworkRetryHelperTests(unittest.TestCase):
     def test_retry_network_call_succeeds_after_transient_error(self):
@@ -1661,8 +1701,20 @@ class VerificationHelperTests(unittest.TestCase):
         self.assertEqual(parsed.year, 2026)
 
     def test_has_required_hashtags_is_case_insensitive(self):
-        text = "Some joke #Jokes #DadJoke #Funny"
+        text = "Some joke #DADJOKE"
         self.assertTrue(bluesky_verify_latest_joke_post.has_required_hashtags(text))
+
+    def test_has_required_hashtags_accepts_fallback_tag(self):
+        text = "Some joke #JOKE"
+        self.assertTrue(bluesky_verify_latest_joke_post.has_required_hashtags(text))
+
+    def test_has_required_hashtags_accepts_pool_tag_without_default_or_fallback(self):
+        text = "Some joke #funny"
+        self.assertTrue(bluesky_verify_latest_joke_post.has_required_hashtags(text))
+
+    def test_has_required_hashtags_rejects_unrelated_tag(self):
+        text = "Some joke #news"
+        self.assertFalse(bluesky_verify_latest_joke_post.has_required_hashtags(text))
 
     def test_to_post_url_builds_expected_url(self):
         url = bluesky_verify_latest_joke_post.to_post_url(
