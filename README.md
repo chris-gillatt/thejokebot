@@ -3,7 +3,7 @@
 <table>
 	<tr>
 		<td width="280" valign="top" align="center">
-			<img src="./images/tjb-logo-transparent-bg.png" alt="The Joke Bot logo" width="240" />
+			<img src="./images/jokebot_logo_transparent_bg.png" alt="The Joke Bot logo" width="240" />
 		</td>
 		<td valign="top">
 			<a href="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_post_joke.yml"><img src="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_post_joke.yml/badge.svg" alt="bluesky_post_joke" /></a><br />
