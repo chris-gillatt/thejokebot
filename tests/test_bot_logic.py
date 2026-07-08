@@ -126,6 +126,48 @@ class RuntimeConfigTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 bluesky_config.load_runtime_config(config_path, strict=True)
 
+    def test_get_posting_tag_runtime_config_prefers_follow_fellows_hashtags(self):
+        with mock.patch(
+            "bluesky_config.get_runtime_config",
+            return_value={
+                "posting": {
+                    "hashtags": ["#jokes", "#dadjoke"],
+                    "tag_default": "#dadjoke",
+                    "tag_fallback": "#joke",
+                    "tag_max_count": 3,
+                    "tag_similarity_groups": [],
+                },
+                "follow_fellows": {
+                    "hashtags": ["dadjokes", "punny", "dadjokes"],
+                },
+            },
+        ):
+            resolved = bluesky_config.get_posting_tag_runtime_config()
+
+        self.assertEqual(resolved["tag_pool"], ["#dadjokes", "#punny"])
+        self.assertEqual(resolved["tag_pool_source"], "follow_fellows.hashtags")
+
+    def test_get_posting_tag_runtime_config_falls_back_to_posting_hashtags(self):
+        with mock.patch(
+            "bluesky_config.get_runtime_config",
+            return_value={
+                "posting": {
+                    "hashtags": ["#jokes", "#dadjoke"],
+                    "tag_default": "#dadjoke",
+                    "tag_fallback": "#joke",
+                    "tag_max_count": 3,
+                    "tag_similarity_groups": [],
+                },
+                "follow_fellows": {
+                    "hashtags": [],
+                },
+            },
+        ):
+            resolved = bluesky_config.get_posting_tag_runtime_config()
+
+        self.assertEqual(resolved["tag_pool"], ["#jokes", "#dadjoke"])
+        self.assertEqual(resolved["tag_pool_source"], "posting.hashtags")
+
 
 class RuntimeConfigValidationScriptTests(unittest.TestCase):
     def test_validate_runtime_config_returns_no_errors_for_current_repo(self):
@@ -2702,8 +2744,8 @@ class JokeRetryChainTests(unittest.TestCase):
 
         def test_get_posting_hashtag_pool_uses_follow_fellows_config(self):
             with mock.patch(
-                "bluesky_post_joke.bluesky_config.get_follow_fellows_config",
-                return_value={"hashtags": ["dadjokes", "punny", "dadjokes"]},
+                "bluesky_post_joke.bluesky_config.get_posting_tag_runtime_config",
+                return_value={"tag_pool": ["#dadjokes", "#punny"]},
             ):
                 pool = bluesky_post_joke.get_posting_hashtag_pool()
 
@@ -2711,12 +2753,12 @@ class JokeRetryChainTests(unittest.TestCase):
 
         def test_get_posting_hashtag_pool_falls_back_to_posting_hashtags(self):
             with mock.patch(
-                "bluesky_post_joke.bluesky_config.get_follow_fellows_config",
-                return_value={"hashtags": []},
+                "bluesky_post_joke.bluesky_config.get_posting_tag_runtime_config",
+                return_value={"tag_pool": bluesky_post_joke.DEFAULT_POSTING_HASHTAGS},
             ):
                 pool = bluesky_post_joke.get_posting_hashtag_pool()
 
-            self.assertEqual(pool, bluesky_post_joke.HASHTAGS)
+            self.assertEqual(pool, bluesky_post_joke.DEFAULT_POSTING_HASHTAGS)
 
     def test_provider_fallback_chain_tries_primaries_first(self):
         """Provider fallback tries primary providers before backups."""

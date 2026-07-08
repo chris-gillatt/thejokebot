@@ -379,6 +379,48 @@ def get_posting_config():
     return get_runtime_config()["posting"]
 
 
+def _normalise_posting_tag_pool(raw_tags):
+    """Normalise a tag list into unique '#'-prefixed hashtags preserving order."""
+    pool = []
+    seen = set()
+    for tag in raw_tags or []:
+        normalised = f"#{str(tag).strip().lstrip('#')}"
+        if normalised == "#" or normalised in seen:
+            continue
+        seen.add(normalised)
+        pool.append(normalised)
+    return pool
+
+
+def get_posting_tag_runtime_config():
+    """
+    Return resolved posting-tag settings and source metadata.
+
+    Resolution model:
+    - tag_pool defaults to normalised follow_fellows.hashtags
+    - falls back to posting.hashtags when follow_fellows.hashtags is empty
+    """
+    cfg = get_runtime_config()
+    posting = cfg["posting"]
+    follow_fellows = cfg["follow_fellows"]
+
+    tag_pool = _normalise_posting_tag_pool(follow_fellows.get("hashtags", []))
+    tag_pool_source = "follow_fellows.hashtags"
+    if not tag_pool:
+        tag_pool = _normalise_posting_tag_pool(posting.get("hashtags", []))
+        tag_pool_source = "posting.hashtags"
+
+    return {
+        "tag_pool": tag_pool,
+        "tag_pool_source": tag_pool_source,
+        "tag_default": posting["tag_default"],
+        "tag_fallback": posting["tag_fallback"],
+        "tag_max_count": posting["tag_max_count"],
+        "tag_similarity_groups": posting["tag_similarity_groups"],
+        "posting_hashtags": posting["hashtags"],
+    }
+
+
 def get_follow_fellows_config():
     return get_runtime_config()["follow_fellows"]
 

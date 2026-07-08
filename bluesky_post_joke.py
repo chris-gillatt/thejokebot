@@ -19,7 +19,7 @@ _POSTING_CONFIG = bluesky_config.get_posting_config()
 DAYS_LIMIT = _POSTING_CONFIG["days_limit"]
 MAX_ATTEMPTS = _POSTING_CONFIG["max_attempts"]
 BLUESKY_MAX_POST_CHARS = _POSTING_CONFIG["max_post_chars"]
-HASHTAGS = _POSTING_CONFIG["hashtags"]
+DEFAULT_POSTING_HASHTAGS = _POSTING_CONFIG["hashtags"]
 
 # Bluesky character limits are based on user-visible characters, not code points.
 _GRAPHEME_PATTERN = regex.compile(r"\X")
@@ -31,7 +31,7 @@ def _grapheme_len(text: str) -> int:
 
 
 # Graphemes consumed by "\n\n" + space-joined hashtags appended to every post.
-_HASHTAG_SUFFIX_LEN = 2 + _grapheme_len(" ".join(HASHTAGS))  # 2 newlines + tag string
+_HASHTAG_SUFFIX_LEN = 2 + _grapheme_len(" ".join(DEFAULT_POSTING_HASHTAGS))
 _MAX_JOKE_CHARS = BLUESKY_MAX_POST_CHARS - _HASHTAG_SUFFIX_LEN
 _MOJIBAKE_MARKERS = ("Ã", "Â", "â", "ð", "\x80", "\x99")
 _HTML_UNESCAPE_PASSES = 3
@@ -45,21 +45,8 @@ def get_max_joke_chars(hashtags: list[str]) -> int:
 
 
 def get_posting_hashtag_pool() -> list[str]:
-    """Build deterministic post-tag pool from follow-fellows hashtags."""
-    follow_fellows_tags = bluesky_config.get_follow_fellows_config().get("hashtags", [])
-    if not follow_fellows_tags:
-        return list(HASHTAGS)
-
-    pool = []
-    seen = set()
-    for tag in follow_fellows_tags:
-        normalised = f"#{str(tag).strip().lstrip('#')}"
-        if normalised == "#" or normalised in seen:
-            continue
-        seen.add(normalised)
-        pool.append(normalised)
-
-    return pool or list(HASHTAGS)
+    """Return the resolved posting tag pool from central runtime tag resolution."""
+    return list(bluesky_config.get_posting_tag_runtime_config()["tag_pool"])
 
 
 def _build_group_lookup(similarity_groups: list[list[str]]) -> dict[str, int]:
@@ -231,7 +218,7 @@ def pick_joke(
     are duplicates, too long, or the provider raises.
     """
     fetch_fn = bluesky_joke_providers.PROVIDERS[provider_name]
-    selected_hashtags = hashtags or HASHTAGS
+    selected_hashtags = hashtags or DEFAULT_POSTING_HASHTAGS
     max_joke_chars = get_max_joke_chars(selected_hashtags)
     recent_dedupe_b64s = {
         _normalise_stored_b64_for_deduplication(encoded) for encoded in recent_b64s
@@ -280,16 +267,20 @@ def main():
     state = bluesky_state.load_state()
     cutoff = get_current_epoch() - (DAYS_LIMIT * 86400)
 
-    posting_config = bluesky_config.get_posting_config()
-    tag_fallback = posting_config["tag_fallback"]
-    tag_default = posting_config["tag_default"]
-    tag_max_count = posting_config["tag_max_count"]
-    tag_similarity_groups = posting_config["tag_similarity_groups"]
+    tag_runtime = bluesky_config.get_posting_tag_runtime_config()
+    tag_fallback = tag_runtime["tag_fallback"]
+    tag_default = tag_runtime["tag_default"]
+    tag_max_count = tag_runtime["tag_max_count"]
+    tag_similarity_groups = tag_runtime["tag_similarity_groups"]
+    posting_hashtag_pool = tag_runtime["tag_pool"]
+    tag_pool_source = tag_runtime["tag_pool_source"]
 
-    posting_hashtag_pool = get_posting_hashtag_pool()
     tag_offset = bluesky_state.get_posting_tag_offset(state)
     shuffled_pool = shuffle_posting_hashtags(
         posting_hashtag_pool, tag_offset, tag_similarity_groups
+    )
+    print(
+        f"Posting tag pool source: {tag_pool_source} ({len(posting_hashtag_pool)} tags)"
     )
 
     recent_b64s = bluesky_state.get_recent_b64s(state, cutoff)
