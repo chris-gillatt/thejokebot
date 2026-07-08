@@ -397,18 +397,12 @@ def get_posting_tag_runtime_config():
     Return resolved posting-tag settings and source metadata.
 
     Resolution model:
-    - tag_pool defaults to normalised follow_fellows.hashtags
-    - falls back to posting.hashtags when follow_fellows.hashtags is empty
+    - tag_pool uses normalised posting.hashtags
     """
     cfg = get_runtime_config()
     posting = cfg["posting"]
-    follow_fellows = cfg["follow_fellows"]
-
-    tag_pool = _normalise_posting_tag_pool(follow_fellows.get("hashtags", []))
-    tag_pool_source = "follow_fellows.hashtags"
-    if not tag_pool:
-        tag_pool = _normalise_posting_tag_pool(posting.get("hashtags", []))
-        tag_pool_source = "posting.hashtags"
+    tag_pool = _normalise_posting_tag_pool(posting.get("hashtags", []))
+    tag_pool_source = "posting.hashtags"
 
     return {
         "tag_pool": tag_pool,

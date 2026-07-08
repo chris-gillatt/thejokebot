@@ -126,12 +126,12 @@ class RuntimeConfigTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 bluesky_config.load_runtime_config(config_path, strict=True)
 
-    def test_get_posting_tag_runtime_config_prefers_follow_fellows_hashtags(self):
+    def test_get_posting_tag_runtime_config_uses_posting_hashtags_only(self):
         with mock.patch(
             "bluesky_config.get_runtime_config",
             return_value={
                 "posting": {
-                    "hashtags": ["#jokes", "#dadjoke"],
+                    "hashtags": ["#jokes", "dadjoke", "#jokes", "punny"],
                     "tag_default": "#dadjoke",
                     "tag_fallback": "#joke",
                     "tag_max_count": 3,
@@ -144,10 +144,10 @@ class RuntimeConfigTests(unittest.TestCase):
         ):
             resolved = bluesky_config.get_posting_tag_runtime_config()
 
-        self.assertEqual(resolved["tag_pool"], ["#dadjokes", "#punny"])
-        self.assertEqual(resolved["tag_pool_source"], "follow_fellows.hashtags")
+        self.assertEqual(resolved["tag_pool"], ["#jokes", "#dadjoke", "#punny"])
+        self.assertEqual(resolved["tag_pool_source"], "posting.hashtags")
 
-    def test_get_posting_tag_runtime_config_falls_back_to_posting_hashtags(self):
+    def test_get_posting_tag_runtime_config_ignores_follow_fellows_hashtags(self):
         with mock.patch(
             "bluesky_config.get_runtime_config",
             return_value={
@@ -159,7 +159,7 @@ class RuntimeConfigTests(unittest.TestCase):
                     "tag_similarity_groups": [],
                 },
                 "follow_fellows": {
-                    "hashtags": [],
+                    "hashtags": ["dadjokes", "punny", "dadjokes"],
                 },
             },
         ):
@@ -2742,7 +2742,7 @@ class JokeRetryChainTests(unittest.TestCase):
             )
             self.assertEqual(selected, ["#three", "#four", "#one"])
 
-        def test_get_posting_hashtag_pool_uses_follow_fellows_config(self):
+        def test_get_posting_hashtag_pool_uses_resolved_runtime_pool(self):
             with mock.patch(
                 "bluesky_post_joke.bluesky_config.get_posting_tag_runtime_config",
                 return_value={"tag_pool": ["#dadjokes", "#punny"]},
@@ -2751,7 +2751,7 @@ class JokeRetryChainTests(unittest.TestCase):
 
             self.assertEqual(pool, ["#dadjokes", "#punny"])
 
-        def test_get_posting_hashtag_pool_falls_back_to_posting_hashtags(self):
+        def test_get_posting_hashtag_pool_uses_default_posting_hashtags(self):
             with mock.patch(
                 "bluesky_post_joke.bluesky_config.get_posting_tag_runtime_config",
                 return_value={"tag_pool": bluesky_post_joke.DEFAULT_POSTING_HASHTAGS},
