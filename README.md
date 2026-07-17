@@ -129,7 +129,7 @@ Shared non-secret defaults now live in `resources/jokebot_runtime_config.json`.
 
 Current config sections:
 
-- `posting` defaults (history window, provider retry attempts, post character budget, hashtags).
+- `posting` defaults (history window, provider retry attempts, post character budget, and hashtag controls including `tag_pool`).
 - `follow_fellows` defaults (per-tag/global follow limits, search page limit, hashtag set).
 - `follows_and_likes` defaults (like and interaction-follow page/pagination limits).
 - `unfollow` defaults (per-run cap, batching controls, baseline protected handles).
@@ -156,7 +156,7 @@ Validation guard rail:
 - **Network retries:** set `BLUESKY_NETWORK_RETRY_ATTEMPTS`, `BLUESKY_NETWORK_RETRY_DELAY_SECONDS`, and `BLUESKY_NETWORK_RETRY_BACKOFF_FACTOR` to tune bounded retries for transient network/API failures.
 - **Unfollow batching:** `bluesky_unfollow.py` is capped and batched by default (`BLUESKY_UNFOLLOW_MAX_ACTIONS=200`, `BLUESKY_UNFOLLOW_BATCH_SIZE=50`, `BLUESKY_UNFOLLOW_BATCH_PAUSE_SECONDS=60`) to reduce throttle risk on large clean-ups.
 - **Follow-fellows cadence:** `bluesky_follow_fellows.py` runs twice weekly, rotates tag priority between runs, and uses the configured per-run cap and hashtag set from `resources/jokebot_runtime_config.json`.
-- **Post hashtag rotation:** `bluesky_post_joke.py` rotates the hashtag window on each successful post and calculates per-post length budget from the selected tags before accepting a joke candidate.
+- **Post hashtag rotation:** `bluesky_post_joke.py` rotates hashtags on each successful post using runtime precedence (`posting.tag_pool` → `follow_fellows.hashtags` → `posting.hashtags`) and calculates per-post length budget from selected tags before accepting a joke candidate.
 - **Report retry bound:** `bluesky_process_reports.py` retries unresolved report notifications up to `BLUESKY_REPORT_MAX_UNRESOLVED_ATTEMPTS` before marking them processed to avoid infinite retry churn.
 - **Starter-pack/list protection:** if `resources/jokebot_starter_pack.json` is enabled and points to a valid source list URI, all members of that list are automatically protected from unfollowing (unioned with `BLUESKY_UNFOLLOW_IGNORE`).
 - **Follow grace protection:** `bluesky_unfollow.py` skips accounts followed by `bluesky_follow_fellows.py` for `30` days before they can become eligible for unfollow.

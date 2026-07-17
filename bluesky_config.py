@@ -12,6 +12,25 @@ _DEFAULT_CONFIG = {
         "days_limit": 730,
         "max_attempts": 5,
         "max_post_chars": 300,
+        "tag_pool": [
+            "#dadjoke",
+            "#dadjokes",
+            "#joke",
+            "#jokes",
+            "#humour",
+            "#humor",
+            "#humoursky",
+            "#humorsky",
+            "#jokesky",
+            "#momjokes",
+            "#mumjokes",
+            "#groan",
+            "#puns",
+            "#pun",
+            "#punny",
+            "#divertido",
+            "#funny",
+        ],
         "hashtags": ["#jokes", "#dadjoke", "#funny"],
         "tag_fallback": "#joke",
         "tag_default": "#dadjoke",
@@ -177,6 +196,30 @@ def _validate_posting_tag_config(posting: dict) -> None:
     _validate_posting_similarity_groups(posting)
 
 
+def _validate_optional_posting_tag_pool(posting: dict) -> None:
+    """Validate and normalise optional posting.tag_pool in place."""
+    if "tag_pool" not in posting:
+        return
+
+    raw_pool = posting.get("tag_pool")
+    if not isinstance(raw_pool, list):
+        raise ValueError("posting.tag_pool must be a list when provided.")
+
+    normalised_pool = []
+    for index, raw_tag in enumerate(raw_pool):
+        if not isinstance(raw_tag, str):
+            raise ValueError(f"posting.tag_pool[{index}] must be a string.")
+        text = raw_tag.strip()
+        if not text:
+            raise ValueError(f"posting.tag_pool[{index}] must not be empty.")
+        normalised = f"#{text.lstrip('#')}"
+        if normalised == "#":
+            raise ValueError(f"posting.tag_pool[{index}] must not be empty.")
+        normalised_pool.append(normalised)
+
+    posting["tag_pool"] = normalised_pool
+
+
 def _validate_config(payload):
     if not isinstance(payload, dict):
         raise ValueError("Runtime config must be a JSON object.")
@@ -205,6 +248,7 @@ def _validate_config(payload):
         if not hashtag.startswith("#"):
             raise ValueError(f"posting.hashtags[{index}] must start with '#'.")
     posting["hashtags"] = posting_hashtags
+    _validate_optional_posting_tag_pool(posting)
 
     _validate_posting_tag_config(posting)
     cfg["posting"] = posting
@@ -398,15 +442,25 @@ def get_posting_tag_runtime_config():
     Return resolved posting-tag settings and source metadata.
 
     Resolution model:
-    - tag_pool uses normalised posting.hashtags
+    - tag_pool uses normalised posting.tag_pool when present and non-empty
+    - falls back to normalised follow_fellows.hashtags when present and non-empty
+    - otherwise falls back to normalised posting.hashtags
     """
     cfg = get_runtime_config()
     posting = cfg["posting"]
-    tag_pool = _normalise_posting_tag_pool(posting.get("hashtags", []))
-    tag_pool_source = "posting.hashtags"
+    follow_fellows = cfg.get("follow_fellows", {})
+
+    resolved_pool = _normalise_posting_tag_pool(posting.get("tag_pool", []))
+    tag_pool_source = "posting.tag_pool"
+    if not resolved_pool:
+        resolved_pool = _normalise_posting_tag_pool(follow_fellows.get("hashtags", []))
+        tag_pool_source = "follow_fellows.hashtags"
+    if not resolved_pool:
+        resolved_pool = _normalise_posting_tag_pool(posting.get("hashtags", []))
+        tag_pool_source = "posting.hashtags"
 
     return {
-        "tag_pool": tag_pool,
+        "tag_pool": resolved_pool,
         "tag_pool_source": tag_pool_source,
         "tag_default": posting["tag_default"],
         "tag_fallback": posting["tag_fallback"],

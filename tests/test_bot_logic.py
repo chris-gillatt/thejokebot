@@ -127,11 +127,36 @@ class RuntimeConfigTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 bluesky_config.load_runtime_config(config_path, strict=True)
 
-    def test_get_posting_tag_runtime_config_uses_posting_hashtags_only(self):
+    def test_load_runtime_config_strict_raises_on_invalid_posting_tag_pool_type(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = pathlib.Path(temp_dir) / "runtime-invalid.json"
+            config_path.write_text(
+                json.dumps({"posting": {"tag_pool": "#jokes"}}),
+                encoding="utf-8",
+            )
+
+            with self.assertRaises(ValueError):
+                bluesky_config.load_runtime_config(config_path, strict=True)
+
+    def test_validate_config_normalises_posting_tag_pool(self):
+        cfg = bluesky_config._validate_config(
+            {
+                **bluesky_config._DEFAULT_CONFIG,
+                "posting": {
+                    **bluesky_config._DEFAULT_CONFIG["posting"],
+                    "tag_pool": ["dadjokes", "#punny"],
+                },
+            }
+        )
+
+        self.assertEqual(cfg["posting"]["tag_pool"], ["#dadjokes", "#punny"])
+
+    def test_get_posting_tag_runtime_config_prefers_posting_tag_pool(self):
         with mock.patch(
             "bluesky_config.get_runtime_config",
             return_value={
                 "posting": {
+                    "tag_pool": ["dadjokes", "#punny", "dadjokes"],
                     "hashtags": ["#jokes", "dadjoke", "#jokes", "punny"],
                     "tag_default": "#dadjoke",
                     "tag_fallback": "#joke",
@@ -145,14 +170,15 @@ class RuntimeConfigTests(unittest.TestCase):
         ):
             resolved = bluesky_config.get_posting_tag_runtime_config()
 
-        self.assertEqual(resolved["tag_pool"], ["#jokes", "#dadjoke", "#punny"])
-        self.assertEqual(resolved["tag_pool_source"], "posting.hashtags")
+        self.assertEqual(resolved["tag_pool"], ["#dadjokes", "#punny"])
+        self.assertEqual(resolved["tag_pool_source"], "posting.tag_pool")
 
-    def test_get_posting_tag_runtime_config_ignores_follow_fellows_hashtags(self):
+    def test_get_posting_tag_runtime_config_falls_back_to_follow_fellows_hashtags(self):
         with mock.patch(
             "bluesky_config.get_runtime_config",
             return_value={
                 "posting": {
+                    "tag_pool": [],
                     "hashtags": ["#jokes", "#dadjoke"],
                     "tag_default": "#dadjoke",
                     "tag_fallback": "#joke",
@@ -166,7 +192,29 @@ class RuntimeConfigTests(unittest.TestCase):
         ):
             resolved = bluesky_config.get_posting_tag_runtime_config()
 
-        self.assertEqual(resolved["tag_pool"], ["#jokes", "#dadjoke"])
+        self.assertEqual(resolved["tag_pool"], ["#dadjokes", "#punny"])
+        self.assertEqual(resolved["tag_pool_source"], "follow_fellows.hashtags")
+
+    def test_get_posting_tag_runtime_config_falls_back_to_posting_hashtags(self):
+        with mock.patch(
+            "bluesky_config.get_runtime_config",
+            return_value={
+                "posting": {
+                    "tag_pool": [],
+                    "hashtags": ["#jokes", "dadjoke", "#jokes", "punny"],
+                    "tag_default": "#dadjoke",
+                    "tag_fallback": "#joke",
+                    "tag_max_count": 3,
+                    "tag_similarity_groups": [],
+                },
+                "follow_fellows": {
+                    "hashtags": [],
+                },
+            },
+        ):
+            resolved = bluesky_config.get_posting_tag_runtime_config()
+
+        self.assertEqual(resolved["tag_pool"], ["#jokes", "#dadjoke", "#punny"])
         self.assertEqual(resolved["tag_pool_source"], "posting.hashtags")
 
 
@@ -2502,6 +2550,34 @@ class PostingTagSelectionTests(unittest.TestCase):
             orders.add(tuple(result))
         # 20 different seeds across a 7-item pool should yield multiple orderings
         self.assertGreater(len(orders), 1)
+
+    def test_broad_pool_varies_selected_sets_across_offsets(self):
+        pool = [
+            "#dadjoke",
+            "#dadjokes",
+            "#joke",
+            "#jokes",
+            "#humour",
+            "#humor",
+            "#punny",
+            "#groan",
+        ]
+        selected_sets = set()
+        for offset in range(12):
+            shuffled = bluesky_post_joke.shuffle_posting_hashtags(
+                pool, offset, self._GROUPS
+            )
+            selected = bluesky_post_joke.fit_hashtags_to_joke(
+                "A short joke.",
+                shuffled,
+                "#dadjoke",
+                "#joke",
+                3,
+                self._GROUPS,
+            )
+            selected_sets.add(tuple(sorted(selected)))
+
+        self.assertGreater(len(selected_sets), 1)
 
     def test_shuffle_removes_group_duplicate(self):
         pool = ["#dadjoke", "#dadjokes", "#funny"]

@@ -299,13 +299,14 @@ Issue #50 requested broader hashtag rotation for joke posts so discovery does no
 rely on the same fixed trio every run.
 
 **Resolution:** `bluesky_post_joke.py` now builds a deterministic rotating post-tag
-window from the configured follow-fellows hashtag pool, tracks progression in
-`bot_state.json` via a dedicated `posting.tag_offset`, and advances offset after
-successful posts. Post-length preflight now calculates the joke budget per post
-from the selected hashtags (grapheme-aware), reducing avoidable rejections while
-preserving Bluesky 300-character safety checks. Added focused regression tests for
-posting offset backfill/wraparound, rotated hashtag selection, and dynamic length
-budget behaviour.
+window from a resolved posting pool with explicit precedence
+(`posting.tag_pool` → `follow_fellows.hashtags` → `posting.hashtags`), tracks
+progression in `bot_state.json` via a dedicated `posting.tag_offset`, and
+advances offset after successful posts. Post-length preflight now calculates the
+joke budget per post from the selected hashtags (grapheme-aware), reducing
+avoidable rejections while preserving Bluesky 300-character safety checks. Added
+focused regression tests for posting offset backfill/wraparound, rotated hashtag
+selection, and dynamic length budget behaviour.
 
 ---
 
@@ -415,6 +416,7 @@ Do not revisit these without a concrete operational reason.
 - v1.29: Completed centralised config rollout (5.26). Added `follows_and_likes` config section to `bluesky_config.py` and `resources/jokebot_runtime_config.json`. Wired `bluesky_follows_and_likes.py` to consume page/limit constants from config instead of hardcoding them. Wired `bluesky_verify_latest_joke_post.py` to derive its hashtag list from `posting.hashtags`. All scripts with operational defaults now consume from central config. Closes #38.
 - v1.31: Completed hashtag-rotation rollout for issue #50. `bluesky_post_joke.py` now rotates post hashtags deterministically from the configured pool, tracks posting tag offset in state, and computes per-post grapheme-aware length budget from selected tags before accepting joke candidates. Added focused tests and documentation updates.
 - v1.30: Completed configuration tuning for issue #52. Extended joke deduplication window from 365 to 730 days (`posting.days_limit`), reduced follow grace from 90 to 30 days (`FOLLOW_RESPONSE_GRACE_PERIOD_DAYS`), and moved unfollow cadence from quarterly to monthly (`0 12 1 * *`) to smooth clean-up volume. Updated runtime config defaults, unfollow workflow schedule, docs, and tests.
+- v1.32: Fixed posting hashtag diversity regression for issue #76 by introducing explicit posting-pool precedence (`posting.tag_pool`, then `follow_fellows.hashtags`, then `posting.hashtags`) and restoring a broad default posting tag pool. Added regression tests for precedence and varied hashtag selection across posting offsets.
 
 ## 9. Code Review: Issues Resolved
 
