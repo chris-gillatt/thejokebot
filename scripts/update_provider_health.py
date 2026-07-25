@@ -54,33 +54,38 @@ def check_provider_health(provider_name: str) -> dict:
 
 def main():
     """Run health checks and update bot_state.json."""
-    state = bluesky_state.load_state()
-    health_checks = state.get("provider", {}).get("health_checks", {})
+    health_results = {}
 
     print(f"Running health checks for {len(ALL_PROVIDERS)} providers...")
 
     for provider_name in ALL_PROVIDERS:
         result = check_provider_health(provider_name)
-        check_record = health_checks.get(provider_name, {})
+        health_results[provider_name] = result
 
         if result["success"]:
-            check_record["last_check_success"] = True
-            check_record["consecutive_failures"] = 0
             print(f"✓ {provider_name}: OK")
         else:
-            check_record["last_check_success"] = False
-            check_record["consecutive_failures"] = (
-                check_record.get("consecutive_failures", 0) + 1
-            )
-            print(
-                f"✗ {provider_name}: FAILED ({check_record['consecutive_failures']} consecutive) — {result['error']}"
-            )
+            print(f"✗ {provider_name}: FAILED — {result['error']}")
 
-        check_record["last_check_at"] = result["check_at"]
-        health_checks[provider_name] = check_record
+    def apply_health_results(state):
+        health_checks = state.get("provider", {}).get("health_checks", {})
+        for provider_name, result in health_results.items():
+            check_record = health_checks.get(provider_name, {})
+            if result["success"]:
+                check_record["last_check_success"] = True
+                check_record["consecutive_failures"] = 0
+            else:
+                check_record["last_check_success"] = False
+                check_record["consecutive_failures"] = (
+                    check_record.get("consecutive_failures", 0) + 1
+                )
+            check_record["last_check_at"] = result["check_at"]
+            health_checks[provider_name] = check_record
 
-    state.setdefault("provider", {})["health_checks"] = health_checks
-    bluesky_state.save_state(state)
+        state.setdefault("provider", {})["health_checks"] = health_checks
+        return health_checks
+
+    health_checks = bluesky_state.update_state(apply_health_results)
     print("Health check state saved.")
 
     # Check for critical failures (primary providers failing consistently).

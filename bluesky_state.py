@@ -17,7 +17,7 @@ import os
 import sys
 import time
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional, TypeVar
 
 # File locking support (Unix-like systems)
 if sys.platform != "win32":
@@ -32,6 +32,7 @@ FOLLOW_RESPONSE_GRACE_PERIOD_SECONDS = FOLLOW_RESPONSE_GRACE_PERIOD_DAYS * 24 * 
 # Canonical provider order — the rotation wraps around this list.
 # Add new providers here and they will be included in rotation automatically.
 PROVIDER_ROTATION_ORDER = ["icanhazdadjoke", "jokeapi", "groandeck"]
+T = TypeVar("T")
 
 
 def _default_state() -> dict:
@@ -180,8 +181,7 @@ def load_state() -> dict:
             lock_file = None
 
     try:
-        with open(STATE_FILE, "r", encoding="utf-8") as f:
-            return _normalise_state(json.load(f))
+        return _load_state_unlocked()
     except (json.JSONDecodeError, IOError):
         print(f"Warning: could not read {STATE_FILE}; starting with empty state.")
         return _default_state()
@@ -214,10 +214,7 @@ def save_state(state: dict) -> None:
             lock_file = None
 
     try:
-        tmp = STATE_FILE + ".tmp"
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(state, f, indent=2)
-        os.replace(tmp, STATE_FILE)
+        _save_state_unlocked(state)
     finally:
         if lock_file is not None:
             try:
@@ -225,6 +222,58 @@ def save_state(state: dict) -> None:
                 lock_file.close()
             except (OSError, IOError) as e:
                 print(f"Warning: could not release lock on {STATE_FILE}: {e}")
+
+
+def update_state(mutator: Callable[[dict], T]) -> T:
+    """
+    Mutate state while holding the write lock for the full read-modify-write cycle.
+
+    Prefer this for new state writers. It prevents a stale in-memory snapshot from
+    overwriting changes written by another run between load_state() and save_state().
+    """
+    lock_file = None
+    if fcntl is not None:
+        try:
+            lock_file = open(STATE_FILE + ".lock", "w", encoding="utf-8")
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        except (OSError, IOError) as e:
+            print(f"Warning: could not acquire lock on {STATE_FILE}: {e}")
+            if lock_file:
+                lock_file.close()
+            lock_file = None
+
+    try:
+        try:
+            state = (
+                _load_state_unlocked()
+                if os.path.exists(STATE_FILE)
+                else _default_state()
+            )
+        except (json.JSONDecodeError, IOError):
+            print(f"Warning: could not read {STATE_FILE}; starting with empty state.")
+            state = _default_state()
+        result = mutator(state)
+        _save_state_unlocked(state)
+        return result
+    finally:
+        if lock_file is not None:
+            try:
+                fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+                lock_file.close()
+            except (OSError, IOError) as e:
+                print(f"Warning: could not release lock on {STATE_FILE}: {e}")
+
+
+def _load_state_unlocked() -> dict:
+    with open(STATE_FILE, "r", encoding="utf-8") as f:
+        return _normalise_state(json.load(f))
+
+
+def _save_state_unlocked(state: dict) -> None:
+    tmp = STATE_FILE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(state, f, indent=2)
+    os.replace(tmp, STATE_FILE)
 
 
 def get_next_provider(state: dict, override: str | None = None) -> str:

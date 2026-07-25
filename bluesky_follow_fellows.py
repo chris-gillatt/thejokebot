@@ -118,21 +118,32 @@ def _build_eligible_tag_users(client, hashtags, already_following, unfollowed_di
 
 
 def _execute_follow_loop(client, selected_users, dry_run, action_delay_seconds, state):
-    """Follow selected_users; return True if any state changes were recorded."""
-    state_changed = False
+    """Follow selected_users; return the DIDs that need follow-grace records."""
+    followed_dids = []
     for i, (tag, did) in enumerate(selected_users, start=1):
         masked_did = mask_sensitive(did)
         if dry_run:
             print(f"[DRY-RUN] Would follow {masked_did} (#{tag})")
         else:
             if follow(client, did):
-                bluesky_state.record_follow_grace(state, did)
-                state_changed = True
+                followed_dids.append(did)
 
         if action_delay_seconds > 0 and i < len(selected_users):
             time.sleep(action_delay_seconds)
 
-    return state_changed
+    return followed_dids
+
+
+def _persist_follow_fellows_state(followed_dids, rotation_step, total_tags):
+    def apply_follow_fellows_state_updates(latest_state):
+        for did in followed_dids:
+            bluesky_state.record_follow_grace(latest_state, did)
+        bluesky_state.advance_follow_fellows_tag_offset(
+            latest_state, rotation_step, total_tags
+        )
+        bluesky_state.prune_follow_grace(latest_state)
+
+    bluesky_state.update_state(apply_follow_fellows_state_updates)
 
 
 def main():
@@ -182,17 +193,13 @@ def main():
 
     print(f"Total users to follow: {len(selected_users)}\n")
 
-    state_changed = _execute_follow_loop(
+    followed_dids = _execute_follow_loop(
         client, selected_users, dry_run, action_delay_seconds, state
     )
 
-    if state_changed:
+    if followed_dids:
         rotation_step = max(1, len(hashtags) // 2)
-        bluesky_state.advance_follow_fellows_tag_offset(
-            state, rotation_step, len(hashtags)
-        )
-        bluesky_state.prune_follow_grace(state)
-        bluesky_state.save_state(state)
+        _persist_follow_fellows_state(followed_dids, rotation_step, len(hashtags))
 
     print("\nFollowed users by tag:")
     for tag in hashtags:

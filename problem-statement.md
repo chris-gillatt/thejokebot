@@ -310,6 +310,17 @@ selection, and dynamic length budget behaviour.
 
 ---
 
+### 5.31 Finish state transaction migration ⏳ Deferred
+**Priority: Medium**
+
+`bluesky_state.update_state()` now supports locked read-modify-write persistence,
+and the posting, follow-fellows, and provider-health writers use it. Remaining
+direct `save_state()` workflows (`bluesky_process_reports.py`,
+`bluesky_follows_and_likes.py`, and `bluesky_unfollow.py`) still need careful
+migration because their state changes are interleaved with network-side actions.
+
+---
+
 ### 5.27 Review and revert httpx WAF workaround when safe to do so ⏳ Deferred
 **Priority: Low**
 

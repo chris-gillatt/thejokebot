@@ -49,11 +49,14 @@ def has_open_pr_for_branch(branch_name: str) -> bool:
         check=False,
     )
     if result.returncode != 0:
-        return False
+        if result.stderr:
+            print(result.stderr, file=sys.stderr)
+        return True
     try:
         rows = json.loads(result.stdout or "[]")
-    except json.JSONDecodeError:
-        return False
+    except json.JSONDecodeError as exc:
+        print(f"Warning: could not parse gh pr list output: {exc}", file=sys.stderr)
+        return True
     return bool(rows)
 
 
@@ -110,10 +113,25 @@ def remove_jokebook_entry(payload: dict, b64_value: str) -> bool:
     return True
 
 
+def _markdown_fence_for(*values: str) -> str:
+    longest_run = 0
+    for value in values:
+        current_run = 0
+        for character in value:
+            if character == "`":
+                current_run += 1
+                longest_run = max(longest_run, current_run)
+            else:
+                current_run = 0
+    return "`" * max(3, longest_run + 1)
+
+
 def build_pr_body(proposal: dict, joke_hash: str) -> str:
     reply_text = proposal.get("reply_text") or ""
     if len(reply_text) > 280:
         reply_text = reply_text[:277] + "..."
+    joke_preview = proposal.get("joke_preview") or "<no preview>"
+    fence = _markdown_fence_for(reply_text, joke_preview)
 
     lines = [
         "## Reported joke denylist proposal",
@@ -127,14 +145,14 @@ def build_pr_body(proposal: dict, joke_hash: str) -> str:
         f"- Reporter DID: `{proposal.get('reporter_did')}`",
         "",
         "### Reply text",
-        "```text",
+        f"{fence}text",
         reply_text,
-        "```",
+        fence,
         "",
         "### Joke preview",
-        "```text",
-        proposal.get("joke_preview") or "<no preview>",
-        "```",
+        f"{fence}text",
+        joke_preview,
+        fence,
     ]
     return "\n".join(lines)
 

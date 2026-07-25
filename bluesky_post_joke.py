@@ -260,6 +260,42 @@ def build_hashtag_facets(joke_text, hashtags):
     return facets
 
 
+def _apply_posting_state_updates(
+    latest_state,
+    *,
+    provider_failures,
+    used_provider,
+    posted_successfully,
+    b64,
+    post_uri,
+    post_cid,
+    posting_hashtag_pool,
+    cutoff,
+):
+    for provider_name, error in provider_failures:
+        bluesky_state.record_failure(latest_state, provider_name, error)
+
+    # Advance rotation after a successful provider fetch, regardless of post outcome.
+    if used_provider != "fallback":
+        bluesky_state.record_provider_used(latest_state, used_provider)
+
+    if posted_successfully:
+        bluesky_state.add_posted_joke(
+            latest_state,
+            b64,
+            used_provider,
+            post_uri=post_uri,
+            post_cid=post_cid,
+        )
+        bluesky_state.advance_posting_tag_offset(
+            latest_state,
+            1,
+            len(posting_hashtag_pool),
+        )
+
+    bluesky_state.prune_old_jokes(latest_state, cutoff)
+
+
 def main():
     state = bluesky_state.load_state()
     cutoff = get_current_epoch() - (DAYS_LIMIT * 86400)
@@ -303,6 +339,10 @@ def main():
     joke = None
     b64 = None
     used_provider = None
+    provider_failures = []
+    posted_successfully = False
+    post_uri = None
+    post_cid = None
 
     for provider_name in providers_to_try:
         try:
@@ -316,16 +356,12 @@ def main():
             atproto_client.exceptions.NetworkError,
         ) as e:
             print(f"Provider '{provider_name}' failed: {e}")
-            bluesky_state.record_failure(state, provider_name, str(e))
+            provider_failures.append((provider_name, str(e)))
 
     if not joke:
         joke = get_fallback_joke()
         b64 = base64.b64encode(joke.encode("utf-8")).decode()
         used_provider = "fallback"
-
-    # Advance rotation after a successful provider fetch (regardless of post outcome).
-    if used_provider != "fallback":
-        bluesky_state.record_provider_used(state, used_provider)
 
     hashtags_for_post = fit_hashtags_to_joke(
         joke,
@@ -354,19 +390,7 @@ def main():
         if isinstance(post, dict):
             post_uri = post.get("uri")
             post_cid = post.get("cid")
-
-        bluesky_state.add_posted_joke(
-            state,
-            b64,
-            used_provider,
-            post_uri=post_uri,
-            post_cid=post_cid,
-        )
-        bluesky_state.advance_posting_tag_offset(
-            state,
-            1,
-            len(posting_hashtag_pool),
-        )
+        posted_successfully = True
     except (
         ValueError,
         requests.RequestException,
@@ -375,8 +399,19 @@ def main():
     ) as e:
         print(f"Failed to post joke: {e}")
     finally:
-        bluesky_state.prune_old_jokes(state, cutoff)
-        bluesky_state.save_state(state)
+        bluesky_state.update_state(
+            lambda latest_state: _apply_posting_state_updates(
+                latest_state,
+                provider_failures=provider_failures,
+                used_provider=used_provider,
+                posted_successfully=posted_successfully,
+                b64=b64,
+                post_uri=post_uri,
+                post_cid=post_cid,
+                posting_hashtag_pool=posting_hashtag_pool,
+                cutoff=cutoff,
+            )
+        )
 
 
 if __name__ == "__main__":

@@ -1448,6 +1448,22 @@ class ReportPrRoutingTests(unittest.TestCase):
         self.assertFalse(removed)
         self.assertEqual(payload["jokes"], ["a", "b"])
 
+    def test_build_pr_body_uses_fence_that_contains_report_text(self):
+        proposal = {
+            "source_post_uri": "at://post/1",
+            "source_reply_uri": "at://reply/1",
+            "reporter_did": "did:plc:abc",
+            "reply_text": "#report\n```\n- [ ] misleading checklist",
+            "joke_preview": "preview with ```` inside",
+        }
+
+        body = bluesky_create_report_prs.build_pr_body(proposal, "abc12345")
+
+        self.assertIn(
+            "`````text\n#report\n```\n- [ ] misleading checklist\n`````", body
+        )
+        self.assertIn("`````text\npreview with ```` inside\n`````", body)
+
     def test_cleanup_local_branch_checks_out_main_then_deletes_branch(self):
         with mock.patch("bluesky_create_report_prs.run_command") as run_command:
             bluesky_create_report_prs._cleanup_local_branch("chore/report-denylist-abc")
@@ -1461,6 +1477,36 @@ class ReportPrRoutingTests(unittest.TestCase):
                 ),
             ]
         )
+
+    def test_has_open_pr_for_branch_fails_closed_when_gh_fails(self):
+        result = subprocess.CompletedProcess(
+            args=["gh", "pr", "list"],
+            returncode=1,
+            stdout="",
+            stderr="authentication failed",
+        )
+
+        with mock.patch("bluesky_create_report_prs.run_command", return_value=result):
+            has_open_pr = bluesky_create_report_prs.has_open_pr_for_branch(
+                "chore/report-denylist-abc"
+            )
+
+        self.assertTrue(has_open_pr)
+
+    def test_has_open_pr_for_branch_fails_closed_on_invalid_json(self):
+        result = subprocess.CompletedProcess(
+            args=["gh", "pr", "list"],
+            returncode=0,
+            stdout="not json",
+            stderr="",
+        )
+
+        with mock.patch("bluesky_create_report_prs.run_command", return_value=result):
+            has_open_pr = bluesky_create_report_prs.has_open_pr_for_branch(
+                "chore/report-denylist-abc"
+            )
+
+        self.assertTrue(has_open_pr)
 
     def test_create_pr_for_proposal_cleans_up_after_push_failure(self):
         proposal = {
@@ -2752,7 +2798,12 @@ class PostingTagSelectionTests(unittest.TestCase):
                                                                 "bluesky_post_joke.bluesky_state.prune_old_jokes"
                                                             ):
                                                                 with mock.patch(
-                                                                    "bluesky_post_joke.bluesky_state.save_state"
+                                                                    "bluesky_post_joke.bluesky_state.update_state",
+                                                                    side_effect=lambda mutator: (
+                                                                        mutator(
+                                                                            bluesky_state._default_state()
+                                                                        )
+                                                                    ),
                                                                 ):
                                                                     bluesky_post_joke.main()
 
@@ -3570,6 +3621,35 @@ class StateRoundTripTests(unittest.TestCase):
         self.assertIn("liked_replies", loaded)
         self.assertIn("liked_uris", loaded["liked_replies"])
 
+    def test_update_state_mutates_latest_disk_state(self):
+        import tempfile
+
+        state = bluesky_state._default_state()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_path = str(pathlib.Path(tmpdir) / "bot_state.json")
+            with mock.patch("bluesky_state.STATE_FILE", tmp_path):
+                bluesky_state.save_state(state)
+
+                stale_state = bluesky_state.load_state()
+
+                def add_liked_uri(latest):
+                    bluesky_state.record_liked_reply_uri(latest, "at://reply/1")
+
+                bluesky_state.update_state(add_liked_uri)
+
+                def record_provider(latest):
+                    latest["provider"]["last_used"] = stale_state["provider"].get(
+                        "last_used"
+                    )
+                    bluesky_state.record_provider_used(latest, "jokeapi")
+
+                bluesky_state.update_state(record_provider)
+                loaded = bluesky_state.load_state()
+
+        self.assertIn("at://reply/1", loaded["liked_replies"]["liked_uris"])
+        self.assertEqual(loaded["provider"]["last_used"], "jokeapi")
+
 
 class FollowFellowsMainTests(unittest.TestCase):
     """Smoke tests for bluesky_follow_fellows.main() (CS-9 coverage gap)."""
@@ -3698,8 +3778,9 @@ class FollowFellowsMainTests(unittest.TestCase):
                             side_effect=lambda fn, description: fn(),
                         ):
                             with mock.patch(
-                                "bluesky_follow_fellows.bluesky_state.save_state"
-                            ) as save_state:
+                                "bluesky_follow_fellows.bluesky_state.update_state",
+                                side_effect=lambda mutator: mutator(state),
+                            ) as update_state:
                                 bluesky_follow_fellows.main()
 
         self.assertEqual(
@@ -3708,7 +3789,7 @@ class FollowFellowsMainTests(unittest.TestCase):
         self.assertEqual(
             state["follow_grace"]["entries"][0]["source"], "follow_fellows"
         )
-        save_state.assert_called_once_with(state)
+        update_state.assert_called_once()
         client.follow.assert_called_once_with(followed_did)
 
 
