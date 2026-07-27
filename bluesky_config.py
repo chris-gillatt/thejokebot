@@ -79,6 +79,7 @@ _DEFAULT_CONFIG = {
             "nocontextbritss.bsky.social",
             "dehler55.bsky.social",
             "dadreplybot.bsky.social",
+            "docatcdi.com",
         ],
     },
     "follows_and_likes": {
