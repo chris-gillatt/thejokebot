@@ -80,6 +80,7 @@ _DEFAULT_CONFIG = {
             "dehler55.bsky.social",
             "dadreplybot.bsky.social",
             "docatcdi.com",
+            "wt5here.bsky.social",
         ],
     },
     "follows_and_likes": {
