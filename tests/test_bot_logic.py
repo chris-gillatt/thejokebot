@@ -2383,6 +2383,132 @@ class FollowInteractorsTests(unittest.TestCase):
         client.follow.assert_called_once_with(author_did)
 
 
+class NeverAutoFollowTests(unittest.TestCase):
+    """Tests for the never_auto_follow_dids exclusion in follow mechanisms."""
+
+    def _make_notification(self, reason, author_did, indexed_at=None):
+        if indexed_at is None:
+            indexed_at = (
+                dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00", "Z")
+            )
+        author = SimpleNamespace(did=author_did)
+        return SimpleNamespace(reason=reason, indexed_at=indexed_at, author=author)
+
+    def test_follow_interactors_skips_never_auto_follow_dids(self):
+        """Interactors in never_auto_follow_dids must not be followed."""
+        blocked_did = "did:plc:blocked"
+        notification = self._make_notification("reply", blocked_did)
+        response = SimpleNamespace(notifications=[notification], cursor=None)
+
+        state = bluesky_state._default_state()
+        client = mock.Mock()
+        client.me.did = "did:plc:bot"
+        client.app.bsky.notification.list_notifications.return_value = response
+
+        with mock.patch(
+            "bluesky_follows_and_likes.fetch_paginated_data", return_value=[]
+        ):
+            with mock.patch(
+                "bluesky_follows_and_likes.retry_network_call",
+                side_effect=lambda fn, description: fn(),
+            ):
+                count = bluesky_follows_and_likes.follow_interactors(
+                    client,
+                    state,
+                    dry_run=False,
+                    action_delay_seconds=0,
+                    never_auto_follow_dids={blocked_did},
+                )
+
+        self.assertEqual(count, 0)
+        client.follow.assert_not_called()
+
+    def test_follow_back_skips_never_auto_follow_dids(self):
+        """follow_back must not follow DIDs in the never_auto_follow_dids set."""
+        blocked_did = "did:plc:blocked"
+        blocked_profile = SimpleNamespace(did=blocked_did)
+
+        state = bluesky_state._default_state()
+        client = mock.Mock()
+        client.me.did = "did:plc:bot"
+
+        with mock.patch(
+            "bluesky_follows_and_likes.fetch_paginated_data",
+            side_effect=[
+                [blocked_profile],  # followers
+                [],                 # following
+            ],
+        ):
+            with mock.patch(
+                "bluesky_follows_and_likes.retry_network_call",
+                side_effect=lambda fn, description: fn(),
+            ):
+                bluesky_follows_and_likes.follow_back(
+                    client,
+                    "jokebot.bsky.social",
+                    dry_run=False,
+                    action_delay_seconds=0,
+                    never_auto_follow_dids={blocked_did},
+                )
+
+        client.follow.assert_not_called()
+
+    def test_follow_fellows_build_eligible_excludes_never_auto_follow_dids(self):
+        """_build_eligible_tag_users must exclude never_auto_follow_dids from candidates."""
+        blocked_did = "did:plc:blocked"
+        other_did = "did:plc:other"
+
+        with mock.patch(
+            "bluesky_follow_fellows.fetch_users_for_tag",
+            return_value=[blocked_did, other_did],
+        ):
+            result = bluesky_follow_fellows._build_eligible_tag_users(
+                client=None,
+                hashtags=["jokes"],
+                already_following=set(),
+                unfollowed_dids=set(),
+                never_auto_follow_dids={blocked_did},
+            )
+
+        self.assertNotIn(blocked_did, result["jokes"])
+        self.assertIn(other_did, result["jokes"])
+
+    def test_resolve_handles_to_dids_returns_resolved_dids(self):
+        """resolve_handles_to_dids should return a set of resolved DIDs."""
+        handle = "wt5here.bsky.social"
+        expected_did = "did:plc:wt5here"
+        profile = SimpleNamespace(did=expected_did)
+        client = mock.Mock()
+
+        with mock.patch(
+            "bluesky_common.retry_network_call",
+            side_effect=lambda fn, description: fn(),
+        ):
+            client.get_profile.return_value = profile
+            result = bluesky_common.resolve_handles_to_dids(client, [handle])
+
+        self.assertEqual(result, {expected_did})
+
+    def test_resolve_handles_to_dids_skips_unresolvable(self):
+        """resolve_handles_to_dids should skip handles that raise exceptions."""
+        client = mock.Mock()
+
+        with mock.patch(
+            "bluesky_common.retry_network_call",
+            side_effect=atproto_client.exceptions.BadRequestError(mock.Mock()),
+        ):
+            result = bluesky_common.resolve_handles_to_dids(client, ["gone.bsky.social"])
+
+        self.assertEqual(result, set())
+
+    def test_config_never_auto_follow_handles_wt5here_present(self):
+        """wt5here.bsky.social must appear in the never_auto_follow_handles config."""
+        import bluesky_config as cfg
+        cfg.clear_runtime_config_cache()
+        follow_cfg = cfg.get_follow_config()
+        self.assertIn("wt5here.bsky.social", follow_cfg["never_auto_follow_handles"])
+
+
 class UnfollowHistoryTests(unittest.TestCase):
     def test_get_unfollowed_dids_returns_empty_set_initially(self):
         state = bluesky_state._default_state()

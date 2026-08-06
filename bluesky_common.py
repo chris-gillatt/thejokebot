@@ -355,3 +355,37 @@ def mask_sensitive(value, prefix=4, suffix=4):
     if len(text) <= prefix + suffix:
         return "<redacted>"
     return f"{text[:prefix]}...{text[-suffix:]}"
+
+
+def resolve_handles_to_dids(client, handles: list[str]) -> set[str]:
+    """Resolve a list of Bluesky handles to a set of DIDs.
+
+    Handles that cannot be resolved (e.g. deleted or invalid accounts) are
+    skipped with a warning rather than raising an exception, so that a stale
+    entry does not break the calling workflow.
+    """
+    resolved: set[str] = set()
+    for handle in handles:
+        masked = mask_sensitive(handle)
+        try:
+            profile = retry_network_call(
+                lambda h=handle: client.get_profile(h),
+                description=f"resolving handle {masked}",
+            )
+            did = getattr(profile, "did", None)
+            if not did and isinstance(profile, dict):
+                did = profile.get("did")
+            if did:
+                resolved.add(did)
+                print(f"Resolved handle {masked} -> {mask_sensitive(did)}")
+            else:
+                print(f"Warning: no DID found for handle {masked}, skipping.")
+        except (
+            ValueError,
+            requests.RequestException,
+            TimeoutError,
+            atproto_client.exceptions.NetworkError,
+            atproto_client.exceptions.BadRequestError,
+        ) as exc:
+            print(f"Warning: could not resolve handle {masked}: {exc}")
+    return resolved

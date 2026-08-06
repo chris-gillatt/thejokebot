@@ -9,11 +9,13 @@ from bluesky_common import (
     get_runtime_controls,
     login_client,
     mask_sensitive,
+    resolve_handles_to_dids,
     retry_network_call,
 )
 from bluesky_follower_utils import fetch_paginated_data
 
 _FOLLOW_FELLOWS_CONFIG = bluesky_config.get_follow_fellows_config()
+_FOLLOW_CONFIG = bluesky_config.get_follow_config()
 
 # Limits
 soft_tag_limit = _FOLLOW_FELLOWS_CONFIG["per_tag_limit"]
@@ -105,13 +107,15 @@ def select_users(tag_users, tag_order, per_tag_limit, overall_limit):
     return selected_users[:overall_limit]
 
 
-def _build_eligible_tag_users(client, hashtags, already_following, unfollowed_dids):
-    """Fetch users per hashtag, excluding already-followed and previously unfollowed DIDs."""
+def _build_eligible_tag_users(client, hashtags, already_following, unfollowed_dids, never_auto_follow_dids):
+    """Fetch users per hashtag, excluding already-followed, previously unfollowed, and permanently blocked DIDs."""
     return {
         tag: [
             u
             for u in fetch_users_for_tag(client, tag)
-            if u not in already_following and u not in unfollowed_dids
+            if u not in already_following
+            and u not in unfollowed_dids
+            and u not in never_auto_follow_dids
         ]
         for tag in hashtags
     }
@@ -169,8 +173,20 @@ def main():
             f"{len(unfollowed_dids)} DID(s) in unfollow history — excluded from candidates."
         )
 
+    never_auto_follow_handles = _FOLLOW_CONFIG.get("never_auto_follow_handles", [])
+    never_auto_follow_dids: set[str] = set()
+    if never_auto_follow_handles:
+        print(
+            f"Resolving {len(never_auto_follow_handles)} never-auto-follow handle(s)..."
+        )
+        never_auto_follow_dids = resolve_handles_to_dids(client, never_auto_follow_handles)
+        if never_auto_follow_dids:
+            print(
+                f"{len(never_auto_follow_dids)} DID(s) in never-auto-follow list — excluded from candidates."
+            )
+
     tag_users = _build_eligible_tag_users(
-        client, hashtags, already_following, unfollowed_dids
+        client, hashtags, already_following, unfollowed_dids, never_auto_follow_dids
     )
 
     print("\nEligible users before redistribution:")

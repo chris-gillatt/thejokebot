@@ -16,11 +16,13 @@ from bluesky_common import (
     get_runtime_controls,
     login_client,
     mask_sensitive,
+    resolve_handles_to_dids,
     retry_network_call,
 )
 from bluesky_follower_utils import fetch_paginated_data
 
 _FOLLOWS_AND_LIKES_CONFIG = bluesky_config.get_follows_and_likes_config()
+_FOLLOW_CONFIG = bluesky_config.get_follow_config()
 
 _DEFAULT_LIKE_MAX_PAGES = _FOLLOWS_AND_LIKES_CONFIG["like_max_pages"]
 _DEFAULT_LIKE_PAGE_LIMIT = _FOLLOWS_AND_LIKES_CONFIG["like_page_limit"]
@@ -50,10 +52,13 @@ def follow_back(
     dry_run: bool,
     action_delay_seconds: float,
     unfollowed_dids: set | None = None,
+    never_auto_follow_dids: set | None = None,
 ) -> None:
     """Follow back any followers the bot is not yet following."""
     if unfollowed_dids is None:
         unfollowed_dids = set()
+    if never_auto_follow_dids is None:
+        never_auto_follow_dids = set()
     user_did = client.me.did
     print(
         f"{Fore.YELLOW}Fetching followers and following for account.{Style.RESET_ALL}"
@@ -72,6 +77,11 @@ def follow_back(
 
     for i, did in enumerate(to_follow_back, start=1):
         masked_did = mask_sensitive(did)
+        if did in never_auto_follow_dids:
+            print(
+                f"{Fore.YELLOW}({i}/{len(to_follow_back)}) Skipping {masked_did} — in never-auto-follow list.{Style.RESET_ALL}"
+            )
+            continue
         if did in unfollowed_dids:
             print(
                 f"{Fore.GREEN}({i}/{len(to_follow_back)}) Re-engagement detected for {masked_did}.{Style.RESET_ALL}"
@@ -222,19 +232,23 @@ def follow_interactors(
     state: dict,
     dry_run: bool,
     action_delay_seconds: float,
+    never_auto_follow_dids: set | None = None,
 ) -> int:
     """Follow users who have interacted with the bot's posts in the last 24 hours.
 
     Notifications of type reply, repost, and like are considered. Interactors
     who are already being followed, still within the follow-grace window, or
     who appear in the unfollow history are skipped to prevent repeated
-    follow/unfollow churn.
+    follow/unfollow churn. DIDs in never_auto_follow_dids are also excluded
+    permanently.
 
     Followed DIDs are recorded in follow_grace (source="interaction") so that
     the unfollow script respects the standard grace window before unfollowing.
 
     Returns the number of new follows performed.
     """
+    if never_auto_follow_dids is None:
+        never_auto_follow_dids = set()
     user_did = client.me.did
     grace_dids = bluesky_state.get_follow_grace_dids(state)
     unfollowed_dids = bluesky_state.get_unfollowed_dids(state)
@@ -248,10 +262,10 @@ def follow_interactors(
     cutoff_epoch = time.time() - _INTERACTION_WINDOW_SECONDS
     interactor_dids = _collect_interactor_dids(client, user_did, cutoff_epoch)
 
-    # Exclude anyone already followed, still in the grace window, or
-    # previously unfollowed (to avoid churn).
+    # Exclude anyone already followed, still in the grace window,
+    # previously unfollowed (to avoid churn), or permanently blocked.
     to_follow = sorted(
-        interactor_dids - already_following - grace_dids - unfollowed_dids
+        interactor_dids - already_following - grace_dids - unfollowed_dids - never_auto_follow_dids
     )
 
     print(
@@ -460,8 +474,20 @@ def main() -> None:
     state = bluesky_state.load_state()
     unfollowed_dids = bluesky_state.get_unfollowed_dids(state)
 
+    never_auto_follow_handles = _FOLLOW_CONFIG.get("never_auto_follow_handles", [])
+    never_auto_follow_dids: set[str] = set()
+    if never_auto_follow_handles:
+        print(
+            f"{Fore.YELLOW}Resolving {len(never_auto_follow_handles)} never-auto-follow handle(s)...{Style.RESET_ALL}"
+        )
+        never_auto_follow_dids = resolve_handles_to_dids(client, never_auto_follow_handles)
+        if never_auto_follow_dids:
+            print(
+                f"{Fore.YELLOW}{len(never_auto_follow_dids)} DID(s) in never-auto-follow list.{Style.RESET_ALL}"
+            )
+
     try:
-        follow_back(client, username, dry_run, action_delay_seconds, unfollowed_dids)
+        follow_back(client, username, dry_run, action_delay_seconds, unfollowed_dids, never_auto_follow_dids)
     except (
         ValueError,
         requests.RequestException,
@@ -471,7 +497,7 @@ def main() -> None:
         print(f"{Fore.RED}Follow-back failed: {exc}{Style.RESET_ALL}")
 
     try:
-        followed = follow_interactors(client, state, dry_run, action_delay_seconds)
+        followed = follow_interactors(client, state, dry_run, action_delay_seconds, never_auto_follow_dids)
         print(
             f"{Fore.GREEN}Followed {followed} new interactor"
             f"{'s' if followed != 1 else ''}.{Style.RESET_ALL}"

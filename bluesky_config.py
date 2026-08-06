@@ -82,6 +82,9 @@ _DEFAULT_CONFIG = {
             "docatcdi.com",
         ],
     },
+    "follow": {
+        "never_auto_follow_handles": [],
+    },
     "follows_and_likes": {
         "like_max_pages": 5,
         "like_page_limit": 100,
@@ -282,6 +285,16 @@ def _validate_config(payload):
     follow_fellows["hashtags"] = normalised_follow_hashtags
     cfg["follow_fellows"] = follow_fellows
 
+    follow = cfg.get("follow", {})
+    raw_never_auto_follow = follow.get("never_auto_follow_handles", [])
+    if raw_never_auto_follow:
+        follow["never_auto_follow_handles"] = _ensure_string_list(
+            raw_never_auto_follow, "follow.never_auto_follow_handles"
+        )
+    else:
+        follow["never_auto_follow_handles"] = []
+    cfg["follow"] = follow
+
     unfollow = cfg.get("unfollow", {})
     unfollow["max_actions"] = _ensure_int(
         unfollow.get("max_actions", 200), minimum=0, field_name="unfollow.max_actions"
@@ -469,6 +482,10 @@ def get_posting_tag_runtime_config():
         "tag_similarity_groups": posting["tag_similarity_groups"],
         "posting_hashtags": posting["hashtags"],
     }
+
+
+def get_follow_config():
+    return get_runtime_config()["follow"]
 
 
 def get_follow_fellows_config():
