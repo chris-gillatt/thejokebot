@@ -107,8 +107,10 @@ def select_users(tag_users, tag_order, per_tag_limit, overall_limit):
     return selected_users[:overall_limit]
 
 
-def _build_eligible_tag_users(client, hashtags, already_following, unfollowed_dids, never_auto_follow_dids):
+def _build_eligible_tag_users(client, hashtags, already_following, unfollowed_dids, never_auto_follow_dids=None):
     """Fetch users per hashtag, excluding already-followed, previously unfollowed, and permanently blocked DIDs."""
+    if never_auto_follow_dids is None:
+        never_auto_follow_dids = set()
     return {
         tag: [
             u

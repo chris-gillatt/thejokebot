@@ -287,12 +287,11 @@ def _validate_config(payload):
 
     follow = cfg.get("follow", {})
     raw_never_auto_follow = follow.get("never_auto_follow_handles", [])
-    if raw_never_auto_follow:
-        follow["never_auto_follow_handles"] = _ensure_string_list(
-            raw_never_auto_follow, "follow.never_auto_follow_handles"
-        )
-    else:
-        follow["never_auto_follow_handles"] = []
+    follow["never_auto_follow_handles"] = (
+        _ensure_string_list(raw_never_auto_follow, "follow.never_auto_follow_handles")
+        if raw_never_auto_follow
+        else []
+    )
     cfg["follow"] = follow
 
     unfollow = cfg.get("unfollow", {})

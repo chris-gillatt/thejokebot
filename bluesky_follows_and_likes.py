@@ -79,7 +79,7 @@ def follow_back(
         masked_did = mask_sensitive(did)
         if did in never_auto_follow_dids:
             print(
-                f"{Fore.YELLOW}({i}/{len(to_follow_back)}) Skipping {masked_did} — in never-auto-follow list.{Style.RESET_ALL}"
+                f"{Fore.YELLOW}({i}/{len(to_follow_back)}) Skipping {masked_did} - in never-auto-follow list.{Style.RESET_ALL}"
             )
             continue
         if did in unfollowed_dids:
