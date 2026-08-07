@@ -2112,6 +2112,31 @@ class LikeRepliesTests(unittest.TestCase):
         self.assertGreater(recent_time, cutoff)
 
 
+class FollowBackTests(unittest.TestCase):
+    def test_follow_back_skips_dids_in_unfollow_history(self):
+        unfollowed_did = "did:plc:unfollowed"
+        follower_profile = SimpleNamespace(did=unfollowed_did)
+        client = mock.Mock()
+        client.me.did = "did:plc:bot"
+
+        with mock.patch(
+            "bluesky_follows_and_likes.fetch_paginated_data",
+            side_effect=[
+                [follower_profile],
+                [],
+            ],
+        ):
+            bluesky_follows_and_likes.follow_back(
+                client,
+                "jokebot.bsky.social",
+                dry_run=False,
+                action_delay_seconds=0,
+                unfollowed_dids={unfollowed_did},
+            )
+
+        client.follow.assert_not_called()
+
+
 class FollowInteractorsTests(unittest.TestCase):
     """Tests for follow_interactors(): follows users who interact with bot posts."""
 

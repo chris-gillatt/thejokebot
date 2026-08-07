@@ -74,8 +74,9 @@ def follow_back(
         masked_did = mask_sensitive(did)
         if did in unfollowed_dids:
             print(
-                f"{Fore.GREEN}({i}/{len(to_follow_back)}) Re-engagement detected for {masked_did}.{Style.RESET_ALL}"
+                f"{Fore.YELLOW}({i}/{len(to_follow_back)}) Skipping previously unfollowed {masked_did}.{Style.RESET_ALL}"
             )
+            continue
         print(
             f"{Fore.YELLOW}({i}/{len(to_follow_back)}) Following {masked_did}...{Style.RESET_ALL}"
         )

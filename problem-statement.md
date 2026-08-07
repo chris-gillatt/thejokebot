@@ -385,6 +385,23 @@ the other scheduled `bot_state_writer` workflows away from minute zero. Updated
 the central runtime schedule metadata to match the workflow YAML so validation
 continues to catch drift.
 
+---
+
+### 5.34 Honour unfollow history in follow-back ✓ Complete
+**Priority: High**
+
+Issue #87 requested that `wt5here.bsky.social` should never be auto-followed
+again. The project already has a DID-based `unfollow_history` state list for
+this purpose, and tag discovery plus interaction-follow paths already exclude
+those DIDs. The follow-back path only logged re-engagement and then still
+followed the account, so a separate permanent-follow block-list would duplicate
+the existing model without fixing the gap.
+
+**Resolution:** `bluesky_follows_and_likes.follow_back()` now skips DIDs in
+`unfollow_history`, matching the other auto-follow paths. The resolved DID for
+`wt5here.bsky.social` was moved out of follow grace and into unfollow history
+with `reason="manual_block"`.
+
 ## 6. Explicit "Will Not Do" Decisions
 Do not revisit these without a concrete operational reason.
 
@@ -445,6 +462,7 @@ Do not revisit these without a concrete operational reason.
 - v1.30: Completed configuration tuning for issue #52. Extended joke deduplication window from 365 to 730 days (`posting.days_limit`), reduced follow grace from 90 to 30 days (`FOLLOW_RESPONSE_GRACE_PERIOD_DAYS`), and moved unfollow cadence from quarterly to monthly (`0 12 1 * *`) to smooth clean-up volume. Updated runtime config defaults, unfollow workflow schedule, docs, and tests.
 - v1.32: Fixed posting hashtag diversity regression for issue #76 by introducing explicit posting-pool precedence (`posting.tag_pool`, then `follow_fellows.hashtags`, then `posting.hashtags`) and restoring a broad default posting tag pool. Added regression tests for precedence and varied hashtag selection across posting offsets.
 - v1.33: Staggered state-writer workflow schedules so `bluesky_post_joke` is no longer cancelled by same-minute `bot_state_writer` queue contention. Runtime schedule metadata remains aligned with the workflow YAML.
+- v1.34: Fixed issue #87 by using the existing DID-based `unfollow_history` model. `follow_back()` now skips previously unfollowed DIDs, and `wt5here.bsky.social` is recorded as a manual block in state rather than introducing a parallel handle-based block list.
 
 ## 9. Code Review: Issues Resolved
 
