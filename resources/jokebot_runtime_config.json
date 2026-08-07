@@ -90,10 +90,10 @@
   },
   "workflow_schedules": {
     "bluesky_post_joke": "0 0,4,8,12,16,20 * * *",
-    "bluesky_follows_and_likes": "0 */2 * * *",
-    "bluesky_follow_fellows": "0 0 * * 3,5",
-    "bluesky_unfollow": "0 12 1 * *",
-    "bluesky_process_reports": "0 */4 * * *",
+    "bluesky_follows_and_likes": "20 */2 * * *",
+    "bluesky_follow_fellows": "10 1 * * 3,5",
+    "bluesky_unfollow": "10 13 1 * *",
+    "bluesky_process_reports": "40 */4 * * *",
     "bluesky_validate_unfollow_ignore": "0 9 1 * *"
   }
 }

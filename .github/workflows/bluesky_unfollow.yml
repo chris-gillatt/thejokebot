@@ -1,9 +1,9 @@
 name: bluesky_unfollow
 
 on:
-  # Runs monthly on the first day at 12:00 UTC.
+  # Runs monthly on the first day, offset from other state writers.
   schedule:
-    - cron: "0 12 1 * *"  # monthly at 12:00 UTC
+    - cron: "10 13 1 * *"  # monthly
   workflow_dispatch:
 
 concurrency:

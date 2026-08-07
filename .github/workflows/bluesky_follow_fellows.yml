@@ -2,7 +2,7 @@ name: bluesky_follow_fellows
 
 on:
   schedule:
-    - cron: "0 0 * * 3,5"  # Runs every Wednesday and Friday at 00:00 UTC
+    - cron: "10 1 * * 3,5"  # Runs every Wednesday and Friday, offset from other state writers
   workflow_dispatch:
 
 concurrency:

@@ -369,6 +369,22 @@ its four page/limit constants from the new `follows_and_likes` config section.
 `posting.hashtags`. Schema validation, deep-merge with built-in defaults, and
 a safe fallback-to-defaults path are all implemented.
 
+---
+
+### 5.33 Stagger state-writer workflow schedules ✓ Complete
+**Priority: High**
+
+Recent `bluesky_post_joke` scheduled runs were cancelled before any job started
+because several workflows sharing the `bot_state_writer` concurrency group were
+scheduled at the same minute. GitHub Actions keeps at most one running and one
+pending run per concurrency group, so same-minute state-writer bursts can evict
+the pending joke-posting run even with `cancel-in-progress: false`.
+
+**Resolution:** Kept `bluesky_post_joke` on its existing cadence and staggered
+the other scheduled `bot_state_writer` workflows away from minute zero. Updated
+the central runtime schedule metadata to match the workflow YAML so validation
+continues to catch drift.
+
 ## 6. Explicit "Will Not Do" Decisions
 Do not revisit these without a concrete operational reason.
 
@@ -428,6 +444,7 @@ Do not revisit these without a concrete operational reason.
 - v1.31: Completed hashtag-rotation rollout for issue #50. `bluesky_post_joke.py` now rotates post hashtags deterministically from the configured pool, tracks posting tag offset in state, and computes per-post grapheme-aware length budget from selected tags before accepting joke candidates. Added focused tests and documentation updates.
 - v1.30: Completed configuration tuning for issue #52. Extended joke deduplication window from 365 to 730 days (`posting.days_limit`), reduced follow grace from 90 to 30 days (`FOLLOW_RESPONSE_GRACE_PERIOD_DAYS`), and moved unfollow cadence from quarterly to monthly (`0 12 1 * *`) to smooth clean-up volume. Updated runtime config defaults, unfollow workflow schedule, docs, and tests.
 - v1.32: Fixed posting hashtag diversity regression for issue #76 by introducing explicit posting-pool precedence (`posting.tag_pool`, then `follow_fellows.hashtags`, then `posting.hashtags`) and restoring a broad default posting tag pool. Added regression tests for precedence and varied hashtag selection across posting offsets.
+- v1.33: Staggered state-writer workflow schedules so `bluesky_post_joke` is no longer cancelled by same-minute `bot_state_writer` queue contention. Runtime schedule metadata remains aligned with the workflow YAML.
 
 ## 9. Code Review: Issues Resolved
 

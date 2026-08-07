@@ -2,7 +2,7 @@ name: bluesky_process_reports
 
 on:
   schedule:
-    - cron: "0 */4 * * *"  # Runs every 4 hours (UTC)
+    - cron: "40 */4 * * *"  # Runs every 4 hours (UTC), offset from other state writers
   workflow_dispatch:
 
 concurrency:
