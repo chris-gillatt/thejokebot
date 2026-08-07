@@ -421,7 +421,7 @@ Do not revisit these without a concrete operational reason.
 - Follow script renamed to `bluesky_follow_fellows.py` to reflect conservative behaviour and reduce misleading framing.
 - Unfollow automation now applies safety-first batching controls (per-run cap, inter-batch pause, and throttle-aware early stop).
 - Unfollow schedule set to daily at 12:00 UTC to clear the 4,400+ non-follower backlog; revert to twice-yearly once backlog is exhausted.
-- Re-engagement guardrail implemented: unfollow history recorded in `bot_state.json`; `follow_fellows` excludes previously-unfollowed DIDs; `follow_back` logs re-engagements.
+- Re-engagement guardrail implemented: unfollow history recorded in `bot_state.json`; `follow_fellows`, interaction-follow, and follow-back all exclude previously-unfollowed DIDs.
 
 ## 8. Changelog (Milestones)
 - v0.1: Initial governance draft.

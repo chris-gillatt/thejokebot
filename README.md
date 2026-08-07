@@ -162,6 +162,43 @@ Validation guard rail:
 - **Follow grace protection:** `bluesky_unfollow.py` skips accounts followed by `bluesky_follow_fellows.py` for `30` days before they can become eligible for unfollow.
 - **Post length preflight:** `bluesky_post_joke.py` skips over-long jokes and retries provider fetches before posting, using grapheme-aware length checks so posts stay within Bluesky's 300-character limit after hashtags are appended.
 
+### Never auto-follow a user again
+
+Use the existing DID-based `unfollow_history` state for accounts that should not
+be auto-followed again. Do not add a separate handle block-list: auto-follow
+paths compare DIDs, and handles can change.
+
+1. Resolve the handle to a stable DID:
+
+	```bash
+	curl -s "https://bsky.social/xrpc/com.atproto.identity.resolveHandle?handle=example.bsky.social"
+	```
+
+2. Unfollow the account from the live Bluesky account if it is currently followed.
+	The state change below prevents future auto-follows; it does not perform a
+	live unfollow by itself.
+3. In `bot_state.json`, add the DID to `unfollow_history.entries`:
+
+	```json
+	{
+	  "did": "did:plc:example",
+	  "unfollowed_at": 1786064785,
+	  "reason": "manual_block"
+	}
+	```
+
+	Use the current Unix timestamp for `unfollowed_at`.
+4. If the same DID appears in `follow_grace.entries`, remove that grace entry so
+	it cannot protect the account from the next unfollow pass.
+5. Validate and commit the state update:
+
+	```bash
+	python -m json.tool bot_state.json >/dev/null
+	ruff check .
+	ruff format --check .
+	python -m pytest tests/ -x -q
+	```
+
 Bluesky rate-limit context (as documented):
 - Repository write budget is point-based per account: `5000` points/hour and `35000` points/day; delete operations cost `1` point each.
 - Hosted PDS API requests are also rate-limited by IP (`3000` requests per `5` minutes).
