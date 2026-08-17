@@ -28,8 +28,23 @@ changelog in this file is intentionally brief.
 2. Behaviour regressions when touching posting/report/follow flows.
 3. Scope creep during multi-file maintenance work.
 4. **httpx TLS fingerprint workaround fragility** — all Bluesky API calls currently route through a custom `_RequestsTransport` in `bluesky_common.py` that delegates to `requests`/urllib3. If AWS WAF Bot Control later adds urllib3's JA3/JA4 fingerprint to its block-list, every workflow will break again. Fallback option is `curl_cffi`, which can impersonate a real browser TLS stack.
+5. **Session-cache key custody** — cached Bluesky sessions must remain encrypted with `BLUESKY_SESSION_CACHE_KEY`. Rotating that secret invalidates existing cache generations and requires a credential login to seed a replacement.
 
 ## 5. Active Backlog
+
+### 5.25 Harden Bluesky session refresh and credential selection ✓ Complete
+**Priority: High**
+
+Session credentials are encrypted before GitHub cache storage and shared across
+the serialised Bluesky workflows using run-unique cache generations. Invalid or
+revoked sessions are removed before credential recovery; transient login failures
+receive bounded retries. Session persistence is registered before login so newly
+issued credentials survive a later profile-fetch failure.
+
+Credential selection no longer silently falls back from `BLUESKY_APP_PASSWORD`
+to the full account password. `BLUESKY_PASSWORD_SOURCE=account_password` is now
+required for deliberate local use of `BLUESKY_PASSWORD`; production workflows
+explicitly select `app_password`.
 
 ### 5.1 Unfollow Re-Engagement Guardrail ✓ Complete
 See v1.4 changelog entry.

@@ -267,7 +267,7 @@ class RuntimeConfigValidationScriptTests(unittest.TestCase):
 
 
 class LoginClientRetryTests(unittest.TestCase):
-    def test_get_bluesky_credentials_prefers_app_password(self):
+    def test_get_bluesky_credentials_uses_app_password_by_default(self):
         with mock.patch.dict(
             os.environ,
             {
@@ -285,11 +285,12 @@ class LoginClientRetryTests(unittest.TestCase):
         self.assertEqual(password, "preferred-app-password")
         self.assertEqual(source, "BLUESKY_APP_PASSWORD")
 
-    def test_get_bluesky_credentials_falls_back_to_legacy_password(self):
+    def test_get_bluesky_credentials_uses_account_password_when_explicit(self):
         with mock.patch.dict(
             os.environ,
             {
                 "BLUESKY_USERNAME": "thejokebot.bsky.social",
+                "BLUESKY_PASSWORD_SOURCE": "account_password",
                 "BLUESKY_PASSWORD": "legacy-password",
             },
             clear=True,
@@ -302,7 +303,7 @@ class LoginClientRetryTests(unittest.TestCase):
         self.assertEqual(password, "legacy-password")
         self.assertEqual(source, "BLUESKY_PASSWORD")
 
-    def test_get_bluesky_credentials_raises_when_password_missing(self):
+    def test_get_bluesky_credentials_does_not_fall_back_to_account_password(self):
         with mock.patch.dict(
             os.environ,
             {
@@ -316,14 +317,28 @@ class LoginClientRetryTests(unittest.TestCase):
                 bluesky_common.get_bluesky_credentials()
 
         self.assertIn("BLUESKY_APP_PASSWORD", str(ctx.exception))
-        self.assertIn("BLUESKY_PASSWORD", str(ctx.exception))
+
+    def test_get_bluesky_credentials_rejects_unknown_password_source(self):
+        with mock.patch.dict(
+            os.environ,
+            {
+                "BLUESKY_USERNAME": "thejokebot.bsky.social",
+                "BLUESKY_PASSWORD_SOURCE": "automatic",
+                "BLUESKY_APP_PASSWORD": "app-password",
+            },
+            clear=True,
+        ):
+            with self.assertRaises(ValueError) as ctx:
+                bluesky_common.get_bluesky_credentials()
+
+        self.assertIn("Invalid BLUESKY_PASSWORD_SOURCE", str(ctx.exception))
 
     def test_get_bluesky_credentials_raises_when_username_missing(self):
         with mock.patch.dict(
             os.environ,
             {
                 "BLUESKY_USERNAME": "",
-                "BLUESKY_PASSWORD": "test-password",
+                "BLUESKY_APP_PASSWORD": "test-password",
             },
             clear=True,
         ):
@@ -342,7 +357,7 @@ class LoginClientRetryTests(unittest.TestCase):
             os.environ,
             {
                 "BLUESKY_USERNAME": "thejokebot.bsky.social",
-                "BLUESKY_PASSWORD": "test-password",
+                "BLUESKY_APP_PASSWORD": "test-password",
                 "BLUESKY_LOGIN_RETRY_ATTEMPTS": "3",
                 "BLUESKY_LOGIN_RETRY_DELAY_SECONDS": "0",
             },
@@ -353,6 +368,35 @@ class LoginClientRetryTests(unittest.TestCase):
 
         self.assertIs(client, mock_client)
         self.assertEqual(username, "thejokebot.bsky.social")
+        self.assertEqual(mock_client.login.call_count, 2)
+
+    def test_login_client_retries_after_transient_server_error(self):
+        response = mock.Mock(status_code=503)
+        response.content = mock.Mock(error="NotEnoughResources")
+        mock_client = mock.Mock()
+        mock_client.login.side_effect = [
+            atproto_client.exceptions.RequestException(response),
+            None,
+        ]
+        with mock.patch.dict(
+            os.environ,
+            {
+                "BLUESKY_USERNAME": "thejokebot.bsky.social",
+                "BLUESKY_APP_PASSWORD": "test-password",
+                "BLUESKY_LOGIN_RETRY_ATTEMPTS": "2",
+                "BLUESKY_LOGIN_RETRY_DELAY_SECONDS": "0",
+                "BLUESKY_SESSION_PERSIST_ENABLED": "true",
+            },
+            clear=True,
+        ):
+            with mock.patch("bluesky_common.Client", return_value=mock_client):
+                with mock.patch(
+                    "bluesky_common._register_session_persistence_callback",
+                    return_value=True,
+                ) as register_mock:
+                    bluesky_common.login_client()
+
+        register_mock.assert_called_once()
         self.assertEqual(mock_client.login.call_count, 2)
 
     def test_login_client_uses_app_password_when_both_set(self):
@@ -391,7 +435,7 @@ class LoginClientRetryTests(unittest.TestCase):
             os.environ,
             {
                 "BLUESKY_USERNAME": "thejokebot.bsky.social",
-                "BLUESKY_PASSWORD": "test-password",
+                "BLUESKY_APP_PASSWORD": "test-password",
                 "BLUESKY_LOGIN_RETRY_ATTEMPTS": "2",
                 "BLUESKY_LOGIN_RETRY_DELAY_SECONDS": "0",
             },
@@ -410,7 +454,7 @@ class LoginClientRetryTests(unittest.TestCase):
             os.environ,
             {
                 "BLUESKY_USERNAME": "thejokebot.bsky.social",
-                "BLUESKY_PASSWORD": "test-password",
+                "BLUESKY_APP_PASSWORD": "test-password",
                 "BLUESKY_SESSION_RESTORE_ENABLED": "true",
                 "BLUESKY_SESSION_PERSIST_ENABLED": "false",
                 "BLUESKY_LOGIN_RETRY_ATTEMPTS": "1",
@@ -440,7 +484,7 @@ class LoginClientRetryTests(unittest.TestCase):
             os.environ,
             {
                 "BLUESKY_USERNAME": "thejokebot.bsky.social",
-                "BLUESKY_PASSWORD": "test-password",
+                "BLUESKY_APP_PASSWORD": "test-password",
                 "BLUESKY_SESSION_RESTORE_ENABLED": "true",
                 "BLUESKY_SESSION_PERSIST_ENABLED": "false",
                 "BLUESKY_LOGIN_RETRY_ATTEMPTS": "1",
@@ -466,6 +510,68 @@ class LoginClientRetryTests(unittest.TestCase):
             mock.call("thejokebot.bsky.social", "test-password"),
         )
 
+    def test_login_client_retries_transient_restore_without_credential_login(self):
+        response = mock.Mock(status_code=503)
+        response.content = mock.Mock(error="NotEnoughResources")
+        mock_client = mock.Mock()
+        mock_client.login.side_effect = atproto_client.exceptions.RequestException(
+            response
+        )
+        mock_client.get_profile.return_value = mock.Mock()
+
+        with mock.patch.dict(
+            os.environ,
+            {
+                "BLUESKY_USERNAME": "thejokebot.bsky.social",
+                "BLUESKY_APP_PASSWORD": "test-password",
+                "BLUESKY_SESSION_RESTORE_ENABLED": "true",
+                "BLUESKY_SESSION_PERSIST_ENABLED": "false",
+                "BLUESKY_LOGIN_RETRY_ATTEMPTS": "2",
+                "BLUESKY_LOGIN_RETRY_DELAY_SECONDS": "0",
+            },
+            clear=True,
+        ):
+            with mock.patch("bluesky_common.Client", return_value=mock_client):
+                with mock.patch(
+                    "bluesky_common._load_session_string_from_file",
+                    return_value="session-token",
+                ):
+                    client, username = bluesky_common.login_client()
+
+        self.assertIs(client, mock_client)
+        self.assertEqual(username, "thejokebot.bsky.social")
+        mock_client.login.assert_called_once_with(session_string="session-token")
+        mock_client.get_profile.assert_called_once_with("thejokebot.bsky.social")
+
+    def test_login_client_removes_revoked_session_before_credential_login(self):
+        response = mock.Mock(status_code=400)
+        response.content = mock.Mock(error="ExpiredToken")
+        mock_client = mock.Mock()
+        mock_client.login.side_effect = [
+            atproto_client.exceptions.BadRequestError(response),
+            None,
+        ]
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            session_path = pathlib.Path(temp_dir) / "bluesky_session.txt"
+            session_path.write_text("revoked-session\n", encoding="utf-8")
+            with mock.patch.dict(
+                os.environ,
+                {
+                    "BLUESKY_USERNAME": "thejokebot.bsky.social",
+                    "BLUESKY_APP_PASSWORD": "test-password",
+                    "BLUESKY_SESSION_RESTORE_ENABLED": "true",
+                    "BLUESKY_SESSION_PERSIST_ENABLED": "false",
+                    "BLUESKY_SESSION_FILE_PATH": str(session_path),
+                    "BLUESKY_LOGIN_RETRY_ATTEMPTS": "1",
+                },
+                clear=True,
+            ):
+                with mock.patch("bluesky_common.Client", return_value=mock_client):
+                    bluesky_common.login_client()
+
+            self.assertFalse(session_path.exists())
+
     def test_login_client_persists_and_registers_when_enabled(self):
         mock_client = mock.Mock()
 
@@ -473,7 +579,7 @@ class LoginClientRetryTests(unittest.TestCase):
             os.environ,
             {
                 "BLUESKY_USERNAME": "thejokebot.bsky.social",
-                "BLUESKY_PASSWORD": "test-password",
+                "BLUESKY_APP_PASSWORD": "test-password",
                 "BLUESKY_SESSION_RESTORE_ENABLED": "false",
                 "BLUESKY_SESSION_PERSIST_ENABLED": "true",
                 "BLUESKY_LOGIN_RETRY_ATTEMPTS": "1",

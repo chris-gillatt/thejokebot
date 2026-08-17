@@ -37,16 +37,21 @@ jobs:
         id: bluesky_session_cache
         uses: actions/cache/restore@v6
         with:
-          path: .agent-tmp/bluesky_session.txt
-          key: bluesky-session-${{ github.workflow }}-${{ github.ref_name }}-${{ github.sha }}
+          path: .agent-tmp/bluesky_session.txt.enc
+          key: bluesky-session-v2-${{ github.ref_name }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
-            bluesky-session-${{ github.workflow }}-${{ github.ref_name }}-
-            bluesky-session-${{ github.ref_name }}-
+            bluesky-session-v2-${{ github.ref_name }}-
+
+      - name: Decrypt Bluesky session cache
+        env:
+          BLUESKY_SESSION_CACHE_KEY: ${{ secrets.BLUESKY_SESSION_CACHE_KEY }}
+        run: scripts/restore_bluesky_session.sh
 
       - name: Run bluesky_unfollow
         env:
           BLUESKY_USERNAME: ${{ vars.BLUESKY_USERNAME }}
           BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
+          BLUESKY_PASSWORD_SOURCE: app_password
           BLUESKY_SESSION_RESTORE_ENABLED: "true"
           BLUESKY_SESSION_PERSIST_ENABLED: "true"
           BLUESKY_SESSION_FILE_PATH: .agent-tmp/bluesky_session.txt
@@ -56,18 +61,18 @@ jobs:
           BLUESKY_UNFOLLOW_BATCH_PAUSE_SECONDS: "60"
         run: python bluesky_unfollow.py
 
-      - name: Ensure session cache path exists
+      - name: Encrypt Bluesky session cache
         if: always()
-        run: |
-          mkdir -p .agent-tmp
-          touch .agent-tmp/bluesky_session.txt
+        env:
+          BLUESKY_SESSION_CACHE_KEY: ${{ secrets.BLUESKY_SESSION_CACHE_KEY }}
+        run: scripts/prepare_bluesky_session_cache.sh
 
       - name: Save Bluesky session cache
-        if: always() && steps.bluesky_session_cache.outputs.cache-hit != 'true'
+        if: always() && hashFiles('.agent-tmp/bluesky_session.txt.enc') != ''
         uses: actions/cache/save@v6
         with:
-          path: .agent-tmp/bluesky_session.txt
-          key: bluesky-session-${{ github.workflow }}-${{ github.ref_name }}-${{ github.sha }}
+          path: .agent-tmp/bluesky_session.txt.enc
+          key: bluesky-session-v2-${{ github.ref_name }}-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Persist unfollow history state
         run: |

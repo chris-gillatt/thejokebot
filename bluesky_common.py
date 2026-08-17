@@ -15,6 +15,7 @@ DEFAULT_NETWORK_RETRY_ATTEMPTS = 3
 DEFAULT_NETWORK_RETRY_DELAY_SECONDS = 1.0
 DEFAULT_NETWORK_RETRY_BACKOFF_FACTOR = 2.0
 DEFAULT_SESSION_FILE_PATH = ".agent-tmp/bluesky_session.txt"
+DEFAULT_PASSWORD_SOURCE = "app_password"
 
 
 def _load_local_env_file():
@@ -77,19 +78,27 @@ class _RequestsTransport(httpx.BaseTransport):
 
 
 def get_bluesky_password():
-    app_password = os.getenv("BLUESKY_APP_PASSWORD")
-    if app_password:
-        return app_password, "BLUESKY_APP_PASSWORD"
-
-    password = os.getenv("BLUESKY_PASSWORD")
-    if password:
-        return password, "BLUESKY_PASSWORD"
-
-    raise ValueError(
-        "Neither BLUESKY_APP_PASSWORD nor BLUESKY_PASSWORD environment variable is set. "
-        "Please configure BLUESKY_APP_PASSWORD (preferred) or BLUESKY_PASSWORD in "
-        "GitHub Actions secrets or local .env."
+    password_source = (
+        os.getenv("BLUESKY_PASSWORD_SOURCE", DEFAULT_PASSWORD_SOURCE).strip().lower()
     )
+    source_variables = {
+        "app_password": "BLUESKY_APP_PASSWORD",
+        "account_password": "BLUESKY_PASSWORD",
+    }
+    variable_name = source_variables.get(password_source)
+    if variable_name is None:
+        valid_sources = ", ".join(sorted(source_variables))
+        raise ValueError(
+            f"Invalid BLUESKY_PASSWORD_SOURCE {password_source!r}; expected one of: {valid_sources}."
+        )
+
+    password = os.getenv(variable_name)
+    if not password:
+        raise ValueError(
+            f"{variable_name} is required when BLUESKY_PASSWORD_SOURCE={password_source}."
+        )
+
+    return password, variable_name
 
 
 def get_bluesky_credentials(include_source=False):
@@ -169,8 +178,70 @@ def _register_session_persistence_callback(client, path):
     return True
 
 
+def _get_xrpc_error_details(exc):
+    response = getattr(exc, "response", None)
+    status_code = getattr(response, "status_code", None)
+    content = getattr(response, "content", None)
+    error_name = getattr(content, "error", None)
+    return status_code, error_name
+
+
+def _is_invalid_session_error(exc):
+    status_code, error_name = _get_xrpc_error_details(exc)
+    return status_code == 401 or error_name in {"ExpiredToken", "InvalidToken"}
+
+
+def _is_transient_login_error(exc):
+    if isinstance(exc, atproto_client.exceptions.NetworkError):
+        return True
+    status_code, _ = _get_xrpc_error_details(exc)
+    return status_code == 429 or (status_code is not None and status_code >= 500)
+
+
+def _remove_invalid_session_file(path):
+    try:
+        path.unlink(missing_ok=True)
+    except OSError as exc:
+        print(
+            f"Warning: failed to remove invalid Bluesky session file at {path}: {type(exc).__name__}: {exc}."
+        )
+
+
+def _retry_restored_session_profile(
+    client, username, session_file_path, max_attempts, retry_delay_seconds, exc
+):
+    for attempt in range(2, max_attempts + 1):
+        print(
+            f"Warning: transient failure while restoring the cached Bluesky session "
+            f"({attempt - 1}/{max_attempts}); retrying the current session in "
+            f"{retry_delay_seconds:.1f}s."
+        )
+        if retry_delay_seconds > 0:
+            time.sleep(retry_delay_seconds)
+        try:
+            client.me = client.get_profile(username)
+            print("Bluesky session restore succeeded after a transient failure.")
+            return client, username
+        except Exception as retry_exc:
+            if _is_invalid_session_error(retry_exc):
+                _remove_invalid_session_file(session_file_path)
+                print(
+                    "Cached Bluesky session became invalid; authenticating with the configured credential source."
+                )
+                return None
+            if not _is_transient_login_error(retry_exc):
+                raise
+            exc = retry_exc
+    raise exc
+
+
 def _attempt_session_restore(
-    client, username, session_file_path, session_persist_enabled
+    client,
+    username,
+    session_file_path,
+    session_persist_enabled,
+    max_attempts,
+    retry_delay_seconds,
 ):
     """Try to restore a Bluesky session from a saved session string.
 
@@ -186,11 +257,25 @@ def _attempt_session_restore(
         print("Bluesky session restore succeeded.")
         if session_persist_enabled:
             _persist_session_string_to_file(client, session_file_path)
-            _register_session_persistence_callback(client, session_file_path)
         return client, username
     except Exception as exc:
+        if _is_invalid_session_error(exc):
+            _remove_invalid_session_file(session_file_path)
+            print(
+                "Cached Bluesky session is invalid; authenticating with the configured credential source."
+            )
+            return None
+        if _is_transient_login_error(exc):
+            return _retry_restored_session_profile(
+                client,
+                username,
+                session_file_path,
+                max_attempts,
+                retry_delay_seconds,
+                exc,
+            )
         print(
-            "Warning: Bluesky session restore failed; falling back to credential login "
+            "Warning: cached Bluesky session is unusable; authenticating with the configured credential source "
             f"({type(exc).__name__}: {exc})."
         )
         return None
@@ -220,10 +305,17 @@ def login_client():
     session_file_path = _get_session_file_path()
 
     client = Client(request=_AtprotoRequest(transport=_RequestsTransport()))
+    if session_persist_enabled:
+        _register_session_persistence_callback(client, session_file_path)
 
     if session_restore_enabled:
         result = _attempt_session_restore(
-            client, username, session_file_path, session_persist_enabled
+            client,
+            username,
+            session_file_path,
+            session_persist_enabled,
+            max_attempts,
+            retry_delay_seconds,
         )
         if result is not None:
             return result
@@ -234,10 +326,9 @@ def login_client():
             client.login(username, password)
             if session_persist_enabled:
                 _persist_session_string_to_file(client, session_file_path)
-                _register_session_persistence_callback(client, session_file_path)
             return client, username
-        except atproto_client.exceptions.NetworkError as exc:
-            if attempt >= max_attempts:
+        except Exception as exc:
+            if not _is_transient_login_error(exc) or attempt >= max_attempts:
                 raise
             print(
                 f"Warning: transient Bluesky login failure ({attempt}/{max_attempts}): {exc}. "
@@ -245,6 +336,8 @@ def login_client():
             )
             if retry_delay_seconds > 0:
                 time.sleep(retry_delay_seconds)
+
+    raise RuntimeError("Bluesky login retry loop exited unexpectedly.")
 
 
 def retry_network_call(

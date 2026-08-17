@@ -104,8 +104,10 @@ Set these in `.env` (keep values quoted):
 | Variable | Required | Description |
 |---|---|---|
 | `BLUESKY_USERNAME` | Yes | Account handle for the bot account (for example `yourbot.bsky.social`). |
-| `BLUESKY_APP_PASSWORD` | Preferred | App password for the Bluesky account. Preferred in production and local runs. |
-| `BLUESKY_PASSWORD` | Fallback | Backward-compatible fallback when `BLUESKY_APP_PASSWORD` is not set. |
+| `BLUESKY_APP_PASSWORD` | Yes by default | App password for the Bluesky account. Used when `BLUESKY_PASSWORD_SOURCE=app_password`, including all production workflows. |
+| `BLUESKY_PASSWORD_SOURCE` | No | Credential source: `app_password` (default) or `account_password`. Account-password use must be explicitly enabled. |
+| `BLUESKY_PASSWORD` | Explicit override only | Full Bluesky account password. Used only when `BLUESKY_PASSWORD_SOURCE=account_password`; never selected automatically. |
+| `BLUESKY_SESSION_CACHE_KEY` | Production workflows | Repository secret used to encrypt cached Bluesky session credentials before GitHub cache storage. |
 | `API_NINJAS_API_KEY` | No | API key for the API Ninjas jokes endpoint. Only needed if you want the `api_ninjas` backup provider. |
 | `BLUESKY_DRY_RUN` | No | Set to `true` to log actions without applying them (also used by `bluesky_manage_starter_pack.py` for preview mode). |
 | `BLUESKY_ACTION_DELAY_SECONDS` | No | Seconds to wait between follow/unfollow actions. |
@@ -121,7 +123,14 @@ Set these in `.env` (keep values quoted):
 | `BLUESKY_REPORT_PAGE_LIMIT` | No | Notifications per page when polling for reports (default `100`). |
 | `BLUESKY_REPORT_MAX_UNRESOLVED_ATTEMPTS` | No | Max retries for unresolved report notifications before they are marked processed to prevent indefinite retry loops (default `3`). |
 
-Credential selection order: the bot uses `BLUESKY_APP_PASSWORD` first and falls back to `BLUESKY_PASSWORD` only when the app password variable is not set.
+The bot never changes credential sources automatically. Production workflows set
+`BLUESKY_PASSWORD_SOURCE=app_password`. For a deliberate local account-password
+login, set `BLUESKY_PASSWORD_SOURCE=account_password` and `BLUESKY_PASSWORD`.
+
+Scheduled workflows share the latest encrypted session cache generation. A revoked
+or invalid cached session is deleted before the configured credential is used to
+create a replacement session. Transient service failures are retried without
+changing credential source or discarding a potentially valid session.
 
 ## Central runtime config
 
