@@ -671,6 +671,84 @@ class NetworkRetryHelperTests(unittest.TestCase):
         self.assertEqual(result, "ok")
         self.assertEqual(calls["count"], 2)
 
+    def test_retry_network_call_retries_transient_sdk_server_error(self):
+        response = mock.Mock(status_code=504, headers={})
+        response.content = mock.Mock(error="UpstreamTimeout")
+        operation = mock.Mock(
+            side_effect=[
+                atproto_client.exceptions.RequestException(response),
+                "ok",
+            ]
+        )
+
+        with mock.patch("bluesky_common.random.uniform", return_value=0):
+            result = bluesky_common.retry_network_call(
+                operation,
+                "unit-test call",
+                max_attempts=2,
+                initial_delay_seconds=0,
+            )
+
+        self.assertEqual(result, "ok")
+        self.assertEqual(operation.call_count, 2)
+
+    def test_retry_network_call_honours_retry_after_for_rate_limit(self):
+        response = mock.Mock(status_code=429, headers={"retry-after": "3"})
+        response.content = mock.Mock(error="RateLimitExceeded")
+        operation = mock.Mock(
+            side_effect=[
+                atproto_client.exceptions.RequestException(response),
+                "ok",
+            ]
+        )
+
+        with mock.patch("bluesky_common.random.uniform", return_value=0):
+            with mock.patch("bluesky_common.time.sleep") as sleep_mock:
+                result = bluesky_common.retry_network_call(
+                    operation,
+                    "unit-test call",
+                    max_attempts=2,
+                    initial_delay_seconds=1,
+                )
+
+        self.assertEqual(result, "ok")
+        sleep_mock.assert_called_once_with(3.0)
+
+    def test_retry_network_call_does_not_retry_non_transient_sdk_error(self):
+        response = mock.Mock(status_code=400, headers={})
+        response.content = mock.Mock(error="InvalidRequest")
+        operation = mock.Mock(
+            side_effect=atproto_client.exceptions.RequestException(response)
+        )
+
+        with self.assertRaises(atproto_client.exceptions.RequestException):
+            bluesky_common.retry_network_call(
+                operation,
+                "unit-test call",
+                max_attempts=3,
+                initial_delay_seconds=0,
+            )
+
+        operation.assert_called_once()
+
+    def test_retry_network_call_raises_after_sdk_server_error_exhaustion(self):
+        response = mock.Mock(status_code=504, headers={})
+        response.content = mock.Mock(error="UpstreamTimeout")
+        operation = mock.Mock(
+            side_effect=atproto_client.exceptions.RequestException(response)
+        )
+
+        with mock.patch("bluesky_common.random.uniform", return_value=0):
+            with self.assertRaises(atproto_client.exceptions.RequestException):
+                bluesky_common.retry_network_call(
+                    operation,
+                    "unit-test call",
+                    max_attempts=3,
+                    initial_delay_seconds=0,
+                )
+
+        self.assertEqual(operation.call_count, 3)
+
 
 class UnfollowControlTests(unittest.TestCase):
     def test_get_unfollow_controls_defaults(self):
@@ -1989,6 +2067,32 @@ class PaginationTests(unittest.TestCase):
         self.assertEqual([item.did for item in data], ["did:one"])
         self.assertEqual(calls["count"], 2)
 
+    def test_fetch_paginated_data_does_not_return_partial_data_after_exhaustion(self):
+        first_page = SimpleNamespace(
+            follows=[SimpleNamespace(did="did:one")], cursor="next"
+        )
+        response = mock.Mock(status_code=504, headers={})
+        response.content = mock.Mock(error="UpstreamTimeout")
+
+        def client_method(actor, cursor=None, limit=100):
+            if cursor is None:
+                return first_page
+            raise atproto_client.exceptions.RequestException(response)
+
+        with mock.patch.dict(
+            os.environ,
+            {
+                "BLUESKY_NETWORK_RETRY_ATTEMPTS": "2",
+                "BLUESKY_NETWORK_RETRY_DELAY_SECONDS": "0",
+            },
+            clear=False,
+        ):
+            with mock.patch("bluesky_common.random.uniform", return_value=0):
+                with self.assertRaises(atproto_client.exceptions.RequestException):
+                    bluesky_follower_utils.fetch_paginated_data(
+                        client_method, actor="did:test"
+                    )
+
 
 class FollowerSelectionTests(unittest.TestCase):
     def test_select_users_deduplicates_and_redistributes(self):
@@ -2239,6 +2343,28 @@ class FollowBackTests(unittest.TestCase):
                 action_delay_seconds=0,
                 unfollowed_dids={unfollowed_did},
             )
+
+        client.follow.assert_not_called()
+
+    def test_follow_back_does_not_mutate_after_incomplete_graph_snapshot(self):
+        client = mock.Mock()
+        client.me.did = "did:plc:bot"
+        snapshot_error = atproto_client.exceptions.RequestException()
+
+        with mock.patch(
+            "bluesky_follows_and_likes.fetch_paginated_data",
+            side_effect=[
+                [SimpleNamespace(did="did:plc:follower")],
+                snapshot_error,
+            ],
+        ):
+            with self.assertRaises(atproto_client.exceptions.RequestException):
+                bluesky_follows_and_likes.follow_back(
+                    client,
+                    "jokebot.bsky.social",
+                    dry_run=False,
+                    action_delay_seconds=0,
+                )
 
         client.follow.assert_not_called()
 

@@ -1,5 +1,7 @@
 import os
+import random
 import time
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 
 import atproto_client.exceptions
@@ -191,11 +193,42 @@ def _is_invalid_session_error(exc):
     return status_code == 401 or error_name in {"ExpiredToken", "InvalidToken"}
 
 
-def _is_transient_login_error(exc):
-    if isinstance(exc, atproto_client.exceptions.NetworkError):
+def _is_transient_network_error(exc):
+    if isinstance(
+        exc,
+        (
+            requests.RequestException,
+            TimeoutError,
+            atproto_client.exceptions.NetworkError,
+        ),
+    ):
         return True
     status_code, _ = _get_xrpc_error_details(exc)
     return status_code == 429 or (status_code is not None and status_code >= 500)
+
+
+def _get_retry_after_seconds(exc):
+    response = getattr(exc, "response", None)
+    headers = getattr(response, "headers", {}) or {}
+    raw_value = headers.get("retry-after") or headers.get("Retry-After")
+    if raw_value is None:
+        return None
+    try:
+        return max(0.0, float(raw_value))
+    except (TypeError, ValueError):
+        try:
+            retry_at = parsedate_to_datetime(str(raw_value))
+            return max(0.0, retry_at.timestamp() - time.time())
+        except (TypeError, ValueError, OverflowError):
+            return None
+
+
+def _get_retry_delay(delay_seconds, exc):
+    retry_after_seconds = _get_retry_after_seconds(exc)
+    if retry_after_seconds is not None:
+        delay_seconds = max(delay_seconds, retry_after_seconds)
+    jitter_seconds = random.uniform(0.0, delay_seconds * 0.25)
+    return delay_seconds + jitter_seconds
 
 
 def _remove_invalid_session_file(path):
@@ -210,14 +243,16 @@ def _remove_invalid_session_file(path):
 def _retry_restored_session_profile(
     client, username, session_file_path, max_attempts, retry_delay_seconds, exc
 ):
+    delay_seconds = retry_delay_seconds
     for attempt in range(2, max_attempts + 1):
+        current_delay_seconds = _get_retry_delay(delay_seconds, exc)
         print(
             f"Warning: transient failure while restoring the cached Bluesky session "
             f"({attempt - 1}/{max_attempts}); retrying the current session in "
-            f"{retry_delay_seconds:.1f}s."
+            f"{current_delay_seconds:.1f}s."
         )
-        if retry_delay_seconds > 0:
-            time.sleep(retry_delay_seconds)
+        if current_delay_seconds > 0:
+            time.sleep(current_delay_seconds)
         try:
             client.me = client.get_profile(username)
             print("Bluesky session restore succeeded after a transient failure.")
@@ -229,9 +264,10 @@ def _retry_restored_session_profile(
                     "Cached Bluesky session became invalid; authenticating with the configured credential source."
                 )
                 return None
-            if not _is_transient_login_error(retry_exc):
+            if not _is_transient_network_error(retry_exc):
                 raise
             exc = retry_exc
+            delay_seconds *= DEFAULT_NETWORK_RETRY_BACKOFF_FACTOR
     raise exc
 
 
@@ -265,7 +301,7 @@ def _attempt_session_restore(
                 "Cached Bluesky session is invalid; authenticating with the configured credential source."
             )
             return None
-        if _is_transient_login_error(exc):
+        if _is_transient_network_error(exc):
             return _retry_restored_session_profile(
                 client,
                 username,
@@ -321,6 +357,7 @@ def login_client():
             return result
 
     print("Using configured credentials for Bluesky authentication.")
+    delay_seconds = retry_delay_seconds
     for attempt in range(1, max_attempts + 1):
         try:
             client.login(username, password)
@@ -328,14 +365,16 @@ def login_client():
                 _persist_session_string_to_file(client, session_file_path)
             return client, username
         except Exception as exc:
-            if not _is_transient_login_error(exc) or attempt >= max_attempts:
+            if not _is_transient_network_error(exc) or attempt >= max_attempts:
                 raise
+            current_delay_seconds = _get_retry_delay(delay_seconds, exc)
             print(
                 f"Warning: transient Bluesky login failure ({attempt}/{max_attempts}): {exc}. "
-                f"Retrying in {retry_delay_seconds:.1f}s."
+                f"Retrying in {current_delay_seconds:.1f}s."
             )
-            if retry_delay_seconds > 0:
-                time.sleep(retry_delay_seconds)
+            if current_delay_seconds > 0:
+                time.sleep(current_delay_seconds)
+            delay_seconds *= DEFAULT_NETWORK_RETRY_BACKOFF_FACTOR
 
     raise RuntimeError("Bluesky login retry loop exited unexpectedly.")
 
@@ -372,20 +411,19 @@ def retry_network_call(
     for attempt in range(1, max_attempts + 1):
         try:
             return operation()
-        except (
-            requests.RequestException,
-            TimeoutError,
-            atproto_client.exceptions.NetworkError,
-        ) as exc:
-            if attempt >= max_attempts:
+        except Exception as exc:
+            if not _is_transient_network_error(exc) or attempt >= max_attempts:
                 raise
+            retry_delay_seconds = _get_retry_delay(delay_seconds, exc)
             print(
                 f"Warning: transient failure while {description} ({attempt}/{max_attempts}): {exc}. "
-                f"Retrying in {delay_seconds:.1f}s."
+                f"Retrying in {retry_delay_seconds:.1f}s."
             )
-            if delay_seconds > 0:
-                time.sleep(delay_seconds)
+            if retry_delay_seconds > 0:
+                time.sleep(retry_delay_seconds)
             delay_seconds *= backoff_factor
+
+    raise RuntimeError("Network retry loop exited unexpectedly.")
 
 
 def get_bool_env(name, default=False):

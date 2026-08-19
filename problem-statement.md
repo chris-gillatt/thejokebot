@@ -32,6 +32,19 @@ changelog in this file is intentionally brief.
 
 ## 5. Active Backlog
 
+### 5.26 Retry transient Bluesky response failures ✓ Complete
+**Priority: High**
+
+The Python SDK reports upstream HTTP failures such as `504 UpstreamTimeout` as
+`RequestException`, which previously bypassed the common network retry helper.
+Shared retry classification now covers transport failures, SDK `NetworkError`,
+HTTP `5xx`, and HTTP `429`, with exponential delay, jitter, and `Retry-After`
+support. Other `4xx` responses still fail immediately.
+
+Paginated graph reads now propagate exhausted failures instead of returning
+partial follower/following snapshots, preventing follow decisions from being
+made with incomplete account state.
+
 ### 5.25 Harden Bluesky session refresh and credential selection ✓ Complete
 **Priority: High**
 
