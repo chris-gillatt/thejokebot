@@ -593,10 +593,9 @@ td:first-child {
 
 .provider-name small {
   max-width: 240px;
-  overflow: hidden;
   color: #9db8c9;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .provider-share {
