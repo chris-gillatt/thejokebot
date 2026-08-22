@@ -27,6 +27,7 @@ MAX_WORKFLOW_PAGES = 20
 MAX_WORKFLOW_LOG_BYTES = 25 * 1024 * 1024
 MAX_WORKFLOW_LOG_UNCOMPRESSED_BYTES = 50 * 1024 * 1024
 WORKFLOW_WINDOW_DAYS = 30
+TOP_POST_LIMIT = 6
 TRACKED_WORKFLOWS = {
     "bluesky_dashboard",
     "bluesky_follow_fellows",
@@ -370,6 +371,15 @@ def _post_summary(post: dict, handle: str) -> dict:
     }
 
 
+def _top_post_summaries(joke_posts: list[dict], handle: str) -> list[dict]:
+    ranked_posts = sorted(
+        joke_posts,
+        key=lambda post: sum(_engagement(post).values()),
+        reverse=True,
+    )
+    return [_post_summary(post, handle) for post in ranked_posts[:TOP_POST_LIMIT]]
+
+
 def _latest_joke_uri(state: dict) -> str:
     deleted = set(state.get("reports", {}).get("deleted_post_uris", []))
     for entry in reversed(state.get("posted_jokes", [])):
@@ -548,6 +558,7 @@ def _workflow_metrics(workflow_runs: list[dict], now: datetime) -> dict:
             "failed": 0,
             "cancelled": 0,
             "last_run_at": None,
+            "last_status": None,
             "last_conclusion": None,
         }
         for name in TRACKED_WORKFLOWS
@@ -570,6 +581,7 @@ def _workflow_metrics(workflow_runs: list[dict], now: datetime) -> dict:
             summary["last_run_at"] is None or created_at > summary["last_run_at"]
         ):
             summary["last_run_at"] = created_at
+            summary["last_status"] = run.get("status")
             summary["last_conclusion"] = conclusion
 
     workflows = sorted(grouped.values(), key=lambda item: item["name"])
@@ -653,11 +665,6 @@ def collect_metrics(
     )
     snapshots.sort(key=lambda item: item["period_start"])
 
-    ranked_posts = sorted(
-        joke_posts,
-        key=lambda post: sum(_engagement(post).values()),
-        reverse=True,
-    )
     return {
         "schema_version": SCHEMA_VERSION,
         "generated_at": now.isoformat(),
@@ -680,9 +687,7 @@ def collect_metrics(
         },
         "providers": _provider_metrics(state, joke_posts),
         "automation": _workflow_metrics(workflow_runs or [], now),
-        "top_posts": [
-            _post_summary(post, profile["handle"]) for post in ranked_posts[:5]
-        ],
+        "top_posts": _top_post_summaries(joke_posts, profile["handle"]),
     }
 
 

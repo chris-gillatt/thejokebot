@@ -377,8 +377,17 @@ function renderAutomation() {
       );
       appendCell(row, numberFormat.format(workflow.failed), workflow.failed ? "failure-count" : "");
       const latest = document.createElement("span");
-      latest.className = `run-status ${workflow.last_conclusion || "unknown"}`;
-      latest.textContent = workflow.last_conclusion || "No runs";
+      const latestState = workflow.last_conclusion || workflow.last_status || "unknown";
+      const latestLabels = {
+        in_progress: "In progress",
+        queued: "Queued",
+        requested: "Queued",
+        waiting: "Waiting",
+        pending: "Pending",
+        unknown: workflow.runs ? "Unknown" : "No runs",
+      };
+      latest.className = `run-status ${latestState}`;
+      latest.textContent = latestLabels[latestState] || latestState;
       appendCell(row, latest);
       body.append(row);
     });

@@ -212,6 +212,18 @@ class DashboardCollectorTests(unittest.TestCase):
         self.state["reports"]["deleted_post_uris"] = [self.latest_uri]
         self.assertEqual(dashboard._latest_joke_uri(self.state), self.first_uri)
 
+    def test_top_posts_returns_six_highest_ranked_posts(self):
+        posts = [
+            _post(f"at://did:bot/app.bsky.feed.post/{index}", likeCount=index)
+            for index in range(7)
+        ]
+
+        summaries = dashboard._top_post_summaries(posts, "thejokebot.bsky.social")
+
+        self.assertEqual(len(summaries), 6)
+        self.assertTrue(summaries[0]["uri"].endswith("/6"))
+        self.assertTrue(summaries[-1]["uri"].endswith("/1"))
+
     def test_repeated_feed_cursor_fails_closed(self):
         session = _Session(
             self.profile,
@@ -366,6 +378,7 @@ class DashboardCollectorTests(unittest.TestCase):
         runs = [
             {
                 "name": "python_tests",
+                "status": "completed",
                 "conclusion": "success",
                 "created_at": "2026-08-22T05:00:00Z",
             },
@@ -373,6 +386,12 @@ class DashboardCollectorTests(unittest.TestCase):
                 "name": "python_tests",
                 "conclusion": "failure",
                 "created_at": "2026-08-21T05:00:00Z",
+            },
+            {
+                "name": "codeql",
+                "status": "in_progress",
+                "conclusion": None,
+                "created_at": "2026-08-22T05:30:00Z",
             },
             {
                 "name": "bluesky_post_joke",
@@ -383,7 +402,7 @@ class DashboardCollectorTests(unittest.TestCase):
 
         summary = dashboard._workflow_metrics(runs, now)
 
-        self.assertEqual(summary["runs"], 3)
+        self.assertEqual(summary["runs"], 4)
         self.assertEqual(summary["successful"], 2)
         self.assertEqual(summary["failed"], 1)
         self.assertEqual(summary["success_rate"], 66.7)
@@ -391,6 +410,10 @@ class DashboardCollectorTests(unittest.TestCase):
             item for item in summary["workflows"] if item["name"] == "python_tests"
         )
         self.assertEqual(tests["last_conclusion"], "success")
+        self.assertEqual(tests["last_status"], "completed")
+        codeql = next(item for item in summary["workflows"] if item["name"] == "codeql")
+        self.assertEqual(codeql["last_status"], "in_progress")
+        self.assertIsNone(codeql["last_conclusion"])
         starter_pack = next(
             item
             for item in summary["workflows"]

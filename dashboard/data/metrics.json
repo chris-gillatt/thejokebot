@@ -1,6 +1,6 @@
 {
   "schema_version": 3,
-  "generated_at": "2026-08-22T08:17:59.557401+00:00",
+  "generated_at": "2026-08-22T08:30:42.215585+00:00",
   "account": {
     "handle": "thejokebot.bsky.social",
     "display_name": "The Joke Bot",
@@ -13,7 +13,7 @@
     "text": "What's a pirate's favorite type of exercise?\n\nThe plank.\n\n#dadjoke #funny #humor",
     "created_at": "2026-08-22T08:06:42.033028+00:00",
     "engagement": {
-      "likes": 1,
+      "likes": 3,
       "replies": 0,
       "reposts": 0,
       "quotes": 0,
@@ -26,7 +26,7 @@
     "profile_posts": 2321,
     "joke_posts": 682,
     "engagement": {
-      "likes": 3767,
+      "likes": 3769,
       "replies": 267,
       "reposts": 286,
       "quotes": 32,
@@ -149,7 +149,7 @@
     },
     {
       "period_start": "2026-08-22T06:00:00+00:00",
-      "collected_at": "2026-08-22T08:17:59.557401+00:00",
+      "collected_at": "2026-08-22T08:30:42.215585+00:00",
       "followers": 6397,
       "following": 10821,
       "profile_posts": 2321,
@@ -2594,7 +2594,7 @@
         "name": "groandeck",
         "published": 183,
         "visible_posts": 183,
-        "average_interactions": 5.64,
+        "average_interactions": 5.65,
         "fallthroughs": 0,
         "rejection_counts": {
           "duplicate": 0,
@@ -2670,9 +2670,9 @@
   },
   "automation": {
     "window_days": 30,
-    "collected_at": "2026-08-22T08:17:59.557401+00:00",
-    "runs": 868,
-    "successful": 853,
+    "collected_at": "2026-08-22T08:30:42.215585+00:00",
+    "runs": 872,
+    "successful": 860,
     "failed": 8,
     "cancelled": 3,
     "success_rate": 99.1,
@@ -2680,11 +2680,12 @@
       {
         "name": "bluesky_dashboard",
         "runs": 8,
-        "successful": 7,
+        "successful": 8,
         "failed": 0,
         "cancelled": 0,
         "last_run_at": "2026-08-22T08:17:37Z",
-        "last_conclusion": null
+        "last_status": "completed",
+        "last_conclusion": "success"
       },
       {
         "name": "bluesky_follow_fellows",
@@ -2693,6 +2694,7 @@
         "failed": 0,
         "cancelled": 0,
         "last_run_at": "2026-08-21T01:44:00Z",
+        "last_status": "completed",
         "last_conclusion": "success"
       },
       {
@@ -2702,6 +2704,7 @@
         "failed": 4,
         "cancelled": 1,
         "last_run_at": "2026-08-22T06:31:52Z",
+        "last_status": "completed",
         "last_conclusion": "success"
       },
       {
@@ -2711,6 +2714,7 @@
         "failed": 0,
         "cancelled": 0,
         "last_run_at": null,
+        "last_status": null,
         "last_conclusion": null
       },
       {
@@ -2720,6 +2724,7 @@
         "failed": 1,
         "cancelled": 2,
         "last_run_at": "2026-08-22T08:06:25Z",
+        "last_status": "completed",
         "last_conclusion": "success"
       },
       {
@@ -2729,6 +2734,7 @@
         "failed": 3,
         "cancelled": 0,
         "last_run_at": "2026-08-22T04:52:06Z",
+        "last_status": "completed",
         "last_conclusion": "success"
       },
       {
@@ -2738,6 +2744,7 @@
         "failed": 0,
         "cancelled": 0,
         "last_run_at": "2026-08-01T12:18:09Z",
+        "last_status": "completed",
         "last_conclusion": "success"
       },
       {
@@ -2747,16 +2754,18 @@
         "failed": 0,
         "cancelled": 0,
         "last_run_at": "2026-08-17T11:33:20Z",
+        "last_status": "completed",
         "last_conclusion": "success"
       },
       {
         "name": "codeql",
-        "runs": 25,
-        "successful": 24,
+        "runs": 26,
+        "successful": 26,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-08-22T08:17:38Z",
-        "last_conclusion": null
+        "last_run_at": "2026-08-22T08:25:42Z",
+        "last_status": "completed",
+        "last_conclusion": "success"
       },
       {
         "name": "pr_auto_merge",
@@ -2765,6 +2774,7 @@
         "failed": 0,
         "cancelled": 0,
         "last_run_at": "2026-08-17T05:24:24Z",
+        "last_status": "completed",
         "last_conclusion": "success"
       },
       {
@@ -2774,33 +2784,37 @@
         "failed": 0,
         "cancelled": 0,
         "last_run_at": "2026-08-22T08:08:24Z",
+        "last_status": "completed",
         "last_conclusion": "success"
       },
       {
         "name": "python_tests",
-        "runs": 21,
-        "successful": 20,
+        "runs": 22,
+        "successful": 22,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-08-22T08:17:38Z",
-        "last_conclusion": null
+        "last_run_at": "2026-08-22T08:25:42Z",
+        "last_status": "completed",
+        "last_conclusion": "success"
       },
       {
         "name": "ruff_quality",
-        "runs": 21,
-        "successful": 21,
+        "runs": 22,
+        "successful": 22,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-08-22T08:17:38Z",
+        "last_run_at": "2026-08-22T08:25:42Z",
+        "last_status": "completed",
         "last_conclusion": "success"
       },
       {
         "name": "validate_runtime_config",
-        "runs": 21,
-        "successful": 21,
+        "runs": 22,
+        "successful": 22,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-08-22T08:17:37Z",
+        "last_run_at": "2026-08-22T08:25:42Z",
+        "last_status": "completed",
         "last_conclusion": "success"
       }
     ]
@@ -2867,6 +2881,19 @@
         "likes": 24,
         "replies": 0,
         "reposts": 0,
+        "quotes": 0,
+        "bookmarks": 0
+      }
+    },
+    {
+      "uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mn2ryqpirv2d",
+      "url": "https://bsky.app/profile/thejokebot.bsky.social/post/3mn2ryqpirv2d",
+      "text": "A weasel walks into a bar. The bartender says, \"Wow, I've never served a weasel before. What can I get for you?\"\n\"Pop,\" goes the weasel.\n\n#jokes #dadjoke #funny",
+      "created_at": "2026-05-30T09:57:31.812428+00:00",
+      "engagement": {
+        "likes": 17,
+        "replies": 1,
+        "reposts": 6,
         "quotes": 0,
         "bookmarks": 0
       }
