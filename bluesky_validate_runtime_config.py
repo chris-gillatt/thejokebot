@@ -23,78 +23,8 @@ _WORKFLOW_FALLBACK_PREFIX = ".github/workflows-disabled/"
 _CRON_PATTERN = re.compile(r'^\s*-\s*cron:\s*"([^"]+)"(?:\s+#.*)?\s*$', re.MULTILINE)
 
 
-def _parse_cron_parts(cron: str) -> tuple[str, str, str, str, str] | None:
-    parts = cron.split()
-    if len(parts) != 5:
-        return None
-    return tuple(parts)  # type: ignore[return-value]
-
-
-def _count_field_values(field: str, minimum: int, maximum: int) -> int | None:
-    if field == "*":
-        return maximum - minimum + 1
-    if field.startswith("*/"):
-        try:
-            step = int(field[2:])
-        except ValueError:
-            return None
-        if step <= 0:
-            return None
-        span = maximum - minimum + 1
-        return (span + step - 1) // step
-
-    values = field.split(",")
-    count = 0
-    for value in values:
-        value = value.strip()
-        if not value:
-            return None
-        if not value.isdigit():
-            return None
-        ivalue = int(value)
-        if ivalue < minimum or ivalue > maximum:
-            return None
-        count += 1
-    return count
-
-
 def _estimate_runs_per_week(cron: str) -> float | None:
-    parts = _parse_cron_parts(cron)
-    if not parts:
-        return None
-    minute, hour, day_of_month, month, day_of_week = parts
-
-    minute_count = _count_field_values(minute, 0, 59)
-    hour_count = _count_field_values(hour, 0, 23)
-    if minute_count is None or hour_count is None:
-        return None
-
-    # Daily/Hourly style schedules.
-    if day_of_month == "*" and month == "*" and day_of_week == "*":
-        return float(minute_count * hour_count * 7)
-
-    # Weekly schedules using day-of-week only.
-    if day_of_month == "*" and month == "*" and day_of_week != "*":
-        dow_count = _count_field_values(day_of_week, 0, 6)
-        if dow_count is None:
-            return None
-        return float(minute_count * hour_count * dow_count)
-
-    # Monthly schedules on a fixed day.
-    if day_of_month.isdigit() and month == "*" and day_of_week == "*":
-        return float(minute_count * hour_count) / 4.345
-
-    # Monthly schedules with month step (for example */3).
-    if day_of_month.isdigit() and month.startswith("*/") and day_of_week == "*":
-        try:
-            month_step = int(month[2:])
-        except ValueError:
-            return None
-        if month_step <= 0:
-            return None
-        return float(minute_count * hour_count) / (4.345 * month_step)
-
-    return None
+    return bluesky_config.estimate_runs_per_week(cron)
 
 
 def _validate_guard_rails(config: dict, schedules: dict[str, str]) -> list[str]:

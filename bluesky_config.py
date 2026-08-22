@@ -1,10 +1,88 @@
 import copy
 import json
+import math
 from pathlib import Path
 
 _CONFIG_PATH = (
     Path(__file__).resolve().parent / "resources" / "jokebot_runtime_config.json"
 )
+DERIVED_UNFOLLOW_MAX_ACTIONS = "follow_fellows_monthly_capacity"
+FOLLOW_CAPACITY_WEEKS = 4
+
+
+def _count_cron_field_values(field, minimum, maximum):
+    if field == "*":
+        return maximum - minimum + 1
+    if field.startswith("*/"):
+        try:
+            step = int(field[2:])
+        except ValueError:
+            return None
+        if step <= 0:
+            return None
+        span = maximum - minimum + 1
+        return (span + step - 1) // step
+
+    values = field.split(",")
+    if not values or any(not value.strip().isdigit() for value in values):
+        return None
+    parsed = [int(value.strip()) for value in values]
+    if any(value < minimum or value > maximum for value in parsed):
+        return None
+    return len(parsed)
+
+
+def estimate_runs_per_week(cron):
+    parts = cron.split()
+    if len(parts) != 5:
+        return None
+    minute, hour, day_of_month, month, day_of_week = parts
+    minute_count = _count_cron_field_values(minute, 0, 59)
+    hour_count = _count_cron_field_values(hour, 0, 23)
+    if minute_count is None or hour_count is None:
+        return None
+    if day_of_month == "*" and month == "*" and day_of_week == "*":
+        return float(minute_count * hour_count * 7)
+    if day_of_month == "*" and month == "*" and day_of_week != "*":
+        day_count = _count_cron_field_values(day_of_week, 0, 6)
+        if day_count is None:
+            return None
+        return float(minute_count * hour_count * day_count)
+    if day_of_month.isdigit() and month == "*" and day_of_week == "*":
+        return float(minute_count * hour_count) / 4.345
+    if day_of_month.isdigit() and month.startswith("*/") and day_of_week == "*":
+        try:
+            month_step = int(month[2:])
+        except ValueError:
+            return None
+        if month_step <= 0:
+            return None
+        return float(minute_count * hour_count) / (4.345 * month_step)
+    return None
+
+
+def _normalise_unfollow_max_actions(value):
+    if value == DERIVED_UNFOLLOW_MAX_ACTIONS:
+        return value
+    return _ensure_int(value, minimum=0, field_name="unfollow.max_actions")
+
+
+def _resolve_unfollow_max_actions(cfg):
+    if cfg["unfollow"]["max_actions"] != DERIVED_UNFOLLOW_MAX_ACTIONS:
+        return
+    follow_runs_per_week = estimate_runs_per_week(
+        cfg["workflow_schedules"].get("bluesky_follow_fellows", "")
+    )
+    if follow_runs_per_week is None:
+        raise ValueError(
+            "unfollow.max_actions cannot be derived from the follow-fellows schedule."
+        )
+    cfg["unfollow"]["max_actions"] = math.ceil(
+        cfg["follow_fellows"]["global_follow_limit"]
+        * follow_runs_per_week
+        * FOLLOW_CAPACITY_WEEKS
+    )
+
 
 _DEFAULT_CONFIG = {
     "schema_version": 1,
@@ -70,7 +148,7 @@ _DEFAULT_CONFIG = {
         ],
     },
     "unfollow": {
-        "max_actions": 200,
+        "max_actions": DERIVED_UNFOLLOW_MAX_ACTIONS,
         "batch_size": 50,
         "batch_pause_seconds": 60.0,
         "default_ignorable_handles": [
@@ -284,8 +362,8 @@ def _validate_config(payload):
     cfg["follow_fellows"] = follow_fellows
 
     unfollow = cfg.get("unfollow", {})
-    unfollow["max_actions"] = _ensure_int(
-        unfollow.get("max_actions", 200), minimum=0, field_name="unfollow.max_actions"
+    unfollow["max_actions"] = _normalise_unfollow_max_actions(
+        unfollow.get("max_actions", DERIVED_UNFOLLOW_MAX_ACTIONS)
     )
     unfollow["batch_size"] = _ensure_int(
         unfollow.get("batch_size", 50), minimum=1, field_name="unfollow.batch_size"
@@ -349,6 +427,8 @@ def _validate_config(payload):
         for key, value in workflow_schedules.items()
         if str(key).strip() and str(value).strip()
     }
+
+    _resolve_unfollow_max_actions(cfg)
 
     return cfg
 

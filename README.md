@@ -133,7 +133,7 @@ Set these in `.env` (keep values quoted):
 | `BLUESKY_NETWORK_RETRY_ATTEMPTS` | No | Max attempts for transient network retries across API fetch/follow/like/unfollow/report calls (default `3`). |
 | `BLUESKY_NETWORK_RETRY_DELAY_SECONDS` | No | Initial retry delay in seconds for transient network failures (default `1`). |
 | `BLUESKY_NETWORK_RETRY_BACKOFF_FACTOR` | No | Multiplier applied to each retry delay step (default `2`). |
-| `BLUESKY_UNFOLLOW_MAX_ACTIONS` | No | Safety cap per run for unfollow actions (default `200`; set `0` for no cap). |
+| `BLUESKY_UNFOLLOW_MAX_ACTIONS` | No | Explicit safety-cap override per unfollow run. By default, the cap is derived from four weeks of configured follow-fellows capacity; set `0` for no cap. |
 | `BLUESKY_UNFOLLOW_BATCH_SIZE` | No | Unfollow batch size before pause (default `50`). |
 | `BLUESKY_UNFOLLOW_BATCH_PAUSE_SECONDS` | No | Pause between unfollow batches in seconds (default `60`). |
 | `BLUESKY_UNFOLLOW_IGNORE` | No | Comma-separated fully-qualified handles to protect from unfollowing (e.g. `theonion.bsky.social`). |
@@ -182,7 +182,7 @@ Validation guard rail:
 - **Dry run:** set `BLUESKY_DRY_RUN='true'` to log actions without applying them. Applies to `bluesky_follows_and_likes.py`, `bluesky_unfollow.py`, and `bluesky_follow_fellows.py`.
 - **Throttling:** set `BLUESKY_ACTION_DELAY_SECONDS='1.5'` (example) to slow follow/unfollow/like loops.
 - **Network retries:** set `BLUESKY_NETWORK_RETRY_ATTEMPTS`, `BLUESKY_NETWORK_RETRY_DELAY_SECONDS`, and `BLUESKY_NETWORK_RETRY_BACKOFF_FACTOR` to tune bounded retries for transient network/API failures.
-- **Unfollow batching:** `bluesky_unfollow.py` is capped and batched by default (`BLUESKY_UNFOLLOW_MAX_ACTIONS=200`, `BLUESKY_UNFOLLOW_BATCH_SIZE=50`, `BLUESKY_UNFOLLOW_BATCH_PAUSE_SECONDS=60`) to reduce throttle risk on large clean-ups.
+- **Unfollow capacity and batching:** the default monthly cap matches four weeks of configured follow-fellows capacity. At the current `150` follows per run and twice-weekly cadence, that is `1,200` unfollows; `BLUESKY_UNFOLLOW_MAX_ACTIONS` can override it. Actions remain batched in groups of `50` with `60`-second pauses and stop early on throttling.
 - **Follow-fellows cadence:** `bluesky_follow_fellows.py` runs twice weekly, rotates tag priority between runs, and uses the configured per-run cap and hashtag set from `resources/jokebot_runtime_config.json`.
 - **Post hashtag rotation:** `bluesky_post_joke.py` rotates hashtags on each successful post using runtime precedence (`posting.tag_pool` → `follow_fellows.hashtags` → `posting.hashtags`) and calculates per-post length budget from selected tags before accepting a joke candidate.
 - **Report retry bound:** `bluesky_process_reports.py` retries unresolved report notifications up to `BLUESKY_REPORT_MAX_UNRESOLVED_ATTEMPTS` before marking them processed to avoid infinite retry churn.

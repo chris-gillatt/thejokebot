@@ -89,6 +89,26 @@ class RuntimeConfigTests(unittest.TestCase):
         self.assertEqual(config["follow_fellows"]["per_tag_limit"], 4)
         self.assertEqual(config["follow_fellows"]["global_follow_limit"], 150)
 
+    def test_unfollow_cap_tracks_four_weeks_of_follow_fellows_capacity(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = pathlib.Path(temp_dir) / "runtime.json"
+            config_path.write_text(
+                json.dumps(
+                    {
+                        "follow_fellows": {"global_follow_limit": 60},
+                        "unfollow": {"max_actions": "follow_fellows_monthly_capacity"},
+                        "workflow_schedules": {
+                            "bluesky_follow_fellows": "10 1 * * 3,5"
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            config = bluesky_config.load_runtime_config(config_path, strict=True)
+
+        self.assertEqual(config["unfollow"]["max_actions"], 480)
+
     def test_runtime_config_invalid_values_fall_back_to_defaults(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             config_path = pathlib.Path(temp_dir) / "runtime-invalid.json"
@@ -774,6 +794,7 @@ class UnfollowControlTests(unittest.TestCase):
         self.assertEqual(
             controls["max_actions"], bluesky_unfollow.DEFAULT_UNFOLLOW_MAX_ACTIONS
         )
+        self.assertEqual(controls["max_actions"], 1200)
         self.assertEqual(
             controls["batch_size"], bluesky_unfollow.DEFAULT_UNFOLLOW_BATCH_SIZE
         )

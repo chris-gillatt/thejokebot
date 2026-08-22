@@ -56,7 +56,6 @@ jobs:
           BLUESKY_SESSION_PERSIST_ENABLED: "true"
           BLUESKY_SESSION_FILE_PATH: .agent-tmp/bluesky_session.txt
           BLUESKY_ACTION_DELAY_SECONDS: "1"
-          BLUESKY_UNFOLLOW_MAX_ACTIONS: "200"
           BLUESKY_UNFOLLOW_BATCH_SIZE: "50"
           BLUESKY_UNFOLLOW_BATCH_PAUSE_SECONDS: "60"
         run: python bluesky_unfollow.py

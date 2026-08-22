@@ -152,6 +152,25 @@ declares first-party test discovery; Pylance suppresses reference analysis; and
 local plus GitHub CodeQL share one `paths-ignore` configuration. Actionlint was
 verified to discover only the root repository's workflow directory.
 
+### 5.42 Clarify dashboard workflow status and ranking ✓ Complete
+**Priority: Medium**
+
+Workflow metrics now retain the latest run status independently from its
+conclusion. Active runs display as queued, waiting, or in progress instead of
+the contradictory "No runs" label, which is reserved for workflows with no
+runs in the rolling window. The ranked-joke grid now contains six posts so its
+three-column desktop layout fills two complete rows.
+
+### 5.43 Balance monthly follow and unfollow capacity ✓ Complete
+**Priority: High**
+
+The default unfollow cap is derived from four weeks of configured follow-fellows
+capacity instead of remaining fixed at `200`. With the current `150`-account cap
+and twice-weekly schedule, the monthly unfollow run can process up to `1,200`
+eligible accounts. Explicit environment and numeric config overrides still take
+precedence, while batching, grace periods, protected accounts, deterministic
+selection, and throttle detection remain unchanged.
+
 ### 5.26 Retry transient Bluesky response failures ✓ Complete
 **Priority: High**
 
