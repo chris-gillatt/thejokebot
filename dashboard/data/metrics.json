@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "generated_at": "2026-08-22T07:28:59.410036+00:00",
+  "generated_at": "2026-08-22T07:31:15.357495+00:00",
   "account": {
     "handle": "thejokebot.bsky.social",
     "display_name": "The Joke Bot",
@@ -37,7 +37,7 @@
   "snapshots": [
     {
       "period_start": "2026-08-22T06:00:00+00:00",
-      "collected_at": "2026-08-22T07:28:59.410036+00:00",
+      "collected_at": "2026-08-22T07:31:15.357495+00:00",
       "followers": 6397,
       "following": 10821,
       "profile_posts": 2320
@@ -1062,8 +1062,8 @@
         "last_failure_at": 1787371961,
         "last_failure_reason": "All 5 jokes from 'icanhazdadjoke' were recent duplicates or too long",
         "healthy": true,
-        "configured": null,
-        "last_health_check_at": 1787300144,
+        "configured": true,
+        "last_health_check_at": 1787383754,
         "consecutive_health_failures": 0
       },
       {
@@ -1075,8 +1075,8 @@
         "last_failure_at": null,
         "last_failure_reason": null,
         "healthy": true,
-        "configured": null,
-        "last_health_check_at": 1787300144,
+        "configured": true,
+        "last_health_check_at": 1787383754,
         "consecutive_health_failures": 0
       },
       {
@@ -1088,8 +1088,8 @@
         "last_failure_at": 1787371961,
         "last_failure_reason": "All 5 jokes from 'jokeapi' were recent duplicates or too long",
         "healthy": true,
-        "configured": null,
-        "last_health_check_at": 1787300144,
+        "configured": true,
+        "last_health_check_at": 1787383754,
         "consecutive_health_failures": 0
       },
       {
@@ -1100,10 +1100,10 @@
         "fallthroughs": 0,
         "last_failure_at": null,
         "last_failure_reason": null,
-        "healthy": false,
-        "configured": null,
-        "last_health_check_at": 1787300144,
-        "consecutive_health_failures": 98
+        "healthy": true,
+        "configured": true,
+        "last_health_check_at": 1787383755,
+        "consecutive_health_failures": 0
       },
       {
         "name": "syrsly",
@@ -1114,28 +1114,28 @@
         "last_failure_at": null,
         "last_failure_reason": null,
         "healthy": true,
-        "configured": null,
-        "last_health_check_at": 1787300144,
+        "configured": true,
+        "last_health_check_at": 1787383755,
         "consecutive_health_failures": 0
       }
     ]
   },
   "automation": {
     "window_days": 30,
-    "collected_at": "2026-08-22T07:28:59.410036+00:00",
-    "runs": 840,
-    "successful": 824,
+    "collected_at": "2026-08-22T07:31:15.357495+00:00",
+    "runs": 841,
+    "successful": 828,
     "failed": 8,
     "cancelled": 3,
     "success_rate": 99.0,
     "workflows": [
       {
         "name": "bluesky_dashboard",
-        "runs": 2,
-        "successful": 1,
+        "runs": 3,
+        "successful": 2,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-08-22T07:28:38Z",
+        "last_run_at": "2026-08-22T07:30:49Z",
         "last_conclusion": null
       },
       {
@@ -1204,11 +1204,11 @@
       {
         "name": "codeql",
         "runs": 20,
-        "successful": 19,
+        "successful": 20,
         "failed": 0,
         "cancelled": 0,
         "last_run_at": "2026-08-22T07:28:38Z",
-        "last_conclusion": null
+        "last_conclusion": "success"
       },
       {
         "name": "pr_auto_merge",
@@ -1222,20 +1222,20 @@
       {
         "name": "provider_health_check",
         "runs": 31,
-        "successful": 30,
+        "successful": 31,
         "failed": 0,
         "cancelled": 0,
         "last_run_at": "2026-08-22T07:28:52Z",
-        "last_conclusion": null
+        "last_conclusion": "success"
       },
       {
         "name": "python_tests",
         "runs": 16,
-        "successful": 15,
+        "successful": 16,
         "failed": 0,
         "cancelled": 0,
         "last_run_at": "2026-08-22T07:28:38Z",
-        "last_conclusion": null
+        "last_conclusion": "success"
       },
       {
         "name": "ruff_quality",
