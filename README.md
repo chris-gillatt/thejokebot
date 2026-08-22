@@ -45,10 +45,12 @@ reliability, retained publication mix by joke provider, provider fall-through
 pressure with distinct candidate-rejection reasons, average received engagement,
 and current provider health.
 
-Follower, following, and profile-post graphs contain collection-time snapshots,
-so their history begins when the dashboard collector starts. Joke-post and
-unfollow activity is reconstructed from retained timestamps in `bot_state.json`.
-Dashboard data contains no follower, liker, replier, or other audience DIDs.
+Follower totals use collection-time snapshots. For up to 30 days, following and
+profile-post totals are reconstructed from aggregate successful-action workflow
+logs and retained post timestamps; unknown historical follower totals remain
+blank rather than being estimated. Joke-post, follow, and unfollow activity is
+also shown by day. Dashboard data contains no follower, liker, replier, or other
+audience DIDs or raw workflow logs.
 
 ## Quick start (local)
 

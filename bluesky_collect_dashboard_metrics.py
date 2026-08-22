@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import io
 import json
 import os
+import re
 import time
+import zipfile
 from collections import Counter
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -17,10 +20,12 @@ from bluesky_common import retry_network_call
 PUBLIC_API_BASE = "https://public.api.bsky.app/xrpc"
 GITHUB_API_BASE = "https://api.github.com"
 METRICS_FILE = Path(__file__).resolve().parent / "dashboard" / "data" / "metrics.json"
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 MAX_FEED_PAGES = 100
 MAX_FEED_RUNTIME_SECONDS = 120
 MAX_WORKFLOW_PAGES = 20
+MAX_WORKFLOW_LOG_BYTES = 25 * 1024 * 1024
+MAX_WORKFLOW_LOG_UNCOMPRESSED_BYTES = 50 * 1024 * 1024
 WORKFLOW_WINDOW_DAYS = 30
 TRACKED_WORKFLOWS = {
     "bluesky_dashboard",
@@ -37,6 +42,12 @@ TRACKED_WORKFLOWS = {
     "python_tests",
     "ruff_quality",
     "validate_runtime_config",
+}
+ACTIVITY_WORKFLOWS = {
+    "bluesky_follow_fellows",
+    "bluesky_follows_and_likes",
+    "bluesky_manage_starter_pack",
+    "bluesky_unfollow",
 }
 ENGAGEMENT_FIELDS = (
     ("likes", "likeCount"),
@@ -147,6 +158,16 @@ def fetch_original_posts(
     )
 
 
+def _github_headers(token: str | None) -> dict[str, str]:
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    return headers
+
+
 def fetch_workflow_runs(
     session,
     repository: str,
@@ -155,12 +176,7 @@ def fetch_workflow_runs(
     max_pages: int = MAX_WORKFLOW_PAGES,
 ) -> list[dict]:
     cutoff = now - timedelta(days=WORKFLOW_WINDOW_DAYS)
-    headers = {
-        "Accept": "application/vnd.github+json",
-        "X-GitHub-Api-Version": "2022-11-28",
-    }
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
+    headers = _github_headers(token)
 
     runs = []
     for page_number in range(1, max_pages + 1):
@@ -194,6 +210,147 @@ def fetch_workflow_runs(
     )
 
 
+def fetch_workflow_run_logs(
+    session, repository: str, run_id: int, token: str | None
+) -> str:
+    def _request():
+        response = session.get(
+            f"{GITHUB_API_BASE}/repos/{repository}/actions/runs/{run_id}/logs",
+            headers=_github_headers(token),
+            timeout=30,
+        )
+        response.raise_for_status()
+        return response.content
+
+    archive_bytes = retry_network_call(
+        _request, description=f"fetching GitHub Actions logs for run {run_id}"
+    )
+    if len(archive_bytes) > MAX_WORKFLOW_LOG_BYTES:
+        raise ValueError(f"Workflow log archive for run {run_id} is too large")
+
+    with zipfile.ZipFile(io.BytesIO(archive_bytes)) as archive:
+        files = [item for item in archive.infolist() if not item.is_dir()]
+        if sum(item.file_size for item in files) > MAX_WORKFLOW_LOG_UNCOMPRESSED_BYTES:
+            raise ValueError(f"Workflow logs for run {run_id} are too large")
+        return "\n".join(
+            archive.read(item).decode("utf-8", errors="replace") for item in files
+        )
+
+
+def _workflow_activity_counts(workflow_name: str, log_text: str) -> dict | None:
+    plain_text = re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", log_text)
+    if "Dry-run mode enabled" in plain_text:
+        return {"follows": 0, "unfollows": 0}
+    if workflow_name == "bluesky_follows_and_likes":
+        follows = len(re.findall(r"\bFollowed (?:interactor )?did:[^\s]+", plain_text))
+        return {"follows": follows, "unfollows": 0}
+    if workflow_name == "bluesky_follow_fellows":
+        planned = re.findall(r"Total users to follow: (\d+)", plain_text)
+        if not planned:
+            return None
+        failures = len(
+            re.findall(r"Unexpected error trying to follow did:[^\s]+", plain_text)
+        )
+        return {"follows": max(0, int(planned[-1]) - failures), "unfollows": 0}
+    if workflow_name == "bluesky_manage_starter_pack":
+        follows = len(re.findall(r"\bFollowed list member did:[^\s]+", plain_text))
+        return {"follows": follows, "unfollows": 0}
+    if workflow_name == "bluesky_unfollow":
+        summaries = re.findall(r"\bSummary:.*?\bunfollowed=(\d+)", plain_text)
+        if not summaries:
+            return None
+        return {"follows": 0, "unfollows": int(summaries[-1])}
+    return None
+
+
+def collect_workflow_activity(
+    session,
+    repository: str,
+    token: str | None,
+    workflow_runs: list[dict],
+    existing: dict | None,
+    now: datetime,
+) -> dict:
+    cutoff = now - timedelta(days=WORKFLOW_WINDOW_DAYS)
+    previous_activity = (existing or {}).get("workflow_activity", {})
+    previous_expired_value = previous_activity.get("expired_before")
+    expired_before = (
+        datetime.fromisoformat(previous_expired_value.replace("Z", "+00:00"))
+        if previous_expired_value
+        else None
+    )
+    cached_runs = {
+        int(item["id"]): item
+        for item in previous_activity.get("runs", [])
+        if item.get("id") is not None
+        and item.get("created_at")
+        and datetime.fromisoformat(item["created_at"].replace("Z", "+00:00")) >= cutoff
+    }
+    unavailable_at = []
+
+    for run in workflow_runs:
+        workflow_name = str(run.get("name") or "")
+        created_at = run.get("created_at")
+        run_id = run.get("id")
+        attempt = int(run.get("run_attempt") or 1)
+        if (
+            workflow_name not in ACTIVITY_WORKFLOWS
+            or run.get("conclusion") != "success"
+            or not created_at
+            or run_id is None
+        ):
+            continue
+        created = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+        if created < cutoff or (expired_before and created <= expired_before):
+            continue
+        cached = cached_runs.get(int(run_id))
+        if cached and int(cached.get("attempt") or 1) == attempt:
+            continue
+        try:
+            counts = _workflow_activity_counts(
+                workflow_name,
+                fetch_workflow_run_logs(session, repository, int(run_id), token),
+            )
+        except (
+            OSError,
+            ValueError,
+            zipfile.BadZipFile,
+            requests.RequestException,
+        ) as exc:
+            print(
+                f"Warning: could not collect activity from workflow run {run_id}: {exc}"
+            )
+            unavailable_at.append(created)
+            if (
+                isinstance(exc, requests.HTTPError)
+                and exc.response is not None
+                and exc.response.status_code == 410
+                and (expired_before is None or created > expired_before)
+            ):
+                expired_before = created
+            continue
+        if counts is None:
+            print(f"Warning: workflow run {run_id} has no recognised activity summary")
+            unavailable_at.append(created)
+            continue
+        cached_runs[int(run_id)] = {
+            "id": int(run_id),
+            "attempt": attempt,
+            "created_at": created_at,
+            **counts,
+        }
+
+    coverage_start = max(
+        [cutoff, *unavailable_at, *([expired_before] if expired_before else [])]
+    )
+    return {
+        "window_days": WORKFLOW_WINDOW_DAYS,
+        "coverage_start": coverage_start.isoformat(),
+        "expired_before": expired_before.isoformat() if expired_before else None,
+        "runs": sorted(cached_runs.values(), key=lambda item: item["created_at"]),
+    }
+
+
 def _engagement(post: dict) -> dict[str, int]:
     return {
         name: max(0, int(post.get(api_name) or 0))
@@ -222,8 +379,11 @@ def _latest_joke_uri(state: dict) -> str:
     raise ValueError("No published joke URI is available for the dashboard")
 
 
-def _daily_activity(state: dict) -> list[dict]:
+def _activity_by_day(
+    state: dict, workflow_activity: dict | None
+) -> tuple[Counter, Counter, Counter]:
     posts = Counter()
+    follows = Counter()
     unfollows = Counter()
     for entry in state.get("posted_jokes", []):
         if entry.get("ts"):
@@ -238,10 +398,65 @@ def _daily_activity(state: dict) -> list[dict]:
                 .isoformat()
             )
             unfollows[day] += 1
+    for run in (workflow_activity or {}).get("runs", []):
+        created_at = run.get("created_at")
+        if not created_at:
+            continue
+        day = (
+            datetime.fromisoformat(created_at.replace("Z", "+00:00")).date().isoformat()
+        )
+        follows[day] += max(0, int(run.get("follows") or 0))
+        unfollows[day] = max(unfollows[day], max(0, int(run.get("unfollows") or 0)))
+    return posts, follows, unfollows
+
+
+def _daily_activity(state: dict, workflow_activity: dict | None = None) -> list[dict]:
+    posts, follows, unfollows = _activity_by_day(state, workflow_activity)
     return [
-        {"date": day, "joke_posts": posts[day], "unfollows": unfollows[day]}
-        for day in sorted(posts.keys() | unfollows.keys())
+        {
+            "date": day,
+            "joke_posts": posts[day],
+            "follows": follows[day],
+            "unfollows": unfollows[day],
+        }
+        for day in sorted(posts.keys() | follows.keys() | unfollows.keys())
     ]
+
+
+def _reconstructed_snapshots(
+    current: dict, state: dict, workflow_activity: dict | None, now: datetime
+) -> list[dict]:
+    if not workflow_activity:
+        return []
+    coverage_value = workflow_activity.get("coverage_start")
+    if not coverage_value:
+        return []
+    coverage_start = datetime.fromisoformat(coverage_value.replace("Z", "+00:00"))
+    oldest_day = max(
+        (now - timedelta(days=WORKFLOW_WINDOW_DAYS)).date(), coverage_start.date()
+    )
+    posts, follows, unfollows = _activity_by_day(state, workflow_activity)
+    following_total = current["following"]
+    post_total = current["profile_posts"]
+    snapshots = []
+    day = now.date()
+    while day >= oldest_day:
+        day_key = day.isoformat()
+        if day != now.date():
+            snapshots.append(
+                {
+                    "period_start": f"{day_key}T23:59:59+00:00",
+                    "collected_at": f"{day_key}T23:59:59+00:00",
+                    "followers": None,
+                    "following": max(0, following_total),
+                    "profile_posts": max(0, post_total),
+                    "source": "workflow_history",
+                }
+            )
+        following_total -= follows[day_key] - unfollows[day_key]
+        post_total -= posts[day_key]
+        day -= timedelta(days=1)
+    return snapshots
 
 
 def _period_start(now: datetime) -> str:
@@ -252,7 +467,7 @@ def _period_start(now: datetime) -> str:
 def _normalise_existing(existing: dict | None) -> dict:
     if existing is None:
         return {"schema_version": SCHEMA_VERSION, "snapshots": []}
-    if existing.get("schema_version") not in {1, SCHEMA_VERSION}:
+    if existing.get("schema_version") not in {1, 2, SCHEMA_VERSION}:
         raise ValueError("Unsupported dashboard metrics schema version")
     if not isinstance(existing.get("snapshots"), list):
         raise ValueError("Dashboard metrics snapshots must be a list")
@@ -379,6 +594,7 @@ def collect_metrics(
     session=None,
     now: datetime | None = None,
     workflow_runs: list[dict] | None = None,
+    workflow_activity: dict | None = None,
 ) -> dict:
     session = session or requests.Session()
     now = now or datetime.now(timezone.utc)
@@ -417,13 +633,24 @@ def collect_metrics(
         "followers": current["followers"],
         "following": current["following"],
         "profile_posts": current["profile_posts"],
+        "source": "bluesky_snapshot",
     }
     snapshots = [
         item
         for item in existing["snapshots"]
-        if item.get("period_start") != snapshot["period_start"]
+        if item.get("source") != "workflow_history"
+        and item.get("period_start") != snapshot["period_start"]
     ]
     snapshots.append(snapshot)
+    existing_days = {
+        datetime.fromisoformat(item["collected_at"].replace("Z", "+00:00")).date()
+        for item in snapshots
+    }
+    snapshots.extend(
+        item
+        for item in _reconstructed_snapshots(current, state, workflow_activity, now)
+        if datetime.fromisoformat(item["collected_at"]).date() not in existing_days
+    )
     snapshots.sort(key=lambda item: item["period_start"])
 
     ranked_posts = sorted(
@@ -443,7 +670,14 @@ def collect_metrics(
         "latest_joke": _post_summary(latest_post, profile["handle"]),
         "current": current,
         "snapshots": snapshots,
-        "daily_activity": _daily_activity(state),
+        "daily_activity": _daily_activity(state, workflow_activity),
+        "workflow_activity": workflow_activity
+        or {
+            "window_days": WORKFLOW_WINDOW_DAYS,
+            "coverage_start": now.isoformat(),
+            "expired_before": None,
+            "runs": [],
+        },
         "providers": _provider_metrics(state, joke_posts),
         "automation": _workflow_metrics(workflow_runs or [], now),
         "top_posts": [
@@ -481,13 +715,23 @@ def main() -> None:
         os.getenv("GITHUB_TOKEN"),
         now,
     )
+    existing = _load_existing()
+    workflow_activity = collect_workflow_activity(
+        session,
+        repository,
+        os.getenv("GITHUB_TOKEN"),
+        workflow_runs,
+        existing,
+        now,
+    )
     metrics = collect_metrics(
         actor,
         bluesky_state.load_state(),
-        _load_existing(),
+        existing,
         session=session,
         now=now,
         workflow_runs=workflow_runs,
+        workflow_activity=workflow_activity,
     )
     _write_metrics(metrics)
     print(

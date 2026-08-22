@@ -128,6 +128,21 @@ Dashboard schema v2 exposes the reason counters in a dedicated rejected-candidat
 column and labels their inception caveat. Producer, migration, aggregation, and
 rendering are treated as a single contract under the repository validation rules.
 
+### 5.40 Reconstruct recent account activity history ✓ Complete
+**Priority: Medium**
+
+The dashboard collector reads successful follow and unfollow outcomes from up to
+30 days of GitHub Actions logs and retains only per-run aggregate counts. It uses
+those counts with retained post timestamps to reconstruct following and
+profile-post totals before collection-time snapshots began. Historical follower
+totals remain unknown rather than being inferred from follow-back activity.
+
+Log ingestion is idempotent across dashboard runs, bounded by compressed and
+uncompressed archive limits, and stops reconstruction at the newest unavailable
+or unrecognised run. The page exposes follows alongside jokes and unfollows,
+marks reconstructed account history, and links to the source repository from
+both the header and footer.
+
 ### 5.26 Retry transient Bluesky response failures ✓ Complete
 **Priority: High**
 

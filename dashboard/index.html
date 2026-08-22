@@ -15,12 +15,12 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=4" />
+    <link rel="stylesheet" href="styles.css?v=5" />
     <script
       src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"
       defer
     ></script>
-    <script src="app.js?v=2" defer></script>
+    <script src="app.js?v=3" defer></script>
   </head>
   <body>
     <noscript>
@@ -37,9 +37,12 @@
           <small id="profile-handle">@thejokebot.bsky.social</small>
         </span>
       </a>
-      <div class="collection-state" aria-live="polite">
-        <span class="status-dot" aria-hidden="true"></span>
-        <span id="collection-time">Loading statistics</span>
+      <div class="header-actions">
+        <a class="header-source" href="https://github.com/chris-gillatt/thejokebot">Source on GitHub</a>
+        <div class="collection-state" aria-live="polite">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span id="collection-time">Loading statistics</span>
+        </div>
       </div>
     </header>
 
@@ -104,7 +107,7 @@
             <article class="chart-block">
               <div class="chart-title">
                 <h3>Account totals</h3>
-                <span>Followers, following, and posts</span>
+                <span>Sampled followers with reconstructed following and posts</span>
               </div>
               <div class="chart-frame">
                 <canvas id="audience-chart"></canvas>
@@ -123,7 +126,7 @@
             <article class="chart-block">
               <div class="chart-title">
                 <h3>Publishing rhythm</h3>
-                <span>Jokes and unfollows by day</span>
+                <span>Jokes, follows, and unfollows by day</span>
               </div>
               <div class="chart-frame">
                 <canvas id="activity-chart"></canvas>
@@ -132,7 +135,7 @@
                 <summary>View activity data</summary>
                 <div class="table-scroll">
                   <table id="activity-table">
-                    <thead><tr><th>Date</th><th>Jokes</th><th>Unfollows</th></tr></thead>
+                    <thead><tr><th>Date</th><th>Jokes</th><th>Follows</th><th>Unfollows</th></tr></thead>
                     <tbody></tbody>
                   </table>
                 </div>

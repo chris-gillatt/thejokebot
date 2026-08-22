@@ -30,6 +30,10 @@ function setText(id, value) {
   document.getElementById(id).textContent = value;
 }
 
+function metricText(value) {
+  return value == null ? "--" : numberFormat.format(value);
+}
+
 function renderProfile() {
   const profileLink = document.getElementById("profile-link");
   profileLink.href = metrics.account.profile_url;
@@ -169,9 +173,9 @@ function renderAudienceChart() {
     "audience-table",
     snapshots.map((item) => [
       dateTimeFormat.format(new Date(item.collected_at)),
-      numberFormat.format(item.followers),
-      numberFormat.format(item.following),
-      numberFormat.format(item.profile_posts),
+      metricText(item.followers),
+      metricText(item.following),
+      metricText(item.profile_posts),
     ]),
   );
 }
@@ -187,6 +191,7 @@ function renderActivityChart() {
       labels: activity.map((item) => dateFormat.format(new Date(`${item.date}T00:00:00Z`))),
       datasets: [
         { label: "Joke posts", data: activity.map((item) => item.joke_posts), backgroundColor: colours[0] },
+        { label: "Follows", data: activity.map((item) => item.follows ?? 0), backgroundColor: colours[2] },
         { label: "Unfollows", data: activity.map((item) => item.unfollows), backgroundColor: colours[1] },
       ],
     },
@@ -194,7 +199,7 @@ function renderActivityChart() {
   });
   renderTable(
     "activity-table",
-    activity.map((item) => [item.date, item.joke_posts, item.unfollows]),
+    activity.map((item) => [item.date, item.joke_posts, item.follows ?? 0, item.unfollows]),
   );
 }
 

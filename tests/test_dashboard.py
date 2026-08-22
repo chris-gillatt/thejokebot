@@ -1,13 +1,17 @@
 import json
+import io
 import unittest
+import zipfile
 from datetime import datetime, timezone
+from unittest.mock import patch
 
 import bluesky_collect_dashboard_metrics as dashboard
 
 
 class _Response:
-    def __init__(self, payload):
+    def __init__(self, payload=None, content=None):
         self.payload = payload
+        self.content = content
 
     def raise_for_status(self):
         return None
@@ -46,6 +50,22 @@ class _WorkflowSession:
         page = params["page"]
         self.requested_pages.append(page)
         return _Response({"workflow_runs": self.pages[page]})
+
+
+class _LogSession:
+    def __init__(self, content):
+        self.content = content
+
+    def get(self, url, headers, timeout):
+        del url, headers, timeout
+        return _Response(content=self.content)
+
+
+def _log_archive(text):
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        archive.writestr("job.txt", text)
+    return buffer.getvalue()
 
 
 def _post(uri, author="did:bot", text="A joke", **counts):
@@ -206,7 +226,7 @@ class DashboardCollectorTests(unittest.TestCase):
 
     def test_rejects_unknown_schema_version(self):
         with self.assertRaisesRegex(ValueError, "schema version"):
-            dashboard._normalise_existing({"schema_version": 3, "snapshots": []})
+            dashboard._normalise_existing({"schema_version": 4, "snapshots": []})
 
     def test_normalise_existing_upgrades_schema_one(self):
         existing = {"schema_version": 1, "snapshots": []}
@@ -214,6 +234,132 @@ class DashboardCollectorTests(unittest.TestCase):
             dashboard._normalise_existing(existing)["schema_version"],
             dashboard.SCHEMA_VERSION,
         )
+
+    def test_parses_confirmed_follow_and_unfollow_counts(self):
+        follows_and_likes = "\n".join(
+            [
+                "\x1b[32mFollowed did:...one\x1b[0m",
+                "Followed interactor did:...two",
+                "Followed 1 new interactor.",
+            ]
+        )
+        discovery = "\n".join(
+            [
+                "Total users to follow: 8",
+                "Unexpected error trying to follow did:...failed: timeout",
+            ]
+        )
+
+        self.assertEqual(
+            dashboard._workflow_activity_counts(
+                "bluesky_follows_and_likes", follows_and_likes
+            ),
+            {"follows": 2, "unfollows": 0},
+        )
+        self.assertEqual(
+            dashboard._workflow_activity_counts("bluesky_follow_fellows", discovery),
+            {"follows": 7, "unfollows": 0},
+        )
+        self.assertEqual(
+            dashboard._workflow_activity_counts(
+                "bluesky_unfollow",
+                "Summary: processed=5, unfollowed=4, failed=1, missing_uri=0.",
+            ),
+            {"follows": 0, "unfollows": 4},
+        )
+        self.assertEqual(
+            dashboard._workflow_activity_counts(
+                "bluesky_follow_fellows",
+                "Dry-run mode enabled.\nTotal users to follow: 8",
+            ),
+            {"follows": 0, "unfollows": 0},
+        )
+
+    def test_fetch_workflow_run_logs_reads_zip_archive(self):
+        logs = dashboard.fetch_workflow_run_logs(
+            _LogSession(_log_archive("Followed did:...safe")),
+            "owner/repository",
+            123,
+            "token",
+        )
+
+        self.assertEqual(logs, "Followed did:...safe")
+
+    def test_collect_workflow_activity_does_not_retry_expired_or_cached_runs(self):
+        existing = {
+            "workflow_activity": {
+                "expired_before": "2026-08-20T00:00:00+00:00",
+                "runs": [
+                    {
+                        "id": 2,
+                        "attempt": 1,
+                        "created_at": "2026-08-21T00:00:00Z",
+                        "follows": 3,
+                        "unfollows": 0,
+                    }
+                ],
+            }
+        }
+        workflow_runs = [
+            {
+                "id": 1,
+                "run_attempt": 1,
+                "name": "bluesky_follows_and_likes",
+                "conclusion": "success",
+                "created_at": "2026-08-19T00:00:00Z",
+            },
+            {
+                "id": 2,
+                "run_attempt": 1,
+                "name": "bluesky_follows_and_likes",
+                "conclusion": "success",
+                "created_at": "2026-08-21T00:00:00Z",
+            },
+        ]
+
+        with patch.object(dashboard, "fetch_workflow_run_logs") as fetch_logs:
+            activity = dashboard.collect_workflow_activity(
+                object(),
+                "owner/repository",
+                "token",
+                workflow_runs,
+                existing,
+                datetime(2026, 8, 22, tzinfo=timezone.utc),
+            )
+
+        fetch_logs.assert_not_called()
+        self.assertEqual(activity["expired_before"], "2026-08-20T00:00:00+00:00")
+        self.assertEqual([item["id"] for item in activity["runs"]], [2])
+
+    def test_reconstructs_following_and_posts_without_inventing_followers(self):
+        now = datetime(2026, 8, 22, 6, tzinfo=timezone.utc)
+        state = {
+            "posted_jokes": [
+                {"ts": datetime(2026, 8, 21, tzinfo=timezone.utc).timestamp()}
+            ],
+            "unfollow_history": {"entries": []},
+        }
+        activity = {
+            "coverage_start": "2026-08-20T00:00:00+00:00",
+            "runs": [
+                {
+                    "id": 1,
+                    "created_at": "2026-08-21T12:00:00Z",
+                    "follows": 5,
+                    "unfollows": 1,
+                }
+            ],
+        }
+
+        snapshots = dashboard._reconstructed_snapshots(
+            {"following": 100, "profile_posts": 10}, state, activity, now
+        )
+        by_day = {item["collected_at"][:10]: item for item in snapshots}
+
+        self.assertEqual(by_day["2026-08-21"]["following"], 100)
+        self.assertEqual(by_day["2026-08-20"]["following"], 96)
+        self.assertEqual(by_day["2026-08-20"]["profile_posts"], 9)
+        self.assertIsNone(by_day["2026-08-20"]["followers"])
 
     def test_workflow_metrics_summarise_rolling_runs(self):
         now = datetime(2026, 8, 22, 6, tzinfo=timezone.utc)
