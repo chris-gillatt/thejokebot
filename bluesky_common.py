@@ -194,6 +194,9 @@ def _is_invalid_session_error(exc):
 
 
 def _is_transient_network_error(exc):
+    if isinstance(exc, requests.HTTPError):
+        status_code = getattr(exc.response, "status_code", None)
+        return status_code == 429 or (status_code is not None and status_code >= 500)
     if isinstance(
         exc,
         (

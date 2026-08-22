@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Live public statistics and recent posts from The Joke Bot on Bluesky."
+    />
+    <title>The Joke Bot | Bluesky statistics</title>
+    <link rel="icon" href="images/jokebot_logo.webp" type="image/webp" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+    <script
+      src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"
+      defer
+    ></script>
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <noscript>
+      <div class="noscript-banner">
+        Dashboard charts require JavaScript.
+        <a href="https://bsky.app/profile/thejokebot.bsky.social">View The Joke Bot on Bluesky</a>.
+      </div>
+    </noscript>
+    <header class="site-header">
+      <a class="brand" id="profile-link" href="https://bsky.app" rel="me">
+        <img id="profile-avatar" alt="" />
+        <span>
+          <strong>The Joke Bot</strong>
+          <small id="profile-handle">@thejokebot.bsky.social</small>
+        </span>
+      </a>
+      <div class="collection-state" aria-live="polite">
+        <span class="status-dot" aria-hidden="true"></span>
+        <span id="collection-time">Loading statistics</span>
+      </div>
+    </header>
+
+    <div class="brand-visual" aria-hidden="true">
+      <img src="images/jokebot_cover.png" alt="" />
+    </div>
+
+    <main>
+      <section class="latest-band" aria-labelledby="latest-heading">
+        <div class="section-inner latest-layout">
+          <div class="section-intro">
+            <p class="eyebrow">Fresh from Bluesky</p>
+            <h1 id="latest-heading">The latest dad joke</h1>
+            <p class="latest-date" id="latest-date"></p>
+          </div>
+          <div id="latest-post" class="post-stage" aria-live="polite">
+            <div class="loading-line">Loading the latest joke...</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="metric-band" aria-label="Current account statistics">
+        <div class="metric-grid section-inner">
+          <div class="metric">
+            <span class="metric-label">Followers</span>
+            <strong id="followers">--</strong>
+            <small id="followers-delta">Baseline</small>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Following</span>
+            <strong id="following">--</strong>
+            <small id="following-delta">Baseline</small>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Profile posts</span>
+            <strong id="profile-posts">--</strong>
+            <small id="posts-delta">Baseline</small>
+          </div>
+          <div class="metric metric-accent">
+            <span class="metric-label">Engagement / joke</span>
+            <strong id="engagement-rate">--</strong>
+            <small id="joke-posts">Across -- jokes</small>
+          </div>
+        </div>
+      </section>
+
+      <section class="dashboard-section" aria-labelledby="trends-heading">
+        <div class="section-inner">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Account pulse</p>
+              <h2 id="trends-heading">Growth over time</h2>
+            </div>
+            <div class="range-control" role="group" aria-label="Chart date range">
+              <button type="button" data-range="7">7 days</button>
+              <button type="button" data-range="30" class="active">30 days</button>
+              <button type="button" data-range="all">All</button>
+            </div>
+          </div>
+
+          <div class="chart-grid">
+            <article class="chart-block">
+              <div class="chart-title">
+                <h3>Account totals</h3>
+                <span>Followers, following, and posts</span>
+              </div>
+              <div class="chart-frame">
+                <canvas id="audience-chart"></canvas>
+              </div>
+              <details>
+                <summary>View audience data</summary>
+                <div class="table-scroll">
+                  <table id="audience-table">
+                    <thead><tr><th>Date</th><th>Followers</th><th>Following</th><th>Posts</th></tr></thead>
+                    <tbody></tbody>
+                  </table>
+                </div>
+              </details>
+            </article>
+
+            <article class="chart-block">
+              <div class="chart-title">
+                <h3>Publishing rhythm</h3>
+                <span>Jokes and unfollows by day</span>
+              </div>
+              <div class="chart-frame">
+                <canvas id="activity-chart"></canvas>
+              </div>
+              <details>
+                <summary>View activity data</summary>
+                <div class="table-scroll">
+                  <table id="activity-table">
+                    <thead><tr><th>Date</th><th>Jokes</th><th>Unfollows</th></tr></thead>
+                    <tbody></tbody>
+                  </table>
+                </div>
+              </details>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="dashboard-section engagement-section" aria-labelledby="engagement-heading">
+        <div class="section-inner engagement-layout">
+          <div>
+            <p class="eyebrow">Audience response</p>
+            <h2 id="engagement-heading">Received engagement</h2>
+            <p class="engagement-total"><strong id="engagement-total">--</strong> total interactions</p>
+          </div>
+          <div class="chart-block engagement-chart-block">
+            <div class="chart-frame chart-frame-short">
+              <canvas id="engagement-chart"></canvas>
+            </div>
+            <div id="engagement-legend" class="engagement-legend"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="dashboard-section" aria-labelledby="top-posts-heading">
+        <div class="section-inner">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Recent stand-outs</p>
+              <h2 id="top-posts-heading">Top joke posts</h2>
+            </div>
+          </div>
+          <div id="top-posts" class="post-grid"></div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <span>The Joke Bot</span>
+      <a href="https://github.com/chris-gillatt/thejokebot">Source on GitHub</a>
+    </footer>
+
+    <div id="page-error" class="page-error" role="alert" hidden>
+      Statistics are temporarily unavailable. Please try again later.
+    </div>
+  </body>
+</html>

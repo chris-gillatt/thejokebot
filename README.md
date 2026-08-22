@@ -7,6 +7,7 @@
 		</td>
 		<td valign="top">
 			<a href="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_post_joke.yml"><img src="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_post_joke.yml/badge.svg" alt="bluesky_post_joke" /></a><br />
+			<a href="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_dashboard.yml"><img src="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_dashboard.yml/badge.svg" alt="bluesky_dashboard" /></a><br />
 			<a href="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_follows_and_likes.yml"><img src="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_follows_and_likes.yml/badge.svg" alt="bluesky_follows_and_likes" /></a>
 			<a href="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_follow_fellows.yml"><img src="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_follow_fellows.yml/badge.svg" alt="bluesky_follow_fellows" /></a><br />
 			<a href="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_unfollow.yml"><img src="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_unfollow.yml/badge.svg" alt="bluesky_unfollow" /></a><br />
@@ -32,6 +33,19 @@ Posts dad jokes to a configured Bluesky account, plus account housekeeping autom
 - Rotates hashtags appended to joke posts using the posting runtime-config tag pool, with deterministic per-post progression and grapheme-aware length fitting.
 - Gives newly followed accounts a 30-day grace period before they become eligible for unfollow if they still do not follow back.
 - Lets followers report unsuitable jokes via a `#report` reply, which triggers an automated PR to add the joke to a permanent denylist.
+- Publishes a six-hourly GitHub Pages dashboard with the latest joke, account trends, posting activity, unfollows, and received engagement.
+
+## Statistics dashboard
+
+The public dashboard is available at <https://chris-gillatt.github.io/thejokebot/>.
+It is rebuilt every six hours from aggregate public data served by Bluesky's
+cached public API, with the latest joke rendered through Bluesky's official post
+embed.
+
+Follower, following, and profile-post graphs contain collection-time snapshots,
+so their history begins when the dashboard collector starts. Joke-post and
+unfollow activity is reconstructed from retained timestamps in `bot_state.json`.
+Dashboard data contains no follower, liker, replier, or other audience DIDs.
 
 ## Quick start (local)
 
@@ -232,6 +246,7 @@ The report triggers an automated PR adding the joke to the denylist. Once a main
 | `bluesky_unfollow.py` | Unfollow accounts that do not follow back, while respecting protected handles, starter-pack protections, and the 30-day follow grace window. |
 | `bluesky_follow_fellows.py` | Search a rotating set of humour/follow-back hashtags and follow up to the configured per-run cap. |
 | `bluesky_verify_latest_joke_post.py` | Read-only check that a recent joke post exists on the account. |
+| `bluesky_collect_dashboard_metrics.py` | Collect aggregate public profile, joke-post, engagement, and activity metrics for the static dashboard. |
 | `bluesky_manage_starter_pack.py` | Convert/synchronise a starter pack from a configured Bluesky list and optionally follow missing list members. |
 | `bluesky_process_reports.py` | Poll reply notifications for `#report`, map replies to posted jokes, delete approved denylist posts, and write PR proposals. |
 | `bluesky_create_report_prs.py` | Open one denylist PR per new report proposal. |

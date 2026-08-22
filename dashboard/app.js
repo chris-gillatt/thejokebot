@@ -1,0 +1,308 @@
+const DATA_URL = "data/metrics.json";
+const EMBED_SCRIPT_URL = "https://embed.bsky.app/static/embed.js";
+const colours = ["#087fdb", "#df6255", "#138a78", "#e9aa31", "#08a9cf"];
+const charts = {};
+let metrics;
+let selectedRange = "30";
+
+const numberFormat = new Intl.NumberFormat("en-GB");
+const compactFormat = new Intl.NumberFormat("en-GB", {
+  notation: "compact",
+  maximumFractionDigits: 1,
+});
+const dateFormat = new Intl.DateTimeFormat("en-GB", {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+  timeZone: "UTC",
+});
+const dateTimeFormat = new Intl.DateTimeFormat("en-GB", {
+  day: "numeric",
+  month: "short",
+  hour: "2-digit",
+  minute: "2-digit",
+  timeZone: "UTC",
+  timeZoneName: "short",
+});
+
+function setText(id, value) {
+  document.getElementById(id).textContent = value;
+}
+
+function renderProfile() {
+  const profileLink = document.getElementById("profile-link");
+  profileLink.href = metrics.account.profile_url;
+  document.getElementById("profile-avatar").src = metrics.account.avatar;
+  setText("profile-handle", `@${metrics.account.handle}`);
+  setText("collection-time", `Updated ${dateTimeFormat.format(new Date(metrics.generated_at))}`);
+}
+
+function renderLatestJoke() {
+  const latest = metrics.latest_joke;
+  setText("latest-date", dateFormat.format(new Date(latest.created_at)));
+  const stage = document.getElementById("latest-post");
+  stage.replaceChildren();
+
+  const quote = document.createElement("blockquote");
+  quote.className = "bluesky-embed post-fallback";
+  quote.dataset.blueskyUri = latest.uri;
+
+  const header = document.createElement("div");
+  header.className = "post-fallback-header";
+  const avatar = document.createElement("img");
+  avatar.src = metrics.account.avatar;
+  avatar.alt = "";
+  const name = document.createElement("span");
+  name.textContent = `${metrics.account.display_name} @${metrics.account.handle}`;
+  header.append(avatar, name);
+
+  const text = document.createElement("p");
+  text.className = "post-fallback-text";
+  text.textContent = latest.text;
+  const link = document.createElement("a");
+  link.href = latest.url;
+  link.textContent = "View on Bluesky";
+  quote.append(header, text, link);
+  stage.append(quote);
+
+  const script = document.createElement("script");
+  script.src = EMBED_SCRIPT_URL;
+  script.async = true;
+  document.head.append(script);
+}
+
+function deltaText(current, previous) {
+  if (!previous) return "Baseline snapshot";
+  const difference = current - previous;
+  if (difference === 0) return "No change";
+  return `${difference > 0 ? "+" : ""}${numberFormat.format(difference)} since last update`;
+}
+
+function renderMetrics() {
+  const current = metrics.current;
+  const snapshots = metrics.snapshots;
+  const previous = snapshots.length > 1 ? snapshots.at(-2) : null;
+  setText("followers", compactFormat.format(current.followers));
+  setText("following", compactFormat.format(current.following));
+  setText("profile-posts", compactFormat.format(current.profile_posts));
+  setText("engagement-rate", numberFormat.format(current.engagement_per_joke));
+  setText("joke-posts", `Across ${numberFormat.format(current.joke_posts)} jokes`);
+  setText("followers-delta", deltaText(current.followers, previous?.followers));
+  setText("following-delta", deltaText(current.following, previous?.following));
+  setText("posts-delta", deltaText(current.profile_posts, previous?.profile_posts));
+}
+
+function cutoffDate() {
+  if (selectedRange === "all") return null;
+  const cutoff = new Date(metrics.generated_at);
+  cutoff.setUTCDate(cutoff.getUTCDate() - Number(selectedRange));
+  return cutoff;
+}
+
+function inRange(value) {
+  const cutoff = cutoffDate();
+  return !cutoff || new Date(value) >= cutoff;
+}
+
+function replaceChart(name, context, config) {
+  charts[name]?.destroy();
+  charts[name] = new Chart(context, config);
+}
+
+function baseOptions() {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { intersect: false, mode: "index" },
+    plugins: {
+      legend: { position: "bottom", labels: { usePointStyle: true, boxWidth: 8 } },
+      tooltip: { displayColors: true },
+    },
+    scales: {
+      x: { grid: { display: false }, ticks: { maxTicksLimit: 7 } },
+      y: { beginAtZero: false, grid: { color: "#e4eaeb" } },
+    },
+  };
+}
+
+function renderAudienceChart() {
+  const snapshots = metrics.snapshots.filter((item) => inRange(item.collected_at));
+  const options = baseOptions();
+  options.scales.yPosts = {
+    position: "right",
+    beginAtZero: false,
+    grid: { drawOnChartArea: false },
+  };
+  replaceChart("audience", document.getElementById("audience-chart"), {
+    type: "line",
+    data: {
+      labels: snapshots.map((item) => dateFormat.format(new Date(item.collected_at))),
+      datasets: [
+        {
+          label: "Followers",
+          data: snapshots.map((item) => item.followers),
+          borderColor: colours[0],
+          backgroundColor: colours[0],
+          tension: 0.25,
+        },
+        {
+          label: "Following",
+          data: snapshots.map((item) => item.following),
+          borderColor: colours[2],
+          backgroundColor: colours[2],
+          tension: 0.25,
+        },
+        {
+          label: "Profile posts",
+          data: snapshots.map((item) => item.profile_posts),
+          borderColor: colours[3],
+          backgroundColor: colours[3],
+          tension: 0.25,
+          yAxisID: "yPosts",
+        },
+      ],
+    },
+    options,
+  });
+  renderTable(
+    "audience-table",
+    snapshots.map((item) => [
+      dateTimeFormat.format(new Date(item.collected_at)),
+      numberFormat.format(item.followers),
+      numberFormat.format(item.following),
+      numberFormat.format(item.profile_posts),
+    ]),
+  );
+}
+
+function renderActivityChart() {
+  const activity = metrics.daily_activity.filter((item) => inRange(`${item.date}T23:59:59Z`));
+  const options = baseOptions();
+  options.scales.y.beginAtZero = true;
+  options.scales.y.ticks = { precision: 0 };
+  replaceChart("activity", document.getElementById("activity-chart"), {
+    type: "bar",
+    data: {
+      labels: activity.map((item) => dateFormat.format(new Date(`${item.date}T00:00:00Z`))),
+      datasets: [
+        { label: "Joke posts", data: activity.map((item) => item.joke_posts), backgroundColor: colours[0] },
+        { label: "Unfollows", data: activity.map((item) => item.unfollows), backgroundColor: colours[1] },
+      ],
+    },
+    options,
+  });
+  renderTable(
+    "activity-table",
+    activity.map((item) => [item.date, item.joke_posts, item.unfollows]),
+  );
+}
+
+function renderTable(id, rows) {
+  const body = document.querySelector(`#${id} tbody`);
+  body.replaceChildren();
+  rows.forEach((row) => {
+    const tableRow = document.createElement("tr");
+    row.forEach((value) => {
+      const cell = document.createElement("td");
+      cell.textContent = value;
+      tableRow.append(cell);
+    });
+    body.append(tableRow);
+  });
+}
+
+function renderEngagement() {
+  const entries = Object.entries(metrics.current.engagement);
+  const total = entries.reduce((sum, [, count]) => sum + count, 0);
+  setText("engagement-total", numberFormat.format(total));
+  replaceChart("engagement", document.getElementById("engagement-chart"), {
+    type: "doughnut",
+    data: {
+      labels: entries.map(([name]) => name),
+      datasets: [{ data: entries.map(([, count]) => count), backgroundColor: colours, borderWidth: 0 }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: "66%",
+      plugins: { legend: { display: false } },
+    },
+  });
+  const legend = document.getElementById("engagement-legend");
+  legend.replaceChildren();
+  entries.forEach(([name, count], index) => {
+    const row = document.createElement("div");
+    row.className = "legend-row";
+    const swatch = document.createElement("span");
+    swatch.className = "legend-swatch";
+    swatch.style.background = colours[index];
+    const label = document.createElement("span");
+    label.textContent = name[0].toUpperCase() + name.slice(1);
+    const value = document.createElement("strong");
+    value.textContent = numberFormat.format(count);
+    row.append(swatch, label, value);
+    legend.append(row);
+  });
+}
+
+function renderTopPosts() {
+  const container = document.getElementById("top-posts");
+  container.replaceChildren();
+  metrics.top_posts.forEach((post) => {
+    const article = document.createElement("article");
+    article.className = "top-post";
+    const text = document.createElement("p");
+    text.className = "top-post-text";
+    text.textContent = post.text;
+    const footer = document.createElement("div");
+    footer.className = "top-post-footer";
+    const interactions = Object.values(post.engagement).reduce((sum, count) => sum + count, 0);
+    const score = document.createElement("span");
+    score.textContent = `${numberFormat.format(interactions)} interactions`;
+    const link = document.createElement("a");
+    link.href = post.url;
+    link.textContent = "View post";
+    footer.append(score, link);
+    article.append(text, footer);
+    container.append(article);
+  });
+}
+
+function renderCharts() {
+  renderAudienceChart();
+  renderActivityChart();
+  renderEngagement();
+}
+
+function bindRangeControls() {
+  document.querySelectorAll("[data-range]").forEach((button) => {
+    button.addEventListener("click", () => {
+      selectedRange = button.dataset.range;
+      document.querySelectorAll("[data-range]").forEach((item) => {
+        item.classList.toggle("active", item === button);
+      });
+      renderAudienceChart();
+      renderActivityChart();
+    });
+  });
+}
+
+async function initialise() {
+  try {
+    const response = await fetch(DATA_URL);
+    if (!response.ok) throw new Error(`Metrics request failed: ${response.status}`);
+    metrics = await response.json();
+    renderProfile();
+    renderLatestJoke();
+    renderMetrics();
+    renderCharts();
+    renderTopPosts();
+    bindRangeControls();
+  } catch (error) {
+    console.error(error);
+    document.getElementById("page-error").hidden = false;
+    setText("collection-time", "Statistics unavailable");
+  }
+}
+
+initialise();

@@ -11,6 +11,7 @@ from types import SimpleNamespace
 from unittest import mock
 
 import atproto_client.exceptions
+import requests
 import bluesky_common
 import bluesky_config
 import bluesky_create_report_prs
@@ -722,6 +723,21 @@ class NetworkRetryHelperTests(unittest.TestCase):
         )
 
         with self.assertRaises(atproto_client.exceptions.RequestException):
+            bluesky_common.retry_network_call(
+                operation,
+                "unit-test call",
+                max_attempts=3,
+                initial_delay_seconds=0,
+            )
+
+        operation.assert_called_once()
+
+    def test_retry_network_call_does_not_retry_requests_http_400(self):
+        response = requests.Response()
+        response.status_code = 400
+        operation = mock.Mock(side_effect=requests.HTTPError(response=response))
+
+        with self.assertRaises(requests.HTTPError):
             bluesky_common.retry_network_call(
                 operation,
                 "unit-test call",

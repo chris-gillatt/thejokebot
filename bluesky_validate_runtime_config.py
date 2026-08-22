@@ -9,6 +9,7 @@ import bluesky_config
 
 WORKFLOW_FILES = {
     "bluesky_post_joke": ".github/workflows/bluesky_post_joke.yml",
+    "bluesky_dashboard": ".github/workflows/bluesky_dashboard.yml",
     "bluesky_follows_and_likes": ".github/workflows/bluesky_follows_and_likes.yml",
     "bluesky_follow_fellows": ".github/workflows/bluesky_follow_fellows.yml",
     "bluesky_unfollow": ".github/workflows/bluesky_unfollow.yml",

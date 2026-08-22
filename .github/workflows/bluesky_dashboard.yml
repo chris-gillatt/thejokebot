@@ -1,0 +1,100 @@
+name: bluesky_dashboard
+
+on:
+  schedule:
+    - cron: "30 0,6,12,18 * * *"  # every six hours, offset from posting
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "dashboard/**"
+      - "bluesky_collect_dashboard_metrics.py"
+      - ".github/workflows/bluesky_dashboard.yml"
+
+concurrency:
+  group: bot_state_writer
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  collect:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Collect dashboard metrics
+        env:
+          BLUESKY_USERNAME: ${{ vars.BLUESKY_USERNAME }}
+        run: python bluesky_collect_dashboard_metrics.py
+
+      - name: Persist dashboard metrics
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add dashboard/data/metrics.json
+
+          if git diff --cached --quiet; then
+            echo "No dashboard metric changes to commit."
+            exit 0
+          fi
+
+          git commit -m "chore(dashboard): update public metrics; GH run: ${GITHUB_RUN_NUMBER}"
+          for attempt in 1 2 3; do
+            git pull --rebase origin main
+            if git push origin HEAD:main; then
+              break
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "Push failed after 3 attempts."
+              exit 1
+            fi
+            echo "Push rejected, retrying (${attempt}/3)..."
+          done
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v6
+        with:
+          enablement: true
+
+      - name: Prepare Pages artifact
+        run: |
+          mkdir -p .agent-tmp/pages/images
+          cp -R dashboard/. .agent-tmp/pages/
+          cp images/jokebot_cover.png .agent-tmp/pages/images/jokebot_cover.png
+          cp images/jokebot_logo.webp .agent-tmp/pages/images/jokebot_logo.webp
+          touch .agent-tmp/pages/.nojekyll
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: .agent-tmp/pages
+
+  deploy:
+    needs: collect
+    runs-on: ubuntu-24.04
+    environment:
+      name: ${{ format('{0}-{1}', 'github', 'pages') }}
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

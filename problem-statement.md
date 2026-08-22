@@ -32,6 +32,41 @@ changelog in this file is intentionally brief.
 
 ## 5. Active Backlog
 
+### 5.35 Publish a GitHub Pages statistics dashboard (Issue #62) ✓ Complete
+**Priority: Medium**
+
+Build a static, public dashboard from aggregate Bluesky data collected every six
+hours. Public reads use the cached `https://public.api.bsky.app` service without
+credentials and retain the existing network retry, pagination, and fail-closed
+behaviour. GitHub Actions persists a versioned metrics document and deploys the
+site through GitHub Pages.
+
+Acceptance criteria:
+- Show the latest successfully posted joke at the top using its persisted
+  `post_uri`, enhanced by the official Bluesky embed widget with a local fallback.
+- Show current followers, following, profile posts, and received engagement
+  totals for original joke posts: likes, replies, reposts, quotes, and bookmarks.
+- Chart sampled follower, following, and profile-post totals over time, clearly
+  distinguishing collection-time snapshots from reconstructable joke-post and
+  unfollow history.
+- Chart joke posts and unfollows over time, plus engagement per joke and recent
+  top-performing jokes.
+- Persist only public aggregate data and public post metadata; never persist
+  follower, liker, replier, or other audience DIDs.
+- Keep the collector idempotent for a six-hour interval, reject partial API
+  pagination, and expose the latest successful collection time to the page.
+- Provide responsive, accessible desktop and mobile layouts with a useful
+  no-script and embed-failure experience.
+- Cover collection, filtering, aggregation, schema handling, and identifier
+  exclusion with focused tests, then validate the rendered site locally.
+
+**Resolution:** Added an unauthenticated, fail-closed public metrics collector,
+versioned aggregate history, official Bluesky latest-post embed with fallback,
+responsive Chart.js views, and a six-hour GitHub Pages workflow. Pages is served
+from <https://chris-gillatt.github.io/thejokebot/>. The generated data excludes
+audience identifiers and distinguishes sampled account totals from activity
+reconstructed from retained bot state.
+
 ### 5.26 Retry transient Bluesky response failures ✓ Complete
 **Priority: High**
 
