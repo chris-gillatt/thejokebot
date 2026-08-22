@@ -290,6 +290,7 @@ def _provider_metrics(state: dict, joke_posts: list[dict]) -> dict:
         )
         visible_posts = visible_summary["visible_posts"]
         failure = failures.get(provider_name, {})
+        reason_counts = failure.get("reason_counts", {})
         health = health_checks.get(provider_name, {})
         providers.append(
             {
@@ -302,6 +303,10 @@ def _provider_metrics(state: dict, joke_posts: list[dict]) -> dict:
                 if visible_posts
                 else None,
                 "fallthroughs": int(failure.get("count") or 0),
+                "rejection_counts": {
+                    reason: int(reason_counts.get(reason) or 0)
+                    for reason in bluesky_state.PROVIDER_FAILURE_REASONS
+                },
                 "last_failure_at": failure.get("last_failure_at"),
                 "last_failure_reason": failure.get("last_error"),
                 "healthy": health.get("last_check_success"),

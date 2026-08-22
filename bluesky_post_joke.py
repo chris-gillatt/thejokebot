@@ -35,6 +35,20 @@ _HTML_UNESCAPE_PASSES = 3
 _DEDUPE_NORMALISATION_PATTERN = regex.compile(r"[\p{P}\s_]+")
 
 
+class JokeSelectionExhausted(ValueError):
+    """Raised when every provider candidate is rejected before posting."""
+
+    def __init__(self, provider: str, duplicate_count: int, too_long_count: int):
+        self.rejection_counts = {
+            "duplicate": duplicate_count,
+            "too_long": too_long_count,
+        }
+        super().__init__(
+            f"All {duplicate_count + too_long_count} jokes from '{provider}' "
+            f"were rejected ({duplicate_count} duplicates, {too_long_count} too long)"
+        )
+
+
 def get_max_joke_chars(hashtags: list[str]) -> int:
     """Return maximum grapheme length available for joke text with selected hashtags."""
     hashtag_suffix_len = 2 + _grapheme_len(" ".join(hashtags))
@@ -220,10 +234,13 @@ def pick_joke(
     recent_dedupe_b64s = {
         _normalise_stored_b64_for_deduplication(encoded) for encoded in recent_b64s
     }
+    duplicate_count = 0
+    too_long_count = 0
     for _ in range(MAX_ATTEMPTS):
         joke = sanitise_joke_text(fetch_fn())
         grapheme_count = _grapheme_len(joke)
         if grapheme_count > max_joke_chars:
+            too_long_count += 1
             print(
                 f"Skipping joke from '{provider_name}': "
                 f"{grapheme_count} graphemes exceeds limit of {max_joke_chars}"
@@ -233,9 +250,23 @@ def pick_joke(
         dedupe_encoded = _encode_deduplication_key(joke)
         if dedupe_encoded not in recent_dedupe_b64s:
             return joke, encoded
-    raise ValueError(
-        f"All {MAX_ATTEMPTS} jokes from '{provider_name}' were recent duplicates or too long"
-    )
+        duplicate_count += 1
+    raise JokeSelectionExhausted(provider_name, duplicate_count, too_long_count)
+
+
+def _failure_reason_counts(error: Exception) -> dict[str, int]:
+    if isinstance(error, JokeSelectionExhausted):
+        return error.rejection_counts
+    if isinstance(
+        error,
+        (
+            requests.RequestException,
+            TimeoutError,
+            atproto_client.exceptions.NetworkError,
+        ),
+    ):
+        return {"network_error": 1}
+    return {"provider_error": 1}
 
 
 def build_hashtag_facets(joke_text, hashtags):
@@ -272,8 +303,13 @@ def _apply_posting_state_updates(
     posting_hashtag_pool,
     cutoff,
 ):
-    for provider_name, error in provider_failures:
-        bluesky_state.record_failure(latest_state, provider_name, error)
+    for provider_name, error, reason_counts in provider_failures:
+        bluesky_state.record_failure(
+            latest_state,
+            provider_name,
+            error,
+            reason_counts=reason_counts,
+        )
 
     # Advance rotation after a successful provider fetch, regardless of post outcome.
     if used_provider != "fallback":
@@ -356,7 +392,7 @@ def main():
             atproto_client.exceptions.NetworkError,
         ) as e:
             print(f"Provider '{provider_name}' failed: {e}")
-            provider_failures.append((provider_name, str(e)))
+            provider_failures.append((provider_name, str(e), _failure_reason_counts(e)))
 
     if not joke:
         joke = get_fallback_joke()

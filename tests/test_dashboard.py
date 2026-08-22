@@ -98,6 +98,12 @@ class DashboardCollectorTests(unittest.TestCase):
                         "count": 4,
                         "last_failure_at": 1787350000,
                         "last_error": "duplicate or too long",
+                        "reason_counts": {
+                            "duplicate": 11,
+                            "too_long": 2,
+                            "network_error": 1,
+                            "provider_error": 0,
+                        },
                     }
                 },
                 "health_checks": {
@@ -169,6 +175,15 @@ class DashboardCollectorTests(unittest.TestCase):
         providers = {item["name"]: item for item in metrics["providers"]["providers"]}
         self.assertEqual(providers["icanhazdadjoke"]["published"], 1)
         self.assertEqual(providers["icanhazdadjoke"]["fallthroughs"], 4)
+        self.assertEqual(
+            providers["icanhazdadjoke"]["rejection_counts"],
+            {
+                "duplicate": 11,
+                "too_long": 2,
+                "network_error": 1,
+                "provider_error": 0,
+            },
+        )
         self.assertTrue(providers["icanhazdadjoke"]["configured"])
         self.assertEqual(providers["groandeck"]["average_interactions"], 14.0)
         self.assertNotIn("did:audience", json.dumps(metrics))

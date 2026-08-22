@@ -286,6 +286,19 @@ function providerHealth(provider) {
   return { label: "No check", className: "unknown" };
 }
 
+function rejectionSummary(counts) {
+  const labels = {
+    duplicate: "duplicate",
+    too_long: "too long",
+    network_error: "network",
+    provider_error: "provider",
+  };
+  const parts = Object.entries(counts || {})
+    .filter(([, count]) => count > 0)
+    .map(([reason, count]) => `${numberFormat.format(count)} ${labels[reason] || reason}`);
+  return parts.length ? parts.join(" · ") : "--";
+}
+
 function renderProviders() {
   const providerMetrics = metrics.providers;
   const providers = providerMetrics.providers;
@@ -325,6 +338,7 @@ function renderProviders() {
         : numberFormat.format(provider.average_interactions),
     );
     appendCell(row, numberFormat.format(provider.fallthroughs));
+    appendCell(row, rejectionSummary(provider.rejection_counts), "rejection-summary");
     const health = providerHealth(provider);
     const badge = document.createElement("span");
     badge.className = `health-badge ${health.className}`;

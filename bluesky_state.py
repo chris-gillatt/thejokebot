@@ -32,7 +32,22 @@ FOLLOW_RESPONSE_GRACE_PERIOD_SECONDS = FOLLOW_RESPONSE_GRACE_PERIOD_DAYS * 24 * 
 # Canonical provider order — the rotation wraps around this list.
 # Add new providers here and they will be included in rotation automatically.
 PROVIDER_ROTATION_ORDER = ["icanhazdadjoke", "jokeapi", "groandeck"]
+PROVIDER_FAILURE_REASONS = (
+    "duplicate",
+    "too_long",
+    "network_error",
+    "provider_error",
+)
 T = TypeVar("T")
+
+
+def _default_provider_failure() -> dict:
+    return {
+        "count": 0,
+        "last_failure_at": None,
+        "last_error": None,
+        "reason_counts": {reason: 0 for reason in PROVIDER_FAILURE_REASONS},
+    }
 
 
 def _default_state() -> dict:
@@ -42,8 +57,7 @@ def _default_state() -> dict:
             "last_used_at": None,
             "rotation_order": list(PROVIDER_ROTATION_ORDER),
             "failures": {
-                p: {"count": 0, "last_failure_at": None, "last_error": None}
-                for p in PROVIDER_ROTATION_ORDER
+                p: _default_provider_failure() for p in PROVIDER_ROTATION_ORDER
             },
             "health_checks": {
                 p: {
@@ -110,10 +124,10 @@ def _normalise_state(state: dict) -> dict:
 
     failures = provider.setdefault("failures", {})
     for provider_name in provider.get("rotation_order") or PROVIDER_ROTATION_ORDER:
-        failures.setdefault(
-            provider_name,
-            {"count": 0, "last_failure_at": None, "last_error": None},
-        )
+        failure = failures.setdefault(provider_name, _default_provider_failure())
+        reason_counts = failure.setdefault("reason_counts", {})
+        for reason in PROVIDER_FAILURE_REASONS:
+            reason_counts.setdefault(reason, 0)
 
     health_checks = provider.setdefault("health_checks", {})
     all_providers = list(
@@ -307,15 +321,24 @@ def record_provider_used(state: dict, provider: str) -> None:
     state["provider"]["last_used_at"] = int(time.time())
 
 
-def record_failure(state: dict, provider: str, error: str) -> None:
+def record_failure(
+    state: dict,
+    provider: str,
+    error: str,
+    reason_counts: dict[str, int] | None = None,
+) -> None:
     """Increment the failure counter for a provider."""
     failures = state["provider"].setdefault("failures", {})
-    entry = failures.setdefault(
-        provider, {"count": 0, "last_failure_at": None, "last_error": None}
-    )
+    entry = failures.setdefault(provider, _default_provider_failure())
     entry["count"] += 1
     entry["last_failure_at"] = int(time.time())
     entry["last_error"] = str(error)
+    saved_counts = entry.setdefault("reason_counts", {})
+    for reason in PROVIDER_FAILURE_REASONS:
+        saved_counts.setdefault(reason, 0)
+    for reason, count in (reason_counts or {}).items():
+        if reason in PROVIDER_FAILURE_REASONS:
+            saved_counts[reason] += max(0, int(count))
 
 
 def add_posted_joke(

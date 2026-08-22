@@ -1497,11 +1497,47 @@ class StateJokeHistoryTests(unittest.TestCase):
 
     def test_record_failure_increments_count_and_records_error(self):
         state = bluesky_state._default_state()
-        bluesky_state.record_failure(state, "jokeapi", "HTTP 429")
-        bluesky_state.record_failure(state, "jokeapi", "HTTP 429")
+        bluesky_state.record_failure(
+            state, "jokeapi", "HTTP 429", reason_counts={"network_error": 1}
+        )
+        bluesky_state.record_failure(
+            state,
+            "jokeapi",
+            "candidate exhaustion",
+            reason_counts={"duplicate": 3, "too_long": 2},
+        )
         failures = state["provider"]["failures"]["jokeapi"]
         self.assertEqual(failures["count"], 2)
-        self.assertEqual(failures["last_error"], "HTTP 429")
+        self.assertEqual(failures["last_error"], "candidate exhaustion")
+        self.assertEqual(
+            failures["reason_counts"],
+            {
+                "duplicate": 3,
+                "too_long": 2,
+                "network_error": 1,
+                "provider_error": 0,
+            },
+        )
+
+    def test_normalise_state_backfills_provider_failure_reason_counts(self):
+        state = bluesky_state._default_state()
+        state["provider"]["failures"]["jokeapi"] = {
+            "count": 12,
+            "last_failure_at": 100,
+            "last_error": "duplicates or too long",
+        }
+
+        normalised = bluesky_state._normalise_state(state)
+
+        self.assertEqual(
+            normalised["provider"]["failures"]["jokeapi"]["reason_counts"],
+            {
+                "duplicate": 0,
+                "too_long": 0,
+                "network_error": 0,
+                "provider_error": 0,
+            },
+        )
 
     def test_get_post_uri_index_returns_uri_mapping(self):
         state = bluesky_state._default_state()
@@ -3161,6 +3197,10 @@ class JokeRetryChainTests(unittest.TestCase):
                 bluesky_post_joke.pick_joke(recent, "test_provider")
 
         self.assertIn("duplicates", str(ctx.exception))
+        self.assertEqual(
+            ctx.exception.rejection_counts,
+            {"duplicate": bluesky_post_joke.MAX_ATTEMPTS, "too_long": 0},
+        )
 
     def test_pick_joke_raises_when_all_duplicates_differ_only_by_punctuation(self):
         original = (
@@ -3258,8 +3298,74 @@ class JokeRetryChainTests(unittest.TestCase):
         with mock.patch.object(
             bluesky_joke_providers, "PROVIDERS", {"test_provider": lambda: long_joke}
         ):
-            with self.assertRaises(ValueError):
+            with self.assertRaises(bluesky_post_joke.JokeSelectionExhausted) as ctx:
                 bluesky_post_joke.pick_joke(set(), "test_provider")
+
+        self.assertEqual(
+            ctx.exception.rejection_counts,
+            {"duplicate": 0, "too_long": bluesky_post_joke.MAX_ATTEMPTS},
+        )
+
+    def test_pick_joke_reports_mixed_rejection_counts(self):
+        max_joke_chars = bluesky_post_joke.get_max_joke_chars(
+            bluesky_post_joke.DEFAULT_POSTING_HASHTAGS
+        )
+        duplicate = "Already posted"
+        recent = {base64.b64encode(duplicate.encode()).decode()}
+        candidates = iter(
+            [duplicate, "x" * (max_joke_chars + 1), duplicate, duplicate, duplicate]
+        )
+
+        with mock.patch.object(
+            bluesky_joke_providers,
+            "PROVIDERS",
+            {"test_provider": lambda: next(candidates)},
+        ):
+            with self.assertRaises(bluesky_post_joke.JokeSelectionExhausted) as ctx:
+                bluesky_post_joke.pick_joke(recent, "test_provider")
+
+        self.assertEqual(
+            ctx.exception.rejection_counts,
+            {"duplicate": 4, "too_long": 1},
+        )
+
+    def test_failure_reason_counts_classifies_network_error(self):
+        self.assertEqual(
+            bluesky_post_joke._failure_reason_counts(TimeoutError("timed out")),
+            {"network_error": 1},
+        )
+
+    def test_failure_reason_counts_classifies_provider_error(self):
+        self.assertEqual(
+            bluesky_post_joke._failure_reason_counts(ValueError("bad payload")),
+            {"provider_error": 1},
+        )
+
+    def test_apply_posting_state_updates_persists_rejection_counts(self):
+        state = bluesky_state._default_state()
+
+        bluesky_post_joke._apply_posting_state_updates(
+            state,
+            provider_failures=[
+                (
+                    "jokeapi",
+                    "candidate exhaustion",
+                    {"duplicate": 4, "too_long": 1},
+                )
+            ],
+            used_provider="fallback",
+            posted_successfully=False,
+            b64=None,
+            post_uri=None,
+            post_cid=None,
+            posting_hashtag_pool=["#joke"],
+            cutoff=0,
+        )
+
+        failure = state["provider"]["failures"]["jokeapi"]
+        self.assertEqual(failure["count"], 1)
+        self.assertEqual(failure["reason_counts"]["duplicate"], 4)
+        self.assertEqual(failure["reason_counts"]["too_long"], 1)
 
     def test_grapheme_len_treats_combining_mark_sequence_as_one(self):
         self.assertEqual(bluesky_post_joke._grapheme_len("e\u0301"), 1)

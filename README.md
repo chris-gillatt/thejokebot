@@ -42,7 +42,8 @@ It is rebuilt every six hours from aggregate public data served by Bluesky's
 cached public API, with the latest joke rendered through Bluesky's official post
 embed. A build-and-run section shows rolling 30-day first-party workflow
 reliability, retained publication mix by joke provider, provider fall-through
-pressure, average received engagement, and current provider health.
+pressure with distinct candidate-rejection reasons, average received engagement,
+and current provider health.
 
 Follower, following, and profile-post graphs contain collection-time snapshots,
 so their history begins when the dashboard collector starts. Joke-post and

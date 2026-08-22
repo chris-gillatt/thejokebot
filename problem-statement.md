@@ -76,10 +76,6 @@ reconstructed from retained bot state.
 - Add selectable time windows for top-performing jokes.
 - Compact or roll up old six-hour snapshots when metrics JSON growth becomes
   material, while retaining useful long-term daily history.
-- Split provider rejection telemetry into duplicate, over-length, fetch/API,
-  and malformed-response reasons. Existing provider failure counters combine
-  duplicate and over-length exhaustion and must not be presented as separate
-  facts retrospectively.
 - Consider per-run provider attempt/fall-through history so rates and trends can
   replace lifetime-only counters without inflating `bot_state.json` indefinitely.
 - Add schedule-adherence metrics (expected versus delivered joke posts and
@@ -117,6 +113,20 @@ authenticated health check. Health state also distinguishes an optional provider
 that is not configured from a configured provider that failed, resetting false
 failure streaks and allowing the dashboard to show "Not configured" instead of
 "Attention" when credentials are deliberately absent.
+
+### 5.39 Split provider rejection telemetry ✓ Complete
+**Priority: Medium**
+
+Posting now records duplicate and over-length candidate rejections separately at
+the point where each candidate is evaluated. Network failures and provider-level
+errors use their own categories. The existing provider fall-through count and
+last-error text remain for compatibility, while new `reason_counts` state starts
+from zero rather than attempting to infer historical detail from combined error
+messages.
+
+Dashboard schema v2 exposes the reason counters in a dedicated rejected-candidate
+column and labels their inception caveat. Producer, migration, aggregation, and
+rendering are treated as a single contract under the repository validation rules.
 
 ### 5.26 Retry transient Bluesky response failures ✓ Complete
 **Priority: High**

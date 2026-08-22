@@ -25,6 +25,7 @@
 ## Validation Expectations
 - Run relevant checks before finishing a task (script run, lint, or targeted tests where available).
 - Report what was verified and what could not be verified.
+- Treat posting telemetry, `bot_state.json` provider fields, dashboard metrics JSON, and dashboard rendering as one cross-file contract. Changes to any part must include producer-to-collector tests and local desktop/mobile dashboard verification.
 
 ## Terminal Command Workflow
 - Avoid heredocs for shell commands and file generation to reduce interruption-related issues.

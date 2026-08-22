@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "generated_at": "2026-08-22T07:45:02.967315+00:00",
+  "generated_at": "2026-08-22T07:49:12.636305+00:00",
   "account": {
     "handle": "thejokebot.bsky.social",
     "display_name": "The Joke Bot",
@@ -37,7 +37,7 @@
   "snapshots": [
     {
       "period_start": "2026-08-22T06:00:00+00:00",
-      "collected_at": "2026-08-22T07:45:02.967315+00:00",
+      "collected_at": "2026-08-22T07:49:12.636305+00:00",
       "followers": 6397,
       "following": 10821,
       "profile_posts": 2320
@@ -1059,6 +1059,12 @@
         "visible_posts": 329,
         "average_interactions": 6.78,
         "fallthroughs": 39,
+        "rejection_counts": {
+          "duplicate": 0,
+          "too_long": 0,
+          "network_error": 0,
+          "provider_error": 0
+        },
         "last_failure_at": 1787371961,
         "last_failure_reason": "All 5 jokes from 'icanhazdadjoke' were recent duplicates or too long",
         "healthy": true,
@@ -1072,6 +1078,12 @@
         "visible_posts": 182,
         "average_interactions": 5.66,
         "fallthroughs": 0,
+        "rejection_counts": {
+          "duplicate": 0,
+          "too_long": 0,
+          "network_error": 0,
+          "provider_error": 0
+        },
         "last_failure_at": null,
         "last_failure_reason": null,
         "healthy": true,
@@ -1085,6 +1097,12 @@
         "visible_posts": 170,
         "average_interactions": 6.58,
         "fallthroughs": 178,
+        "rejection_counts": {
+          "duplicate": 0,
+          "too_long": 0,
+          "network_error": 0,
+          "provider_error": 0
+        },
         "last_failure_at": 1787371961,
         "last_failure_reason": "All 5 jokes from 'jokeapi' were recent duplicates or too long",
         "healthy": true,
@@ -1098,6 +1116,12 @@
         "visible_posts": 0,
         "average_interactions": null,
         "fallthroughs": 0,
+        "rejection_counts": {
+          "duplicate": 0,
+          "too_long": 0,
+          "network_error": 0,
+          "provider_error": 0
+        },
         "last_failure_at": null,
         "last_failure_reason": null,
         "healthy": true,
@@ -1111,6 +1135,12 @@
         "visible_posts": 0,
         "average_interactions": null,
         "fallthroughs": 0,
+        "rejection_counts": {
+          "duplicate": 0,
+          "too_long": 0,
+          "network_error": 0,
+          "provider_error": 0
+        },
         "last_failure_at": null,
         "last_failure_reason": null,
         "healthy": true,
@@ -1122,9 +1152,9 @@
   },
   "automation": {
     "window_days": 30,
-    "collected_at": "2026-08-22T07:45:02.967315+00:00",
+    "collected_at": "2026-08-22T07:49:12.636305+00:00",
     "runs": 856,
-    "successful": 840,
+    "successful": 844,
     "failed": 8,
     "cancelled": 3,
     "success_rate": 99.1,
@@ -1132,11 +1162,11 @@
       {
         "name": "bluesky_dashboard",
         "runs": 6,
-        "successful": 5,
+        "successful": 6,
         "failed": 0,
         "cancelled": 0,
         "last_run_at": "2026-08-22T07:44:44Z",
-        "last_conclusion": null
+        "last_conclusion": "success"
       },
       {
         "name": "bluesky_follow_fellows",
@@ -1204,11 +1234,11 @@
       {
         "name": "codeql",
         "runs": 23,
-        "successful": 22,
+        "successful": 23,
         "failed": 0,
         "cancelled": 0,
         "last_run_at": "2026-08-22T07:44:44Z",
-        "last_conclusion": null
+        "last_conclusion": "success"
       },
       {
         "name": "pr_auto_merge",
@@ -1231,20 +1261,20 @@
       {
         "name": "python_tests",
         "runs": 19,
-        "successful": 18,
+        "successful": 19,
         "failed": 0,
         "cancelled": 0,
         "last_run_at": "2026-08-22T07:44:44Z",
-        "last_conclusion": null
+        "last_conclusion": "success"
       },
       {
         "name": "ruff_quality",
         "runs": 19,
-        "successful": 18,
+        "successful": 19,
         "failed": 0,
         "cancelled": 0,
         "last_run_at": "2026-08-22T07:44:44Z",
-        "last_conclusion": null
+        "last_conclusion": "success"
       },
       {
         "name": "validate_runtime_config",
