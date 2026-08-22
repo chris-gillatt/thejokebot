@@ -1,7 +1,7 @@
 {
   "provider": {
     "last_used": "groandeck",
-    "last_used_at": 1787371961,
+    "last_used_at": 1787386002,
     "rotation_order": [
       "icanhazdadjoke",
       "jokeapi",
@@ -9,19 +9,37 @@
     ],
     "failures": {
       "icanhazdadjoke": {
-        "count": 39,
-        "last_failure_at": 1787371961,
-        "last_error": "All 5 jokes from 'icanhazdadjoke' were recent duplicates or too long"
+        "count": 40,
+        "last_failure_at": 1787386002,
+        "last_error": "All 5 jokes from 'icanhazdadjoke' were rejected (5 duplicates, 0 too long)",
+        "reason_counts": {
+          "duplicate": 5,
+          "too_long": 0,
+          "network_error": 0,
+          "provider_error": 0
+        }
       },
       "jokeapi": {
-        "count": 178,
-        "last_failure_at": 1787371961,
-        "last_error": "All 5 jokes from 'jokeapi' were recent duplicates or too long"
+        "count": 179,
+        "last_failure_at": 1787386002,
+        "last_error": "All 5 jokes from 'jokeapi' were rejected (5 duplicates, 0 too long)",
+        "reason_counts": {
+          "duplicate": 5,
+          "too_long": 0,
+          "network_error": 0,
+          "provider_error": 0
+        }
       },
       "groandeck": {
         "count": 0,
         "last_failure_at": null,
-        "last_error": null
+        "last_error": null,
+        "reason_counts": {
+          "duplicate": 0,
+          "too_long": 0,
+          "network_error": 0,
+          "provider_error": 0
+        }
       }
     },
     "health_checks": {
@@ -6032,6 +6050,13 @@
       "provider": "groandeck",
       "post_uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mtnfvhaxbi2n",
       "post_cid": "bafyreich3e6vgbyo5czjnyjl5s23oxlchduuot5lnbid66kifdo6ibjemi"
+    },
+    {
+      "ts": 1787386002,
+      "b64": "V2hhdCdzIGEgcGlyYXRlJ3MgZmF2b3JpdGUgdHlwZSBvZiBleGVyY2lzZT8KClRoZSBwbGFuay4=",
+      "provider": "groandeck",
+      "post_uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mtnsxvqbud2n",
+      "post_cid": "bafyreic6qaauzpx3rdx4i7qowu4hap5thtxvqgsurks7mbwgowngmikozi"
     }
   ],
   "reports": {
@@ -43881,6 +43906,6 @@
     ]
   },
   "posting": {
-    "tag_offset": 10
+    "tag_offset": 11
   }
 }
