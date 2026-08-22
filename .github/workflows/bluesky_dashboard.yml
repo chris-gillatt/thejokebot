@@ -43,6 +43,7 @@ jobs:
       - name: Collect dashboard metrics
         env:
           BLUESKY_USERNAME: ${{ vars.BLUESKY_USERNAME }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python bluesky_collect_dashboard_metrics.py
 
       - name: Persist dashboard metrics

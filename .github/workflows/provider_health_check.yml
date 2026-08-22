@@ -12,6 +12,8 @@ permissions:
 jobs:
   health_check:
     runs-on: ubuntu-latest
+    env:
+      API_NINJAS_API_KEY: ${{ secrets.API_NINJAS_API_KEY }}
     steps:
       - uses: actions/checkout@v7
 

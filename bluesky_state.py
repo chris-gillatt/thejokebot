@@ -50,6 +50,7 @@ def _default_state() -> dict:
                     "last_check_at": None,
                     "last_check_success": None,
                     "consecutive_failures": 0,
+                    "configured": None,
                 }
                 for p in PROVIDER_ROTATION_ORDER + ["syrsly", "api_ninjas"]
             },
@@ -125,8 +126,10 @@ def _normalise_state(state: dict) -> dict:
                 "last_check_at": None,
                 "last_check_success": None,
                 "consecutive_failures": 0,
+                "configured": None,
             },
         )
+        health_checks[provider_name].setdefault("configured", None)
 
     reports = state.setdefault("reports", {})
     reports.setdefault("processed_notification_uris", [])

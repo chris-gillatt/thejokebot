@@ -6,6 +6,7 @@ let metrics;
 let selectedRange = "30";
 
 const numberFormat = new Intl.NumberFormat("en-GB");
+const percentageFormat = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 1 });
 const compactFormat = new Intl.NumberFormat("en-GB", {
   notation: "compact",
   maximumFractionDigits: 1,
@@ -245,6 +246,125 @@ function renderEngagement() {
   });
 }
 
+function displayName(value) {
+  const names = {
+    api_ninjas: "API Ninjas",
+    bluesky_dashboard: "Dashboard",
+    bluesky_follow_fellows: "Follow fellows",
+    bluesky_follows_and_likes: "Follows and likes",
+    bluesky_manage_starter_pack: "Starter pack",
+    bluesky_post_joke: "Post joke",
+    bluesky_process_reports: "Process reports",
+    bluesky_unfollow: "Unfollow",
+    bluesky_validate_unfollow_ignore: "Validate unfollow ignore",
+    codeql: "CodeQL",
+    groandeck: "GroanDeck",
+    icanhazdadjoke: "icanhazdadjoke",
+    jokeapi: "JokeAPI",
+    pr_auto_merge: "PR auto-merge",
+    provider_health_check: "Provider health",
+    python_tests: "Python tests",
+    ruff_quality: "Ruff quality",
+    syrsly: "Syrsly",
+    validate_runtime_config: "Runtime config",
+  };
+  return names[value] || value.replaceAll("_", " ");
+}
+
+function appendCell(row, value, className) {
+  const cell = document.createElement("td");
+  if (className) cell.className = className;
+  if (value instanceof Node) cell.append(value);
+  else cell.textContent = value;
+  row.append(cell);
+}
+
+function providerHealth(provider) {
+  if (provider.configured === false) return { label: "Not configured", className: "unknown" };
+  if (provider.healthy === true) return { label: "Healthy", className: "healthy" };
+  if (provider.healthy === false) return { label: "Attention", className: "attention" };
+  return { label: "No check", className: "unknown" };
+}
+
+function renderProviders() {
+  const providerMetrics = metrics.providers;
+  const providers = providerMetrics.providers;
+  const checked = providers.filter(
+    (provider) => provider.configured !== false && provider.healthy !== null,
+  );
+  const healthy = checked.filter((provider) => provider.healthy === true).length;
+  setText("providers-healthy", `${healthy}/${checked.length}`);
+  setText("retained-publications", numberFormat.format(providerMetrics.retained_publications));
+
+  const body = document.querySelector("#provider-table tbody");
+  body.replaceChildren();
+  providers.forEach((provider) => {
+    const row = document.createElement("tr");
+    const providerName = document.createElement("div");
+    providerName.className = "provider-name";
+    const name = document.createElement("strong");
+    name.textContent = displayName(provider.name);
+    const share = providerMetrics.retained_publications
+      ? (provider.published * 100) / providerMetrics.retained_publications
+      : 0;
+    const bar = document.createElement("span");
+    bar.className = "provider-share";
+    bar.style.setProperty("--provider-share", `${share}%`);
+    providerName.append(name, bar);
+    if (provider.last_failure_reason) {
+      const reason = document.createElement("small");
+      reason.textContent = provider.last_failure_reason;
+      providerName.append(reason);
+    }
+    appendCell(row, providerName);
+    appendCell(row, numberFormat.format(provider.published));
+    appendCell(
+      row,
+      provider.average_interactions === null
+        ? "--"
+        : numberFormat.format(provider.average_interactions),
+    );
+    appendCell(row, numberFormat.format(provider.fallthroughs));
+    const health = providerHealth(provider);
+    const badge = document.createElement("span");
+    badge.className = `health-badge ${health.className}`;
+    badge.textContent = health.label;
+    appendCell(row, badge);
+    body.append(row);
+  });
+}
+
+function renderAutomation() {
+  const automation = metrics.automation;
+  setText(
+    "automation-rate",
+    automation.success_rate === null ? "--" : `${numberFormat.format(automation.success_rate)}%`,
+  );
+  setText("automation-runs", numberFormat.format(automation.runs));
+  setText("automation-failed", numberFormat.format(automation.failed));
+
+  const body = document.querySelector("#workflow-table tbody");
+  body.replaceChildren();
+  [...automation.workflows]
+    .sort((left, right) => right.runs - left.runs || left.name.localeCompare(right.name))
+    .forEach((workflow) => {
+      const row = document.createElement("tr");
+      appendCell(row, displayName(workflow.name));
+      appendCell(row, numberFormat.format(workflow.runs));
+      const completed = workflow.successful + workflow.failed;
+      appendCell(
+        row,
+        completed ? `${percentageFormat.format((workflow.successful * 100) / completed)}%` : "--",
+      );
+      appendCell(row, numberFormat.format(workflow.failed), workflow.failed ? "failure-count" : "");
+      const latest = document.createElement("span");
+      latest.className = `run-status ${workflow.last_conclusion || "unknown"}`;
+      latest.textContent = workflow.last_conclusion || "No runs";
+      appendCell(row, latest);
+      body.append(row);
+    });
+}
+
 function renderTopPosts() {
   const container = document.getElementById("top-posts");
   container.replaceChildren();
@@ -296,6 +416,8 @@ async function initialise() {
     renderLatestJoke();
     renderMetrics();
     renderCharts();
+    renderProviders();
+    renderAutomation();
     renderTopPosts();
     bindRangeControls();
   } catch (error) {

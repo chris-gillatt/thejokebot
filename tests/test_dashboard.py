@@ -36,6 +36,18 @@ class _Session:
         raise AssertionError(f"Unexpected method: {method}")
 
 
+class _WorkflowSession:
+    def __init__(self, pages):
+        self.pages = pages
+        self.requested_pages = []
+
+    def get(self, url, params, headers, timeout):
+        del url, headers, timeout
+        page = params["page"]
+        self.requested_pages.append(page)
+        return _Response({"workflow_runs": self.pages[page]})
+
+
 def _post(uri, author="did:bot", text="A joke", **counts):
     return {
         "uri": uri,
@@ -69,9 +81,34 @@ class DashboardCollectorTests(unittest.TestCase):
         )
         self.state = {
             "posted_jokes": [
-                {"ts": 1787350000, "post_uri": self.first_uri},
-                {"ts": 1787357528, "post_uri": self.latest_uri},
+                {
+                    "ts": 1787350000,
+                    "post_uri": self.first_uri,
+                    "provider": "icanhazdadjoke",
+                },
+                {
+                    "ts": 1787357528,
+                    "post_uri": self.latest_uri,
+                    "provider": "groandeck",
+                },
             ],
+            "provider": {
+                "failures": {
+                    "icanhazdadjoke": {
+                        "count": 4,
+                        "last_failure_at": 1787350000,
+                        "last_error": "duplicate or too long",
+                    }
+                },
+                "health_checks": {
+                    "icanhazdadjoke": {
+                        "last_check_at": 1787350000,
+                        "last_check_success": True,
+                        "consecutive_failures": 0,
+                        "configured": True,
+                    }
+                },
+            },
             "reports": {"deleted_post_uris": []},
             "unfollow_history": {
                 "entries": [{"did": "did:audience", "unfollowed_at": 1787357000}]
@@ -129,6 +166,11 @@ class DashboardCollectorTests(unittest.TestCase):
         self.assertEqual(metrics["latest_joke"]["uri"], self.latest_uri)
         self.assertEqual(len(metrics["snapshots"]), 1)
         self.assertEqual(metrics["snapshots"][0]["followers"], 6400)
+        providers = {item["name"]: item for item in metrics["providers"]["providers"]}
+        self.assertEqual(providers["icanhazdadjoke"]["published"], 1)
+        self.assertEqual(providers["icanhazdadjoke"]["fallthroughs"], 4)
+        self.assertTrue(providers["icanhazdadjoke"]["configured"])
+        self.assertEqual(providers["groandeck"]["average_interactions"], 14.0)
         self.assertNotIn("did:audience", json.dumps(metrics))
 
     def test_latest_joke_skips_deleted_post(self):
@@ -149,7 +191,73 @@ class DashboardCollectorTests(unittest.TestCase):
 
     def test_rejects_unknown_schema_version(self):
         with self.assertRaisesRegex(ValueError, "schema version"):
-            dashboard._normalise_existing({"schema_version": 2, "snapshots": []})
+            dashboard._normalise_existing({"schema_version": 3, "snapshots": []})
+
+    def test_normalise_existing_upgrades_schema_one(self):
+        existing = {"schema_version": 1, "snapshots": []}
+        self.assertEqual(
+            dashboard._normalise_existing(existing)["schema_version"],
+            dashboard.SCHEMA_VERSION,
+        )
+
+    def test_workflow_metrics_summarise_rolling_runs(self):
+        now = datetime(2026, 8, 22, 6, tzinfo=timezone.utc)
+        runs = [
+            {
+                "name": "python_tests",
+                "conclusion": "success",
+                "created_at": "2026-08-22T05:00:00Z",
+            },
+            {
+                "name": "python_tests",
+                "conclusion": "failure",
+                "created_at": "2026-08-21T05:00:00Z",
+            },
+            {
+                "name": "bluesky_post_joke",
+                "conclusion": "success",
+                "created_at": "2026-08-22T04:00:00Z",
+            },
+        ]
+
+        summary = dashboard._workflow_metrics(runs, now)
+
+        self.assertEqual(summary["runs"], 3)
+        self.assertEqual(summary["successful"], 2)
+        self.assertEqual(summary["failed"], 1)
+        self.assertEqual(summary["success_rate"], 66.7)
+        tests = next(
+            item for item in summary["workflows"] if item["name"] == "python_tests"
+        )
+        self.assertEqual(tests["last_conclusion"], "success")
+        starter_pack = next(
+            item
+            for item in summary["workflows"]
+            if item["name"] == "bluesky_manage_starter_pack"
+        )
+        self.assertEqual(starter_pack["runs"], 0)
+        self.assertIsNone(starter_pack["last_conclusion"])
+
+    def test_fetch_workflow_runs_collects_multiple_pages(self):
+        runs = [
+            {
+                "name": "python_tests",
+                "conclusion": "success",
+                "created_at": "2026-08-22T05:00:00Z",
+            }
+            for _ in range(101)
+        ]
+        session = _WorkflowSession({1: runs[:100], 2: runs[100:]})
+
+        collected = dashboard.fetch_workflow_runs(
+            session,
+            "owner/repository",
+            "token",
+            datetime(2026, 8, 22, 6, tzinfo=timezone.utc),
+        )
+
+        self.assertEqual(len(collected), 101)
+        self.assertEqual(session.requested_pages, [1, 2])
 
 
 if __name__ == "__main__":

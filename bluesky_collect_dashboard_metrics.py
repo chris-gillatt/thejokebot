@@ -6,7 +6,7 @@ import json
 import os
 import time
 from collections import Counter
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import requests
@@ -15,10 +15,29 @@ import bluesky_state
 from bluesky_common import retry_network_call
 
 PUBLIC_API_BASE = "https://public.api.bsky.app/xrpc"
+GITHUB_API_BASE = "https://api.github.com"
 METRICS_FILE = Path(__file__).resolve().parent / "dashboard" / "data" / "metrics.json"
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 MAX_FEED_PAGES = 100
 MAX_FEED_RUNTIME_SECONDS = 120
+MAX_WORKFLOW_PAGES = 20
+WORKFLOW_WINDOW_DAYS = 30
+TRACKED_WORKFLOWS = {
+    "bluesky_dashboard",
+    "bluesky_follow_fellows",
+    "bluesky_follows_and_likes",
+    "bluesky_manage_starter_pack",
+    "bluesky_post_joke",
+    "bluesky_process_reports",
+    "bluesky_unfollow",
+    "bluesky_validate_unfollow_ignore",
+    "codeql",
+    "pr_auto_merge",
+    "provider_health_check",
+    "python_tests",
+    "ruff_quality",
+    "validate_runtime_config",
+}
 ENGAGEMENT_FIELDS = (
     ("likes", "likeCount"),
     ("replies", "replyCount"),
@@ -128,6 +147,53 @@ def fetch_original_posts(
     )
 
 
+def fetch_workflow_runs(
+    session,
+    repository: str,
+    token: str | None,
+    now: datetime,
+    max_pages: int = MAX_WORKFLOW_PAGES,
+) -> list[dict]:
+    cutoff = now - timedelta(days=WORKFLOW_WINDOW_DAYS)
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+
+    runs = []
+    for page_number in range(1, max_pages + 1):
+
+        def _request():
+            response = session.get(
+                f"{GITHUB_API_BASE}/repos/{repository}/actions/runs",
+                params={
+                    "created": f">={cutoff.isoformat()}",
+                    "per_page": 100,
+                    "page": page_number,
+                },
+                headers=headers,
+                timeout=30,
+            )
+            response.raise_for_status()
+            return response.json()
+
+        payload = retry_network_call(
+            _request, description=f"fetching GitHub Actions page {page_number}"
+        )
+        page_runs = payload.get("workflow_runs") if isinstance(payload, dict) else None
+        if not isinstance(page_runs, list):
+            raise ValueError("GitHub Actions response is missing workflow_runs")
+        runs.extend(page_runs)
+        if len(page_runs) < 100:
+            return runs
+
+    raise RuntimeError(
+        f"GitHub Actions pagination exceeded its {max_pages}-page safety limit"
+    )
+
+
 def _engagement(post: dict) -> dict[str, int]:
     return {
         name: max(0, int(post.get(api_name) or 0))
@@ -186,11 +252,119 @@ def _period_start(now: datetime) -> str:
 def _normalise_existing(existing: dict | None) -> dict:
     if existing is None:
         return {"schema_version": SCHEMA_VERSION, "snapshots": []}
-    if existing.get("schema_version") != SCHEMA_VERSION:
+    if existing.get("schema_version") not in {1, SCHEMA_VERSION}:
         raise ValueError("Unsupported dashboard metrics schema version")
     if not isinstance(existing.get("snapshots"), list):
         raise ValueError("Dashboard metrics snapshots must be a list")
+    existing["schema_version"] = SCHEMA_VERSION
     return existing
+
+
+def _provider_metrics(state: dict, joke_posts: list[dict]) -> dict:
+    retained_publications = Counter(
+        entry.get("provider") or "unknown" for entry in state.get("posted_jokes", [])
+    )
+    provider_by_uri = {
+        entry.get("post_uri"): entry.get("provider") or "unknown"
+        for entry in state.get("posted_jokes", [])
+        if entry.get("post_uri")
+    }
+    visible = {}
+    for post in joke_posts:
+        provider_name = provider_by_uri.get(post.get("uri"), "unknown")
+        summary = visible.setdefault(
+            provider_name, {"visible_posts": 0, "interactions": 0}
+        )
+        summary["visible_posts"] += 1
+        summary["interactions"] += sum(_engagement(post).values())
+
+    failures = state.get("provider", {}).get("failures", {})
+    health_checks = state.get("provider", {}).get("health_checks", {})
+    provider_names = sorted(
+        retained_publications.keys() | failures.keys() | health_checks.keys()
+    )
+    providers = []
+    for provider_name in provider_names:
+        visible_summary = visible.get(
+            provider_name, {"visible_posts": 0, "interactions": 0}
+        )
+        visible_posts = visible_summary["visible_posts"]
+        failure = failures.get(provider_name, {})
+        health = health_checks.get(provider_name, {})
+        providers.append(
+            {
+                "name": provider_name,
+                "published": retained_publications[provider_name],
+                "visible_posts": visible_posts,
+                "average_interactions": round(
+                    visible_summary["interactions"] / visible_posts, 2
+                )
+                if visible_posts
+                else None,
+                "fallthroughs": int(failure.get("count") or 0),
+                "last_failure_at": failure.get("last_failure_at"),
+                "last_failure_reason": failure.get("last_error"),
+                "healthy": health.get("last_check_success"),
+                "configured": health.get("configured"),
+                "last_health_check_at": health.get("last_check_at"),
+                "consecutive_health_failures": int(
+                    health.get("consecutive_failures") or 0
+                ),
+            }
+        )
+    providers.sort(key=lambda item: (-item["published"], item["name"]))
+    return {
+        "retained_publications": sum(retained_publications.values()),
+        "providers": providers,
+    }
+
+
+def _workflow_metrics(workflow_runs: list[dict], now: datetime) -> dict:
+    grouped = {
+        name: {
+            "name": name,
+            "runs": 0,
+            "successful": 0,
+            "failed": 0,
+            "cancelled": 0,
+            "last_run_at": None,
+            "last_conclusion": None,
+        }
+        for name in TRACKED_WORKFLOWS
+    }
+    for run in workflow_runs:
+        name = str(run.get("name") or "unknown")
+        if name not in TRACKED_WORKFLOWS:
+            continue
+        summary = grouped[name]
+        summary["runs"] += 1
+        conclusion = run.get("conclusion")
+        if conclusion == "success":
+            summary["successful"] += 1
+        elif conclusion == "failure":
+            summary["failed"] += 1
+        elif conclusion == "cancelled":
+            summary["cancelled"] += 1
+        created_at = run.get("created_at")
+        if created_at and (
+            summary["last_run_at"] is None or created_at > summary["last_run_at"]
+        ):
+            summary["last_run_at"] = created_at
+            summary["last_conclusion"] = conclusion
+
+    workflows = sorted(grouped.values(), key=lambda item: item["name"])
+    completed = sum(item["successful"] + item["failed"] for item in workflows)
+    successful = sum(item["successful"] for item in workflows)
+    return {
+        "window_days": WORKFLOW_WINDOW_DAYS,
+        "collected_at": now.isoformat(),
+        "runs": sum(item["runs"] for item in workflows),
+        "successful": successful,
+        "failed": sum(item["failed"] for item in workflows),
+        "cancelled": sum(item["cancelled"] for item in workflows),
+        "success_rate": round(successful * 100 / completed, 1) if completed else None,
+        "workflows": workflows,
+    }
 
 
 def collect_metrics(
@@ -199,6 +373,7 @@ def collect_metrics(
     existing: dict | None = None,
     session=None,
     now: datetime | None = None,
+    workflow_runs: list[dict] | None = None,
 ) -> dict:
     session = session or requests.Session()
     now = now or datetime.now(timezone.utc)
@@ -264,6 +439,8 @@ def collect_metrics(
         "current": current,
         "snapshots": snapshots,
         "daily_activity": _daily_activity(state),
+        "providers": _provider_metrics(state, joke_posts),
+        "automation": _workflow_metrics(workflow_runs or [], now),
         "top_posts": [
             _post_summary(post, profile["handle"]) for post in ranked_posts[:5]
         ],
@@ -290,7 +467,23 @@ def main() -> None:
     actor = os.getenv("BLUESKY_USERNAME", "").strip()
     if not actor:
         raise ValueError("BLUESKY_USERNAME is required to collect dashboard metrics")
-    metrics = collect_metrics(actor, bluesky_state.load_state(), _load_existing())
+    now = datetime.now(timezone.utc)
+    session = requests.Session()
+    repository = os.getenv("GITHUB_REPOSITORY", "chris-gillatt/thejokebot").strip()
+    workflow_runs = fetch_workflow_runs(
+        session,
+        repository,
+        os.getenv("GITHUB_TOKEN"),
+        now,
+    )
+    metrics = collect_metrics(
+        actor,
+        bluesky_state.load_state(),
+        _load_existing(),
+        session=session,
+        now=now,
+        workflow_runs=workflow_runs,
+    )
     _write_metrics(metrics)
     print(
         f"Dashboard metrics updated for @{metrics['account']['handle']} "

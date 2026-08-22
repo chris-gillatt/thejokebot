@@ -6,9 +6,12 @@ These tests are run on a schedule by provider_health_check.yml workflow
 to alert maintainers of provider outages or consistent failures.
 """
 
+import os
 import unittest
+from unittest import mock
 
 import bluesky_joke_providers
+from scripts import update_provider_health
 
 
 class ProviderHealthTests(unittest.TestCase):
@@ -53,6 +56,14 @@ class ProviderHealthTests(unittest.TestCase):
         joke = bluesky_joke_providers.fetch_from_jokebot_jokebook()
         self.assertIsInstance(joke, str)
         self.assertGreater(len(joke), 0)
+
+    def test_api_ninjas_without_key_is_not_configured(self):
+        with mock.patch.dict(os.environ, {}, clear=True):
+            result = update_provider_health.check_provider_health("api_ninjas")
+
+        self.assertIsNone(result["success"])
+        self.assertFalse(result["configured"])
+        self.assertEqual(result["error"], "API_NINJAS_API_KEY is not set")
 
 
 if __name__ == "__main__":

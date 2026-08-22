@@ -67,6 +67,57 @@ from <https://chris-gillatt.github.io/thejokebot/>. The generated data excludes
 audience identifiers and distinguishes sampled account totals from activity
 reconstructed from retained bot state.
 
+### 5.36 Dashboard follow-up improvements ⏳ Deferred
+**Priority: Low**
+
+- Show an explicit "collecting history" state until account trend charts have
+  enough snapshots for a meaningful line.
+- Review trend readability after 7–14 days of real snapshots have accumulated.
+- Add selectable time windows for top-performing jokes.
+- Compact or roll up old six-hour snapshots when metrics JSON growth becomes
+  material, while retaining useful long-term daily history.
+- Split provider rejection telemetry into duplicate, over-length, fetch/API,
+  and malformed-response reasons. Existing provider failure counters combine
+  duplicate and over-length exhaustion and must not be presented as separate
+  facts retrospectively.
+- Consider per-run provider attempt/fall-through history so rates and trends can
+  replace lifetime-only counters without inflating `bot_state.json` indefinitely.
+- Add schedule-adherence metrics (expected versus delivered joke posts and
+  delayed/missed runs) once a durable per-run event model exists.
+- Add moderation outcomes such as reports received, accepted removals, and time
+  to resolution using aggregate counters only.
+- Add an operational alert strip for stale dashboard collection, recent workflow
+  failures, or unhealthy providers when those signals need faster visibility.
+- Explore provider and hashtag engagement comparisons only with minimum sample
+  sizes and clear caveats; raw averages can otherwise overstate small cohorts.
+
+### 5.37 Add dashboard build and run health ✓ Complete
+**Priority: Medium**
+
+Extended the public metrics document and dashboard with rolling 30-day GitHub
+Actions reliability, stable first-party workflow rows, retained publication mix
+by joke provider, average interactions for currently visible provider posts,
+cumulative provider fall-throughs, and latest provider health state. GitHub
+Actions collection is authenticated in CI, bounded to 20 pages, and covered by
+multi-page regression tests. Labels distinguish rolling workflow data, retained
+publication history, visible-post engagement, and combined legacy fall-through
+reasons.
+
+### 5.38 Correct optional-provider health classification ✓ Complete
+**Priority: Medium**
+
+API Ninjas accumulated consecutive health failures because the provider-health
+workflow did not pass the existing `API_NINJAS_API_KEY` secret to its state
+updater. The provider was therefore never called; missing credentials were
+misclassified as an outage even though the health-test step treated that same
+condition as expected.
+
+The workflow now supplies the existing secret so API Ninjas receives a real
+authenticated health check. Health state also distinguishes an optional provider
+that is not configured from a configured provider that failed, resetting false
+failure streaks and allowing the dashboard to show "Not configured" instead of
+"Attention" when credentials are deliberately absent.
+
 ### 5.26 Retry transient Bluesky response failures ✓ Complete
 **Priority: High**
 

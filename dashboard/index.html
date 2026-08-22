@@ -169,6 +169,91 @@
           <div id="top-posts" class="post-grid"></div>
         </div>
       </section>
+
+      <section class="dashboard-section operations-section" aria-labelledby="operations-heading">
+        <div class="section-inner">
+          <div class="section-heading operations-heading">
+            <div>
+              <p class="eyebrow">Behind the punchline</p>
+              <h2 id="operations-heading">Build and run health</h2>
+            </div>
+            <p class="section-note">Tracked bot and CI workflows over the last 30 days</p>
+          </div>
+
+          <div class="operations-summary" aria-label="Automation summary">
+            <div class="operation-stat">
+              <span>Success rate</span>
+              <strong id="automation-rate">--</strong>
+            </div>
+            <div class="operation-stat">
+              <span>Workflow runs</span>
+              <strong id="automation-runs">--</strong>
+            </div>
+            <div class="operation-stat">
+              <span>Failed runs</span>
+              <strong id="automation-failed">--</strong>
+            </div>
+            <div class="operation-stat">
+              <span>Providers healthy</span>
+              <strong id="providers-healthy">--</strong>
+            </div>
+          </div>
+
+          <div class="operations-layout">
+            <article class="operations-block" aria-labelledby="providers-heading">
+              <div class="operations-block-heading">
+                <div>
+                  <h3 id="providers-heading">Joke provider mix</h3>
+                  <p>Publications retained in the rolling joke history</p>
+                </div>
+                <strong id="retained-publications">--</strong>
+              </div>
+              <div class="table-scroll operations-table-scroll">
+                <table class="operations-table" id="provider-table">
+                  <thead>
+                    <tr>
+                      <th>Provider</th>
+                      <th>Published</th>
+                      <th>Avg. interactions</th>
+                      <th>Fall-throughs</th>
+                      <th>Health</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+              <p class="data-note">
+                Fall-throughs are cumulative exhausted provider attempts. Existing data combines duplicate,
+                length, malformed-response, and API failures.
+              </p>
+            </article>
+
+            <article class="operations-block" aria-labelledby="workflows-heading">
+              <div class="operations-block-heading">
+                <div>
+                  <h3 id="workflows-heading">Workflow reliability</h3>
+                  <p>Named first-party automation only</p>
+                </div>
+              </div>
+              <div class="table-scroll operations-table-scroll workflow-table-scroll">
+                <table class="operations-table" id="workflow-table">
+                  <thead>
+                    <tr>
+                      <th>Workflow</th>
+                      <th>Runs</th>
+                      <th>Success</th>
+                      <th>Failed</th>
+                      <th>Latest</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
     </main>
 
     <footer>

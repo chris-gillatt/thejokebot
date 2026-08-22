@@ -1,6 +1,6 @@
 {
-  "schema_version": 1,
-  "generated_at": "2026-08-22T07:05:19.902571+00:00",
+  "schema_version": 2,
+  "generated_at": "2026-08-22T07:21:27.539700+00:00",
   "account": {
     "handle": "thejokebot.bsky.social",
     "display_name": "The Joke Bot",
@@ -37,7 +37,7 @@
   "snapshots": [
     {
       "period_start": "2026-08-22T06:00:00+00:00",
-      "collected_at": "2026-08-22T07:05:19.902571+00:00",
+      "collected_at": "2026-08-22T07:21:27.539700+00:00",
       "followers": 6397,
       "following": 10821,
       "profile_posts": 2320
@@ -1050,6 +1050,208 @@
       "unfollows": 0
     }
   ],
+  "providers": {
+    "retained_publications": 921,
+    "providers": [
+      {
+        "name": "icanhazdadjoke",
+        "published": 565,
+        "visible_posts": 329,
+        "average_interactions": 6.78,
+        "fallthroughs": 39,
+        "last_failure_at": 1787371961,
+        "last_failure_reason": "All 5 jokes from 'icanhazdadjoke' were recent duplicates or too long",
+        "healthy": true,
+        "last_health_check_at": 1787300144,
+        "consecutive_health_failures": 0
+      },
+      {
+        "name": "groandeck",
+        "published": 182,
+        "visible_posts": 182,
+        "average_interactions": 5.66,
+        "fallthroughs": 0,
+        "last_failure_at": null,
+        "last_failure_reason": null,
+        "healthy": true,
+        "last_health_check_at": 1787300144,
+        "consecutive_health_failures": 0
+      },
+      {
+        "name": "jokeapi",
+        "published": 174,
+        "visible_posts": 170,
+        "average_interactions": 6.58,
+        "fallthroughs": 178,
+        "last_failure_at": 1787371961,
+        "last_failure_reason": "All 5 jokes from 'jokeapi' were recent duplicates or too long",
+        "healthy": true,
+        "last_health_check_at": 1787300144,
+        "consecutive_health_failures": 0
+      },
+      {
+        "name": "api_ninjas",
+        "published": 0,
+        "visible_posts": 0,
+        "average_interactions": null,
+        "fallthroughs": 0,
+        "last_failure_at": null,
+        "last_failure_reason": null,
+        "healthy": false,
+        "last_health_check_at": 1787300144,
+        "consecutive_health_failures": 98
+      },
+      {
+        "name": "syrsly",
+        "published": 0,
+        "visible_posts": 0,
+        "average_interactions": null,
+        "fallthroughs": 0,
+        "last_failure_at": null,
+        "last_failure_reason": null,
+        "healthy": true,
+        "last_health_check_at": 1787300144,
+        "consecutive_health_failures": 0
+      }
+    ]
+  },
+  "automation": {
+    "window_days": 30,
+    "collected_at": "2026-08-22T07:21:27.539700+00:00",
+    "runs": 834,
+    "successful": 822,
+    "failed": 8,
+    "cancelled": 3,
+    "success_rate": 99.0,
+    "workflows": [
+      {
+        "name": "bluesky_dashboard",
+        "runs": 1,
+        "successful": 1,
+        "failed": 0,
+        "cancelled": 0,
+        "last_run_at": "2026-08-22T07:04:58Z",
+        "last_conclusion": "success"
+      },
+      {
+        "name": "bluesky_follow_fellows",
+        "runs": 9,
+        "successful": 9,
+        "failed": 0,
+        "cancelled": 0,
+        "last_run_at": "2026-08-21T01:44:00Z",
+        "last_conclusion": "success"
+      },
+      {
+        "name": "bluesky_follows_and_likes",
+        "runs": 359,
+        "successful": 354,
+        "failed": 4,
+        "cancelled": 1,
+        "last_run_at": "2026-08-22T06:31:52Z",
+        "last_conclusion": "success"
+      },
+      {
+        "name": "bluesky_manage_starter_pack",
+        "runs": 0,
+        "successful": 0,
+        "failed": 0,
+        "cancelled": 0,
+        "last_run_at": null,
+        "last_conclusion": null
+      },
+      {
+        "name": "bluesky_post_joke",
+        "runs": 183,
+        "successful": 180,
+        "failed": 1,
+        "cancelled": 2,
+        "last_run_at": "2026-08-22T04:12:16Z",
+        "last_conclusion": "success"
+      },
+      {
+        "name": "bluesky_process_reports",
+        "runs": 179,
+        "successful": 176,
+        "failed": 3,
+        "cancelled": 0,
+        "last_run_at": "2026-08-22T04:52:06Z",
+        "last_conclusion": "success"
+      },
+      {
+        "name": "bluesky_unfollow",
+        "runs": 1,
+        "successful": 1,
+        "failed": 0,
+        "cancelled": 0,
+        "last_run_at": "2026-08-01T12:18:09Z",
+        "last_conclusion": "success"
+      },
+      {
+        "name": "bluesky_validate_unfollow_ignore",
+        "runs": 2,
+        "successful": 2,
+        "failed": 0,
+        "cancelled": 0,
+        "last_run_at": "2026-08-17T11:33:20Z",
+        "last_conclusion": "success"
+      },
+      {
+        "name": "codeql",
+        "runs": 19,
+        "successful": 19,
+        "failed": 0,
+        "cancelled": 0,
+        "last_run_at": "2026-08-22T07:06:36Z",
+        "last_conclusion": "success"
+      },
+      {
+        "name": "pr_auto_merge",
+        "runs": 6,
+        "successful": 5,
+        "failed": 0,
+        "cancelled": 0,
+        "last_run_at": "2026-08-17T05:24:24Z",
+        "last_conclusion": "success"
+      },
+      {
+        "name": "provider_health_check",
+        "runs": 30,
+        "successful": 30,
+        "failed": 0,
+        "cancelled": 0,
+        "last_run_at": "2026-08-21T08:15:28Z",
+        "last_conclusion": "success"
+      },
+      {
+        "name": "python_tests",
+        "runs": 15,
+        "successful": 15,
+        "failed": 0,
+        "cancelled": 0,
+        "last_run_at": "2026-08-22T07:06:36Z",
+        "last_conclusion": "success"
+      },
+      {
+        "name": "ruff_quality",
+        "runs": 15,
+        "successful": 15,
+        "failed": 0,
+        "cancelled": 0,
+        "last_run_at": "2026-08-22T07:06:36Z",
+        "last_conclusion": "success"
+      },
+      {
+        "name": "validate_runtime_config",
+        "runs": 15,
+        "successful": 15,
+        "failed": 0,
+        "cancelled": 0,
+        "last_run_at": "2026-08-22T07:06:36Z",
+        "last_conclusion": "success"
+      }
+    ]
+  },
   "top_posts": [
     {
       "uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mpy6f4ljoe2k",

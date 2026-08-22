@@ -6,6 +6,7 @@ health tests. It records check results (success/failure) and tracks consecutive
 failures to detect provider outages.
 """
 
+import os
 import sys
 import time
 
@@ -27,6 +28,16 @@ def check_provider_health(provider_name: str) -> dict:
         {"success": bool, "error": str | None, "check_at": int}
     """
     check_at = int(time.time())
+    if (
+        provider_name == "api_ninjas"
+        and not os.getenv("API_NINJAS_API_KEY", "").strip()
+    ):
+        return {
+            "success": None,
+            "configured": False,
+            "error": "API_NINJAS_API_KEY is not set",
+            "check_at": check_at,
+        }
     fetch_fn = bluesky_joke_providers.PROVIDERS.get(provider_name)
     if not fetch_fn:
         return {
@@ -43,7 +54,12 @@ def check_provider_health(provider_name: str) -> dict:
                 "error": f"Provider returned invalid response: {type(joke)}",
                 "check_at": check_at,
             }
-        return {"success": True, "error": None, "check_at": check_at}
+        return {
+            "success": True,
+            "configured": True,
+            "error": None,
+            "check_at": check_at,
+        }
     except Exception as e:
         return {
             "success": False,
@@ -64,6 +80,8 @@ def main():
 
         if result["success"]:
             print(f"✓ {provider_name}: OK")
+        elif not result.get("configured", True):
+            print(f"- {provider_name}: NOT CONFIGURED — {result['error']}")
         else:
             print(f"✗ {provider_name}: FAILED — {result['error']}")
 
@@ -71,7 +89,12 @@ def main():
         health_checks = state.get("provider", {}).get("health_checks", {})
         for provider_name, result in health_results.items():
             check_record = health_checks.get(provider_name, {})
-            if result["success"]:
+            configured = result.get("configured", True)
+            check_record["configured"] = configured
+            if not configured:
+                check_record["last_check_success"] = None
+                check_record["consecutive_failures"] = 0
+            elif result["success"]:
                 check_record["last_check_success"] = True
                 check_record["consecutive_failures"] = 0
             else:
