@@ -1,5 +1,5 @@
 """
-Update provider health check state in bot_state.json.
+Update provider health check state.
 
 This script is called by the provider_health_check.yml workflow after running
 health tests. It records check results (success/failure) and tracks consecutive
@@ -69,7 +69,7 @@ def check_provider_health(provider_name: str) -> dict:
 
 
 def main():
-    """Run health checks and update bot_state.json."""
+    """Run health checks and update provider health state."""
     health_results = {}
 
     print(f"Running health checks for {len(ALL_PROVIDERS)} providers...")
@@ -108,7 +108,10 @@ def main():
         state.setdefault("provider", {})["health_checks"] = health_checks
         return health_checks
 
-    health_checks = bluesky_state.update_state(apply_health_results)
+    health_checks = bluesky_state.update_state(
+        apply_health_results,
+        domains="provider_health",
+    )
     print("Health check state saved.")
 
     # Check for critical failures (primary providers failing consistently).

@@ -1039,7 +1039,7 @@ class UnfollowIgnoreValidationTests(unittest.TestCase):
                 "nocontextbritss.bsky.social",
             }.issubset(resolved_handles)
         )
-        save_state.assert_called_once_with(state)
+        save_state.assert_called_once_with(state, domains="social")
 
     def test_load_source_list_uri_returns_empty_when_file_missing(self):
         missing_path = pathlib.Path("/tmp/does-not-exist-jokebot-starter-pack.json")
@@ -1121,7 +1121,7 @@ class UnfollowIgnoreValidationTests(unittest.TestCase):
             execute_unfollow_loop.call_args.args[2],
             [],
         )
-        save_state.assert_called_once_with(state)
+        save_state.assert_called_once_with(state, domains="social")
 
 
 class StarterPackManagerTests(unittest.TestCase):
@@ -3137,7 +3137,7 @@ class PostingTagSelectionTests(unittest.TestCase):
                                                             ):
                                                                 with mock.patch(
                                                                     "bluesky_post_joke.bluesky_state.update_state",
-                                                                    side_effect=lambda mutator: (
+                                                                    side_effect=lambda mutator, **kwargs: (
                                                                         mutator(
                                                                             bluesky_state._default_state()
                                                                         )
@@ -3976,11 +3976,31 @@ class StateRoundTripTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp_path = str(pathlib.Path(tmpdir) / "bot_state.json")
             with mock.patch("bluesky_state.STATE_FILE", tmp_path):
-                bluesky_state.save_state(state)
+                bluesky_state.save_state(state, domains="posting")
                 loaded = bluesky_state.load_state()
 
         self.assertEqual(len(loaded["posted_jokes"]), 1)
         self.assertEqual(loaded["posted_jokes"][0]["b64"], "dGVzdA==")
+
+    def test_save_and_load_round_trips_all_domains(self):
+        import tempfile
+
+        state = bluesky_state._default_state()
+        state["posted_jokes"] = [{"ts": 1, "b64": "YQ==", "provider": "jokeapi"}]
+        state["liked_replies"]["liked_uris"] = ["at://reply/1"]
+        state["reports"]["processed_notification_uris"] = ["at://report/1"]
+        state["provider"]["health_checks"]["jokeapi"]["last_check_success"] = True
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_path = str(pathlib.Path(tmpdir) / "bot_state.json")
+            with mock.patch("bluesky_state.STATE_FILE", tmp_path):
+                bluesky_state.save_state(
+                    state,
+                    domains=tuple(bluesky_state.STATE_FILENAMES),
+                )
+                loaded = bluesky_state.load_state()
+
+        self.assertEqual(loaded, state)
 
     def test_load_state_returns_default_when_file_missing(self):
         with mock.patch(
@@ -3991,8 +4011,8 @@ class StateRoundTripTests(unittest.TestCase):
         self.assertIn("posted_jokes", loaded)
         self.assertEqual(loaded["posted_jokes"], [])
 
-    def test_save_state_is_atomic_via_temp_file(self):
-        """save_state writes to a .tmp file then replaces atomically."""
+    def test_save_state_domain_is_atomic_via_temp_file(self):
+        """A domain save writes to a .tmp file then replaces atomically."""
         import tempfile
 
         state = bluesky_state._default_state()
@@ -4001,12 +4021,16 @@ class StateRoundTripTests(unittest.TestCase):
             tmp_path = str(pathlib.Path(tmpdir) / "bot_state.json")
             with mock.patch("bluesky_state.STATE_FILE", tmp_path):
                 with mock.patch("os.replace", wraps=os.replace) as mock_replace:
-                    bluesky_state.save_state(state)
+                    bluesky_state.save_state(state, domains="posting")
                     mock_replace.assert_called_once()
                     call_args = mock_replace.call_args[0]
-                    # Source should be a .tmp file; destination should be STATE_FILE.
                     self.assertTrue(call_args[0].endswith(".tmp"))
-                    self.assertEqual(call_args[1], tmp_path)
+                    self.assertEqual(
+                        pathlib.Path(call_args[1]),
+                        (
+                            pathlib.Path(tmpdir) / "state" / "posting_state.json"
+                        ).resolve(),
+                    )
 
     def test_load_state_normalises_old_state_missing_liked_replies(self):
         """Older state files without liked_replies are backfilled on load."""
@@ -4029,7 +4053,7 @@ class StateRoundTripTests(unittest.TestCase):
         self.assertIn("liked_replies", loaded)
         self.assertIn("liked_uris", loaded["liked_replies"])
 
-    def test_update_state_mutates_latest_disk_state(self):
+    def test_domain_updates_preserve_other_domain_state(self):
         import tempfile
 
         state = bluesky_state._default_state()
@@ -4037,14 +4061,17 @@ class StateRoundTripTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp_path = str(pathlib.Path(tmpdir) / "bot_state.json")
             with mock.patch("bluesky_state.STATE_FILE", tmp_path):
-                bluesky_state.save_state(state)
+                bluesky_state.save_state(
+                    state,
+                    domains=("posting", "social"),
+                )
 
                 stale_state = bluesky_state.load_state()
 
                 def add_liked_uri(latest):
                     bluesky_state.record_liked_reply_uri(latest, "at://reply/1")
 
-                bluesky_state.update_state(add_liked_uri)
+                bluesky_state.update_state(add_liked_uri, domains="social")
 
                 def record_provider(latest):
                     latest["provider"]["last_used"] = stale_state["provider"].get(
@@ -4052,7 +4079,7 @@ class StateRoundTripTests(unittest.TestCase):
                     )
                     bluesky_state.record_provider_used(latest, "jokeapi")
 
-                bluesky_state.update_state(record_provider)
+                bluesky_state.update_state(record_provider, domains="posting")
                 loaded = bluesky_state.load_state()
 
         self.assertIn("at://reply/1", loaded["liked_replies"]["liked_uris"])
@@ -4187,7 +4214,7 @@ class FollowFellowsMainTests(unittest.TestCase):
                         ):
                             with mock.patch(
                                 "bluesky_follow_fellows.bluesky_state.update_state",
-                                side_effect=lambda mutator: mutator(state),
+                                side_effect=lambda mutator, **kwargs: mutator(state),
                             ) as update_state:
                                 bluesky_follow_fellows.main()
 

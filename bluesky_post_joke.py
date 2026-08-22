@@ -446,7 +446,8 @@ def main():
                 post_cid=post_cid,
                 posting_hashtag_pool=posting_hashtag_pool,
                 cutoff=cutoff,
-            )
+            ),
+            domains="posting",
         )
 
 

@@ -1,14 +1,4 @@
-"""
-Unified runtime state for the joke bot.
-
-Replaces posted_jokes.txt with a single JSON file (bot_state.json) that
-tracks both joke history (base64-encoded, for deduplication) and provider
-rotation/failure state.
-
-Writes are performed atomically via a temp file + os.replace() to prevent
-corruption if a run is interrupted. File-level locking prevents concurrent
-mutations when two processes run simultaneously.
-"""
+"""Domain-based runtime state for the joke bot."""
 
 from __future__ import annotations
 
@@ -16,8 +6,9 @@ import json
 import os
 import sys
 import time
+from contextlib import ExitStack, contextmanager
 from pathlib import Path
-from typing import Callable, Optional, TypeVar
+from typing import Callable, Iterator, Optional, TypeVar
 
 # File locking support (Unix-like systems)
 if sys.platform != "win32":
@@ -26,6 +17,12 @@ else:
     fcntl = None  # type: ignore
 
 STATE_FILE = str(Path(__file__).resolve().parent / "bot_state.json")
+STATE_FILENAMES = {
+    "posting": "posting_state.json",
+    "social": "social_state.json",
+    "moderation": "moderation_state.json",
+    "provider_health": "provider_health_state.json",
+}
 FOLLOW_RESPONSE_GRACE_PERIOD_DAYS = 30
 FOLLOW_RESPONSE_GRACE_PERIOD_SECONDS = FOLLOW_RESPONSE_GRACE_PERIOD_DAYS * 24 * 60 * 60
 
@@ -39,6 +36,14 @@ PROVIDER_FAILURE_REASONS = (
     "provider_error",
 )
 T = TypeVar("T")
+
+
+def _state_files() -> dict[str, str]:
+    state_directory = Path(STATE_FILE).resolve().parent / "state"
+    return {
+        domain: str(state_directory / filename)
+        for domain, filename in STATE_FILENAMES.items()
+    }
 
 
 def _default_provider_failure() -> dict:
@@ -175,122 +180,134 @@ def _normalise_state(state: dict) -> dict:
     return state
 
 
+def _normalise_domains(domains: str | tuple[str, ...]) -> tuple[str, ...]:
+    selected = (domains,)
+    if isinstance(domains, tuple):
+        selected = domains
+    unknown = set(selected) - set(STATE_FILENAMES)
+    if unknown:
+        raise ValueError(f"Unknown state domain(s): {', '.join(sorted(unknown))}")
+    return selected
+
+
+@contextmanager
+def _state_locks(domains: tuple[str, ...], exclusive: bool) -> Iterator[None]:
+    if fcntl is None:
+        yield
+        return
+
+    lock_mode = fcntl.LOCK_EX if exclusive else fcntl.LOCK_SH
+    with ExitStack() as stack:
+        for domain in sorted(domains):
+            state_file = _state_files()[domain]
+            Path(state_file).parent.mkdir(parents=True, exist_ok=True)
+            lock_file = stack.enter_context(
+                open(state_file + ".lock", "w", encoding="utf-8")
+            )
+            fcntl.flock(lock_file.fileno(), lock_mode)
+            stack.callback(fcntl.flock, lock_file.fileno(), fcntl.LOCK_UN)
+        yield
+
+
 def load_state() -> dict:
-    """
-    Load state from disk with shared lock to prevent reading mid-write.
-
-    Returns a fresh default state if the file is missing or corrupt.
-    Uses fcntl.flock() on Unix-like systems to ensure read consistency.
-    """
-    if not os.path.exists(STATE_FILE):
+    """Load and assemble all state domains, with legacy-file fallback."""
+    domains = tuple(STATE_FILENAMES)
+    try:
+        with _state_locks(domains, exclusive=False):
+            return _load_state_unlocked()
+    except (json.JSONDecodeError, IOError) as exc:
+        print(f"Warning: could not read bot state; starting with empty state: {exc}")
         return _default_state()
 
-    # On Unix-like systems, acquire shared lock to prevent reading during writes.
-    lock_file = None
-    if fcntl is not None:
-        try:
-            lock_file = open(STATE_FILE + ".lock", "w", encoding="utf-8")
-            fcntl.flock(lock_file.fileno(), fcntl.LOCK_SH)
-        except (OSError, IOError) as e:
-            print(f"Warning: could not acquire read lock on {STATE_FILE}: {e}")
-            if lock_file:
-                lock_file.close()
-            lock_file = None
 
-    try:
-        return _load_state_unlocked()
-    except (json.JSONDecodeError, IOError):
-        print(f"Warning: could not read {STATE_FILE}; starting with empty state.")
-        return _default_state()
-    finally:
-        if lock_file is not None:
-            try:
-                fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
-                lock_file.close()
-            except (OSError, IOError) as e:
-                print(f"Warning: could not release read lock on {STATE_FILE}: {e}")
+def save_state(state: dict, *, domains: str | tuple[str, ...]) -> None:
+    """Atomically persist only the selected state domains."""
+    selected = _normalise_domains(domains)
+    with _state_locks(selected, exclusive=True):
+        for domain in selected:
+            _save_domain_unlocked(state, domain)
 
 
-def save_state(state: dict) -> None:
-    """
-    Write state to disk atomically with file-level locking to prevent concurrent mutations.
-
-    Uses fcntl.flock() on Unix-like systems (macOS, Linux) to ensure exclusive access
-    during read-modify-write operations. On Windows, relies on atomic os.replace().
-    """
-    # On Unix-like systems, acquire exclusive lock before writing.
-    lock_file = None
-    if fcntl is not None:
-        try:
-            lock_file = open(STATE_FILE + ".lock", "w", encoding="utf-8")
-            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
-        except (OSError, IOError) as e:
-            print(f"Warning: could not acquire lock on {STATE_FILE}: {e}")
-            if lock_file:
-                lock_file.close()
-            lock_file = None
-
-    try:
-        _save_state_unlocked(state)
-    finally:
-        if lock_file is not None:
-            try:
-                fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
-                lock_file.close()
-            except (OSError, IOError) as e:
-                print(f"Warning: could not release lock on {STATE_FILE}: {e}")
-
-
-def update_state(mutator: Callable[[dict], T]) -> T:
+def update_state(
+    mutator: Callable[[dict], T],
+    *,
+    domains: str | tuple[str, ...],
+) -> T:
     """
     Mutate state while holding the write lock for the full read-modify-write cycle.
 
     Prefer this for new state writers. It prevents a stale in-memory snapshot from
     overwriting changes written by another run between load_state() and save_state().
     """
-    lock_file = None
-    if fcntl is not None:
+    selected = _normalise_domains(domains)
+    with _state_locks(selected, exclusive=True):
         try:
-            lock_file = open(STATE_FILE + ".lock", "w", encoding="utf-8")
-            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
-        except (OSError, IOError) as e:
-            print(f"Warning: could not acquire lock on {STATE_FILE}: {e}")
-            if lock_file:
-                lock_file.close()
-            lock_file = None
-
-    try:
-        try:
-            state = (
-                _load_state_unlocked()
-                if os.path.exists(STATE_FILE)
-                else _default_state()
+            state = _load_state_unlocked()
+        except (json.JSONDecodeError, IOError) as exc:
+            print(
+                f"Warning: could not read bot state; starting with empty state: {exc}"
             )
-        except (json.JSONDecodeError, IOError):
-            print(f"Warning: could not read {STATE_FILE}; starting with empty state.")
             state = _default_state()
         result = mutator(state)
-        _save_state_unlocked(state)
+        for domain in selected:
+            _save_domain_unlocked(state, domain)
         return result
-    finally:
-        if lock_file is not None:
-            try:
-                fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
-                lock_file.close()
-            except (OSError, IOError) as e:
-                print(f"Warning: could not release lock on {STATE_FILE}: {e}")
 
 
 def _load_state_unlocked() -> dict:
-    with open(STATE_FILE, "r", encoding="utf-8") as f:
-        return _normalise_state(json.load(f))
+    legacy_state = {}
+    if os.path.exists(STATE_FILE):
+        with open(STATE_FILE, encoding="utf-8") as state_file:
+            legacy_state = json.load(state_file)
+    state = _normalise_state(legacy_state)
+
+    for domain, state_file_path in _state_files().items():
+        if not os.path.exists(state_file_path):
+            continue
+        with open(state_file_path, encoding="utf-8") as state_file:
+            payload = json.load(state_file)
+        if domain == "provider_health":
+            state["provider"]["health_checks"] = payload.get("health_checks", {})
+        else:
+            state.update(payload)
+    return _normalise_state(state)
 
 
-def _save_state_unlocked(state: dict) -> None:
-    tmp = STATE_FILE + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(state, f, indent=2)
-    os.replace(tmp, STATE_FILE)
+def _domain_payload(state: dict, domain: str) -> dict:
+    if domain == "posting":
+        provider = dict(state["provider"])
+        provider.pop("health_checks", None)
+        return {
+            "provider": provider,
+            "posting": state["posting"],
+            "posted_jokes": state["posted_jokes"],
+        }
+    if domain == "social":
+        return {
+            key: state[key]
+            for key in (
+                "liked_replies",
+                "unfollow_history",
+                "follow_grace",
+                "follow_tracking",
+                "follow_fellows",
+            )
+        }
+    if domain == "moderation":
+        return {"reports": state["reports"]}
+    return {"health_checks": state["provider"]["health_checks"]}
+
+
+def _save_domain_unlocked(state: dict, domain: str) -> None:
+    state_file_path = _state_files()[domain]
+    Path(state_file_path).parent.mkdir(parents=True, exist_ok=True)
+    temporary_path = state_file_path + ".tmp"
+    with open(temporary_path, "w", encoding="utf-8") as state_file:
+        json.dump(
+            _domain_payload(_normalise_state(state), domain), state_file, indent=2
+        )
+        state_file.write("\n")
+    os.replace(temporary_path, state_file_path)
 
 
 def get_next_provider(state: dict, override: str | None = None) -> str:

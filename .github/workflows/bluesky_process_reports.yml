@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: bot_state_writer
+  group: moderation_state_writer
   cancel-in-progress: false
 
 permissions:
@@ -76,10 +76,10 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add bot_state.json
+          git add state/moderation_state.json
 
           if git diff --cached --quiet; then
-            echo "No bot_state.json changes to commit."
+            echo "No moderation state changes to commit."
             exit 0
           fi
 

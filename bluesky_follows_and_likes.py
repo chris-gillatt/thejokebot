@@ -413,7 +413,7 @@ def like_replies(
         # Persist after each page so progress survives an interruption.
         if page_new_likes > 0:
             bluesky_state.prune_liked_reply_uris(state)
-            bluesky_state.save_state(state)
+            bluesky_state.save_state(state, domains="social")
 
         if stop_paging:
             break
@@ -499,7 +499,7 @@ def main() -> None:
     ) as exc:
         print(f"{Fore.RED}Interaction liking failed: {exc}{Style.RESET_ALL}")
 
-    bluesky_state.save_state(state)
+    bluesky_state.save_state(state, domains="social")
     print(f"{Fore.GREEN}Done.{Style.RESET_ALL}")
 
 

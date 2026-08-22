@@ -450,7 +450,7 @@ def main() -> None:
                 bluesky_state.record_acknowledged_report_uri(state, reply_uri)
                 print(f"Recorded permanent failure for: {masked_reply_uri}")
 
-    bluesky_state.save_state(state)
+    bluesky_state.save_state(state, domains="moderation")
 
     payload = {
         "source": "app.bsky.notification.listNotifications",

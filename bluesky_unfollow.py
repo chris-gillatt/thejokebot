@@ -414,7 +414,7 @@ def unfollow_users():
             f"missing_uri={skipped_missing_uri}.{Style.RESET_ALL}"
         )
         _state.prune_unfollow_history(state)
-        _state.save_state(state)
+        _state.save_state(state, domains="social")
         print(f"{Fore.GREEN}Unfollow actions completed! 🎉{Style.RESET_ALL}")
     except (
         ValueError,

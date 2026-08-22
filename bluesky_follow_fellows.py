@@ -143,7 +143,10 @@ def _persist_follow_fellows_state(followed_dids, rotation_step, total_tags):
         )
         bluesky_state.prune_follow_grace(latest_state)
 
-    bluesky_state.update_state(apply_follow_fellows_state_updates)
+    bluesky_state.update_state(
+        apply_follow_fellows_state_updates,
+        domains="social",
+    )
 
 
 def main():

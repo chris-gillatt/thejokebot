@@ -77,7 +77,7 @@ reconstructed from retained bot state.
 - Compact or roll up old six-hour snapshots when metrics JSON growth becomes
   material, while retaining useful long-term daily history.
 - Consider per-run provider attempt/fall-through history so rates and trends can
-  replace lifetime-only counters without inflating `bot_state.json` indefinitely.
+  replace lifetime-only counters without inflating posting state indefinitely.
 - Add schedule-adherence metrics (expected versus delivered joke posts and
   delayed/missed runs) once a durable per-run event model exists.
 - Add moderation outcomes such as reports received, accepted removals, and time
@@ -170,6 +170,19 @@ and twice-weekly schedule, the monthly unfollow run can process up to `1,200`
 eligible accounts. Explicit environment and numeric config overrides still take
 precedence, while batching, grace periods, protected accounts, deterministic
 selection, and throttle detection remain unchanged.
+
+### 5.44 Split runtime state by operational purpose ✓ Complete
+**Priority: Medium**
+
+Issue #90 identified that unrelated workflows rewrote one growing state file and
+therefore required a shared concurrency group plus offset schedules. Runtime
+state is now divided into posting, social, moderation, and provider-health files
+under `state/`.
+Each writer persists only its owned domain and uses a matching concurrency group;
+dashboard collection reads assembled state without serialising unrelated writers.
+Legacy `bot_state.json` remains a read fallback for compatibility but is no longer
+tracked or written. Provider-health persistence also uses bounded
+pull/rebase/push retries.
 
 ### 5.26 Retry transient Bluesky response failures ✓ Complete
 **Priority: High**
@@ -468,7 +481,7 @@ rely on the same fixed trio every run.
 **Resolution:** `bluesky_post_joke.py` now builds a deterministic rotating post-tag
 window from a resolved posting pool with explicit precedence
 (`posting.tag_pool` → `follow_fellows.hashtags` → `posting.hashtags`), tracks
-progression in `bot_state.json` via a dedicated `posting.tag_offset`, and
+progression in posting state via a dedicated `posting.tag_offset`, and
 advances offset after successful posts. Post-length preflight now calculates the
 joke budget per post from the selected hashtags (grapheme-aware), reducing
 avoidable rejections while preserving Bluesky 300-character safety checks. Added
@@ -480,11 +493,12 @@ selection, and dynamic length budget behaviour.
 ### 5.31 Finish state transaction migration ⏳ Deferred
 **Priority: Medium**
 
-`bluesky_state.update_state()` now supports locked read-modify-write persistence,
-and the posting, follow-fellows, and provider-health writers use it. Remaining
-direct `save_state()` workflows (`bluesky_process_reports.py`,
-`bluesky_follows_and_likes.py`, and `bluesky_unfollow.py`) still need careful
-migration because their state changes are interleaved with network-side actions.
+`bluesky_state.update_state()` supports domain-scoped locked read-modify-write
+persistence, and the posting, follow-fellows, and provider-health writers use it.
+Remaining direct `save_state()` workflows (`bluesky_process_reports.py`,
+`bluesky_follows_and_likes.py`, and `bluesky_unfollow.py`) now write only their
+owned domain, but still need careful transaction migration because state changes
+are interleaved with network-side actions.
 
 ---
 

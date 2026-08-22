@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: bot_state_writer
+  group: posting_state_writer
   cancel-in-progress: false
 
 permissions:
@@ -70,22 +70,22 @@ jobs:
           path: .agent-tmp/bluesky_session.txt.enc
           key: bluesky-session-v2-${{ github.ref_name }}-${{ github.run_id }}-${{ github.run_attempt }}
 
-      - name: Update bot_state.json
+      - name: Persist posting state
         run: |
           # Use the GitHub Bot user for Git and GitHub IAM.
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
           # Persist updated provider rotation and joke history.
-          git add bot_state.json
+          git add state/posting_state.json
 
           # Commit and push only when the file changed.
           if git diff --cached --quiet; then
-            echo "No bot_state.json changes to commit."
+            echo "No posting state changes to commit."
             exit 0
           fi
 
-          git commit -m "chore: update bot_state.json; GH run: ${GITHUB_RUN_NUMBER}"
+          git commit -m "chore(posting): update state; GH run: ${GITHUB_RUN_NUMBER}"
           for attempt in 1 2 3; do
             git pull --rebase origin main
             if git push; then

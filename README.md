@@ -205,7 +205,7 @@ paths compare DIDs, and handles can change.
 2. Unfollow the account from the live Bluesky account if it is currently followed.
 	The state change below prevents future auto-follows; it does not perform a
 	live unfollow by itself.
-3. In `bot_state.json`, add the DID to `unfollow_history.entries`:
+3. In `state/social_state.json`, add the DID to `unfollow_history.entries`:
 
 	```json
 	{
@@ -221,7 +221,7 @@ paths compare DIDs, and handles can change.
 5. Validate and commit the state update:
 
 	```bash
-	python -m json.tool bot_state.json >/dev/null
+	python -m json.tool state/social_state.json >/dev/null
 	ruff check .
 	ruff format --check .
 	python -m pytest tests/ -x -q
@@ -246,7 +246,7 @@ The report triggers an automated PR adding the joke to the denylist. Once a main
 
 | Script | Purpose |
 |---|---|
-| `bluesky_post_joke.py` | Fetch a joke, append a rotated hashtag window, post to Bluesky, maintain `bot_state.json`. |
+| `bluesky_post_joke.py` | Fetch a joke, append a rotated hashtag window, post to Bluesky, and maintain posting state. |
 | `bluesky_follows_and_likes.py` | Follow back new followers, follow users who interact with the bot's posts (replies, reposts, likes from the last 24 hours), and like replies to the bot's posts. |
 | `bluesky_unfollow.py` | Unfollow accounts that do not follow back, while respecting protected handles, starter-pack protections, and the 30-day follow grace window. |
 | `bluesky_follow_fellows.py` | Search a rotating set of humour/follow-back hashtags and follow up to the configured per-run cap. |
@@ -280,16 +280,19 @@ The report pipeline runs every 4 hours via `bluesky_process_reports`.
 
 1. It scans replies for `#report`, maps each report to a posted joke, and ignores duplicates.
 2. It writes proposals to `.agent-tmp/report_proposals.json` and opens denylist PRs via `bluesky_create_report_prs.py`.
-3. It updates state in `bot_state.json` so notifications and deletions are not reprocessed.
+3. It updates `state/moderation_state.json` so notifications and deletions are not reprocessed.
 4. Unresolved notifications are retried up to `BLUESKY_REPORT_MAX_UNRESOLVED_ATTEMPTS` before being marked processed.
 
-`bluesky_follow_fellows` currently runs every Wednesday and Friday at 00:00 UTC. `bluesky_unfollow` currently runs monthly on the first day at 12:00 UTC.
+`bluesky_follow_fellows` currently runs every Wednesday and Friday at 01:10 UTC. `bluesky_unfollow` currently runs monthly on the first day at 13:10 UTC.
 
 ## State
 
 | File | Purpose |
 |---|---|
-| `bot_state.json` | Runtime state: posted joke history (b64, deduplication), provider rotation, report notification checkpoints, unresolved report-attempt counters, deleted post URIs, liked reply URIs, unfollow history, follow-grace entries, and follow-fellows/posting tag-rotation offsets. |
+| `state/posting_state.json` | Provider rotation and failures, posted joke history, deduplication data, and posting tag rotation. |
+| `state/social_state.json` | Liked replies, unfollow history, follow grace and tracking, and follow-fellows tag rotation. |
+| `state/moderation_state.json` | Report notification checkpoints, unresolved attempts, acknowledgements, and deleted post URIs. |
+| `state/provider_health_state.json` | Latest provider health results and consecutive failure counters. |
 | `resources/jokebot_denylist.json` | Repository-backed denylist. Jokes added here are permanently excluded from posting. |
 | `resources/jokebot_jokebook.json` | Bundled offline joke pool (446 jokes). Used as final fallback when all live APIs are unavailable. |
 
