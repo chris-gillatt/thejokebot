@@ -53,7 +53,7 @@ git pull --rebase && git submodule update --init --recursive
 
 This is also available as a VS Code task: **Terminal → Run Task → Sync repo and submodules**.
 
-Run this at the start of each development session to ensure `references/` (atproto, bsky-docs, cookbook) are at their current upstream versions.
+Run this at the start of each development session to ensure `references/` (atproto, bps-website, cookbook) are at their current upstream versions.
 
 ## Local validation helper
 
