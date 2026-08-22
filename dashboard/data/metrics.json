@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "generated_at": "2026-08-22T07:21:27.539700+00:00",
+  "generated_at": "2026-08-22T07:28:59.410036+00:00",
   "account": {
     "handle": "thejokebot.bsky.social",
     "display_name": "The Joke Bot",
@@ -37,7 +37,7 @@
   "snapshots": [
     {
       "period_start": "2026-08-22T06:00:00+00:00",
-      "collected_at": "2026-08-22T07:21:27.539700+00:00",
+      "collected_at": "2026-08-22T07:28:59.410036+00:00",
       "followers": 6397,
       "following": 10821,
       "profile_posts": 2320
@@ -1062,6 +1062,7 @@
         "last_failure_at": 1787371961,
         "last_failure_reason": "All 5 jokes from 'icanhazdadjoke' were recent duplicates or too long",
         "healthy": true,
+        "configured": null,
         "last_health_check_at": 1787300144,
         "consecutive_health_failures": 0
       },
@@ -1074,6 +1075,7 @@
         "last_failure_at": null,
         "last_failure_reason": null,
         "healthy": true,
+        "configured": null,
         "last_health_check_at": 1787300144,
         "consecutive_health_failures": 0
       },
@@ -1086,6 +1088,7 @@
         "last_failure_at": 1787371961,
         "last_failure_reason": "All 5 jokes from 'jokeapi' were recent duplicates or too long",
         "healthy": true,
+        "configured": null,
         "last_health_check_at": 1787300144,
         "consecutive_health_failures": 0
       },
@@ -1098,6 +1101,7 @@
         "last_failure_at": null,
         "last_failure_reason": null,
         "healthy": false,
+        "configured": null,
         "last_health_check_at": 1787300144,
         "consecutive_health_failures": 98
       },
@@ -1110,6 +1114,7 @@
         "last_failure_at": null,
         "last_failure_reason": null,
         "healthy": true,
+        "configured": null,
         "last_health_check_at": 1787300144,
         "consecutive_health_failures": 0
       }
@@ -1117,21 +1122,21 @@
   },
   "automation": {
     "window_days": 30,
-    "collected_at": "2026-08-22T07:21:27.539700+00:00",
-    "runs": 834,
-    "successful": 822,
+    "collected_at": "2026-08-22T07:28:59.410036+00:00",
+    "runs": 840,
+    "successful": 824,
     "failed": 8,
     "cancelled": 3,
     "success_rate": 99.0,
     "workflows": [
       {
         "name": "bluesky_dashboard",
-        "runs": 1,
+        "runs": 2,
         "successful": 1,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-08-22T07:04:58Z",
-        "last_conclusion": "success"
+        "last_run_at": "2026-08-22T07:28:38Z",
+        "last_conclusion": null
       },
       {
         "name": "bluesky_follow_fellows",
@@ -1198,12 +1203,12 @@
       },
       {
         "name": "codeql",
-        "runs": 19,
+        "runs": 20,
         "successful": 19,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-08-22T07:06:36Z",
-        "last_conclusion": "success"
+        "last_run_at": "2026-08-22T07:28:38Z",
+        "last_conclusion": null
       },
       {
         "name": "pr_auto_merge",
@@ -1216,38 +1221,38 @@
       },
       {
         "name": "provider_health_check",
-        "runs": 30,
+        "runs": 31,
         "successful": 30,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-08-21T08:15:28Z",
-        "last_conclusion": "success"
+        "last_run_at": "2026-08-22T07:28:52Z",
+        "last_conclusion": null
       },
       {
         "name": "python_tests",
-        "runs": 15,
+        "runs": 16,
         "successful": 15,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-08-22T07:06:36Z",
-        "last_conclusion": "success"
+        "last_run_at": "2026-08-22T07:28:38Z",
+        "last_conclusion": null
       },
       {
         "name": "ruff_quality",
-        "runs": 15,
-        "successful": 15,
+        "runs": 16,
+        "successful": 16,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-08-22T07:06:36Z",
+        "last_run_at": "2026-08-22T07:28:38Z",
         "last_conclusion": "success"
       },
       {
         "name": "validate_runtime_config",
-        "runs": 15,
-        "successful": 15,
+        "runs": 16,
+        "successful": 16,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-08-22T07:06:36Z",
+        "last_run_at": "2026-08-22T07:28:38Z",
         "last_conclusion": "success"
       }
     ]
