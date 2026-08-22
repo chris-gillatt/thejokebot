@@ -526,6 +526,7 @@ Do not revisit these without a concrete operational reason.
 - v1.32: Fixed posting hashtag diversity regression for issue #76 by introducing explicit posting-pool precedence (`posting.tag_pool`, then `follow_fellows.hashtags`, then `posting.hashtags`) and restoring a broad default posting tag pool. Added regression tests for precedence and varied hashtag selection across posting offsets.
 - v1.33: Staggered state-writer workflow schedules so `bluesky_post_joke` is no longer cancelled by same-minute `bot_state_writer` queue contention. Runtime schedule metadata remains aligned with the workflow YAML.
 - v1.34: Fixed issue #87 by using the existing DID-based `unfollow_history` model. `follow_back()` now skips previously unfollowed DIDs, and `wt5here.bsky.social` is recorded as a manual block in state rather than introducing a parallel handle-based block list.
+- v1.35: Published the issue #62 statistics dashboard through GitHub Pages, with six-hour public Bluesky snapshots, an official latest-joke embed, account and activity trends, aggregate engagement, and identifier-safe generated data.
 
 ## 9. Code Review: Issues Resolved
 
