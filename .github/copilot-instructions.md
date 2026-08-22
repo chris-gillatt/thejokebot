@@ -36,6 +36,7 @@
 ## References Directory Policy
 - The `references/` directory contains read-only external resources (submodules, documentation, cookbooks).
 - Never make changes to content within `references/`. All content is considered read-only.
+- Exclude `references/**` from every first-party test, coverage, lint, static-analysis, and editor-analysis configuration. Validate new quality tools against first-party files only.
 - Only pull in updates from upstream sources. Changes should only flow in one direction: from upstream → local.
 - If any changes appear pending in submodules under `references/`, clear them immediately using:
   - `git restore references/`

@@ -1,6 +1,9 @@
 {
   "python.envFile": "${workspaceFolder}/.env",
   "python.terminal.useEnvFile": true,
+  "python.analysis.exclude": [
+    "references/**"
+  ],
   "git.ignoredRepositories": [
     "${workspaceFolder}/references/atproto",
     "${workspaceFolder}/references/bps-website",

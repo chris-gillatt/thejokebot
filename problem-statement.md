@@ -143,6 +143,15 @@ or unrecognised run. The page exposes follows alongside jokes and unfollows,
 marks reconstructed account history, and links to the source repository from
 both the header and footer.
 
+### 5.41 Exclude reference submodules from quality analysis ✓ Complete
+**Priority: Medium**
+
+All first-party quality tooling now excludes the read-only `references/`
+submodules explicitly. Ruff and coverage retain their root exclusions; pytest
+declares first-party test discovery; Pylance suppresses reference analysis; and
+local plus GitHub CodeQL share one `paths-ignore` configuration. Actionlint was
+verified to discover only the root repository's workflow directory.
+
 ### 5.26 Retry transient Bluesky response failures ✓ Complete
 **Priority: High**
 

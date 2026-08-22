@@ -11,4 +11,8 @@ max-complexity = 10
 
 [tool.coverage.run]
 # Measure all first-party source files; skip read-only submodules.
-omit = ["references/*"]
+omit = ["references/**"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+norecursedirs = ["references"]

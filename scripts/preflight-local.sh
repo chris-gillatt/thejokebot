@@ -48,6 +48,7 @@ echo "==> Unit tests"
 if command -v codeql >/dev/null 2>&1; then
   CODEQL_TMP="$REPO_ROOT/.agent-tmp/codeql-local"
   CODEQL_SUITE="codeql/python-queries:codeql-suites/python-security-and-quality.qls"
+  CODEQL_CONFIG="$REPO_ROOT/.github/codeql/codeql-config.yml"
   mkdir -p "$CODEQL_TMP"
 
   echo "==> CodeQL query pack check"
@@ -64,6 +65,7 @@ if command -v codeql >/dev/null 2>&1; then
   codeql database create "$CODEQL_TMP/db" \
     --language=python \
     --source-root "$REPO_ROOT" \
+    --codescanning-config "$CODEQL_CONFIG" \
     --overwrite
 
   echo "==> CodeQL analyse (python-security-and-quality)"
