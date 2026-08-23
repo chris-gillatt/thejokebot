@@ -183,6 +183,9 @@ dashboard collection reads assembled state without serialising unrelated writers
 Legacy `bot_state.json` remains a read fallback for compatibility but is no longer
 tracked or written. Provider-health persistence also uses bounded
 pull/rebase/push retries.
+Domain reads are isolated so one corrupt file cannot discard healthy state from
+another domain, and updates refuse to overwrite a selected domain that could not
+be read safely.
 
 ### 5.26 Retry transient Bluesky response failures ✓ Complete
 **Priority: High**

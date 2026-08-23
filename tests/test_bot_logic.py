@@ -4085,6 +4085,85 @@ class StateRoundTripTests(unittest.TestCase):
         self.assertIn("at://reply/1", loaded["liked_replies"]["liked_uris"])
         self.assertEqual(loaded["provider"]["last_used"], "jokeapi")
 
+    def test_domain_update_ignores_corruption_in_unrelated_domain(self):
+        import tempfile
+
+        state = bluesky_state._default_state()
+        state["liked_replies"]["liked_uris"] = ["at://reply/keep"]
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_path = str(pathlib.Path(tmpdir) / "bot_state.json")
+            with mock.patch("bluesky_state.STATE_FILE", tmp_path):
+                bluesky_state.save_state(
+                    state,
+                    domains=("posting", "social"),
+                )
+                posting_path = pathlib.Path(tmpdir) / "state" / "posting_state.json"
+                posting_path.write_text("{broken", encoding="utf-8")
+
+                bluesky_state.update_state(
+                    lambda latest: latest["liked_replies"].update(last_checked_at=123),
+                    domains="social",
+                )
+
+                social_path = pathlib.Path(tmpdir) / "state" / "social_state.json"
+                social_payload = json.loads(social_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(
+            social_payload["liked_replies"],
+            {
+                "liked_uris": ["at://reply/keep"],
+                "last_checked_at": 123,
+            },
+        )
+
+    def test_domain_update_refuses_to_overwrite_corrupt_selected_domain(self):
+        import tempfile
+
+        state = bluesky_state._default_state()
+        mutator = mock.Mock()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_path = str(pathlib.Path(tmpdir) / "bot_state.json")
+            with mock.patch("bluesky_state.STATE_FILE", tmp_path):
+                bluesky_state.save_state(state, domains="social")
+                social_path = pathlib.Path(tmpdir) / "state" / "social_state.json"
+                social_path.write_text("{broken", encoding="utf-8")
+
+                with self.assertRaises(bluesky_state.StateReadError) as raised:
+                    bluesky_state.update_state(mutator, domains="social")
+
+                persisted = social_path.read_text(encoding="utf-8")
+
+        self.assertEqual(raised.exception.domains, ("social",))
+        self.assertEqual(persisted, "{broken")
+        mutator.assert_not_called()
+
+    def test_load_state_preserves_healthy_domains_when_one_is_corrupt(self):
+        import tempfile
+
+        state = bluesky_state._default_state()
+        state["posted_jokes"] = [{"ts": 1, "b64": "YQ==", "provider": "jokeapi"}]
+        state["liked_replies"]["liked_uris"] = ["at://reply/keep"]
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_path = str(pathlib.Path(tmpdir) / "bot_state.json")
+            with mock.patch("bluesky_state.STATE_FILE", tmp_path):
+                bluesky_state.save_state(
+                    state,
+                    domains=("posting", "social"),
+                )
+                posting_path = pathlib.Path(tmpdir) / "state" / "posting_state.json"
+                posting_path.write_text("{broken", encoding="utf-8")
+
+                loaded = bluesky_state.load_state()
+
+        self.assertEqual(loaded["posted_jokes"], [])
+        self.assertEqual(
+            loaded["liked_replies"]["liked_uris"],
+            ["at://reply/keep"],
+        )
+
 
 class FollowFellowsMainTests(unittest.TestCase):
     """Smoke tests for bluesky_follow_fellows.main() (CS-9 coverage gap)."""

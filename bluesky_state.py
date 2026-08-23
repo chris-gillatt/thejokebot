@@ -36,6 +36,19 @@ PROVIDER_FAILURE_REASONS = (
     "provider_error",
 )
 T = TypeVar("T")
+StateReadFailures = dict[str, tuple[str, Exception]]
+
+
+class StateReadError(RuntimeError):
+    """Raised when an update cannot safely read a selected state domain."""
+
+    def __init__(self, failures: StateReadFailures) -> None:
+        self.domains = tuple(sorted(failures))
+        details = "; ".join(
+            f"{domain} ({path}): {error}"
+            for domain, (path, error) in sorted(failures.items())
+        )
+        super().__init__(f"Could not read selected state domain(s): {details}")
 
 
 def _state_files() -> dict[str, str]:
@@ -214,10 +227,12 @@ def load_state() -> dict:
     domains = tuple(STATE_FILENAMES)
     try:
         with _state_locks(domains, exclusive=False):
-            return _load_state_unlocked()
-    except (json.JSONDecodeError, IOError) as exc:
+            state, failures = _load_state_unlocked()
+    except OSError as exc:
         print(f"Warning: could not read bot state; starting with empty state: {exc}")
         return _default_state()
+    _warn_state_read_failures(failures)
+    return state
 
 
 def save_state(state: dict, *, domains: str | tuple[str, ...]) -> None:
@@ -241,36 +256,52 @@ def update_state(
     """
     selected = _normalise_domains(domains)
     with _state_locks(selected, exclusive=True):
-        try:
-            state = _load_state_unlocked()
-        except (json.JSONDecodeError, IOError) as exc:
-            print(
-                f"Warning: could not read bot state; starting with empty state: {exc}"
-            )
-            state = _default_state()
+        state, failures = _load_state_unlocked()
+        selected_failures = {
+            domain: failures[domain] for domain in selected if domain in failures
+        }
+        if selected_failures:
+            raise StateReadError(selected_failures)
+        _warn_state_read_failures(failures)
         result = mutator(state)
         for domain in selected:
             _save_domain_unlocked(state, domain)
         return result
 
 
-def _load_state_unlocked() -> dict:
+def _load_state_unlocked() -> tuple[dict, StateReadFailures]:
     legacy_state = {}
+    legacy_failure = None
     if os.path.exists(STATE_FILE):
-        with open(STATE_FILE, encoding="utf-8") as state_file:
-            legacy_state = json.load(state_file)
+        try:
+            with open(STATE_FILE, encoding="utf-8") as state_file:
+                legacy_state = json.load(state_file)
+        except (json.JSONDecodeError, OSError) as exc:
+            legacy_failure = (STATE_FILE, exc)
     state = _normalise_state(legacy_state)
+    failures: StateReadFailures = {}
 
     for domain, state_file_path in _state_files().items():
         if not os.path.exists(state_file_path):
+            if legacy_failure is not None:
+                failures[domain] = legacy_failure
             continue
-        with open(state_file_path, encoding="utf-8") as state_file:
-            payload = json.load(state_file)
+        try:
+            with open(state_file_path, encoding="utf-8") as state_file:
+                payload = json.load(state_file)
+        except (json.JSONDecodeError, OSError) as exc:
+            failures[domain] = (state_file_path, exc)
+            continue
         if domain == "provider_health":
             state["provider"]["health_checks"] = payload.get("health_checks", {})
         else:
             state.update(payload)
-    return _normalise_state(state)
+    return _normalise_state(state), failures
+
+
+def _warn_state_read_failures(failures: StateReadFailures) -> None:
+    for domain, (path, error) in sorted(failures.items()):
+        print(f"Warning: could not read {domain} state from {path}: {error}")
 
 
 def _domain_payload(state: dict, domain: str) -> dict:
