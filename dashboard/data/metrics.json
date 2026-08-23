@@ -1,6 +1,6 @@
 {
-  "schema_version": 3,
-  "generated_at": "2026-08-23T06:45:36.865108+00:00",
+  "schema_version": 4,
+  "generated_at": "2026-08-23T07:17:59.051704+00:00",
   "account": {
     "handle": "thejokebot.bsky.social",
     "display_name": "The Joke Bot",
@@ -13,7 +13,7 @@
     "text": "Why did the snowboarder open a coffee shop?\n\nHe was tired of all the moguls and wanted grounds to chill.\n\n#dadjoke #humour #mumjokes",
     "created_at": "2026-08-23T04:14:30.117750+00:00",
     "engagement": {
-      "likes": 1,
+      "likes": 2,
       "replies": 0,
       "reposts": 0,
       "quotes": 0,
@@ -21,12 +21,12 @@
     }
   },
   "current": {
-    "followers": 6401,
+    "followers": 6402,
     "following": 10824,
     "profile_posts": 2326,
     "joke_posts": 687,
     "engagement": {
-      "likes": 3784,
+      "likes": 3786,
       "replies": 269,
       "reposts": 288,
       "quotes": 32,
@@ -181,8 +181,8 @@
     },
     {
       "period_start": "2026-08-23T06:00:00+00:00",
-      "collected_at": "2026-08-23T06:45:36.865108+00:00",
-      "followers": 6401,
+      "collected_at": "2026-08-23T07:17:59.051704+00:00",
+      "followers": 6402,
       "following": 10824,
       "profile_posts": 2326,
       "source": "bluesky_snapshot"
@@ -1402,6 +1402,19 @@
       "unfollows": 0
     }
   ],
+  "discovery_activity": {
+    "window_days": 30,
+    "coverage_start": null,
+    "completed_runs": 0,
+    "selected": 0,
+    "followed": 0,
+    "failed": 0,
+    "completion_rate": null,
+    "average_per_run": null,
+    "median_per_run": null,
+    "zero_result_runs": 0,
+    "runs": []
+  },
   "workflow_activity": {
     "window_days": 30,
     "coverage_start": "2026-08-08T06:33:26+00:00",
@@ -2716,7 +2729,7 @@
         "name": "groandeck",
         "published": 186,
         "visible_posts": 186,
-        "average_interactions": 5.62,
+        "average_interactions": 5.63,
         "fallthroughs": 0,
         "rejection_counts": {
           "duplicate": 0,
@@ -2792,20 +2805,20 @@
   },
   "automation": {
     "window_days": 30,
-    "collected_at": "2026-08-23T06:45:36.865108+00:00",
-    "runs": 892,
-    "successful": 879,
+    "collected_at": "2026-08-23T07:17:59.051704+00:00",
+    "runs": 900,
+    "successful": 885,
     "failed": 8,
     "cancelled": 3,
     "success_rate": 99.1,
     "workflows": [
       {
         "name": "bluesky_dashboard",
-        "runs": 14,
-        "successful": 13,
+        "runs": 15,
+        "successful": 14,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-08-23T06:45:13Z",
+        "last_run_at": "2026-08-23T07:17:34Z",
         "last_status": "in_progress",
         "last_conclusion": null
       },
@@ -2821,8 +2834,8 @@
       },
       {
         "name": "bluesky_follows_and_likes",
-        "runs": 360,
-        "successful": 355,
+        "runs": 359,
+        "successful": 354,
         "failed": 4,
         "cancelled": 1,
         "last_run_at": "2026-08-23T06:32:21Z",
@@ -2881,13 +2894,13 @@
       },
       {
         "name": "codeql",
-        "runs": 30,
-        "successful": 30,
+        "runs": 32,
+        "successful": 31,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-08-23T06:34:54Z",
-        "last_status": "completed",
-        "last_conclusion": "success"
+        "last_run_at": "2026-08-23T07:17:34Z",
+        "last_status": "in_progress",
+        "last_conclusion": null
       },
       {
         "name": "pr_auto_merge",
@@ -2911,31 +2924,31 @@
       },
       {
         "name": "python_tests",
-        "runs": 26,
-        "successful": 26,
+        "runs": 28,
+        "successful": 27,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-08-23T06:34:54Z",
-        "last_status": "completed",
-        "last_conclusion": "success"
+        "last_run_at": "2026-08-23T07:17:34Z",
+        "last_status": "in_progress",
+        "last_conclusion": null
       },
       {
         "name": "ruff_quality",
-        "runs": 26,
-        "successful": 26,
+        "runs": 28,
+        "successful": 28,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-08-23T06:34:54Z",
+        "last_run_at": "2026-08-23T07:17:34Z",
         "last_status": "completed",
         "last_conclusion": "success"
       },
       {
         "name": "validate_runtime_config",
-        "runs": 26,
-        "successful": 26,
+        "runs": 28,
+        "successful": 28,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-08-23T06:34:54Z",
+        "last_run_at": "2026-08-23T07:17:34Z",
         "last_status": "completed",
         "last_conclusion": "success"
       }
