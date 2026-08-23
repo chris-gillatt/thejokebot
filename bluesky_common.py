@@ -1,5 +1,6 @@
 import os
 import random
+import tempfile
 import time
 from email.utils import parsedate_to_datetime
 from pathlib import Path
@@ -152,11 +153,27 @@ def _persist_session_string_to_file(client, path):
         )
         return False
 
+    temporary_path = None
+    temporary_fd = None
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(f"{session_string}\n", encoding="utf-8")
-        path.chmod(0o600)
+        temporary_fd, temporary_name = tempfile.mkstemp(
+            prefix=f".{path.name}.", suffix=".tmp", dir=path.parent
+        )
+        temporary_path = Path(temporary_name)
+        os.fchmod(temporary_fd, 0o600)
+        session_file = os.fdopen(temporary_fd, "w", encoding="utf-8")
+        temporary_fd = None
+        with session_file:
+            session_file.write(f"{session_string}\n")
+            session_file.flush()
+            os.fsync(session_file.fileno())
+        os.replace(temporary_path, path)
     except OSError as exc:
+        if temporary_fd is not None:
+            os.close(temporary_fd)
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
         print(
             f"Warning: failed to persist Bluesky session file at {path}: {type(exc).__name__}: {exc}."
         )

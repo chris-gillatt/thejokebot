@@ -644,21 +644,22 @@ class LoginClientRetryTests(unittest.TestCase):
             )
             self.assertEqual(session_path.stat().st_mode & 0o777, 0o600)
 
-    def test_persist_session_string_to_file_returns_false_when_chmod_fails(self):
+    def test_persist_session_string_to_file_leaves_no_token_when_fchmod_fails(self):
         mock_client = mock.Mock()
         mock_client.export_session_string.return_value = "session-token"
 
         with tempfile.TemporaryDirectory() as temp_dir:
             session_path = pathlib.Path(temp_dir) / "bluesky_session.txt"
-            with mock.patch.object(
-                pathlib.Path,
-                "chmod",
-                side_effect=OSError("permission denied"),
+            with mock.patch(
+                "bluesky_common.os.fchmod", side_effect=OSError("permission denied")
             ):
                 with mock.patch("builtins.print") as print_mock:
                     persisted = bluesky_common._persist_session_string_to_file(
                         mock_client, session_path
                     )
+
+            self.assertFalse(session_path.exists())
+            self.assertEqual(list(pathlib.Path(temp_dir).iterdir()), [])
 
         self.assertFalse(persisted)
         self.assertTrue(
@@ -667,6 +668,25 @@ class LoginClientRetryTests(unittest.TestCase):
                 for call in print_mock.call_args_list
             )
         )
+
+    def test_persist_session_string_to_file_atomically_replaces_existing_file(self):
+        mock_client = mock.Mock()
+        mock_client.export_session_string.return_value = "new-session-token"
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            session_path = pathlib.Path(temp_dir) / "bluesky_session.txt"
+            session_path.write_text("old-session-token\n", encoding="utf-8")
+            session_path.chmod(0o644)
+
+            persisted = bluesky_common._persist_session_string_to_file(
+                mock_client, session_path
+            )
+
+            self.assertTrue(persisted)
+            self.assertEqual(
+                session_path.read_text(encoding="utf-8"), "new-session-token\n"
+            )
+            self.assertEqual(session_path.stat().st_mode & 0o777, 0o600)
 
 
 class NetworkRetryHelperTests(unittest.TestCase):
