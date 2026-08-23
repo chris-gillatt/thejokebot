@@ -213,6 +213,25 @@ DID policy, reads the complete live block set, and recreates only missing blocks
 before any follow or like processing. Five existing live blocks were backfilled
 to the repository variable without committing or logging their identifiers.
 
+### 5.46 Harden Bluesky session-file persistence ✓ Complete
+**Priority: High**
+
+Persist exported session credentials through an owner-only temporary file before
+atomically replacing the live cache path. Permission, write, flush, and replace
+failures remove temporary token material and leave no newly exposed destination.
+Focused tests cover restrictive permissions, failed hardening, and replacement
+of an existing session file.
+
+### 5.47 Make provider health monitoring deterministic ✓ Complete
+**Priority: Medium**
+
+Keep live provider connectivity in the scheduled health updater and use mocked
+provider functions in the ordinary test suite. The workflow now probes each
+provider once per run, persists every result, and applies its existing alert
+threshold only after two consecutive primary-provider failures. Tests cover
+successful responses, exceptions, streak escalation, recovery, and deliberately
+unconfigured optional providers without requiring network access.
+
 ### 5.26 Retry transient Bluesky response failures ✓ Complete
 **Priority: High**
 
