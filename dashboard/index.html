@@ -15,12 +15,12 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=5" />
+    <link rel="stylesheet" href="styles.css?v=6" />
     <script
       src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"
       defer
     ></script>
-    <script src="app.js?v=4" defer></script>
+    <script src="app.js?v=5" defer></script>
   </head>
   <body>
     <noscript>
@@ -141,6 +141,60 @@
                 </div>
               </details>
             </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="dashboard-section discovery-section" aria-labelledby="discovery-heading">
+        <div class="section-inner">
+          <div class="section-heading discovery-heading">
+            <div>
+              <p class="eyebrow">Network growth</p>
+              <h2 id="discovery-heading">Discovery activity</h2>
+            </div>
+            <p class="discovery-note">Aggregate account discovery outcomes. No account or targeting details are retained.</p>
+          </div>
+
+          <div class="discovery-summary" aria-label="Discovery activity summary">
+            <div class="discovery-stat">
+              <span>Accounts added</span>
+              <strong id="discovery-followed">--</strong>
+              <small id="discovery-coverage">Collecting history</small>
+            </div>
+            <div class="discovery-stat">
+              <span>Runs observed</span>
+              <strong id="discovery-runs">--</strong>
+              <small>Rolling 30 days</small>
+            </div>
+            <div class="discovery-stat">
+              <span>Completion</span>
+              <strong id="discovery-completion">--</strong>
+              <small id="discovery-zero-runs">No run history yet</small>
+            </div>
+            <div class="discovery-stat">
+              <span>Typical run</span>
+              <strong id="discovery-median">--</strong>
+              <small id="discovery-average">Median accounts added</small>
+            </div>
+          </div>
+
+          <div class="chart-block discovery-chart-block">
+            <div class="chart-title">
+              <h3>Recent outcomes</h3>
+              <span>Accounts considered and added per completed run</span>
+            </div>
+            <div class="chart-frame">
+              <canvas id="discovery-chart"></canvas>
+            </div>
+            <details>
+              <summary>View discovery data</summary>
+              <div class="table-scroll">
+                <table id="discovery-table">
+                  <thead><tr><th>Date</th><th>Considered</th><th>Added</th><th>Completion</th></tr></thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </details>
           </div>
         </div>
       </section>

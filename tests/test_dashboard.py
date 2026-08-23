@@ -238,7 +238,7 @@ class DashboardCollectorTests(unittest.TestCase):
 
     def test_rejects_unknown_schema_version(self):
         with self.assertRaisesRegex(ValueError, "schema version"):
-            dashboard._normalise_existing({"schema_version": 4, "snapshots": []})
+            dashboard._normalise_existing({"schema_version": 5, "snapshots": []})
 
     def test_normalise_existing_upgrades_schema_one(self):
         existing = {"schema_version": 1, "snapshots": []}
@@ -261,6 +261,9 @@ class DashboardCollectorTests(unittest.TestCase):
                 "Unexpected error trying to follow did:...failed: timeout",
             ]
         )
+        discovery_summary = (
+            "Discovery summary: selected=8, followed=6, failed=2, dry_run=false."
+        )
 
         self.assertEqual(
             dashboard._workflow_activity_counts(
@@ -270,7 +273,13 @@ class DashboardCollectorTests(unittest.TestCase):
         )
         self.assertEqual(
             dashboard._workflow_activity_counts("bluesky_follow_fellows", discovery),
-            {"follows": 7, "unfollows": 0},
+            {"follows": 7, "unfollows": 0, "selected": 8, "failed": 1},
+        )
+        self.assertEqual(
+            dashboard._workflow_activity_counts(
+                "bluesky_follow_fellows", discovery_summary
+            ),
+            {"follows": 6, "unfollows": 0, "selected": 8, "failed": 2},
         )
         self.assertEqual(
             dashboard._workflow_activity_counts(
@@ -342,6 +351,44 @@ class DashboardCollectorTests(unittest.TestCase):
         fetch_logs.assert_not_called()
         self.assertEqual(activity["expired_before"], "2026-08-20T00:00:00+00:00")
         self.assertEqual([item["id"] for item in activity["runs"]], [2])
+
+    def test_summarises_discovery_runs_without_identifiers(self):
+        activity = {
+            "window_days": 30,
+            "runs": [
+                {
+                    "workflow": "bluesky_follow_fellows",
+                    "created_at": "2026-08-20T01:10:00Z",
+                    "selected": 8,
+                    "follows": 6,
+                    "failed": 2,
+                },
+                {
+                    "workflow": "bluesky_follow_fellows",
+                    "created_at": "2026-08-22T01:10:00Z",
+                    "selected": 5,
+                    "follows": 0,
+                    "failed": 5,
+                },
+                {
+                    "workflow": "bluesky_follows_and_likes",
+                    "created_at": "2026-08-22T02:20:00Z",
+                    "follows": 3,
+                },
+            ],
+        }
+
+        summary = dashboard._discovery_metrics(activity)
+
+        self.assertEqual(summary["completed_runs"], 2)
+        self.assertEqual(summary["selected"], 13)
+        self.assertEqual(summary["followed"], 6)
+        self.assertEqual(summary["failed"], 7)
+        self.assertEqual(summary["completion_rate"], 46.2)
+        self.assertEqual(summary["average_per_run"], 3.0)
+        self.assertEqual(summary["median_per_run"], 3.0)
+        self.assertEqual(summary["zero_result_runs"], 1)
+        self.assertNotIn("id", json.dumps(summary))
 
     def test_reconstructs_following_and_posts_without_inventing_followers(self):
         now = datetime(2026, 8, 22, 6, tzinfo=timezone.utc)

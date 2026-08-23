@@ -11,6 +11,7 @@ import zipfile
 from collections import Counter
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from statistics import median
 
 import requests
 
@@ -20,7 +21,7 @@ from bluesky_common import retry_network_call
 PUBLIC_API_BASE = "https://public.api.bsky.app/xrpc"
 GITHUB_API_BASE = "https://api.github.com"
 METRICS_FILE = Path(__file__).resolve().parent / "dashboard" / "data" / "metrics.json"
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 MAX_FEED_PAGES = 100
 MAX_FEED_RUNTIME_SECONDS = 120
 MAX_WORKFLOW_PAGES = 20
@@ -246,13 +247,32 @@ def _workflow_activity_counts(workflow_name: str, log_text: str) -> dict | None:
         follows = len(re.findall(r"\bFollowed (?:interactor )?did:[^\s]+", plain_text))
         return {"follows": follows, "unfollows": 0}
     if workflow_name == "bluesky_follow_fellows":
+        summaries = re.findall(
+            r"Discovery summary: selected=(\d+), followed=(\d+), "
+            r"failed=(\d+), dry_run=false\.",
+            plain_text,
+        )
+        if summaries:
+            selected, followed, failed = (int(value) for value in summaries[-1])
+            return {
+                "follows": followed,
+                "unfollows": 0,
+                "selected": selected,
+                "failed": failed,
+            }
         planned = re.findall(r"Total users to follow: (\d+)", plain_text)
         if not planned:
             return None
         failures = len(
             re.findall(r"Unexpected error trying to follow did:[^\s]+", plain_text)
         )
-        return {"follows": max(0, int(planned[-1]) - failures), "unfollows": 0}
+        selected = int(planned[-1])
+        return {
+            "follows": max(0, selected - failures),
+            "unfollows": 0,
+            "selected": selected,
+            "failed": failures,
+        }
     if workflow_name == "bluesky_manage_starter_pack":
         follows = len(re.findall(r"\bFollowed list member did:[^\s]+", plain_text))
         return {"follows": follows, "unfollows": 0}
@@ -337,6 +357,7 @@ def collect_workflow_activity(
         cached_runs[int(run_id)] = {
             "id": int(run_id),
             "attempt": attempt,
+            "workflow": workflow_name,
             "created_at": created_at,
             **counts,
         }
@@ -433,6 +454,47 @@ def _daily_activity(state: dict, workflow_activity: dict | None = None) -> list[
     ]
 
 
+def _discovery_metrics(workflow_activity: dict | None) -> dict:
+    runs = []
+    for run in (workflow_activity or {}).get("runs", []):
+        if run.get("workflow") != "bluesky_follow_fellows":
+            continue
+        selected = max(0, int(run.get("selected") or 0))
+        followed = max(0, int(run.get("follows") or 0))
+        failed = max(0, int(run.get("failed") or 0))
+        runs.append(
+            {
+                "created_at": run.get("created_at"),
+                "selected": selected,
+                "followed": followed,
+                "failed": failed,
+            }
+        )
+
+    selected_total = sum(run["selected"] for run in runs)
+    followed_counts = [run["followed"] for run in runs]
+    followed_total = sum(followed_counts)
+    return {
+        "window_days": int(
+            (workflow_activity or {}).get("window_days") or WORKFLOW_WINDOW_DAYS
+        ),
+        "coverage_start": min(
+            (run["created_at"] for run in runs if run["created_at"]), default=None
+        ),
+        "completed_runs": len(runs),
+        "selected": selected_total,
+        "followed": followed_total,
+        "failed": sum(run["failed"] for run in runs),
+        "completion_rate": round(followed_total * 100 / selected_total, 1)
+        if selected_total
+        else None,
+        "average_per_run": round(followed_total / len(runs), 1) if runs else None,
+        "median_per_run": round(float(median(followed_counts)), 1) if runs else None,
+        "zero_result_runs": sum(count == 0 for count in followed_counts),
+        "runs": runs,
+    }
+
+
 def _reconstructed_snapshots(
     current: dict, state: dict, workflow_activity: dict | None, now: datetime
 ) -> list[dict]:
@@ -477,7 +539,7 @@ def _period_start(now: datetime) -> str:
 def _normalise_existing(existing: dict | None) -> dict:
     if existing is None:
         return {"schema_version": SCHEMA_VERSION, "snapshots": []}
-    if existing.get("schema_version") not in {1, 2, SCHEMA_VERSION}:
+    if existing.get("schema_version") not in {1, 2, 3, SCHEMA_VERSION}:
         raise ValueError("Unsupported dashboard metrics schema version")
     if not isinstance(existing.get("snapshots"), list):
         raise ValueError("Dashboard metrics snapshots must be a list")
@@ -678,6 +740,7 @@ def collect_metrics(
         "current": current,
         "snapshots": snapshots,
         "daily_activity": _daily_activity(state, workflow_activity),
+        "discovery_activity": _discovery_metrics(workflow_activity),
         "workflow_activity": workflow_activity
         or {
             "window_days": WORKFLOW_WINDOW_DAYS,

@@ -232,6 +232,16 @@ threshold only after two consecutive primary-provider failures. Tests cover
 successful responses, exceptions, streak escalation, recovery, and deliberately
 unconfigured optional providers without requiring network access.
 
+### 5.48 Add discovery-run performance to the dashboard ✓ Complete
+**Priority: Medium**
+
+Fellow-follow discovery now emits an explicit aggregate run summary and reports
+successful follows by tag rather than selected candidates. The dashboard retains
+30 days of classified run totals and shows accounts considered and added,
+completion, typical run size, and zero-result runs. Public metrics contain no
+account identifiers, tags, targeting details, or workflow run identifiers, and
+older unclassified activity is not presented as discovery history.
+
 ### 5.26 Retry transient Bluesky response failures ✓ Complete
 **Priority: High**
 

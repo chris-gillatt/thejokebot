@@ -134,6 +134,15 @@ def _execute_follow_loop(client, selected_users, dry_run, action_delay_seconds, 
     return followed_dids
 
 
+def _successful_tag_counts(selected_users, followed_dids, tags):
+    followed_did_set = set(followed_dids)
+    counts = {tag: 0 for tag in tags}
+    for tag, did in selected_users:
+        if did in followed_did_set:
+            counts[tag] += 1
+    return counts
+
+
 def _persist_follow_fellows_state(followed_dids, rotation_step, total_tags):
     def apply_follow_fellows_state_updates(latest_state):
         for did in followed_dids:
@@ -204,9 +213,20 @@ def main():
         rotation_step = max(1, len(hashtags) // 2)
         _persist_follow_fellows_state(followed_dids, rotation_step, len(hashtags))
 
+    followed_tag_counts = _successful_tag_counts(
+        selected_users, followed_dids, hashtags
+    )
+
     print("\nFollowed users by tag:")
     for tag in hashtags:
-        print(f"  #{tag}: {tag_counts[tag]} users")
+        print(f"  #{tag}: {followed_tag_counts[tag]} users")
+
+    print(
+        "Discovery summary: "
+        f"selected={len(selected_users)}, followed={len(followed_dids)}, "
+        f"failed={0 if dry_run else len(selected_users) - len(followed_dids)}, "
+        f"dry_run={str(dry_run).lower()}."
+    )
 
     print("\nFollow fellows script completed.")
 

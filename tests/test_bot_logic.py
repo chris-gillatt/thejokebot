@@ -3011,6 +3011,20 @@ class FollowGraceTests(unittest.TestCase):
 
 
 class FollowFellowsTagRotationTests(unittest.TestCase):
+    def test_successful_tag_counts_excludes_failed_selections(self):
+        selected = [
+            ("dadjoke", "did:plc:one"),
+            ("dadjoke", "did:plc:two"),
+            ("pun", "did:plc:three"),
+        ]
+
+        self.assertEqual(
+            bluesky_follow_fellows._successful_tag_counts(
+                selected, ["did:plc:one", "did:plc:three"], ["dadjoke", "pun"]
+            ),
+            {"dadjoke": 1, "pun": 1},
+        )
+
     def test_get_follow_fellows_tag_offset_returns_zero_initially(self):
         state = bluesky_state._default_state()
         self.assertEqual(bluesky_state.get_follow_fellows_tag_offset(state), 0)

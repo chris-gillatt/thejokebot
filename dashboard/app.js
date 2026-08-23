@@ -203,6 +203,72 @@ function renderActivityChart() {
   );
 }
 
+function renderDiscovery() {
+  const discovery = metrics.discovery_activity || {
+    runs: [],
+    followed: 0,
+    completed_runs: 0,
+    completion_rate: null,
+    median_per_run: null,
+    average_per_run: null,
+    zero_result_runs: 0,
+    coverage_start: null,
+  };
+  const runs = discovery.runs.filter((run) => inRange(run.created_at));
+  setText("discovery-followed", numberFormat.format(discovery.followed));
+  setText("discovery-runs", numberFormat.format(discovery.completed_runs));
+  setText(
+    "discovery-completion",
+    discovery.completion_rate === null ? "--" : `${percentageFormat.format(discovery.completion_rate)}%`,
+  );
+  setText(
+    "discovery-median",
+    discovery.median_per_run === null ? "--" : numberFormat.format(discovery.median_per_run),
+  );
+  setText(
+    "discovery-average",
+    discovery.average_per_run === null
+      ? "Median accounts added"
+      : `${numberFormat.format(discovery.average_per_run)} average per run`,
+  );
+  setText(
+    "discovery-zero-runs",
+    discovery.completed_runs
+      ? `${numberFormat.format(discovery.zero_result_runs)} zero-result runs`
+      : "No run history yet",
+  );
+  setText(
+    "discovery-coverage",
+    discovery.coverage_start
+      ? `Since ${dateFormat.format(new Date(discovery.coverage_start))}`
+      : "Collecting history",
+  );
+
+  const options = baseOptions();
+  options.scales.y.beginAtZero = true;
+  options.scales.y.ticks = { precision: 0 };
+  replaceChart("discovery", document.getElementById("discovery-chart"), {
+    type: "bar",
+    data: {
+      labels: runs.map((run) => dateTimeFormat.format(new Date(run.created_at))),
+      datasets: [
+        { label: "Considered", data: runs.map((run) => run.selected), backgroundColor: colours[3] },
+        { label: "Added", data: runs.map((run) => run.followed), backgroundColor: colours[2] },
+      ],
+    },
+    options,
+  });
+  renderTable(
+    "discovery-table",
+    runs.map((run) => [
+      dateTimeFormat.format(new Date(run.created_at)),
+      numberFormat.format(run.selected),
+      numberFormat.format(run.followed),
+      run.selected ? `${percentageFormat.format((run.followed * 100) / run.selected)}%` : "--",
+    ]),
+  );
+}
+
 function renderTable(id, rows) {
   const body = document.querySelector(`#${id} tbody`);
   body.replaceChildren();
@@ -419,6 +485,7 @@ function renderTopPosts() {
 function renderCharts() {
   renderAudienceChart();
   renderActivityChart();
+  renderDiscovery();
   renderEngagement();
 }
 
@@ -431,6 +498,7 @@ function bindRangeControls() {
       });
       renderAudienceChart();
       renderActivityChart();
+      renderDiscovery();
     });
   });
 }
