@@ -68,6 +68,38 @@ def check_provider_health(provider_name: str) -> dict:
         }
 
 
+def _apply_health_results(state: dict, health_results: dict) -> dict:
+    health_checks = state.get("provider", {}).get("health_checks", {})
+    for provider_name, result in health_results.items():
+        check_record = health_checks.get(provider_name, {})
+        configured = result.get("configured", True)
+        check_record["configured"] = configured
+        if not configured:
+            check_record["last_check_success"] = None
+            check_record["consecutive_failures"] = 0
+        elif result["success"]:
+            check_record["last_check_success"] = True
+            check_record["consecutive_failures"] = 0
+        else:
+            check_record["last_check_success"] = False
+            check_record["consecutive_failures"] = (
+                check_record.get("consecutive_failures", 0) + 1
+            )
+        check_record["last_check_at"] = result["check_at"]
+        health_checks[provider_name] = check_record
+
+    state.setdefault("provider", {})["health_checks"] = health_checks
+    return health_checks
+
+
+def _critical_failures(health_checks: dict) -> list[tuple[str, int]]:
+    return [
+        (provider_name, health_checks[provider_name]["consecutive_failures"])
+        for provider_name in bluesky_state.PROVIDER_ROTATION_ORDER
+        if health_checks.get(provider_name, {}).get("consecutive_failures", 0) >= 2
+    ]
+
+
 def main():
     """Run health checks and update provider health state."""
     health_results = {}
@@ -85,41 +117,14 @@ def main():
         else:
             print(f"✗ {provider_name}: FAILED — {result['error']}")
 
-    def apply_health_results(state):
-        health_checks = state.get("provider", {}).get("health_checks", {})
-        for provider_name, result in health_results.items():
-            check_record = health_checks.get(provider_name, {})
-            configured = result.get("configured", True)
-            check_record["configured"] = configured
-            if not configured:
-                check_record["last_check_success"] = None
-                check_record["consecutive_failures"] = 0
-            elif result["success"]:
-                check_record["last_check_success"] = True
-                check_record["consecutive_failures"] = 0
-            else:
-                check_record["last_check_success"] = False
-                check_record["consecutive_failures"] = (
-                    check_record.get("consecutive_failures", 0) + 1
-                )
-            check_record["last_check_at"] = result["check_at"]
-            health_checks[provider_name] = check_record
-
-        state.setdefault("provider", {})["health_checks"] = health_checks
-        return health_checks
-
     health_checks = bluesky_state.update_state(
-        apply_health_results,
+        lambda state: _apply_health_results(state, health_results),
         domains="provider_health",
     )
     print("Health check state saved.")
 
     # Check for critical failures (primary providers failing consistently).
-    critical_failures = [
-        (p, health_checks[p]["consecutive_failures"])
-        for p in bluesky_state.PROVIDER_ROTATION_ORDER
-        if health_checks.get(p, {}).get("consecutive_failures", 0) >= 2
-    ]
+    critical_failures = _critical_failures(health_checks)
 
     if critical_failures:
         print("\n⚠️  ALERT: Primary provider(s) failing consistently:")

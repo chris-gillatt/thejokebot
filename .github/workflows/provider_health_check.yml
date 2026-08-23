@@ -32,12 +32,7 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run provider health checks
-        id: health_check
-        run: python -m pytest tests/test_provider_health.py -v --tb=short
-
-      - name: Update health check state
-        if: always()
+      - name: Check providers and update health state
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: python scripts/update_provider_health.py
