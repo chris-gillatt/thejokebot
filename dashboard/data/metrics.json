@@ -1,6 +1,6 @@
 {
   "schema_version": 3,
-  "generated_at": "2026-08-22T18:43:21.770702+00:00",
+  "generated_at": "2026-08-23T00:47:41.524920+00:00",
   "account": {
     "handle": "thejokebot.bsky.social",
     "display_name": "The Joke Bot",
@@ -8,31 +8,31 @@
     "profile_url": "https://bsky.app/profile/thejokebot.bsky.social"
   },
   "latest_joke": {
-    "uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mtonoounvu2y",
-    "url": "https://bsky.app/profile/thejokebot.bsky.social/post/3mtonoounvu2y",
-    "text": "Why don't cellos ever get lonely?\n\nThey always have strings attached.\n\n#dadjoke #humour #pun",
-    "created_at": "2026-08-22T16:04:43.892214+00:00",
+    "uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mtpiwqkkvp2e",
+    "url": "https://bsky.app/profile/thejokebot.bsky.social/post/3mtpiwqkkvp2e",
+    "text": "I went to the zoo yesterday and saw a baguette in a cage. It was bread in captivity.\n\n#dadjoke #jokesky #mumjokes",
+    "created_at": "2026-08-23T00:12:25.117654+00:00",
     "engagement": {
-      "likes": 3,
+      "likes": 1,
       "replies": 0,
-      "reposts": 0,
+      "reposts": 1,
       "quotes": 0,
       "bookmarks": 0
     }
   },
   "current": {
     "followers": 6401,
-    "following": 10823,
-    "profile_posts": 2323,
-    "joke_posts": 684,
+    "following": 10824,
+    "profile_posts": 2325,
+    "joke_posts": 686,
     "engagement": {
-      "likes": 3776,
+      "likes": 3781,
       "replies": 268,
-      "reposts": 286,
+      "reposts": 288,
       "quotes": 32,
       "bookmarks": 30
     },
-    "engagement_per_joke": 6.42
+    "engagement_per_joke": 6.41
   },
   "snapshots": [
     {
@@ -169,6 +169,14 @@
       "followers": 6401,
       "following": 10823,
       "profile_posts": 2323,
+      "source": "bluesky_snapshot"
+    },
+    {
+      "period_start": "2026-08-23T00:00:00+00:00",
+      "collected_at": "2026-08-23T00:47:41.524920+00:00",
+      "followers": 6401,
+      "following": 10824,
+      "profile_posts": 2325,
       "source": "bluesky_snapshot"
     }
   ],
@@ -1375,8 +1383,14 @@
     },
     {
       "date": "2026-08-22",
-      "joke_posts": 5,
-      "follows": 106,
+      "joke_posts": 6,
+      "follows": 107,
+      "unfollows": 0
+    },
+    {
+      "date": "2026-08-23",
+      "joke_posts": 1,
+      "follows": 0,
       "unfollows": 0
     }
   ],
@@ -2623,17 +2637,38 @@
         "created_at": "2026-08-22T18:31:14Z",
         "follows": 4,
         "unfollows": 0
+      },
+      {
+        "id": 32596840815,
+        "attempt": 1,
+        "created_at": "2026-08-22T20:29:51Z",
+        "follows": 1,
+        "unfollows": 0
+      },
+      {
+        "id": 32602578569,
+        "attempt": 1,
+        "created_at": "2026-08-22T22:29:35Z",
+        "follows": 0,
+        "unfollows": 0
+      },
+      {
+        "id": 32608178994,
+        "attempt": 1,
+        "created_at": "2026-08-23T00:33:49Z",
+        "follows": 0,
+        "unfollows": 0
       }
     ]
   },
   "providers": {
-    "retained_publications": 924,
+    "retained_publications": 926,
     "providers": [
       {
         "name": "icanhazdadjoke",
-        "published": 565,
-        "visible_posts": 329,
-        "average_interactions": 6.78,
+        "published": 567,
+        "visible_posts": 331,
+        "average_interactions": 6.76,
         "fallthroughs": 42,
         "rejection_counts": {
           "duplicate": 15,
@@ -2652,7 +2687,7 @@
         "name": "groandeck",
         "published": 185,
         "visible_posts": 185,
-        "average_interactions": 5.63,
+        "average_interactions": 5.64,
         "fallthroughs": 0,
         "rejection_counts": {
           "duplicate": 0,
@@ -2672,14 +2707,14 @@
         "published": 174,
         "visible_posts": 170,
         "average_interactions": 6.58,
-        "fallthroughs": 181,
+        "fallthroughs": 182,
         "rejection_counts": {
-          "duplicate": 15,
+          "duplicate": 20,
           "too_long": 0,
           "network_error": 0,
           "provider_error": 0
         },
-        "last_failure_at": 1787414683,
+        "last_failure_at": 1787443945,
         "last_failure_reason": "All 5 jokes from 'jokeapi' were rejected (5 duplicates, 0 too long)",
         "healthy": true,
         "configured": true,
@@ -2728,27 +2763,27 @@
   },
   "automation": {
     "window_days": 30,
-    "collected_at": "2026-08-22T18:43:21.770702+00:00",
-    "runs": 882,
-    "successful": 869,
+    "collected_at": "2026-08-23T00:47:41.524920+00:00",
+    "runs": 881,
+    "successful": 868,
     "failed": 8,
     "cancelled": 3,
     "success_rate": 99.1,
     "workflows": [
       {
         "name": "bluesky_dashboard",
-        "runs": 12,
-        "successful": 11,
+        "runs": 13,
+        "successful": 12,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-08-22T18:42:57Z",
+        "last_run_at": "2026-08-23T00:47:20Z",
         "last_status": "in_progress",
         "last_conclusion": null
       },
       {
         "name": "bluesky_follow_fellows",
-        "runs": 9,
-        "successful": 9,
+        "runs": 8,
+        "successful": 8,
         "failed": 0,
         "cancelled": 0,
         "last_run_at": "2026-08-21T01:44:00Z",
@@ -2761,7 +2796,7 @@
         "successful": 354,
         "failed": 4,
         "cancelled": 1,
-        "last_run_at": "2026-08-22T18:31:14Z",
+        "last_run_at": "2026-08-23T00:33:49Z",
         "last_status": "completed",
         "last_conclusion": "success"
       },
@@ -2781,17 +2816,17 @@
         "successful": 180,
         "failed": 1,
         "cancelled": 2,
-        "last_run_at": "2026-08-22T16:04:20Z",
+        "last_run_at": "2026-08-23T00:12:04Z",
         "last_status": "completed",
         "last_conclusion": "success"
       },
       {
         "name": "bluesky_process_reports",
-        "runs": 179,
-        "successful": 176,
+        "runs": 178,
+        "successful": 175,
         "failed": 3,
         "cancelled": 0,
-        "last_run_at": "2026-08-22T16:47:52Z",
+        "last_run_at": "2026-08-22T20:47:23Z",
         "last_status": "completed",
         "last_conclusion": "success"
       },
