@@ -187,6 +187,32 @@ Domain reads are isolated so one corrupt file cannot discard healthy state from
 another domain, and updates refuse to overwrite a selected domain that could not
 be read safely.
 
+### 5.45 Restore configured account blocks (Issue #91) ✓ Complete
+**Priority: Medium**
+
+Maintain a private DID policy in the `BLUESKY_BLOCK_DIDS` GitHub repository
+variable. Before the existing two-hour follow and like processing, compare that
+policy with the account's current Bluesky blocks and recreate only missing
+records. Never automatically unblock accounts. Rely on Bluesky's block filtering
+for search-based discovery rather than adding parallel checks throughout social
+scripts.
+
+Acceptance criteria:
+- Accept comma/newline-separated DIDs with optional handle comments, while using
+  only stable DIDs for identity.
+- Reject the complete policy before mutation when any entry is invalid or names
+  the bot account itself.
+- Page through all current blocks and preserve both configured and unmanaged
+  existing blocks.
+- Support existing dry-run, delay, masking, and retry controls.
+- Backfill every currently blocked account into the private variable before
+  enabling enforcement.
+
+**Resolution:** The existing two-hour social workflow now validates the private
+DID policy, reads the complete live block set, and recreates only missing blocks
+before any follow or like processing. Five existing live blocks were backfilled
+to the repository variable without committing or logging their identifiers.
+
 ### 5.26 Retry transient Bluesky response failures ✓ Complete
 **Priority: High**
 

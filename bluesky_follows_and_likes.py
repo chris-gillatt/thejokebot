@@ -10,6 +10,7 @@ import requests
 import atproto_client.exceptions
 from colorama import Fore, Style
 
+import bluesky_blocks
 import bluesky_config
 import bluesky_state
 from bluesky_common import (
@@ -457,6 +458,18 @@ def main() -> None:
     ) as exc:
         print(f"{Fore.RED}Login failed: {exc}{Style.RESET_ALL}")
         return
+
+    reconciled_blocks = bluesky_blocks.reconcile_configured_blocks(
+        client,
+        dry_run=dry_run,
+        action_delay_seconds=action_delay_seconds,
+    )
+    if reconciled_blocks:
+        action = "would require" if dry_run else "required"
+        print(
+            f"{Fore.GREEN}{reconciled_blocks} configured block"
+            f"{'s' if reconciled_blocks != 1 else ''} {action} action.{Style.RESET_ALL}"
+        )
 
     state = bluesky_state.load_state()
     unfollowed_dids = bluesky_state.get_unfollowed_dids(state)

@@ -12,6 +12,7 @@ from unittest import mock
 
 import atproto_client.exceptions
 import requests
+import bluesky_blocks
 import bluesky_common
 import bluesky_config
 import bluesky_create_report_prs
@@ -2393,6 +2394,138 @@ class LikeRepliesTests(unittest.TestCase):
         cutoff = time.time() - (24 * 60 * 60)
 
         self.assertGreater(recent_time, cutoff)
+
+
+class BlockReconciliationTests(unittest.TestCase):
+    def test_reconcile_blocks_empty_policy_is_no_op(self):
+        client = mock.Mock()
+
+        changed = bluesky_blocks.reconcile_blocks(
+            client,
+            set(),
+            dry_run=False,
+            action_delay_seconds=0,
+        )
+
+        self.assertEqual(changed, 0)
+        client.app.bsky.graph.get_blocks.assert_not_called()
+        client.app.bsky.graph.block.create.assert_not_called()
+
+    def test_parse_block_dids_accepts_comments_commas_and_duplicates(self):
+        raw_value = """
+        did:plc:abc123 # first.example
+        did:web:example.com, did:plc:abc123 # duplicate
+        """
+
+        self.assertEqual(
+            bluesky_blocks.parse_block_dids(raw_value),
+            {"did:plc:abc123", "did:web:example.com"},
+        )
+
+    def test_parse_block_dids_rejects_invalid_entry(self):
+        with self.assertRaisesRegex(ValueError, "invalid DID entries"):
+            bluesky_blocks.parse_block_dids(
+                "did:plc:valid123\nnot-a-did # invalid.example"
+            )
+
+    def test_fetch_blocked_dids_reads_every_page(self):
+        client = mock.Mock()
+        client.app.bsky.graph.get_blocks.side_effect = [
+            SimpleNamespace(
+                blocks=[SimpleNamespace(did="did:plc:first")], cursor="next"
+            ),
+            SimpleNamespace(
+                blocks=[SimpleNamespace(did="did:plc:second")], cursor=None
+            ),
+        ]
+
+        with mock.patch(
+            "bluesky_blocks.retry_network_call",
+            side_effect=lambda fn, description: fn(),
+        ):
+            blocked = bluesky_blocks.fetch_blocked_dids(client)
+
+        self.assertEqual(blocked, {"did:plc:first", "did:plc:second"})
+        self.assertEqual(client.app.bsky.graph.get_blocks.call_count, 2)
+
+    def test_reconcile_blocks_creates_only_missing_blocks(self):
+        client = mock.Mock()
+        client.me.did = "did:plc:bot"
+
+        with mock.patch(
+            "bluesky_blocks.fetch_blocked_dids",
+            return_value={"did:plc:existing", "did:plc:unmanaged"},
+        ):
+            with mock.patch(
+                "bluesky_blocks.retry_network_call",
+                side_effect=lambda fn, description: fn(),
+            ):
+                changed = bluesky_blocks.reconcile_blocks(
+                    client,
+                    {"did:plc:existing", "did:plc:new"},
+                    dry_run=False,
+                    action_delay_seconds=0,
+                )
+
+        self.assertEqual(changed, 1)
+        client.app.bsky.graph.block.create.assert_called_once()
+        _, kwargs = client.app.bsky.graph.block.create.call_args
+        self.assertEqual(kwargs["repo"], "did:plc:bot")
+        self.assertEqual(kwargs["record"].subject, "did:plc:new")
+        client.app.bsky.graph.block.delete.assert_not_called()
+
+    def test_reconcile_blocks_dry_run_does_not_create_block(self):
+        client = mock.Mock()
+        client.me.did = "did:plc:bot"
+
+        with mock.patch("bluesky_blocks.fetch_blocked_dids", return_value=set()):
+            changed = bluesky_blocks.reconcile_blocks(
+                client,
+                {"did:plc:new"},
+                dry_run=True,
+                action_delay_seconds=0,
+            )
+
+        self.assertEqual(changed, 1)
+        client.app.bsky.graph.block.create.assert_not_called()
+
+    def test_reconcile_blocks_rejects_bot_did_before_fetching_blocks(self):
+        client = mock.Mock()
+        client.me.did = "did:plc:bot"
+
+        with mock.patch("bluesky_blocks.fetch_blocked_dids") as fetch_blocks:
+            with self.assertRaisesRegex(ValueError, "bot account DID"):
+                bluesky_blocks.reconcile_blocks(
+                    client,
+                    {"did:plc:bot"},
+                    dry_run=False,
+                    action_delay_seconds=0,
+                )
+
+        fetch_blocks.assert_not_called()
+
+    def test_social_main_stops_when_block_reconciliation_fails(self):
+        client = mock.Mock()
+
+        with mock.patch(
+            "bluesky_follows_and_likes.get_runtime_controls",
+            return_value={"dry_run": False, "action_delay_seconds": 0},
+        ):
+            with mock.patch(
+                "bluesky_follows_and_likes.login_client",
+                return_value=(client, "jokebot.bsky.social"),
+            ):
+                with mock.patch(
+                    "bluesky_follows_and_likes.bluesky_blocks.reconcile_configured_blocks",
+                    side_effect=ValueError("invalid block policy"),
+                ):
+                    with mock.patch(
+                        "bluesky_follows_and_likes.bluesky_state.load_state"
+                    ) as load_state:
+                        with self.assertRaisesRegex(ValueError, "invalid block policy"):
+                            bluesky_follows_and_likes.main()
+
+        load_state.assert_not_called()
 
 
 class FollowBackTests(unittest.TestCase):

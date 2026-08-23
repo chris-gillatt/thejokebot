@@ -137,6 +137,7 @@ Set these in `.env` (keep values quoted):
 | `BLUESKY_UNFOLLOW_BATCH_SIZE` | No | Unfollow batch size before pause (default `50`). |
 | `BLUESKY_UNFOLLOW_BATCH_PAUSE_SECONDS` | No | Pause between unfollow batches in seconds (default `60`). |
 | `BLUESKY_UNFOLLOW_IGNORE` | No | Comma-separated fully-qualified handles to protect from unfollowing (e.g. `theonion.bsky.social`). |
+| `BLUESKY_BLOCK_DIDS` | No | Private comma/newline-separated DID policy that restores missing Bluesky blocks before follow and like processing. Repository variables may include trailing handle comments for readability. |
 | `BLUESKY_JOKE_PROVIDER` | No | Force a specific provider by name (`icanhazdadjoke`, `jokeapi`, `groandeck`, `syrsly`, `api_ninjas`, `jokebot_jokebook`). Leave unset for normal rotation. |
 | `BLUESKY_REPORT_MAX_PAGES` | No | Max notification pages to fetch per report run (default `3`). |
 | `BLUESKY_REPORT_PAGE_LIMIT` | No | Notifications per page when polling for reports (default `100`). |
@@ -189,6 +190,22 @@ Validation guard rail:
 - **Starter-pack/list protection:** if `resources/jokebot_starter_pack.json` is enabled and points to a valid source list URI, all members of that list are automatically protected from unfollowing (unioned with `BLUESKY_UNFOLLOW_IGNORE`).
 - **Follow grace protection:** `bluesky_unfollow.py` skips accounts followed by `bluesky_follow_fellows.py` for `30` days before they can become eligible for unfollow.
 - **Post length preflight:** `bluesky_post_joke.py` skips over-long jokes and retries provider fetches before posting, using grapheme-aware length checks so posts stay within Bluesky's 300-character limit after hashtags are appended.
+
+### Maintain persistent account blocks
+
+Set the private GitHub repository variable `BLUESKY_BLOCK_DIDS` to the stable DIDs
+that must remain blocked. One entry per line is recommended; an optional handle
+comment keeps the list readable without using a changeable handle as identity:
+
+```text
+did:plc:example # example.bsky.social
+did:web:example.com # another.example
+```
+
+The two-hour follows-and-likes workflow checks this policy before making social
+actions and recreates missing blocks. It never removes blocks. Removing a DID
+from the variable stops enforcing that block but does not unblock the account;
+unblock it deliberately through Bluesky when required.
 
 ### Never auto-follow a user again
 
