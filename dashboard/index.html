@@ -15,12 +15,12 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=6" />
+    <link rel="stylesheet" href="styles.css?v=7" />
     <script
       src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"
       defer
     ></script>
-    <script src="app.js?v=5" defer></script>
+    <script src="app.js?v=6" defer></script>
   </head>
   <body>
     <noscript>
@@ -183,10 +183,11 @@
               <h3>Recent outcomes</h3>
               <span>Accounts considered and added per completed run</span>
             </div>
-            <div class="chart-frame">
+            <div class="chart-frame" id="discovery-chart-frame">
+              <p class="discovery-empty" id="discovery-empty" hidden></p>
               <canvas id="discovery-chart"></canvas>
             </div>
-            <details>
+            <details id="discovery-details">
               <summary>View discovery data</summary>
               <div class="table-scroll">
                 <table id="discovery-table">

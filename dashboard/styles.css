@@ -465,6 +465,20 @@ summary:focus-visible {
   max-width: 880px;
 }
 
+.discovery-chart-block .chart-frame.is-empty {
+  height: 180px;
+  display: grid;
+  place-items: center;
+}
+
+.discovery-empty {
+  max-width: 380px;
+  margin: 0;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.5;
+}
+
 details {
   margin-top: 12px;
   color: var(--muted);

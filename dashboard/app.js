@@ -244,20 +244,38 @@ function renderDiscovery() {
       : "Collecting history",
   );
 
-  const options = baseOptions();
-  options.scales.y.beginAtZero = true;
-  options.scales.y.ticks = { precision: 0 };
-  replaceChart("discovery", document.getElementById("discovery-chart"), {
-    type: "bar",
-    data: {
-      labels: runs.map((run) => dateTimeFormat.format(new Date(run.created_at))),
-      datasets: [
-        { label: "Considered", data: runs.map((run) => run.selected), backgroundColor: colours[3] },
-        { label: "Added", data: runs.map((run) => run.followed), backgroundColor: colours[2] },
-      ],
-    },
-    options,
-  });
+  const chartFrame = document.getElementById("discovery-chart-frame");
+  const chartCanvas = document.getElementById("discovery-chart");
+  const emptyState = document.getElementById("discovery-empty");
+  const dataDetails = document.getElementById("discovery-details");
+  const hasRuns = runs.length > 0;
+  chartCanvas.hidden = !hasRuns;
+  emptyState.hidden = hasRuns;
+  dataDetails.hidden = !hasRuns;
+  chartFrame.classList.toggle("is-empty", !hasRuns);
+
+  if (hasRuns) {
+    const options = baseOptions();
+    options.scales.y.beginAtZero = true;
+    options.scales.y.ticks = { precision: 0 };
+    replaceChart("discovery", chartCanvas, {
+      type: "bar",
+      data: {
+        labels: runs.map((run) => dateTimeFormat.format(new Date(run.created_at))),
+        datasets: [
+          { label: "Considered", data: runs.map((run) => run.selected), backgroundColor: colours[3] },
+          { label: "Added", data: runs.map((run) => run.followed), backgroundColor: colours[2] },
+        ],
+      },
+      options,
+    });
+  } else {
+    charts.discovery?.destroy();
+    delete charts.discovery;
+    emptyState.textContent = discovery.completed_runs
+      ? "No completed discovery runs in this period."
+      : "Discovery history will appear after the next completed run.";
+  }
   renderTable(
     "discovery-table",
     runs.map((run) => [
