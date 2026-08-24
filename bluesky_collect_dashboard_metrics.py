@@ -456,6 +456,11 @@ def collect_workflow_activity(
             or "selected" not in cached
             or "failed" not in cached
         )
+        incomplete_social = workflow_name == "bluesky_follows_and_likes" and (
+            not cached
+            or cached.get("workflow") != workflow_name
+            or "follow_back_candidates" not in cached
+        )
         incomplete_unfollow = workflow_name == "bluesky_unfollow" and (
             not cached
             or cached.get("workflow") != workflow_name
@@ -474,6 +479,7 @@ def collect_workflow_activity(
         if (
             cached_attempt_matches
             and not incomplete_discovery
+            and not incomplete_social
             and not incomplete_unfollow
             and not incomplete_moderation
             and not incomplete_provider
