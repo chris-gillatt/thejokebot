@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
 import bluesky_collect_dashboard_metrics as dashboard
+import bluesky_follows_and_likes
 
 
 class _Response:
@@ -264,12 +265,42 @@ class DashboardCollectorTests(unittest.TestCase):
         discovery_summary = (
             "Discovery summary: selected=8, followed=6, failed=2, dry_run=false."
         )
+        social_summary = bluesky_follows_and_likes._social_summary_line(
+            {
+                "follow_back_candidates": 8,
+                "follow_back_added": 5,
+                "protected": 3,
+                "interaction_candidates": 12,
+                "interaction_eligible": 4,
+                "interaction_added": 3,
+                "interactions_liked": 7,
+                "failed": 2,
+            },
+            dry_run=False,
+        )
 
         self.assertEqual(
             dashboard._workflow_activity_counts(
                 "bluesky_follows_and_likes", follows_and_likes
             ),
             {"follows": 2, "unfollows": 0},
+        )
+        self.assertEqual(
+            dashboard._workflow_activity_counts(
+                "bluesky_follows_and_likes", social_summary
+            ),
+            {
+                "follows": 8,
+                "unfollows": 0,
+                "follow_back_candidates": 8,
+                "follow_back_added": 5,
+                "protected": 3,
+                "interaction_candidates": 12,
+                "interaction_eligible": 4,
+                "interaction_added": 3,
+                "interactions_liked": 7,
+                "failed": 2,
+            },
         )
         self.assertEqual(
             dashboard._workflow_activity_counts("bluesky_follow_fellows", discovery),
@@ -284,9 +315,19 @@ class DashboardCollectorTests(unittest.TestCase):
         self.assertEqual(
             dashboard._workflow_activity_counts(
                 "bluesky_unfollow",
+                "Found 9 users to unfollow (excluding ignorable accounts).\n"
+                "Run stopped early after throttle detection.\n"
                 "Summary: processed=5, unfollowed=4, failed=1, missing_uri=0.",
             ),
-            {"follows": 0, "unfollows": 4},
+            {
+                "follows": 0,
+                "unfollows": 4,
+                "eligible": 9,
+                "processed": 5,
+                "failed": 1,
+                "missing_uri": 0,
+                "stopped_early": True,
+            },
         )
         self.assertEqual(
             dashboard._workflow_activity_counts(
@@ -467,6 +508,61 @@ class DashboardCollectorTests(unittest.TestCase):
         self.assertEqual(activity["runs"], existing["workflow_activity"]["runs"])
         self.assertEqual(dashboard._discovery_metrics(activity)["completed_runs"], 0)
 
+    def test_collect_workflow_activity_upgrades_cached_unfollow_once(self):
+        existing = {
+            "workflow_activity": {
+                "runs": [
+                    {
+                        "id": 3,
+                        "attempt": 1,
+                        "workflow": "bluesky_unfollow",
+                        "created_at": "2026-08-21T00:00:00Z",
+                        "follows": 0,
+                        "unfollows": 4,
+                    }
+                ],
+            }
+        }
+        workflow_runs = [
+            {
+                "id": 3,
+                "run_attempt": 1,
+                "name": "bluesky_unfollow",
+                "conclusion": "success",
+                "created_at": "2026-08-21T00:00:00Z",
+            }
+        ]
+        log_text = (
+            "Found 9 users to unfollow (excluding ignorable accounts).\n"
+            "Summary: processed=5, unfollowed=4, failed=1, missing_uri=0."
+        )
+
+        with patch.object(
+            dashboard, "fetch_workflow_run_logs", return_value=log_text
+        ) as fetch_logs:
+            activity = dashboard.collect_workflow_activity(
+                object(),
+                "owner/repository",
+                "token",
+                workflow_runs,
+                existing,
+                datetime(2026, 8, 22, tzinfo=timezone.utc),
+            )
+
+        fetch_logs.assert_called_once()
+        self.assertEqual(activity["runs"][0]["eligible"], 9)
+        self.assertEqual(activity["runs"][0]["processed"], 5)
+        with patch.object(dashboard, "fetch_workflow_run_logs") as fetch_logs:
+            dashboard.collect_workflow_activity(
+                object(),
+                "owner/repository",
+                "token",
+                workflow_runs,
+                {"workflow_activity": activity},
+                datetime(2026, 8, 22, tzinfo=timezone.utc),
+            )
+        fetch_logs.assert_not_called()
+
     def test_summarises_discovery_runs_without_identifiers(self):
         activity = {
             "window_days": 30,
@@ -504,6 +600,65 @@ class DashboardCollectorTests(unittest.TestCase):
         self.assertEqual(summary["median_per_run"], 3.0)
         self.assertEqual(summary["zero_result_runs"], 1)
         self.assertNotIn("id", json.dumps(summary))
+
+    def test_summarises_social_and_network_activity_without_identifiers(self):
+        now = datetime(2026, 8, 22, 12, tzinfo=timezone.utc)
+        activity = {
+            "runs": [
+                {
+                    "workflow": "bluesky_follows_and_likes",
+                    "created_at": "2026-08-22T10:00:00Z",
+                    "follow_back_candidates": 8,
+                    "follow_back_added": 5,
+                    "protected": 3,
+                    "interaction_candidates": 12,
+                    "interaction_eligible": 4,
+                    "interaction_added": 3,
+                    "interactions_liked": 7,
+                    "failed": 2,
+                },
+                {
+                    "workflow": "bluesky_unfollow",
+                    "created_at": "2026-08-01T13:00:00Z",
+                    "eligible": 9,
+                    "processed": 5,
+                    "unfollows": 4,
+                    "failed": 1,
+                    "missing_uri": 0,
+                    "stopped_early": True,
+                },
+            ]
+        }
+        state = {
+            "follow_grace": {
+                "entries": [
+                    {
+                        "did": "did:private:one",
+                        "followed_at": now.timestamp(),
+                        "source": "follow_fellows",
+                    },
+                    {
+                        "did": "did:private:two",
+                        "followed_at": now.timestamp(),
+                        "source": "interaction",
+                    },
+                ]
+            }
+        }
+
+        social = dashboard._social_activity_metrics(activity)
+        network = dashboard._network_maintenance_metrics(state, activity, now)
+
+        self.assertEqual(social["follow_back_added"], 5)
+        self.assertEqual(social["interaction_added"], 3)
+        self.assertEqual(social["interactions_liked"], 7)
+        self.assertEqual(network["response_window"]["active"], 2)
+        self.assertEqual(network["response_window"]["by_source"]["discovery"], 1)
+        self.assertEqual(network["unfollow"]["cap_remaining"], 4)
+        self.assertEqual(network["unfollow"]["stopped_early_runs"], 1)
+        public_metrics = json.dumps({"social": social, "network": network})
+        self.assertNotIn("did:private", public_metrics)
+        self.assertNotIn('"id"', public_metrics)
 
     def test_reconstructs_following_and_posts_without_inventing_followers(self):
         now = datetime(2026, 8, 22, 6, tzinfo=timezone.utc)

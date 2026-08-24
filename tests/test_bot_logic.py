@@ -2552,13 +2552,15 @@ class FollowBackTests(unittest.TestCase):
     def test_follow_back_skips_dids_in_unfollow_history(self):
         unfollowed_did = "did:plc:unfollowed"
         follower_profile = SimpleNamespace(did=unfollowed_did)
+        new_follower = SimpleNamespace(did="did:plc:new")
         client = mock.Mock()
         client.me.did = "did:plc:bot"
+        summary = {}
 
         with mock.patch(
             "bluesky_follows_and_likes.fetch_paginated_data",
             side_effect=[
-                [follower_profile],
+                [follower_profile, new_follower],
                 [],
             ],
         ):
@@ -2568,9 +2570,19 @@ class FollowBackTests(unittest.TestCase):
                 dry_run=False,
                 action_delay_seconds=0,
                 unfollowed_dids={unfollowed_did},
+                summary=summary,
             )
 
-        client.follow.assert_not_called()
+        client.follow.assert_called_once_with("did:plc:new")
+        self.assertEqual(
+            summary,
+            {
+                "follow_back_candidates": 2,
+                "follow_back_added": 1,
+                "protected": 1,
+                "failed": 0,
+            },
+        )
 
     def test_follow_back_does_not_mutate_after_incomplete_graph_snapshot(self):
         client = mock.Mock()
@@ -2685,6 +2697,7 @@ class FollowInteractorsTests(unittest.TestCase):
         client = mock.Mock()
         client.me.did = "did:plc:bot"
         client.app.bsky.notification.list_notifications.return_value = response
+        summary = {}
 
         with mock.patch(
             "bluesky_follows_and_likes.fetch_paginated_data",
@@ -2695,11 +2708,20 @@ class FollowInteractorsTests(unittest.TestCase):
                 side_effect=lambda fn, description: fn(),
             ):
                 count = bluesky_follows_and_likes.follow_interactors(
-                    client, state, dry_run=False, action_delay_seconds=0
+                    client,
+                    state,
+                    dry_run=False,
+                    action_delay_seconds=0,
+                    summary=summary,
                 )
 
         self.assertEqual(count, 0)
         client.follow.assert_not_called()
+        self.assertEqual(summary["interaction_candidates"], 1)
+        self.assertEqual(summary["interaction_eligible"], 0)
+        self.assertEqual(summary["protected"], 1)
+        self.assertEqual(summary["interaction_added"], 0)
+        self.assertEqual(summary["failed"], 0)
 
     def test_follow_interactors_skips_dids_in_follow_grace(self):
         """Interactors already in the follow-grace window should be skipped."""

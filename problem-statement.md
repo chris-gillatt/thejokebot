@@ -287,7 +287,7 @@ Acceptance criteria:
 - Add latest and median workflow duration from GitHub run `created_at` and
   `updated_at` metadata; do not ingest job logs for duration alone.
 
-#### Phase 3: Social funnel and network maintenance
+#### Phase 3: Social funnel and network maintenance ✓ Complete
 
 - Emit one stable aggregate summary from the follows-and-likes workflow covering
   follow-back candidates, protected/history skips, successful additions,

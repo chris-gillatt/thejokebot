@@ -301,6 +301,94 @@ function renderDiscovery() {
   );
 }
 
+function renderSocialActivity() {
+  const social = metrics.social_activity || { completed_runs: 0, runs: [] };
+  const network = metrics.network_maintenance || {};
+  const responseWindow = network.response_window;
+  const unfollow = network.unfollow;
+  const hasSocialHistory = social.completed_runs > 0;
+  const hasUnfollowHistory = unfollow?.completed_runs > 0;
+  const socialValues = {
+    "social-follow-candidates": hasSocialHistory ? social.follow_back_candidates : null,
+    "social-follow-added": hasSocialHistory ? social.follow_back_added : null,
+    "social-interaction-candidates": hasSocialHistory ? social.interaction_candidates : null,
+    "social-interaction-eligible": hasSocialHistory ? social.interaction_eligible : null,
+    "social-interaction-added": hasSocialHistory ? social.interaction_added : null,
+    "social-interactions-liked": hasSocialHistory ? social.interactions_liked : null,
+  };
+  Object.entries(socialValues).forEach(([id, value]) => setText(id, metricText(value)));
+  setText(
+    "social-history-note",
+    hasSocialHistory
+      ? `${numberFormat.format(social.completed_runs)} runs observed over 30 days`
+      : "Social run history will appear after the next completed run.",
+  );
+  setText(
+    "social-protected",
+    hasSocialHistory
+      ? `${numberFormat.format(social.protected)} protected or previously handled`
+      : "-- protected or previously handled",
+  );
+  setText(
+    "social-failed",
+    hasSocialHistory
+      ? `${numberFormat.format(social.failed)} failed actions`
+      : "-- failed actions",
+  );
+  const maximum = Math.max(
+    1,
+    ...Object.values(socialValues).map((value) => Number(value) || 0),
+  );
+  document.querySelectorAll(".social-flow-row").forEach((row) => {
+    const value = Number(socialValues[row.dataset.metric]) || 0;
+    row.style.setProperty("--flow-width", `${(value * 100) / maximum}%`);
+  });
+
+  setText("response-window-active", metricText(responseWindow?.active));
+  setText("response-discovery", metricText(responseWindow?.by_source?.discovery));
+  setText("response-interaction", metricText(responseWindow?.by_source?.interaction));
+  setText("response-other", metricText(responseWindow?.by_source?.other));
+  setText("unfollow-processed", metricText(hasUnfollowHistory ? unfollow.processed : null));
+  setText("unfollow-completed", metricText(hasUnfollowHistory ? unfollow.unfollowed : null));
+  setText("unfollow-pending", metricText(hasUnfollowHistory ? unfollow.cap_remaining : null));
+  setText(
+    "unfollow-exceptions",
+    hasUnfollowHistory
+      ? numberFormat.format(unfollow.failed + unfollow.missing_records)
+      : "--",
+  );
+  setText(
+    "unfollow-history-note",
+    hasUnfollowHistory
+      ? `${numberFormat.format(unfollow.completed_runs)} runs observed · ${numberFormat.format(unfollow.stopped_early_runs)} stopped early`
+      : "Maintenance history will appear after the next completed run.",
+  );
+
+  renderTable(
+    "social-table",
+    (social.runs || []).map((run) => [
+      dateTimeFormat.format(new Date(run.created_at)),
+      run.follow_back_candidates,
+      run.follow_back_added,
+      run.interaction_candidates,
+      run.interaction_added,
+      run.interactions_liked,
+      run.failed,
+    ]),
+  );
+  renderTable(
+    "unfollow-table",
+    (unfollow?.runs || []).map((run) => [
+      dateTimeFormat.format(new Date(run.created_at)),
+      run.eligible,
+      run.processed,
+      run.unfollowed,
+      run.failed + run.missing_records,
+      run.stopped_early ? "Yes" : "No",
+    ]),
+  );
+}
+
 function renderTable(id, rows) {
   const body = document.querySelector(`#${id} tbody`);
   body.replaceChildren();
@@ -605,6 +693,7 @@ function renderCharts() {
   renderAudienceChart();
   renderActivityChart();
   renderDiscovery();
+  renderSocialActivity();
   renderEngagement();
 }
 

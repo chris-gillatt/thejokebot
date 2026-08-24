@@ -253,6 +253,37 @@ def _workflow_activity_counts(workflow_name: str, log_text: str) -> dict | None:
     if "Dry-run mode enabled" in plain_text:
         return {"follows": 0, "unfollows": 0}
     if workflow_name == "bluesky_follows_and_likes":
+        summaries = re.findall(
+            r"Social summary: follow_back_candidates=(\d+), "
+            r"follow_back_added=(\d+), protected=(\d+), "
+            r"interaction_candidates=(\d+), interaction_eligible=(\d+), "
+            r"interaction_added=(\d+), interactions_liked=(\d+), "
+            r"failed=(\d+), dry_run=false\.",
+            plain_text,
+        )
+        if summaries:
+            (
+                follow_back_candidates,
+                follow_back_added,
+                protected,
+                interaction_candidates,
+                interaction_eligible,
+                interaction_added,
+                interactions_liked,
+                failed,
+            ) = (int(value) for value in summaries[-1])
+            return {
+                "follows": follow_back_added + interaction_added,
+                "unfollows": 0,
+                "follow_back_candidates": follow_back_candidates,
+                "follow_back_added": follow_back_added,
+                "protected": protected,
+                "interaction_candidates": interaction_candidates,
+                "interaction_eligible": interaction_eligible,
+                "interaction_added": interaction_added,
+                "interactions_liked": interactions_liked,
+                "failed": failed,
+            }
         follows = len(re.findall(r"\bFollowed (?:interactor )?did:[^\s]+", plain_text))
         return {"follows": follows, "unfollows": 0}
     if workflow_name == "bluesky_follow_fellows":
@@ -286,10 +317,27 @@ def _workflow_activity_counts(workflow_name: str, log_text: str) -> dict | None:
         follows = len(re.findall(r"\bFollowed list member did:[^\s]+", plain_text))
         return {"follows": follows, "unfollows": 0}
     if workflow_name == "bluesky_unfollow":
-        summaries = re.findall(r"\bSummary:.*?\bunfollowed=(\d+)", plain_text)
+        summaries = re.findall(
+            r"\bSummary: processed=(\d+), unfollowed=(\d+), failed=(\d+), "
+            r"missing_uri=(\d+)\.",
+            plain_text,
+        )
         if not summaries:
             return None
-        return {"follows": 0, "unfollows": int(summaries[-1])}
+        processed, unfollowed, failed, missing_uri = (
+            int(value) for value in summaries[-1]
+        )
+        eligible_values = re.findall(r"Found (\d+) users to unfollow", plain_text)
+        eligible = int(eligible_values[-1]) if eligible_values else processed
+        return {
+            "follows": 0,
+            "unfollows": unfollowed,
+            "eligible": eligible,
+            "processed": processed,
+            "failed": failed,
+            "missing_uri": missing_uri,
+            "stopped_early": "Run stopped early after throttle detection" in plain_text,
+        }
     return None
 
 
@@ -341,7 +389,16 @@ def collect_workflow_activity(
             or "selected" not in cached
             or "failed" not in cached
         )
-        if cached_attempt_matches and not incomplete_discovery:
+        incomplete_unfollow = workflow_name == "bluesky_unfollow" and (
+            not cached
+            or cached.get("workflow") != workflow_name
+            or "processed" not in cached
+        )
+        if (
+            cached_attempt_matches
+            and not incomplete_discovery
+            and not incomplete_unfollow
+        ):
             continue
         try:
             counts = _workflow_activity_counts(
@@ -508,6 +565,106 @@ def _discovery_metrics(workflow_activity: dict | None) -> dict:
         "median_per_run": round(float(median(followed_counts)), 1) if runs else None,
         "zero_result_runs": sum(count == 0 for count in followed_counts),
         "runs": runs,
+    }
+
+
+def _social_activity_metrics(workflow_activity: dict | None) -> dict:
+    runs = []
+    for run in (workflow_activity or {}).get("runs", []):
+        if (
+            run.get("workflow") != "bluesky_follows_and_likes"
+            or "follow_back_candidates" not in run
+        ):
+            continue
+        runs.append(
+            {
+                "created_at": run.get("created_at"),
+                "follow_back_candidates": max(
+                    0, int(run.get("follow_back_candidates") or 0)
+                ),
+                "follow_back_added": max(0, int(run.get("follow_back_added") or 0)),
+                "protected": max(0, int(run.get("protected") or 0)),
+                "interaction_candidates": max(
+                    0, int(run.get("interaction_candidates") or 0)
+                ),
+                "interaction_eligible": max(
+                    0, int(run.get("interaction_eligible") or 0)
+                ),
+                "interaction_added": max(0, int(run.get("interaction_added") or 0)),
+                "interactions_liked": max(0, int(run.get("interactions_liked") or 0)),
+                "failed": max(0, int(run.get("failed") or 0)),
+            }
+        )
+    fields = (
+        "follow_back_candidates",
+        "follow_back_added",
+        "protected",
+        "interaction_candidates",
+        "interaction_eligible",
+        "interaction_added",
+        "interactions_liked",
+        "failed",
+    )
+    return {
+        "window_days": WORKFLOW_WINDOW_DAYS,
+        "completed_runs": len(runs),
+        **{field: sum(run[field] for run in runs) for field in fields},
+        "runs": runs,
+    }
+
+
+def _network_maintenance_metrics(
+    state: dict, workflow_activity: dict | None, now: datetime
+) -> dict:
+    source_names = {
+        "follow_fellows": "discovery",
+        "interaction": "interaction",
+        "manual_reconciled": "other",
+    }
+    grace_cutoff = now.timestamp() - bluesky_state.FOLLOW_RESPONSE_GRACE_PERIOD_SECONDS
+    source_counts = Counter(
+        source_names.get(str(entry.get("source") or ""), "other")
+        for entry in state.get("follow_grace", {}).get("entries", [])
+        if float(entry.get("followed_at") or 0) > grace_cutoff
+    )
+    runs = []
+    for run in (workflow_activity or {}).get("runs", []):
+        if run.get("workflow") != "bluesky_unfollow" or "processed" not in run:
+            continue
+        runs.append(
+            {
+                "created_at": run.get("created_at"),
+                "eligible": max(0, int(run.get("eligible") or 0)),
+                "processed": max(0, int(run.get("processed") or 0)),
+                "unfollowed": max(0, int(run.get("unfollows") or 0)),
+                "failed": max(0, int(run.get("failed") or 0)),
+                "missing_records": max(0, int(run.get("missing_uri") or 0)),
+                "stopped_early": bool(run.get("stopped_early")),
+            }
+        )
+    return {
+        "window_days": WORKFLOW_WINDOW_DAYS,
+        "response_window": {
+            "days": bluesky_state.FOLLOW_RESPONSE_GRACE_PERIOD_DAYS,
+            "active": sum(source_counts.values()),
+            "by_source": {
+                source: source_counts[source]
+                for source in ("discovery", "interaction", "other")
+            },
+        },
+        "unfollow": {
+            "completed_runs": len(runs),
+            "eligible": sum(run["eligible"] for run in runs),
+            "processed": sum(run["processed"] for run in runs),
+            "unfollowed": sum(run["unfollowed"] for run in runs),
+            "failed": sum(run["failed"] for run in runs),
+            "missing_records": sum(run["missing_records"] for run in runs),
+            "cap_remaining": sum(
+                max(0, run["eligible"] - run["processed"]) for run in runs
+            ),
+            "stopped_early_runs": sum(run["stopped_early"] for run in runs),
+            "runs": runs,
+        },
     }
 
 
@@ -965,6 +1122,10 @@ def collect_metrics(
         "snapshots": snapshots,
         "daily_activity": _daily_activity(state, workflow_activity),
         "discovery_activity": _discovery_metrics(workflow_activity),
+        "social_activity": _social_activity_metrics(workflow_activity),
+        "network_maintenance": _network_maintenance_metrics(
+            state, workflow_activity, now
+        ),
         "workflow_activity": workflow_activity
         or {
             "window_days": WORKFLOW_WINDOW_DAYS,

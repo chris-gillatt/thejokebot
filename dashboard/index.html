@@ -15,12 +15,12 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=9" />
+    <link rel="stylesheet" href="styles.css?v=10" />
     <script
       src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"
       defer
     ></script>
-    <script src="app.js?v=8" defer></script>
+    <script src="app.js?v=9" defer></script>
   </head>
   <body>
     <noscript>
@@ -199,6 +199,75 @@
                 </table>
               </div>
             </details>
+          </div>
+        </div>
+      </section>
+
+      <section class="dashboard-section social-section" aria-labelledby="social-heading">
+        <div class="section-inner">
+          <div class="section-heading social-heading">
+            <div>
+              <p class="eyebrow">Account relationships</p>
+              <h2 id="social-heading">Social activity</h2>
+            </div>
+            <p class="section-note social-note">Broad 30-day outcomes only. Account and targeting details are not retained.</p>
+          </div>
+
+          <div class="social-layout">
+            <article class="social-block" aria-labelledby="social-flow-heading">
+              <div class="social-block-heading">
+                <h3 id="social-flow-heading">Follow and response flow</h3>
+                <p id="social-history-note">Collecting history</p>
+              </div>
+              <div class="social-flow">
+                <div class="social-flow-row" data-metric="social-follow-candidates"><span>Follow-back candidates</span><strong id="social-follow-candidates">--</strong></div>
+                <div class="social-flow-row" data-metric="social-follow-added"><span>Follow-backs added</span><strong id="social-follow-added">--</strong></div>
+                <div class="social-flow-row" data-metric="social-interaction-candidates"><span>Recent interactors</span><strong id="social-interaction-candidates">--</strong></div>
+                <div class="social-flow-row" data-metric="social-interaction-eligible"><span>Eligible interactors</span><strong id="social-interaction-eligible">--</strong></div>
+                <div class="social-flow-row" data-metric="social-interaction-added"><span>Interactor follows</span><strong id="social-interaction-added">--</strong></div>
+                <div class="social-flow-row" data-metric="social-interactions-liked"><span>Interactions liked</span><strong id="social-interactions-liked">--</strong></div>
+              </div>
+              <div class="social-footnotes"><span id="social-protected">-- protected or previously handled</span><span id="social-failed">-- failed actions</span></div>
+              <details>
+                <summary>View social run data</summary>
+                <div class="table-scroll social-table-scroll">
+                  <table id="social-table">
+                    <thead><tr><th>Date</th><th>Follow-back candidates</th><th>Added</th><th>Interactors</th><th>Added</th><th>Liked</th><th>Failed</th></tr></thead>
+                    <tbody></tbody>
+                  </table>
+                </div>
+              </details>
+            </article>
+
+            <article class="social-block" aria-labelledby="maintenance-heading">
+              <div class="social-block-heading">
+                <h3 id="maintenance-heading">Network maintenance</h3>
+                <p id="unfollow-history-note">Collecting history</p>
+              </div>
+              <div class="response-window">
+                <div><span>Active response window</span><strong id="response-window-active">--</strong><small>30-day protection</small></div>
+                <dl>
+                  <div><dt>Discovery</dt><dd id="response-discovery">--</dd></div>
+                  <div><dt>Interaction</dt><dd id="response-interaction">--</dd></div>
+                  <div><dt>Other</dt><dd id="response-other">--</dd></div>
+                </dl>
+              </div>
+              <div class="maintenance-summary">
+                <div><span>Reviewed</span><strong id="unfollow-processed">--</strong></div>
+                <div><span>Completed</span><strong id="unfollow-completed">--</strong></div>
+                <div><span>Cap remaining</span><strong id="unfollow-pending">--</strong></div>
+                <div><span>Exceptions</span><strong id="unfollow-exceptions">--</strong></div>
+              </div>
+              <details>
+                <summary>View maintenance run data</summary>
+                <div class="table-scroll social-table-scroll">
+                  <table id="unfollow-table">
+                    <thead><tr><th>Date</th><th>Eligible</th><th>Reviewed</th><th>Completed</th><th>Exceptions</th><th>Stopped early</th></tr></thead>
+                    <tbody></tbody>
+                  </table>
+                </div>
+              </details>
+            </article>
           </div>
         </div>
       </section>

@@ -38,6 +38,23 @@ _INTERACTION_FOLLOW_MAX_PAGES = _FOLLOWS_AND_LIKES_CONFIG[
 _INTERACTION_FOLLOW_PAGE_LIMIT = _FOLLOWS_AND_LIKES_CONFIG[
     "interaction_follow_page_limit"
 ]
+_SOCIAL_SUMMARY_FIELDS = (
+    "follow_back_candidates",
+    "follow_back_added",
+    "protected",
+    "interaction_candidates",
+    "interaction_eligible",
+    "interaction_added",
+    "interactions_liked",
+    "failed",
+)
+
+
+def _social_summary_line(summary: dict, dry_run: bool) -> str:
+    counts = ", ".join(
+        f"{field}={int(summary.get(field) or 0)}" for field in _SOCIAL_SUMMARY_FIELDS
+    )
+    return f"Social summary: {counts}, dry_run={'true' if dry_run else 'false'}."
 
 
 # ---------------------------------------------------------------------------
@@ -51,10 +68,13 @@ def follow_back(
     dry_run: bool,
     action_delay_seconds: float,
     unfollowed_dids: set | None = None,
+    summary: dict | None = None,
 ) -> None:
     """Follow back any followers the bot is not yet following."""
     if unfollowed_dids is None:
         unfollowed_dids = set()
+    if summary is None:
+        summary = {}
     user_did = client.me.did
     print(
         f"{Fore.YELLOW}Fetching followers and following for account.{Style.RESET_ALL}"
@@ -67,6 +87,10 @@ def follow_back(
     following_dids = {f.did for f in following}
 
     to_follow_back = follower_dids - following_dids
+    summary["follow_back_candidates"] = len(to_follow_back)
+    summary["follow_back_added"] = 0
+    summary["protected"] = 0
+    summary["failed"] = 0
     print(
         f"{Fore.GREEN}Found {len(to_follow_back)} followers to follow back.{Style.RESET_ALL}"
     )
@@ -74,6 +98,7 @@ def follow_back(
     for i, did in enumerate(to_follow_back, start=1):
         masked_did = mask_sensitive(did)
         if did in unfollowed_dids:
+            summary["protected"] += 1
             print(
                 f"{Fore.YELLOW}({i}/{len(to_follow_back)}) Skipping previously unfollowed {masked_did}.{Style.RESET_ALL}"
             )
@@ -90,6 +115,7 @@ def follow_back(
                     description=f"following back {masked_did}",
                 )
                 print(f"{Fore.GREEN}Followed {masked_did}{Style.RESET_ALL}")
+                summary["follow_back_added"] += 1
             except (
                 requests.RequestException,
                 TimeoutError,
@@ -98,7 +124,11 @@ def follow_back(
                 print(
                     f"{Fore.RED}Failed to follow {masked_did}: {exc}{Style.RESET_ALL}"
                 )
+                summary["failed"] += 1
                 continue
+
+        if dry_run:
+            summary["follow_back_added"] += 1
 
         if action_delay_seconds > 0 and i < len(to_follow_back):
             time.sleep(action_delay_seconds)
@@ -224,6 +254,7 @@ def follow_interactors(
     state: dict,
     dry_run: bool,
     action_delay_seconds: float,
+    summary: dict | None = None,
 ) -> int:
     """Follow users who have interacted with the bot's posts in the last 24 hours.
 
@@ -238,6 +269,8 @@ def follow_interactors(
     Returns the number of new follows performed.
     """
     user_did = client.me.did
+    if summary is None:
+        summary = {}
     grace_dids = bluesky_state.get_follow_grace_dids(state)
     unfollowed_dids = bluesky_state.get_unfollowed_dids(state)
 
@@ -250,10 +283,16 @@ def follow_interactors(
     cutoff_epoch = time.time() - _INTERACTION_WINDOW_SECONDS
     interactor_dids = _collect_interactor_dids(client, user_did, cutoff_epoch)
 
-    # Exclude anyone already followed, still in the grace window, or
-    # previously unfollowed (to avoid churn).
-    to_follow = sorted(
-        interactor_dids - already_following - grace_dids - unfollowed_dids
+    existing_skips = interactor_dids & already_following
+    remaining = interactor_dids - existing_skips
+    grace_skips = remaining & grace_dids
+    remaining -= grace_skips
+    history_skips = remaining & unfollowed_dids
+    to_follow = sorted(remaining - history_skips)
+    summary["interaction_candidates"] = len(interactor_dids)
+    summary["interaction_eligible"] = len(to_follow)
+    summary["protected"] = summary.get("protected", 0) + len(
+        existing_skips | grace_skips | history_skips
     )
 
     print(
@@ -264,6 +303,8 @@ def follow_interactors(
     followed_count = _follow_did_list(
         client, state, to_follow, dry_run, action_delay_seconds
     )
+    summary["interaction_added"] = followed_count
+    summary["failed"] = summary.get("failed", 0) + len(to_follow) - followed_count
 
     if followed_count > 0 and not dry_run:
         bluesky_state.prune_follow_grace(state)
@@ -297,6 +338,7 @@ def _process_like_page(
     already_liked,
     dry_run,
     action_delay_seconds,
+    summary,
 ):
     """Process one page of notifications, liking applicable items.
 
@@ -349,6 +391,7 @@ def _process_like_page(
                 atproto_client.exceptions.NetworkError,
             ) as exc:
                 print(f"{Fore.RED}Failed to like {masked_uri}: {exc}{Style.RESET_ALL}")
+                summary["failed"] = summary.get("failed", 0) + 1
                 continue
 
         bluesky_state.record_liked_reply_uri(state, uri)
@@ -362,7 +405,11 @@ def _process_like_page(
 
 
 def like_replies(
-    client, state: dict, dry_run: bool, action_delay_seconds: float
+    client,
+    state: dict,
+    dry_run: bool,
+    action_delay_seconds: float,
+    summary: dict | None = None,
 ) -> int:
     """Like replies/reposts of the bot's posts from the last 24 hours.
 
@@ -373,6 +420,8 @@ def like_replies(
     Returns the number of new likes performed.
     """
     already_liked = bluesky_state.get_liked_reply_uris(state)
+    if summary is None:
+        summary = {}
     liked_count = 0
     cutoff_epoch = time.time() - _LIKE_WINDOW_SECONDS
     cursor = None
@@ -408,6 +457,7 @@ def like_replies(
             already_liked,
             dry_run,
             action_delay_seconds,
+            summary,
         )
         liked_count += page_new_likes
 
@@ -424,6 +474,7 @@ def like_replies(
             break
 
     bluesky_state.set_likes_checked_now(state)
+    summary["interactions_liked"] = liked_count
     return liked_count
 
 
@@ -473,19 +524,39 @@ def main() -> None:
 
     state = bluesky_state.load_state()
     unfollowed_dids = bluesky_state.get_unfollowed_dids(state)
+    social_summary = {
+        "follow_back_candidates": 0,
+        "follow_back_added": 0,
+        "protected": 0,
+        "interaction_candidates": 0,
+        "interaction_eligible": 0,
+        "interaction_added": 0,
+        "interactions_liked": 0,
+        "failed": 0,
+    }
 
     try:
-        follow_back(client, username, dry_run, action_delay_seconds, unfollowed_dids)
+        follow_back(
+            client,
+            username,
+            dry_run,
+            action_delay_seconds,
+            unfollowed_dids,
+            social_summary,
+        )
     except (
         ValueError,
         requests.RequestException,
         TimeoutError,
         atproto_client.exceptions.NetworkError,
     ) as exc:
+        social_summary["failed"] += 1
         print(f"{Fore.RED}Follow-back failed: {exc}{Style.RESET_ALL}")
 
     try:
-        followed = follow_interactors(client, state, dry_run, action_delay_seconds)
+        followed = follow_interactors(
+            client, state, dry_run, action_delay_seconds, social_summary
+        )
         print(
             f"{Fore.GREEN}Followed {followed} new interactor"
             f"{'s' if followed != 1 else ''}.{Style.RESET_ALL}"
@@ -496,10 +567,13 @@ def main() -> None:
         TimeoutError,
         atproto_client.exceptions.NetworkError,
     ) as exc:
+        social_summary["failed"] += 1
         print(f"{Fore.RED}Interaction-follow failed: {exc}{Style.RESET_ALL}")
 
     try:
-        liked = like_replies(client, state, dry_run, action_delay_seconds)
+        liked = like_replies(
+            client, state, dry_run, action_delay_seconds, social_summary
+        )
         print(
             f"{Fore.GREEN}Liked {liked} new interaction"
             f"{'s' if liked != 1 else ''}.{Style.RESET_ALL}"
@@ -510,8 +584,10 @@ def main() -> None:
         TimeoutError,
         atproto_client.exceptions.NetworkError,
     ) as exc:
+        social_summary["failed"] += 1
         print(f"{Fore.RED}Interaction liking failed: {exc}{Style.RESET_ALL}")
 
+    print(_social_summary_line(social_summary, dry_run))
     bluesky_state.save_state(state, domains="social")
     print(f"{Fore.GREEN}Done.{Style.RESET_ALL}")
 
