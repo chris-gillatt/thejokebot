@@ -364,6 +364,7 @@ def _workflow_activity_counts(workflow_name: str, log_text: str) -> dict | None:
             return {
                 "follows": follow_back_added + interaction_added,
                 "unfollows": 0,
+                "social_summary_observed": True,
                 "follow_back_candidates": follow_back_candidates,
                 "follow_back_added": follow_back_added,
                 "protected": protected,
@@ -374,7 +375,11 @@ def _workflow_activity_counts(workflow_name: str, log_text: str) -> dict | None:
                 "failed": failed,
             }
         follows = len(re.findall(r"\bFollowed (?:interactor )?did:[^\s]+", plain_text))
-        return {"follows": follows, "unfollows": 0}
+        return {
+            "follows": follows,
+            "unfollows": 0,
+            "social_summary_observed": False,
+        }
     if workflow_name == "bluesky_follow_fellows":
         summaries = re.findall(
             r"Discovery summary: selected=(\d+), followed=(\d+), "
@@ -459,7 +464,7 @@ def collect_workflow_activity(
         incomplete_social = workflow_name == "bluesky_follows_and_likes" and (
             not cached
             or cached.get("workflow") != workflow_name
-            or "follow_back_candidates" not in cached
+            or "social_summary_observed" not in cached
         )
         incomplete_unfollow = workflow_name == "bluesky_unfollow" and (
             not cached

@@ -419,7 +419,11 @@ class DashboardCollectorTests(unittest.TestCase):
             dashboard._workflow_activity_counts(
                 "bluesky_follows_and_likes", follows_and_likes
             ),
-            {"follows": 2, "unfollows": 0},
+            {
+                "follows": 2,
+                "unfollows": 0,
+                "social_summary_observed": False,
+            },
         )
         self.assertEqual(
             dashboard._workflow_activity_counts(
@@ -428,6 +432,7 @@ class DashboardCollectorTests(unittest.TestCase):
             {
                 "follows": 8,
                 "unfollows": 0,
+                "social_summary_observed": True,
                 "follow_back_candidates": 8,
                 "follow_back_added": 5,
                 "protected": 3,
@@ -495,6 +500,7 @@ class DashboardCollectorTests(unittest.TestCase):
                         "created_at": "2026-08-21T00:00:00Z",
                         "follows": 3,
                         "unfollows": 0,
+                        "social_summary_observed": True,
                         "follow_back_candidates": 3,
                     }
                 ],
@@ -530,6 +536,58 @@ class DashboardCollectorTests(unittest.TestCase):
         fetch_logs.assert_not_called()
         self.assertEqual(activity["expired_before"], "2026-08-20T00:00:00+00:00")
         self.assertEqual([item["id"] for item in activity["runs"]], [2])
+
+    def test_collect_workflow_activity_marks_legacy_social_run_checked(self):
+        existing = {
+            "workflow_activity": {
+                "runs": [
+                    {
+                        "id": 2,
+                        "attempt": 1,
+                        "workflow": "bluesky_follows_and_likes",
+                        "created_at": "2026-08-21T00:00:00Z",
+                        "follows": 3,
+                        "unfollows": 0,
+                    }
+                ],
+            }
+        }
+        workflow_runs = [
+            {
+                "id": 2,
+                "run_attempt": 1,
+                "name": "bluesky_follows_and_likes",
+                "conclusion": "success",
+                "created_at": "2026-08-21T00:00:00Z",
+            }
+        ]
+
+        with patch.object(
+            dashboard,
+            "fetch_workflow_run_logs",
+            return_value="Followed did:plc:example",
+        ) as fetch_logs:
+            activity = dashboard.collect_workflow_activity(
+                object(),
+                "owner/repository",
+                "token",
+                workflow_runs,
+                existing,
+                datetime(2026, 8, 22, tzinfo=timezone.utc),
+            )
+
+        fetch_logs.assert_called_once()
+        self.assertFalse(activity["runs"][0]["social_summary_observed"])
+        with patch.object(dashboard, "fetch_workflow_run_logs") as fetch_logs:
+            dashboard.collect_workflow_activity(
+                object(),
+                "owner/repository",
+                "token",
+                workflow_runs,
+                {"workflow_activity": activity},
+                datetime(2026, 8, 22, tzinfo=timezone.utc),
+            )
+        fetch_logs.assert_not_called()
 
     def test_collect_workflow_activity_upgrades_cached_social_run_once(self):
         existing = {
@@ -574,6 +632,7 @@ class DashboardCollectorTests(unittest.TestCase):
             )
 
         fetch_logs.assert_called_once()
+        self.assertTrue(activity["runs"][0]["social_summary_observed"])
         self.assertEqual(activity["runs"][0]["follow_back_candidates"], 5)
         self.assertEqual(activity["runs"][0]["interaction_eligible"], 3)
         with patch.object(dashboard, "fetch_workflow_run_logs") as fetch_logs:
