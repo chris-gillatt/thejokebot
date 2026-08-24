@@ -1,6 +1,6 @@
 {
   "schema_version": 7,
-  "generated_at": "2026-08-24T14:32:02.182102+00:00",
+  "generated_at": "2026-08-24T14:36:50.075168+00:00",
   "account": {
     "handle": "thejokebot.bsky.social",
     "display_name": "The Joke Bot",
@@ -26,13 +26,13 @@
     "profile_posts": 2334,
     "joke_posts": 695,
     "engagement": {
-      "likes": 3808,
+      "likes": 3810,
       "replies": 270,
       "reposts": 289,
       "quotes": 32,
       "bookmarks": 30
     },
-    "engagement_per_joke": 6.37
+    "engagement_per_joke": 6.38
   },
   "snapshots": [
     {
@@ -109,11 +109,11 @@
     },
     {
       "period_start": "2026-08-24T12:00:00+00:00",
-      "collected_at": "2026-08-24T14:32:02.182102+00:00",
+      "collected_at": "2026-08-24T14:36:50.075168+00:00",
       "followers": 6412,
       "following": 10834,
       "profile_posts": 2334,
-      "engagement_total": 4429,
+      "engagement_total": 4431,
       "source": "bluesky_snapshot"
     }
   ],
@@ -1377,16 +1377,28 @@
   },
   "social_activity": {
     "window_days": 30,
-    "completed_runs": 0,
-    "follow_back_candidates": 0,
+    "completed_runs": 1,
+    "follow_back_candidates": 1,
     "follow_back_added": 0,
-    "protected": 0,
-    "interaction_candidates": 0,
+    "protected": 12,
+    "interaction_candidates": 11,
     "interaction_eligible": 0,
     "interaction_added": 0,
     "interactions_liked": 0,
     "failed": 0,
-    "runs": []
+    "runs": [
+      {
+        "created_at": "2026-08-24T14:32:56Z",
+        "follow_back_candidates": 1,
+        "follow_back_added": 0,
+        "protected": 12,
+        "interaction_candidates": 11,
+        "interaction_eligible": 0,
+        "interaction_added": 0,
+        "interactions_liked": 0,
+        "failed": 0
+      }
+    ]
   },
   "moderation_activity": {
     "window_days": 30,
@@ -3200,6 +3212,23 @@
         "follows": 0,
         "unfollows": 0,
         "social_summary_observed": false
+      },
+      {
+        "id": 32739378832,
+        "attempt": 1,
+        "workflow": "bluesky_follows_and_likes",
+        "created_at": "2026-08-24T14:32:56Z",
+        "follows": 0,
+        "unfollows": 0,
+        "social_summary_observed": true,
+        "follow_back_candidates": 1,
+        "follow_back_added": 0,
+        "protected": 12,
+        "interaction_candidates": 11,
+        "interaction_eligible": 0,
+        "interaction_added": 0,
+        "interactions_liked": 0,
+        "failed": 0
       }
     ]
   },
@@ -3230,7 +3259,7 @@
         "name": "groandeck",
         "published": 188,
         "visible_posts": 188,
-        "average_interactions": 5.62,
+        "average_interactions": 5.63,
         "fallthroughs": 0,
         "rejection_counts": {
           "duplicate": 0,
@@ -3328,20 +3357,20 @@
   },
   "automation": {
     "window_days": 30,
-    "collected_at": "2026-08-24T14:32:02.182102+00:00",
-    "runs": 966,
-    "successful": 951,
+    "collected_at": "2026-08-24T14:36:50.075168+00:00",
+    "runs": 968,
+    "successful": 955,
     "failed": 8,
     "cancelled": 3,
     "success_rate": 99.2,
     "workflows": [
       {
         "name": "bluesky_dashboard",
-        "runs": 30,
-        "successful": 29,
+        "runs": 31,
+        "successful": 30,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-08-24T14:31:38Z",
+        "last_run_at": "2026-08-24T14:36:19Z",
         "last_status": "in_progress",
         "last_conclusion": null,
         "latest_duration_seconds": null,
@@ -3363,14 +3392,14 @@
       },
       {
         "name": "bluesky_follows_and_likes",
-        "runs": 358,
-        "successful": 353,
+        "runs": 359,
+        "successful": 354,
         "failed": 4,
         "cancelled": 1,
-        "last_run_at": "2026-08-24T12:32:51Z",
+        "last_run_at": "2026-08-24T14:32:56Z",
         "last_status": "completed",
         "last_conclusion": "success",
-        "latest_duration_seconds": 72,
+        "latest_duration_seconds": 83,
         "median_duration_seconds": 59,
         "expected_interval_hours": 2.0
       },
@@ -3442,13 +3471,13 @@
       {
         "name": "codeql",
         "runs": 45,
-        "successful": 44,
+        "successful": 45,
         "failed": 0,
         "cancelled": 0,
         "last_run_at": "2026-08-24T14:31:38Z",
-        "last_status": "in_progress",
-        "last_conclusion": null,
-        "latest_duration_seconds": null,
+        "last_status": "completed",
+        "last_conclusion": "success",
+        "latest_duration_seconds": 79,
         "median_duration_seconds": 72,
         "expected_interval_hours": null
       },
@@ -3481,13 +3510,13 @@
       {
         "name": "python_tests",
         "runs": 40,
-        "successful": 39,
+        "successful": 40,
         "failed": 0,
         "cancelled": 0,
         "last_run_at": "2026-08-24T14:31:38Z",
-        "last_status": "in_progress",
-        "last_conclusion": null,
-        "latest_duration_seconds": null,
+        "last_status": "completed",
+        "last_conclusion": "success",
+        "latest_duration_seconds": 32,
         "median_duration_seconds": 31,
         "expected_interval_hours": null
       },
