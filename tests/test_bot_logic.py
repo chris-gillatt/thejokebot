@@ -3595,6 +3595,24 @@ class JokeRetryChainTests(unittest.TestCase):
             {"provider_error": 1},
         )
 
+    def test_provider_summary_reports_attempts_fallthrough_and_rejections(self):
+        line = bluesky_post_joke._provider_summary_line(
+            [
+                ("jokeapi", "duplicates", {"duplicate": 4, "too_long": 1}),
+                ("groandeck", "timeout", {"network_error": 1}),
+            ],
+            "jokebot_jokebook",
+            True,
+        )
+
+        self.assertEqual(
+            line,
+            "Provider summary: attempts=3, "
+            "successful_source=jokebot_jokebook, fallthrough=true, "
+            "static_fallback=false, duplicate=4, too_long=1, "
+            "network_error=1, provider_error=0, posted=true.",
+        )
+
     def test_apply_posting_state_updates_persists_rejection_counts(self):
         state = bluesky_state._default_state()
 

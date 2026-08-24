@@ -523,6 +523,63 @@ function renderProviders() {
   setText("providers-healthy", `${healthy}/${checked.length}`);
   setText("retained-publications", numberFormat.format(providerMetrics.retained_publications));
 
+  const pressure = metrics.provider_pressure?.windows || {};
+  const sevenDays = pressure["7"];
+  const thirtyDays = pressure["30"];
+  const hasPressureHistory = sevenDays?.completed_runs > 0;
+  setText(
+    "provider-pressure-note",
+    hasPressureHistory
+      ? `${numberFormat.format(sevenDays.completed_runs)} posting runs observed over 7 days`
+      : "Posting run history will appear after the next completed run.",
+  );
+  setText(
+    "provider-fallthrough-7",
+    hasPressureHistory ? `${percentageFormat.format(sevenDays.fallthrough_rate)}%` : "--",
+  );
+  setText(
+    "provider-fallthrough-runs-7",
+    hasPressureHistory
+      ? `${numberFormat.format(sevenDays.fallthroughs)} fall-through runs`
+      : "-- runs",
+  );
+  setText(
+    "provider-attempts-7",
+    hasPressureHistory ? numberFormat.format(sevenDays.average_attempts) : "--",
+  );
+  setText(
+    "provider-static-fallbacks-7",
+    hasPressureHistory ? numberFormat.format(sevenDays.static_fallbacks) : "--",
+  );
+  setText(
+    "provider-fallthrough-30",
+    thirtyDays?.completed_runs
+      ? `${percentageFormat.format(thirtyDays.fallthrough_rate)}%`
+      : "--",
+  );
+  setText(
+    "provider-fallthrough-runs-30",
+    thirtyDays?.completed_runs
+      ? `${numberFormat.format(thirtyDays.fallthroughs)} fall-through runs`
+      : "-- runs",
+  );
+  const rejectionValues = {
+    "provider-rejection-duplicate": sevenDays?.rejections?.duplicate,
+    "provider-rejection-too-long": sevenDays?.rejections?.too_long,
+    "provider-rejection-network": sevenDays?.rejections?.network_error,
+    "provider-rejection-provider": sevenDays?.rejections?.provider_error,
+  };
+  Object.entries(rejectionValues).forEach(([id, value]) => {
+    setText(id, metricText(hasPressureHistory ? value : null));
+  });
+  const sources = Object.entries(sevenDays?.successful_sources || {})
+    .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+    .map(([name, count]) => `${displayName(name)} ${numberFormat.format(count)}`);
+  setText(
+    "provider-source-note",
+    hasPressureHistory && sources.length ? `Selected: ${sources.join(" · ")}` : "--",
+  );
+
   const body = document.querySelector("#provider-table tbody");
   body.replaceChildren();
   providers.forEach((provider) => {

@@ -7,6 +7,7 @@ from unittest.mock import patch
 
 import bluesky_collect_dashboard_metrics as dashboard
 import bluesky_follows_and_likes
+import bluesky_post_joke
 import bluesky_process_reports
 
 
@@ -244,7 +245,7 @@ class DashboardCollectorTests(unittest.TestCase):
 
     def test_rejects_unknown_schema_version(self):
         with self.assertRaisesRegex(ValueError, "schema version"):
-            dashboard._normalise_existing({"schema_version": 6, "snapshots": []})
+            dashboard._normalise_existing({"schema_version": 7, "snapshots": []})
 
     def test_normalise_existing_upgrades_schema_one(self):
         existing = {"schema_version": 1, "snapshots": []}
@@ -273,6 +274,43 @@ class DashboardCollectorTests(unittest.TestCase):
         self.assertEqual(summary["approved_removals"], 1)
         self.assertEqual(summary["unresolved"], 4)
         self.assertNotIn("uri", json.dumps(summary))
+
+    def test_parses_and_summarises_provider_pressure_from_run_events(self):
+        line = bluesky_post_joke._provider_summary_line(
+            [("jokeapi", "duplicates", {"duplicate": 4, "too_long": 1})],
+            "groandeck",
+            True,
+        )
+        counts = dashboard._workflow_activity_counts("bluesky_post_joke", line)
+        activity = {
+            "runs": [
+                {
+                    "workflow": "bluesky_post_joke",
+                    "created_at": "2026-08-22T10:00:00Z",
+                    **counts,
+                }
+            ]
+        }
+
+        pressure = dashboard._provider_pressure_metrics(
+            activity, datetime(2026, 8, 24, tzinfo=timezone.utc)
+        )
+
+        self.assertEqual(pressure["windows"]["7"]["completed_runs"], 1)
+        self.assertEqual(pressure["windows"]["7"]["average_attempts"], 2.0)
+        self.assertEqual(pressure["windows"]["7"]["fallthrough_rate"], 100.0)
+        self.assertEqual(
+            pressure["windows"]["7"]["rejections"],
+            {
+                "duplicate": 4,
+                "too_long": 1,
+                "network_error": 0,
+                "provider_error": 0,
+            },
+        )
+        self.assertEqual(
+            pressure["windows"]["7"]["successful_sources"], {"groandeck": 1}
+        )
 
     def test_engagement_momentum_requires_full_observed_windows(self):
         now = datetime(2026, 8, 31, 12, tzinfo=timezone.utc)
@@ -603,6 +641,58 @@ class DashboardCollectorTests(unittest.TestCase):
         fetch_logs.assert_called_once()
         self.assertEqual(activity["runs"][0]["eligible"], 9)
         self.assertEqual(activity["runs"][0]["processed"], 5)
+        with patch.object(dashboard, "fetch_workflow_run_logs") as fetch_logs:
+            dashboard.collect_workflow_activity(
+                object(),
+                "owner/repository",
+                "token",
+                workflow_runs,
+                {"workflow_activity": activity},
+                datetime(2026, 8, 22, tzinfo=timezone.utc),
+            )
+        fetch_logs.assert_not_called()
+
+    def test_collect_workflow_activity_upgrades_cached_provider_run_once(self):
+        existing = {
+            "workflow_activity": {
+                "runs": [
+                    {
+                        "id": 4,
+                        "attempt": 1,
+                        "workflow": "bluesky_post_joke",
+                        "created_at": "2026-08-21T00:00:00Z",
+                        "follows": 0,
+                        "unfollows": 0,
+                    }
+                ]
+            }
+        }
+        workflow_runs = [
+            {
+                "id": 4,
+                "run_attempt": 1,
+                "name": "bluesky_post_joke",
+                "conclusion": "success",
+                "created_at": "2026-08-21T00:00:00Z",
+            }
+        ]
+        log_text = bluesky_post_joke._provider_summary_line([], "jokeapi", True)
+
+        with patch.object(
+            dashboard, "fetch_workflow_run_logs", return_value=log_text
+        ) as fetch_logs:
+            activity = dashboard.collect_workflow_activity(
+                object(),
+                "owner/repository",
+                "token",
+                workflow_runs,
+                existing,
+                datetime(2026, 8, 22, tzinfo=timezone.utc),
+            )
+
+        fetch_logs.assert_called_once()
+        self.assertEqual(activity["runs"][0]["provider_attempts"], 1)
+        self.assertEqual(activity["runs"][0]["successful_source"], "jokeapi")
         with patch.object(dashboard, "fetch_workflow_run_logs") as fetch_logs:
             dashboard.collect_workflow_activity(
                 object(),

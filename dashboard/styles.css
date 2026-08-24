@@ -868,6 +868,76 @@ td:first-child {
   margin-bottom: 48px;
 }
 
+.provider-pressure-block {
+  margin-bottom: 48px;
+}
+
+.provider-pressure-summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border-top: 1px solid #31516a;
+  border-bottom: 1px solid #31516a;
+}
+
+.provider-pressure-summary > div {
+  min-width: 0;
+  padding: 17px 20px 19px;
+  border-left: 1px solid #31516a;
+}
+
+.provider-pressure-summary > div:last-child {
+  border-right: 1px solid #31516a;
+}
+
+.provider-pressure-summary span,
+.provider-pressure-summary strong,
+.provider-pressure-summary small {
+  display: block;
+}
+
+.provider-pressure-summary span,
+.provider-pressure-summary small {
+  color: #b8cedd;
+  font-size: 0.72rem;
+}
+
+.provider-pressure-summary strong {
+  margin-top: 5px;
+  font: 700 1.65rem/1 var(--font-display);
+}
+
+.provider-pressure-summary small {
+  margin-top: 5px;
+}
+
+.provider-rejections {
+  margin: 0;
+  padding: 12px 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 28px;
+  background: #0d3656;
+}
+
+.provider-rejections div {
+  display: flex;
+  gap: 8px;
+}
+
+.provider-rejections dt,
+.provider-rejections dd {
+  margin: 0;
+  font-size: 0.75rem;
+}
+
+.provider-rejections dt {
+  color: #b8cedd;
+}
+
+.provider-rejections dd {
+  font-weight: 700;
+}
+
 .moderation-block {
   margin-bottom: 34px;
 }
@@ -992,6 +1062,14 @@ td:first-child {
 
 .operations-block-heading > strong {
   font: 700 1.5rem/1 var(--font-display);
+}
+
+#provider-source-note {
+  max-width: 68%;
+  color: #b8cedd;
+  font: 700 0.78rem/1.4 var(--font-body);
+  text-align: right;
+  overflow-wrap: anywhere;
 }
 
 .operations-table-scroll {
@@ -1387,6 +1465,33 @@ footer a {
 
   .moderation-summary > div {
     padding-inline: 14px;
+  }
+
+  .provider-pressure-summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .provider-pressure-summary > div:nth-child(3),
+  .provider-pressure-summary > div:nth-child(4) {
+    border-top: 1px solid #31516a;
+  }
+
+  .provider-pressure-summary > div:nth-child(odd) {
+    border-left: 0;
+  }
+
+  .provider-pressure-summary > div {
+    padding-inline: 14px;
+  }
+
+  .provider-pressure-block .operations-block-heading {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  #provider-source-note {
+    max-width: 100%;
+    text-align: left;
   }
 
   .delivery-summary {

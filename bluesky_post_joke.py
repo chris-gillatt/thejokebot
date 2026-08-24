@@ -269,6 +269,29 @@ def _failure_reason_counts(error: Exception) -> dict[str, int]:
     return {"provider_error": 1}
 
 
+def _provider_summary_line(
+    provider_failures: list[tuple[str, str, dict[str, int]]],
+    used_provider: str,
+    posted_successfully: bool,
+) -> str:
+    rejection_counts = {
+        reason: sum(counts.get(reason, 0) for _, _, counts in provider_failures)
+        for reason in ("duplicate", "too_long", "network_error", "provider_error")
+    }
+    provider_attempts = len(provider_failures) + (used_provider != "fallback")
+    return (
+        f"Provider summary: attempts={provider_attempts}, "
+        f"successful_source={used_provider}, "
+        f"fallthrough={str(bool(provider_failures)).lower()}, "
+        f"static_fallback={str(used_provider == 'fallback').lower()}, "
+        f"duplicate={rejection_counts['duplicate']}, "
+        f"too_long={rejection_counts['too_long']}, "
+        f"network_error={rejection_counts['network_error']}, "
+        f"provider_error={rejection_counts['provider_error']}, "
+        f"posted={str(posted_successfully).lower()}."
+    )
+
+
 def build_hashtag_facets(joke_text, hashtags):
     facets = []
     current_offset = len(joke_text.encode("UTF-8")) + 2
@@ -435,6 +458,11 @@ def main():
     ) as e:
         print(f"Failed to post joke: {e}")
     finally:
+        print(
+            _provider_summary_line(
+                provider_failures, used_provider, posted_successfully
+            )
+        )
         bluesky_state.update_state(
             lambda latest_state: _apply_posting_state_updates(
                 latest_state,

@@ -313,13 +313,16 @@ Resolution-time reporting remains deferred until the new aggregate lifecycle
 events provide a sufficient observed history; no duration is inferred from
 legacy identifier-only state.
 
-#### Phase 5: Provider pressure trends
+#### Phase 5: Provider pressure trends ✓ Complete
 
 - Emit a per-posting-run aggregate summary containing provider attempts,
   successful source, fallback use, and rejection counts by existing category.
 - Build rolling provider pressure and fall-through rates only from the new event
   stream. Existing cumulative counters remain lifetime context and must not be
   presented as historical trends.
+
+The dashboard keeps observed 7/30-day posting-run pressure separate from the
+existing lifetime publication and failure counters.
 
 Cross-phase rules:
 - Increment the dashboard schema only when the persisted contract changes, and

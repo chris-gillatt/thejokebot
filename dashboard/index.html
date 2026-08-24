@@ -15,12 +15,12 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=11" />
+    <link rel="stylesheet" href="styles.css?v=12" />
     <script
       src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"
       defer
     ></script>
-    <script src="app.js?v=10" defer></script>
+    <script src="app.js?v=11" defer></script>
   </head>
   <body>
     <noscript>
@@ -367,6 +367,28 @@
               <div><span>Missed slots</span><strong id="posting-missed">--</strong><small id="posting-missed-context">Delayed slots unavailable</small></div>
               <div><span>Current streak</span><strong id="posting-streak">--</strong><small>Closed slots</small></div>
             </div>
+          </div>
+
+          <div class="provider-pressure-block" aria-labelledby="provider-pressure-heading">
+            <div class="operations-block-heading">
+              <div>
+                <h3 id="provider-pressure-heading">Provider pressure</h3>
+                <p id="provider-pressure-note">Collecting posting run history</p>
+              </div>
+              <strong id="provider-source-note">--</strong>
+            </div>
+            <div class="provider-pressure-summary">
+              <div><span>7-day fall-through</span><strong id="provider-fallthrough-7">--</strong><small id="provider-fallthrough-runs-7">-- runs</small></div>
+              <div><span>Average attempts</span><strong id="provider-attempts-7">--</strong><small>7 days</small></div>
+              <div><span>Static fallback</span><strong id="provider-static-fallbacks-7">--</strong><small>7 days</small></div>
+              <div><span>30-day fall-through</span><strong id="provider-fallthrough-30">--</strong><small id="provider-fallthrough-runs-30">-- runs</small></div>
+            </div>
+            <dl class="provider-rejections" aria-label="Seven-day provider rejection counts">
+              <div><dt>Duplicate</dt><dd id="provider-rejection-duplicate">--</dd></div>
+              <div><dt>Too long</dt><dd id="provider-rejection-too-long">--</dd></div>
+              <div><dt>Network</dt><dd id="provider-rejection-network">--</dd></div>
+              <div><dt>Provider</dt><dd id="provider-rejection-provider">--</dd></div>
+            </dl>
           </div>
 
           <div class="operations-layout">

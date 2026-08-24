@@ -22,7 +22,7 @@ from bluesky_common import retry_network_call
 PUBLIC_API_BASE = "https://public.api.bsky.app/xrpc"
 GITHUB_API_BASE = "https://api.github.com"
 METRICS_FILE = Path(__file__).resolve().parent / "dashboard" / "data" / "metrics.json"
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 MAX_FEED_PAGES = 100
 MAX_FEED_RUNTIME_SECONDS = 120
 MAX_WORKFLOW_PAGES = 20
@@ -58,6 +58,7 @@ ACTIVITY_WORKFLOWS = {
     "bluesky_follow_fellows",
     "bluesky_follows_and_likes",
     "bluesky_manage_starter_pack",
+    "bluesky_post_joke",
     "bluesky_process_reports",
     "bluesky_unfollow",
 }
@@ -292,11 +293,48 @@ def _unfollow_activity_counts(log_text: str) -> dict | None:
     }
 
 
+def _provider_activity_counts(log_text: str) -> dict | None:
+    summaries = re.findall(
+        r"Provider summary: attempts=(\d+), successful_source=([a-z0-9_-]+), "
+        r"fallthrough=(true|false), static_fallback=(true|false), "
+        r"duplicate=(\d+), too_long=(\d+), network_error=(\d+), "
+        r"provider_error=(\d+), posted=(true|false)\.",
+        log_text,
+    )
+    if not summaries:
+        return None
+    (
+        attempts,
+        successful_source,
+        fallthrough,
+        static_fallback,
+        duplicate,
+        too_long,
+        network_error,
+        provider_error,
+        posted,
+    ) = summaries[-1]
+    return {
+        "follows": 0,
+        "unfollows": 0,
+        "provider_attempts": int(attempts),
+        "successful_source": successful_source,
+        "fallthrough": fallthrough == "true",
+        "static_fallback": static_fallback == "true",
+        "duplicate": int(duplicate),
+        "too_long": int(too_long),
+        "network_error": int(network_error),
+        "provider_error": int(provider_error),
+        "posted": posted == "true",
+    }
+
+
 def _workflow_activity_counts(workflow_name: str, log_text: str) -> dict | None:
     plain_text = re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", log_text)
     if "Dry-run mode enabled" in plain_text:
         return {"follows": 0, "unfollows": 0}
     specialised_parser = {
+        "bluesky_post_joke": _provider_activity_counts,
         "bluesky_process_reports": _moderation_activity_counts,
         "bluesky_unfollow": _unfollow_activity_counts,
     }.get(workflow_name)
@@ -427,11 +465,17 @@ def collect_workflow_activity(
             or cached.get("workflow") != workflow_name
             or "proposals" not in cached
         )
+        incomplete_provider = workflow_name == "bluesky_post_joke" and (
+            not cached
+            or cached.get("workflow") != workflow_name
+            or "provider_attempts" not in cached
+        )
         if (
             cached_attempt_matches
             and not incomplete_discovery
             and not incomplete_unfollow
             and not incomplete_moderation
+            and not incomplete_provider
         ):
             continue
         try:
@@ -673,6 +717,71 @@ def _moderation_metrics(workflow_activity: dict | None) -> dict:
     }
 
 
+def _provider_pressure_metrics(workflow_activity: dict | None, now: datetime) -> dict:
+    observed_runs = []
+    for run in (workflow_activity or {}).get("runs", []):
+        if (
+            run.get("workflow") != "bluesky_post_joke"
+            or "provider_attempts" not in run
+            or not run.get("created_at")
+        ):
+            continue
+        observed_runs.append(
+            {
+                "created_at": run["created_at"],
+                "provider_attempts": max(0, int(run.get("provider_attempts") or 0)),
+                "successful_source": str(run.get("successful_source") or "unknown"),
+                "fallthrough": bool(run.get("fallthrough")),
+                "static_fallback": bool(run.get("static_fallback")),
+                "posted": bool(run.get("posted")),
+                "rejections": {
+                    reason: max(0, int(run.get(reason) or 0))
+                    for reason in (
+                        "duplicate",
+                        "too_long",
+                        "network_error",
+                        "provider_error",
+                    )
+                },
+            }
+        )
+
+    windows = {}
+    for days in (7, 30):
+        cutoff = now - timedelta(days=days)
+        runs = [
+            run
+            for run in observed_runs
+            if datetime.fromisoformat(run["created_at"].replace("Z", "+00:00"))
+            >= cutoff
+        ]
+        fallthroughs = sum(run["fallthrough"] for run in runs)
+        attempts = sum(run["provider_attempts"] for run in runs)
+        sources = Counter(run["successful_source"] for run in runs)
+        windows[str(days)] = {
+            "completed_runs": len(runs),
+            "posted_runs": sum(run["posted"] for run in runs),
+            "provider_attempts": attempts,
+            "average_attempts": round(attempts / len(runs), 1) if runs else None,
+            "fallthroughs": fallthroughs,
+            "fallthrough_rate": round(fallthroughs * 100 / len(runs), 1)
+            if runs
+            else None,
+            "static_fallbacks": sum(run["static_fallback"] for run in runs),
+            "rejections": {
+                reason: sum(run["rejections"][reason] for run in runs)
+                for reason in (
+                    "duplicate",
+                    "too_long",
+                    "network_error",
+                    "provider_error",
+                )
+            },
+            "successful_sources": dict(sorted(sources.items())),
+        }
+    return {"windows": windows, "runs": observed_runs}
+
+
 def _network_maintenance_metrics(
     state: dict, workflow_activity: dict | None, now: datetime
 ) -> dict:
@@ -772,7 +881,7 @@ def _period_start(now: datetime) -> str:
 def _normalise_existing(existing: dict | None) -> dict:
     if existing is None:
         return {"schema_version": SCHEMA_VERSION, "snapshots": []}
-    if existing.get("schema_version") not in {1, 2, 3, 4, SCHEMA_VERSION}:
+    if existing.get("schema_version") not in {1, 2, 3, 4, 5, SCHEMA_VERSION}:
         raise ValueError("Unsupported dashboard metrics schema version")
     if not isinstance(existing.get("snapshots"), list):
         raise ValueError("Dashboard metrics snapshots must be a list")
@@ -1218,6 +1327,7 @@ def collect_metrics(
         "social_activity": _social_activity_metrics(workflow_activity),
         "moderation_activity": _moderation_metrics(workflow_activity),
         "engagement_momentum": _engagement_momentum(snapshots, now),
+        "provider_pressure": _provider_pressure_metrics(workflow_activity, now),
         "network_maintenance": _network_maintenance_metrics(
             state, workflow_activity, now
         ),
