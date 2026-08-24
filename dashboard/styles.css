@@ -1033,8 +1033,8 @@ td:first-child {
 
 .operations-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
-  gap: 46px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 52px;
 }
 
 .operations-block {
@@ -1075,14 +1075,15 @@ td:first-child {
 .operations-table-scroll {
   width: 100%;
   max-width: 100%;
-  max-height: 430px;
+  max-height: none;
   margin-top: 0;
-  contain: inline-size;
+  overflow: visible;
   background: #0d3656;
   border-top: 3px solid var(--cyan);
 }
 
 .operations-table {
+  table-layout: fixed;
   color: var(--white);
   font-size: 0.78rem;
 }
@@ -1101,7 +1102,13 @@ td:first-child {
 .operations-table th,
 .operations-table td {
   border-bottom-color: #31516a;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.operations-table th:first-child,
+.operations-table td:first-child {
+  width: 24%;
 }
 
 .operations-table th:first-child,
@@ -1430,6 +1437,67 @@ footer a {
   .operations-summary {
     grid-template-columns: repeat(2, 1fr);
   }
+
+  .operations-table-scroll {
+    background: transparent;
+  }
+
+  .operations-table,
+  .operations-table tbody,
+  .operations-table tr,
+  .operations-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .operations-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+
+  .operations-table tr {
+    padding: 10px 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 18px;
+    border-bottom: 1px solid #31516a;
+  }
+
+  .operations-table td,
+  .operations-table td:first-child {
+    width: 100%;
+    padding: 8px 0;
+    border-bottom: 0;
+    text-align: left;
+  }
+
+  .operations-table td::before {
+    display: block;
+    margin-bottom: 3px;
+    color: #b8cedd;
+    font-size: 0.64rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  #provider-table td:nth-child(1)::before { content: "Provider"; }
+  #provider-table td:nth-child(2)::before { content: "Published"; }
+  #provider-table td:nth-child(3)::before { content: "Visible average"; }
+  #provider-table td:nth-child(4)::before { content: "Fall-throughs"; }
+  #provider-table td:nth-child(5)::before { content: "Rejected candidates"; }
+  #provider-table td:nth-child(6)::before { content: "Health"; }
+  #workflow-table td:nth-child(1)::before { content: "Workflow"; }
+  #workflow-table td:nth-child(2)::before { content: "Runs"; }
+  #workflow-table td:nth-child(3)::before { content: "Success"; }
+  #workflow-table td:nth-child(4)::before { content: "Failed"; }
+  #workflow-table td:nth-child(5)::before { content: "Runtime"; }
+  #workflow-table td:nth-child(6)::before { content: "Latest"; }
 
   .operation-stat:nth-child(3),
   .operation-stat:nth-child(4) {
