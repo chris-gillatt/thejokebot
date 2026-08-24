@@ -325,7 +325,14 @@ def collect_workflow_activity(
         if created < cutoff or (expired_before and created <= expired_before):
             continue
         cached = cached_runs.get(int(run_id))
-        if cached and int(cached.get("attempt") or 1) == attempt:
+        cached_attempt_matches = cached and int(cached.get("attempt") or 1) == attempt
+        incomplete_discovery = workflow_name == "bluesky_follow_fellows" and (
+            not cached
+            or cached.get("workflow") != workflow_name
+            or "selected" not in cached
+            or "failed" not in cached
+        )
+        if cached_attempt_matches and not incomplete_discovery:
             continue
         try:
             counts = _workflow_activity_counts(

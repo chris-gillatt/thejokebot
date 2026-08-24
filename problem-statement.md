@@ -70,20 +70,9 @@ reconstructed from retained bot state.
 ### 5.36 Dashboard follow-up improvements ⏳ Deferred
 **Priority: Low**
 
-- Show an explicit "collecting history" state until account trend charts have
-  enough snapshots for a meaningful line.
-- Review trend readability after 7–14 days of real snapshots have accumulated.
 - Add selectable time windows for top-performing jokes.
 - Compact or roll up old six-hour snapshots when metrics JSON growth becomes
   material, while retaining useful long-term daily history.
-- Consider per-run provider attempt/fall-through history so rates and trends can
-  replace lifetime-only counters without inflating posting state indefinitely.
-- Add schedule-adherence metrics (expected versus delivered joke posts and
-  delayed/missed runs) once a durable per-run event model exists.
-- Add moderation outcomes such as reports received, accepted removals, and time
-  to resolution using aggregate counters only.
-- Add an operational alert strip for stale dashboard collection, recent workflow
-  failures, or unhealthy providers when those signals need faster visibility.
 - Explore provider and hashtag engagement comparisons only with minimum sample
   sizes and clear caveats; raw averages can otherwise overstate small cohorts.
 
@@ -241,6 +230,104 @@ successful follows by tag rather than selected candidates. The dashboard retains
 completion, typical run size, and zero-result runs. Public metrics contain no
 account identifiers, tags, targeting details, or workflow run identifiers, and
 older unclassified activity is not presented as discovery history.
+
+### 5.49 Repair dashboard history and expand operational reporting ⏳ Planned
+**Priority: High**
+
+The discovery and account-total views need correction before more dashboard
+surface area is added. The live metrics document contains successful discovery
+runs cached before schema v4, but those records lack their workflow name and
+selection totals. The collector treats matching run IDs as complete and never
+reprocesses them, leaving discovery activity empty until a new run occurs.
+The account chart also splices daily reconstructed values into six-hour sampled
+values, combines unrelated absolute scales, and renders profile posts on a
+crowded secondary axis. Although the underlying values are labelled by source,
+the resulting graph does not communicate meaningful growth.
+
+#### Phase 1: Repair existing views ✓ Complete
+
+- Reprocess only cached `bluesky_follow_fellows` runs that are missing v4
+  classification or discovery totals. Use the current GitHub run metadata to
+  identify them, then parse their retained logs with the existing legacy and
+  explicit-summary parsers. Preserve an honest coverage boundary when logs have
+  expired rather than estimating missing outcomes.
+- Keep discovery on its own fixed rolling 30-day window. Do not let the account
+  chart's 7/30/all selector filter only the discovery graph while leaving its
+  summary cards unchanged.
+- Replace the combined account-total graph with sampled audience change from the
+  first available Bluesky snapshot. Plot follower and following deltas on one
+  axis, exclude profile posts, and show absolute totals plus deltas in tooltips.
+- Retain reconstructed following and profile-post values in the accessible data
+  table, with an explicit sampled/reconstructed source column. Keep the current
+  profile-post total and latest change in the metric band.
+- Show a useful collecting-history state until at least two sampled audience
+  snapshots exist.
+
+Acceptance criteria:
+- The next dashboard collection backfills all still-readable discovery runs
+  without re-fetching already complete cached runs.
+- Empty, partially expired, legacy, and current discovery caches have focused
+  migration tests.
+- Audience lines share a zero-based change axis and never join reconstructed
+  points to sampled points.
+- Tooltips and tables make absolute value, delta, timestamp, and source clear.
+- Desktop and mobile screenshots verify empty and populated discovery states,
+  sampled audience history, table overflow, chart pixels, and text fit.
+
+#### Phase 2: Operational pulse and posting delivery
+
+- Add a compact alert strip for stale dashboard collection, overdue core
+  workflows, recent failures, and unhealthy configured providers. Classify
+  transient upstream failures separately from persistent failures where the
+  available run metadata supports that distinction.
+- Compare configured posting slots with retained successful post timestamps over
+  7 and 30 days. Show expected, delivered, delivery rate, current streak, and
+  genuinely missed slots. Use UTC and define one bounded matching window per
+  slot so a post cannot satisfy two expected runs.
+- Add latest and median workflow duration from GitHub run `created_at` and
+  `updated_at` metadata; do not ingest job logs for duration alone.
+
+#### Phase 3: Social funnel and network maintenance
+
+- Emit one stable aggregate summary from the follows-and-likes workflow covering
+  follow-back candidates, protected/history skips, successful additions,
+  interaction candidates, interaction additions, failures, and replies liked.
+- Retain 30 days of those summaries and render a neutral social-activity funnel.
+  Publish counts only; never retain audience identifiers in dashboard data.
+- Summarise active response-window entries by broad source and monthly unfollow
+  outcomes: eligible, processed, completed, failed, missing records, and early
+  throttle stops. Keep wording operational and avoid exposing selection rules.
+
+#### Phase 4: Moderation and engagement momentum
+
+- Parse the existing report workflow summaries into proposals, acknowledgements,
+  approved removals, and unresolved outcomes. Do not treat all processed reply
+  notifications as reports.
+- Add aggregate report lifecycle timestamps at the producer before calculating
+  resolution time; do not infer historical durations from current state.
+- Add engagement totals to future six-hour snapshots, then derive observed 7 and
+  30-day gains after enough samples accumulate. Label them as snapshot deltas,
+  account for removed/hidden posts, and avoid age-normalised claims.
+
+#### Phase 5: Provider pressure trends
+
+- Emit a per-posting-run aggregate summary containing provider attempts,
+  successful source, fallback use, and rejection counts by existing category.
+- Build rolling provider pressure and fall-through rates only from the new event
+  stream. Existing cumulative counters remain lifetime context and must not be
+  presented as historical trends.
+
+Cross-phase rules:
+- Increment the dashboard schema only when the persisted contract changes, and
+  keep old metrics readable during deployment.
+- Treat producer logs, collector parsing, generated JSON, and rendering as one
+  tested contract for every new metric.
+- Persist aggregate counts, public post metadata, and workflow names only; no
+  audience DIDs, report contents, targeting tags, secrets, or raw logs.
+- Do not claim discovery follow-back conversion, hashtag effectiveness, or post
+  engagement decay without durable cohort or fixed-age observations.
+- Deliver each phase as a separate commit/PR-sized change with the full local
+  quality gate and desktop/mobile visual verification.
 
 ### 5.26 Retry transient Bluesky response failures ✓ Complete
 **Priority: High**

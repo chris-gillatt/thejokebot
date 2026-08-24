@@ -399,6 +399,20 @@ summary:focus-visible {
   height: 260px;
 }
 
+.audience-chart-frame.is-empty {
+  height: 180px;
+  display: grid;
+  place-items: center;
+}
+
+.chart-empty {
+  max-width: 380px;
+  margin: 0;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.5;
+}
+
 .discovery-section {
   background: #edf3f1;
   border-top: 1px solid var(--line);

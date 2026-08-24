@@ -352,6 +352,121 @@ class DashboardCollectorTests(unittest.TestCase):
         self.assertEqual(activity["expired_before"], "2026-08-20T00:00:00+00:00")
         self.assertEqual([item["id"] for item in activity["runs"]], [2])
 
+    def test_collect_workflow_activity_upgrades_legacy_discovery_once(self):
+        existing = {
+            "workflow_activity": {
+                "runs": [
+                    {
+                        "id": 2,
+                        "attempt": 1,
+                        "created_at": "2026-08-21T00:00:00Z",
+                        "follows": 3,
+                        "unfollows": 0,
+                    }
+                ],
+            }
+        }
+        workflow_runs = [
+            {
+                "id": 2,
+                "run_attempt": 1,
+                "name": "bluesky_follow_fellows",
+                "conclusion": "success",
+                "created_at": "2026-08-21T00:00:00Z",
+            }
+        ]
+
+        with patch.object(
+            dashboard,
+            "fetch_workflow_run_logs",
+            return_value=(
+                "Discovery summary: selected=5, followed=3, failed=2, dry_run=false."
+            ),
+        ) as fetch_logs:
+            activity = dashboard.collect_workflow_activity(
+                object(),
+                "owner/repository",
+                "token",
+                workflow_runs,
+                existing,
+                datetime(2026, 8, 22, tzinfo=timezone.utc),
+            )
+
+        fetch_logs.assert_called_once()
+        self.assertEqual(
+            activity["runs"],
+            [
+                {
+                    "id": 2,
+                    "attempt": 1,
+                    "workflow": "bluesky_follow_fellows",
+                    "created_at": "2026-08-21T00:00:00Z",
+                    "follows": 3,
+                    "unfollows": 0,
+                    "selected": 5,
+                    "failed": 2,
+                }
+            ],
+        )
+
+        complete_existing = {"workflow_activity": activity}
+        with patch.object(dashboard, "fetch_workflow_run_logs") as fetch_logs:
+            dashboard.collect_workflow_activity(
+                object(),
+                "owner/repository",
+                "token",
+                workflow_runs,
+                complete_existing,
+                datetime(2026, 8, 22, tzinfo=timezone.utc),
+            )
+
+        fetch_logs.assert_not_called()
+
+    def test_collect_workflow_activity_marks_expired_legacy_discovery(self):
+        existing = {
+            "workflow_activity": {
+                "runs": [
+                    {
+                        "id": 2,
+                        "attempt": 1,
+                        "created_at": "2026-08-21T00:00:00Z",
+                        "follows": 3,
+                        "unfollows": 0,
+                    }
+                ],
+            }
+        }
+        workflow_runs = [
+            {
+                "id": 2,
+                "run_attempt": 1,
+                "name": "bluesky_follow_fellows",
+                "conclusion": "success",
+                "created_at": "2026-08-21T00:00:00Z",
+            }
+        ]
+        response = dashboard.requests.Response()
+        response.status_code = 410
+        expired = dashboard.requests.HTTPError(response=response)
+
+        with patch.object(
+            dashboard, "fetch_workflow_run_logs", side_effect=expired
+        ) as fetch_logs:
+            activity = dashboard.collect_workflow_activity(
+                object(),
+                "owner/repository",
+                "token",
+                workflow_runs,
+                existing,
+                datetime(2026, 8, 22, tzinfo=timezone.utc),
+            )
+
+        fetch_logs.assert_called_once()
+        self.assertEqual(activity["expired_before"], "2026-08-21T00:00:00+00:00")
+        self.assertEqual(activity["coverage_start"], "2026-08-21T00:00:00+00:00")
+        self.assertEqual(activity["runs"], existing["workflow_activity"]["runs"])
+        self.assertEqual(dashboard._discovery_metrics(activity)["completed_runs"], 0)
+
     def test_summarises_discovery_runs_without_identifiers(self):
         activity = {
             "window_days": 30,

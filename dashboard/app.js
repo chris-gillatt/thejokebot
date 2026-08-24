@@ -85,8 +85,8 @@ function deltaText(current, previous) {
 
 function renderMetrics() {
   const current = metrics.current;
-  const snapshots = metrics.snapshots;
-  const previous = snapshots.length > 1 ? snapshots.at(-2) : null;
+  const sampledSnapshots = metrics.snapshots.filter((item) => item.source === "bluesky_snapshot");
+  const previous = sampledSnapshots.length > 1 ? sampledSnapshots.at(-2) : null;
   setText("followers", compactFormat.format(current.followers));
   setText("following", compactFormat.format(current.following));
   setText("profile-posts", compactFormat.format(current.profile_posts));
@@ -131,51 +131,65 @@ function baseOptions() {
 }
 
 function renderAudienceChart() {
-  const snapshots = metrics.snapshots.filter((item) => inRange(item.collected_at));
-  const options = baseOptions();
-  options.scales.yPosts = {
-    position: "right",
-    beginAtZero: false,
-    grid: { drawOnChartArea: false },
-  };
-  replaceChart("audience", document.getElementById("audience-chart"), {
-    type: "line",
-    data: {
-      labels: snapshots.map((item) => dateFormat.format(new Date(item.collected_at))),
-      datasets: [
-        {
-          label: "Followers",
-          data: snapshots.map((item) => item.followers),
-          borderColor: colours[0],
-          backgroundColor: colours[0],
-          tension: 0.25,
-        },
-        {
-          label: "Following",
-          data: snapshots.map((item) => item.following),
-          borderColor: colours[2],
-          backgroundColor: colours[2],
-          tension: 0.25,
-        },
-        {
-          label: "Profile posts",
-          data: snapshots.map((item) => item.profile_posts),
-          borderColor: colours[3],
-          backgroundColor: colours[3],
-          tension: 0.25,
-          yAxisID: "yPosts",
-        },
-      ],
-    },
-    options,
-  });
+  const allSnapshots = metrics.snapshots.filter((item) => inRange(item.collected_at));
+  const snapshots = allSnapshots.filter((item) => item.source === "bluesky_snapshot");
+  const chartFrame = document.getElementById("audience-chart-frame");
+  const chartCanvas = document.getElementById("audience-chart");
+  const emptyState = document.getElementById("audience-empty");
+  const hasHistory = snapshots.length >= 2;
+  chartCanvas.hidden = !hasHistory;
+  emptyState.hidden = hasHistory;
+  chartFrame.classList.toggle("is-empty", !hasHistory);
+
+  if (!hasHistory) {
+    charts.audience?.destroy();
+    delete charts.audience;
+  } else {
+    const baseline = snapshots[0];
+    const options = baseOptions();
+    options.scales.y.beginAtZero = true;
+    options.scales.y.title = { display: true, text: "Change since first sample" };
+    options.plugins.tooltip.callbacks = {
+      label(context) {
+        const absolute = context.dataset.absoluteValues[context.dataIndex];
+        const change = context.parsed.y;
+        return `${context.dataset.label}: ${change >= 0 ? "+" : ""}${numberFormat.format(change)} (${numberFormat.format(absolute)} total)`;
+      },
+    };
+    replaceChart("audience", chartCanvas, {
+      type: "line",
+      data: {
+        labels: snapshots.map((item) => dateTimeFormat.format(new Date(item.collected_at))),
+        datasets: [
+          {
+            label: "Followers",
+            data: snapshots.map((item) => item.followers - baseline.followers),
+            absoluteValues: snapshots.map((item) => item.followers),
+            borderColor: colours[0],
+            backgroundColor: colours[0],
+            tension: 0.25,
+          },
+          {
+            label: "Following",
+            data: snapshots.map((item) => item.following - baseline.following),
+            absoluteValues: snapshots.map((item) => item.following),
+            borderColor: colours[2],
+            backgroundColor: colours[2],
+            tension: 0.25,
+          },
+        ],
+      },
+      options,
+    });
+  }
   renderTable(
     "audience-table",
-    snapshots.map((item) => [
+    allSnapshots.map((item) => [
       dateTimeFormat.format(new Date(item.collected_at)),
       metricText(item.followers),
       metricText(item.following),
       metricText(item.profile_posts),
+      item.source === "bluesky_snapshot" ? "Sampled" : "Reconstructed",
     ]),
   );
 }
@@ -214,7 +228,7 @@ function renderDiscovery() {
     zero_result_runs: 0,
     coverage_start: null,
   };
-  const runs = discovery.runs.filter((run) => inRange(run.created_at));
+  const runs = discovery.runs;
   setText("discovery-followed", numberFormat.format(discovery.followed));
   setText("discovery-runs", numberFormat.format(discovery.completed_runs));
   setText(

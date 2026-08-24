@@ -15,12 +15,12 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=7" />
+    <link rel="stylesheet" href="styles.css?v=8" />
     <script
       src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"
       defer
     ></script>
-    <script src="app.js?v=6" defer></script>
+    <script src="app.js?v=7" defer></script>
   </head>
   <body>
     <noscript>
@@ -106,17 +106,20 @@
           <div class="chart-grid">
             <article class="chart-block">
               <div class="chart-title">
-                <h3>Account totals</h3>
-                <span>Sampled followers with reconstructed following and posts</span>
+                <h3>Audience change</h3>
+                <span>Change from the first sampled account snapshot</span>
               </div>
-              <div class="chart-frame">
+              <div class="chart-frame audience-chart-frame" id="audience-chart-frame">
                 <canvas id="audience-chart"></canvas>
+                <p class="chart-empty" id="audience-empty" hidden>
+                  Audience history will appear after the next account sample.
+                </p>
               </div>
               <details>
                 <summary>View audience data</summary>
                 <div class="table-scroll">
                   <table id="audience-table">
-                    <thead><tr><th>Date</th><th>Followers</th><th>Following</th><th>Posts</th></tr></thead>
+                    <thead><tr><th>Date</th><th>Followers</th><th>Following</th><th>Posts</th><th>Source</th></tr></thead>
                     <tbody></tbody>
                   </table>
                 </div>
