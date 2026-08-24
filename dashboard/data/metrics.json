@@ -1,6 +1,6 @@
 {
   "schema_version": 4,
-  "generated_at": "2026-08-24T12:46:37.446778+00:00",
+  "generated_at": "2026-08-24T13:28:25.203230+00:00",
   "account": {
     "handle": "thejokebot.bsky.social",
     "display_name": "The Joke Bot",
@@ -221,7 +221,7 @@
     },
     {
       "period_start": "2026-08-24T12:00:00+00:00",
-      "collected_at": "2026-08-24T12:46:37.446778+00:00",
+      "collected_at": "2026-08-24T13:28:25.203230+00:00",
       "followers": 6412,
       "following": 10833,
       "profile_posts": 2334,
@@ -1450,16 +1450,41 @@
   ],
   "discovery_activity": {
     "window_days": 30,
-    "coverage_start": null,
-    "completed_runs": 0,
-    "selected": 0,
-    "followed": 0,
+    "coverage_start": "2026-08-12T01:45:36Z",
+    "completed_runs": 4,
+    "selected": 271,
+    "followed": 271,
     "failed": 0,
-    "completion_rate": null,
-    "average_per_run": null,
-    "median_per_run": null,
+    "completion_rate": 100.0,
+    "average_per_run": 67.8,
+    "median_per_run": 69.0,
     "zero_result_runs": 0,
-    "runs": []
+    "runs": [
+      {
+        "created_at": "2026-08-12T01:45:36Z",
+        "selected": 59,
+        "followed": 59,
+        "failed": 0
+      },
+      {
+        "created_at": "2026-08-14T01:45:38Z",
+        "selected": 74,
+        "followed": 74,
+        "failed": 0
+      },
+      {
+        "created_at": "2026-08-19T01:43:45Z",
+        "selected": 69,
+        "followed": 69,
+        "failed": 0
+      },
+      {
+        "created_at": "2026-08-21T01:44:00Z",
+        "selected": 69,
+        "followed": 69,
+        "failed": 0
+      }
+    ]
   },
   "workflow_activity": {
     "window_days": 30,
@@ -1784,9 +1809,12 @@
       {
         "id": 31554664359,
         "attempt": 1,
+        "workflow": "bluesky_follow_fellows",
         "created_at": "2026-08-12T01:45:36Z",
         "follows": 59,
-        "unfollows": 0
+        "unfollows": 0,
+        "selected": 59,
+        "failed": 0
       },
       {
         "id": 31559206725,
@@ -1959,9 +1987,12 @@
       {
         "id": 31761613355,
         "attempt": 1,
+        "workflow": "bluesky_follow_fellows",
         "created_at": "2026-08-14T01:45:38Z",
         "follows": 74,
-        "unfollows": 0
+        "unfollows": 0,
+        "selected": 74,
+        "failed": 0
       },
       {
         "id": 31765993617,
@@ -2386,9 +2417,12 @@
       {
         "id": 32205966048,
         "attempt": 1,
+        "workflow": "bluesky_follow_fellows",
         "created_at": "2026-08-19T01:43:45Z",
         "follows": 69,
-        "unfollows": 0
+        "unfollows": 0,
+        "selected": 69,
+        "failed": 0
       },
       {
         "id": 32209538515,
@@ -2554,9 +2588,12 @@
       {
         "id": 32437338276,
         "attempt": 1,
+        "workflow": "bluesky_follow_fellows",
         "created_at": "2026-08-21T01:44:00Z",
         "follows": 69,
-        "unfollows": 0
+        "unfollows": 0,
+        "selected": 69,
+        "failed": 0
       },
       {
         "id": 32440975101,
@@ -2971,20 +3008,20 @@
   },
   "automation": {
     "window_days": 30,
-    "collected_at": "2026-08-24T12:46:37.446778+00:00",
-    "runs": 921,
-    "successful": 908,
+    "collected_at": "2026-08-24T13:28:25.203230+00:00",
+    "runs": 927,
+    "successful": 912,
     "failed": 8,
     "cancelled": 3,
     "success_rate": 99.1,
     "workflows": [
       {
         "name": "bluesky_dashboard",
-        "runs": 21,
-        "successful": 20,
+        "runs": 22,
+        "successful": 21,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-08-24T12:46:12Z",
+        "last_run_at": "2026-08-24T13:28:00Z",
         "last_status": "in_progress",
         "last_conclusion": null
       },
@@ -3030,11 +3067,11 @@
       },
       {
         "name": "bluesky_process_reports",
-        "runs": 178,
-        "successful": 175,
+        "runs": 179,
+        "successful": 176,
         "failed": 3,
         "cancelled": 0,
-        "last_run_at": "2026-08-24T08:58:44Z",
+        "last_run_at": "2026-08-24T13:00:52Z",
         "last_status": "completed",
         "last_conclusion": "success"
       },
@@ -3060,13 +3097,13 @@
       },
       {
         "name": "codeql",
-        "runs": 36,
+        "runs": 37,
         "successful": 36,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-08-24T05:23:42Z",
-        "last_status": "completed",
-        "last_conclusion": "success"
+        "last_run_at": "2026-08-24T13:28:00Z",
+        "last_status": "in_progress",
+        "last_conclusion": null
       },
       {
         "name": "pr_auto_merge",
@@ -3090,31 +3127,31 @@
       },
       {
         "name": "python_tests",
-        "runs": 31,
+        "runs": 32,
         "successful": 31,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-08-24T05:23:42Z",
-        "last_status": "completed",
-        "last_conclusion": "success"
+        "last_run_at": "2026-08-24T13:28:00Z",
+        "last_status": "in_progress",
+        "last_conclusion": null
       },
       {
         "name": "ruff_quality",
-        "runs": 31,
-        "successful": 31,
+        "runs": 32,
+        "successful": 32,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-08-24T05:23:42Z",
+        "last_run_at": "2026-08-24T13:28:00Z",
         "last_status": "completed",
         "last_conclusion": "success"
       },
       {
         "name": "validate_runtime_config",
-        "runs": 31,
-        "successful": 31,
+        "runs": 32,
+        "successful": 32,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-08-24T05:23:42Z",
+        "last_run_at": "2026-08-24T13:28:00Z",
         "last_status": "completed",
         "last_conclusion": "success"
       }
