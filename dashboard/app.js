@@ -402,6 +402,16 @@ function rejectionSummary(counts) {
   return parts.length ? parts.join(" · ") : "--";
 }
 
+function durationText(seconds) {
+  if (seconds == null) return "--";
+  if (seconds < 60) return `${numberFormat.format(seconds)} sec`;
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `${numberFormat.format(minutes)} min`;
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  return remainder ? `${hours} hr ${remainder} min` : `${hours} hr`;
+}
+
 function renderProviders() {
   const providerMetrics = metrics.providers;
   const providers = providerMetrics.providers;
@@ -452,13 +462,82 @@ function renderProviders() {
 }
 
 function renderAutomation() {
-  const automation = metrics.automation;
+  const automation = metrics.automation || { workflows: [], alerts: [] };
   setText(
     "automation-rate",
     automation.success_rate === null ? "--" : `${numberFormat.format(automation.success_rate)}%`,
   );
   setText("automation-runs", numberFormat.format(automation.runs));
   setText("automation-failed", numberFormat.format(automation.failed));
+
+  const delivery = metrics.posting_delivery;
+  const sevenDays = delivery?.windows?.["7"];
+  const thirtyDays = delivery?.windows?.["30"];
+  setText(
+    "posting-delivery-rate",
+    sevenDays?.delivery_rate == null
+      ? "--"
+      : `${percentageFormat.format(sevenDays.delivery_rate)}%`,
+  );
+  setText(
+    "posting-delivered",
+    sevenDays ? `${numberFormat.format(sevenDays.delivered)}/${numberFormat.format(sevenDays.expected)}` : "--",
+  );
+  setText(
+    "posting-delivery-rate-30",
+    thirtyDays?.delivery_rate == null
+      ? "30 days: --"
+      : `30 days: ${percentageFormat.format(thirtyDays.delivery_rate)}%`,
+  );
+  setText(
+    "posting-delivered-30",
+    thirtyDays
+      ? `30 days: ${numberFormat.format(thirtyDays.delivered)}/${numberFormat.format(thirtyDays.expected)}`
+      : "30 days: --",
+  );
+  setText("posting-missed", sevenDays ? numberFormat.format(sevenDays.missed) : "--");
+  setText(
+    "posting-missed-context",
+    sevenDays && thirtyDays
+      ? `${numberFormat.format(sevenDays.delayed)} delayed · 30 days: ${numberFormat.format(thirtyDays.missed)} missed, ${numberFormat.format(thirtyDays.delayed)} delayed`
+      : "Delayed slots unavailable",
+  );
+  setText(
+    "posting-streak",
+    delivery ? numberFormat.format(delivery.current_streak) : "--",
+  );
+
+  const alerts = [...(automation.alerts || [])];
+  if (Date.now() - new Date(metrics.generated_at).getTime() > 8 * 60 * 60 * 1000) {
+    alerts.unshift({ kind: "stale_dashboard", level: "attention" });
+  }
+  const pulse = document.getElementById("operational-pulse");
+  pulse.replaceChildren();
+  if (!alerts.length) {
+    const clear = document.createElement("p");
+    clear.className = "pulse-clear";
+    clear.textContent = "No current operational alerts";
+    pulse.append(clear);
+  } else {
+    alerts.forEach((alert) => {
+      const item = document.createElement("p");
+      item.className = `pulse-alert ${alert.level || "attention"}`;
+      if (alert.kind === "stale_dashboard") {
+        item.textContent = "Dashboard collection is overdue";
+      } else if (alert.kind === "workflow_failure") {
+        item.textContent = `${displayName(alert.workflow)} failed most recently`;
+      } else if (alert.kind === "workflow_overdue") {
+        item.textContent = `${displayName(alert.workflow)} is overdue`;
+      } else if (alert.kind === "provider_health") {
+        item.textContent = `${numberFormat.format(alert.count)} configured provider${alert.count === 1 ? "" : "s"} need attention`;
+      } else if (alert.kind === "posting_delivery") {
+        item.textContent = `${numberFormat.format(alert.count)} posting slot${alert.count === 1 ? "" : "s"} missed in 7 complete days`;
+      } else {
+        item.textContent = "Operational attention needed";
+      }
+      pulse.append(item);
+    });
+  }
 
   const body = document.querySelector("#workflow-table tbody");
   body.replaceChildren();
@@ -474,6 +553,14 @@ function renderAutomation() {
         completed ? `${percentageFormat.format((workflow.successful * 100) / completed)}%` : "--",
       );
       appendCell(row, numberFormat.format(workflow.failed), workflow.failed ? "failure-count" : "");
+      const runtime = document.createElement("span");
+      runtime.className = "runtime-cell";
+      const runtimeMedian = document.createElement("span");
+      runtimeMedian.textContent = `${durationText(workflow.median_duration_seconds)} median`;
+      const runtimeLatest = document.createElement("small");
+      runtimeLatest.textContent = `${durationText(workflow.latest_duration_seconds)} latest`;
+      runtime.append(runtimeMedian, runtimeLatest);
+      appendCell(row, runtime);
       const latest = document.createElement("span");
       const latestState = workflow.last_conclusion || workflow.last_status || "unknown";
       const latestLabels = {

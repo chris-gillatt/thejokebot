@@ -274,7 +274,7 @@ Acceptance criteria:
 - Desktop and mobile screenshots verify empty and populated discovery states,
   sampled audience history, table overflow, chart pixels, and text fit.
 
-#### Phase 2: Operational pulse and posting delivery
+#### Phase 2: Operational pulse and posting delivery ✓ Complete
 
 - Add a compact alert strip for stale dashboard collection, overdue core
   workflows, recent failures, and unhealthy configured providers. Classify

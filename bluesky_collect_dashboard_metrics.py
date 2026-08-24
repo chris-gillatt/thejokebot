@@ -15,6 +15,7 @@ from statistics import median
 
 import requests
 
+import bluesky_config
 import bluesky_state
 from bluesky_common import retry_network_call
 
@@ -29,6 +30,14 @@ MAX_WORKFLOW_LOG_BYTES = 25 * 1024 * 1024
 MAX_WORKFLOW_LOG_UNCOMPRESSED_BYTES = 50 * 1024 * 1024
 WORKFLOW_WINDOW_DAYS = 30
 TOP_POST_LIMIT = 6
+POSTING_DELIVERY_WINDOWS = (7, 30)
+POSTING_SLOT_MATCH_HOURS = 2
+CORE_WORKFLOWS = {
+    "bluesky_dashboard",
+    "bluesky_follows_and_likes",
+    "bluesky_post_joke",
+    "bluesky_process_reports",
+}
 TRACKED_WORKFLOWS = {
     "bluesky_dashboard",
     "bluesky_follow_fellows",
@@ -618,7 +627,127 @@ def _provider_metrics(state: dict, joke_posts: list[dict]) -> dict:
     }
 
 
+def _daily_schedule_times(cron: str) -> list[tuple[int, int]]:
+    parts = cron.split()
+    if len(parts) != 5 or parts[2:] != ["*", "*", "*"]:
+        raise ValueError("Posting schedule must be a daily five-field cron")
+
+    def _values(field: str, maximum: int) -> list[int]:
+        if field == "*":
+            return list(range(maximum + 1))
+        if field.startswith("*/"):
+            step = int(field[2:])
+            if step <= 0:
+                raise ValueError("Posting schedule step must be positive")
+            return list(range(0, maximum + 1, step))
+        values = sorted({int(value) for value in field.split(",")})
+        if not values or any(value < 0 or value > maximum for value in values):
+            raise ValueError("Posting schedule contains an out-of-range value")
+        return values
+
+    minutes = _values(parts[0], 59)
+    hours = _values(parts[1], 23)
+    return [(hour, minute) for hour in hours for minute in minutes]
+
+
+def _posting_delivery(state: dict, cron: str, now: datetime) -> dict:
+    schedule_times = _daily_schedule_times(cron)
+    match_window = timedelta(hours=POSTING_SLOT_MATCH_HOURS)
+    published_at = sorted(
+        datetime.fromtimestamp(float(item["ts"]), tz=timezone.utc)
+        for item in state.get("posted_jokes", [])
+        if item.get("ts") is not None
+    )
+
+    def _slots(start: datetime, end: datetime) -> list[datetime]:
+        slots = []
+        day = start
+        while day < end:
+            slots.extend(
+                day.replace(hour=hour, minute=minute) for hour, minute in schedule_times
+            )
+            day += timedelta(days=1)
+        return slots
+
+    def _summarise(slots: list[datetime]) -> dict:
+        delivered = 0
+        delayed = 0
+        publication_index = 0
+        for slot in slots:
+            while (
+                publication_index < len(published_at)
+                and published_at[publication_index] < slot
+            ):
+                publication_index += 1
+            if (
+                publication_index < len(published_at)
+                and published_at[publication_index] <= slot + match_window
+            ):
+                delivered += 1
+                if published_at[publication_index] > slot + timedelta(minutes=30):
+                    delayed += 1
+                publication_index += 1
+        expected = len(slots)
+        return {
+            "expected": expected,
+            "delivered": delivered,
+            "missed": expected - delivered,
+            "delayed": delayed,
+            "delivery_rate": round(delivered * 100 / expected, 1) if expected else None,
+        }
+
+    today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    windows = {
+        str(days): _summarise(_slots(today - timedelta(days=days), today))
+        for days in POSTING_DELIVERY_WINDOWS
+    }
+    closed_slots = [
+        slot
+        for slot in _slots(today - timedelta(days=max(POSTING_DELIVERY_WINDOWS)), now)
+        if slot + match_window <= now
+    ]
+    streak = 0
+    for slot in reversed(closed_slots):
+        if any(slot <= published <= slot + match_window for published in published_at):
+            streak += 1
+        else:
+            break
+    return {
+        "schedule": cron,
+        "timezone": "UTC",
+        "match_window_hours": POSTING_SLOT_MATCH_HOURS,
+        "current_streak": streak,
+        "windows": windows,
+    }
+
+
+def _daily_schedule_interval_hours(cron: str) -> float | None:
+    try:
+        schedule_times = _daily_schedule_times(cron)
+    except (TypeError, ValueError):
+        return None
+    minutes = sorted(hour * 60 + minute for hour, minute in schedule_times)
+    if not minutes:
+        return None
+    gaps = [right - left for left, right in zip(minutes, minutes[1:])]
+    gaps.append(24 * 60 - minutes[-1] + minutes[0])
+    return round(max(gaps) / 60, 2)
+
+
+def _workflow_duration_seconds(run: dict) -> int | None:
+    created_at = run.get("created_at")
+    updated_at = run.get("updated_at")
+    if not created_at or not updated_at or run.get("status") != "completed":
+        return None
+    created = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+    updated = datetime.fromisoformat(updated_at.replace("Z", "+00:00"))
+    if updated < created:
+        return None
+    return int((updated - created).total_seconds())
+
+
 def _workflow_metrics(workflow_runs: list[dict], now: datetime) -> dict:
+    schedules = bluesky_config.get_workflow_schedule_config()
     grouped = {
         name: {
             "name": name,
@@ -629,9 +758,15 @@ def _workflow_metrics(workflow_runs: list[dict], now: datetime) -> dict:
             "last_run_at": None,
             "last_status": None,
             "last_conclusion": None,
+            "latest_duration_seconds": None,
+            "median_duration_seconds": None,
+            "expected_interval_hours": _daily_schedule_interval_hours(
+                schedules.get(name, "")
+            ),
         }
         for name in TRACKED_WORKFLOWS
     }
+    durations = {name: [] for name in TRACKED_WORKFLOWS}
     for run in workflow_runs:
         name = str(run.get("name") or "unknown")
         if name not in TRACKED_WORKFLOWS:
@@ -646,12 +781,20 @@ def _workflow_metrics(workflow_runs: list[dict], now: datetime) -> dict:
         elif conclusion == "cancelled":
             summary["cancelled"] += 1
         created_at = run.get("created_at")
+        duration = _workflow_duration_seconds(run)
         if created_at and (
             summary["last_run_at"] is None or created_at > summary["last_run_at"]
         ):
             summary["last_run_at"] = created_at
             summary["last_status"] = run.get("status")
             summary["last_conclusion"] = conclusion
+            summary["latest_duration_seconds"] = duration
+        if duration is not None:
+            durations[name].append(duration)
+
+    for name, values in durations.items():
+        if values:
+            grouped[name]["median_duration_seconds"] = int(median(values))
 
     workflows = sorted(grouped.values(), key=lambda item: item["name"])
     completed = sum(item["successful"] + item["failed"] for item in workflows)
@@ -666,6 +809,69 @@ def _workflow_metrics(workflow_runs: list[dict], now: datetime) -> dict:
         "success_rate": round(successful * 100 / completed, 1) if completed else None,
         "workflows": workflows,
     }
+
+
+def _operational_alerts(
+    automation: dict, providers: dict, posting_delivery: dict, now: datetime
+) -> list[dict]:
+    alerts = []
+    recent_cutoff = now - timedelta(hours=24)
+    for workflow in automation["workflows"]:
+        last_run_at = workflow.get("last_run_at")
+        expected_interval = workflow.get("expected_interval_hours")
+        if (
+            workflow["name"] in CORE_WORKFLOWS
+            and expected_interval
+            and (
+                not last_run_at
+                or datetime.fromisoformat(last_run_at.replace("Z", "+00:00"))
+                < now - timedelta(hours=expected_interval + 2)
+            )
+        ):
+            alerts.append(
+                {
+                    "level": "attention",
+                    "kind": "workflow_overdue",
+                    "workflow": workflow["name"],
+                }
+            )
+        if (
+            workflow["name"] in CORE_WORKFLOWS
+            and workflow.get("last_conclusion") == "failure"
+            and last_run_at
+            and datetime.fromisoformat(last_run_at.replace("Z", "+00:00"))
+            >= recent_cutoff
+        ):
+            alerts.append(
+                {
+                    "level": "attention",
+                    "kind": "workflow_failure",
+                    "workflow": workflow["name"],
+                }
+            )
+    unhealthy = sum(
+        provider.get("configured") is not False and provider.get("healthy") is False
+        for provider in providers["providers"]
+    )
+    if unhealthy:
+        alerts.append(
+            {
+                "level": "attention",
+                "kind": "provider_health",
+                "count": unhealthy,
+            }
+        )
+    missed = posting_delivery["windows"]["7"]["missed"]
+    if missed:
+        alerts.append(
+            {
+                "level": "attention",
+                "kind": "posting_delivery",
+                "count": missed,
+                "window_days": 7,
+            }
+        )
+    return alerts
 
 
 def collect_metrics(
@@ -734,6 +940,17 @@ def collect_metrics(
     )
     snapshots.sort(key=lambda item: item["period_start"])
 
+    providers = _provider_metrics(state, joke_posts)
+    automation = _workflow_metrics(workflow_runs or [], now)
+    posting_delivery = _posting_delivery(
+        state,
+        bluesky_config.get_workflow_schedule_config()["bluesky_post_joke"],
+        now,
+    )
+    automation["alerts"] = _operational_alerts(
+        automation, providers, posting_delivery, now
+    )
+
     return {
         "schema_version": SCHEMA_VERSION,
         "generated_at": now.isoformat(),
@@ -755,8 +972,9 @@ def collect_metrics(
             "expired_before": None,
             "runs": [],
         },
-        "providers": _provider_metrics(state, joke_posts),
-        "automation": _workflow_metrics(workflow_runs or [], now),
+        "providers": providers,
+        "posting_delivery": posting_delivery,
+        "automation": automation,
         "top_posts": _top_post_summaries(joke_posts, profile["handle"]),
     }
 

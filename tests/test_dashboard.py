@@ -2,7 +2,7 @@ import json
 import io
 import unittest
 import zipfile
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
 import bluesky_collect_dashboard_metrics as dashboard
@@ -543,6 +543,7 @@ class DashboardCollectorTests(unittest.TestCase):
                 "status": "completed",
                 "conclusion": "success",
                 "created_at": "2026-08-22T05:00:00Z",
+                "updated_at": "2026-08-22T05:02:00Z",
             },
             {
                 "name": "python_tests",
@@ -573,6 +574,12 @@ class DashboardCollectorTests(unittest.TestCase):
         )
         self.assertEqual(tests["last_conclusion"], "success")
         self.assertEqual(tests["last_status"], "completed")
+        self.assertEqual(tests["latest_duration_seconds"], 120)
+        self.assertEqual(tests["median_duration_seconds"], 120)
+        post_joke = next(
+            item for item in summary["workflows"] if item["name"] == "bluesky_post_joke"
+        )
+        self.assertEqual(post_joke["expected_interval_hours"], 4.0)
         codeql = next(item for item in summary["workflows"] if item["name"] == "codeql")
         self.assertEqual(codeql["last_status"], "in_progress")
         self.assertIsNone(codeql["last_conclusion"])
@@ -583,6 +590,90 @@ class DashboardCollectorTests(unittest.TestCase):
         )
         self.assertEqual(starter_pack["runs"], 0)
         self.assertIsNone(starter_pack["last_conclusion"])
+        self.assertIsNone(starter_pack["median_duration_seconds"])
+
+    def test_summarises_posting_delivery_without_counting_incomplete_day(self):
+        now = datetime(2026, 8, 22, 12, tzinfo=timezone.utc)
+        start = datetime(2026, 8, 15, tzinfo=timezone.utc)
+        slots = [
+            start + timedelta(days=day, hours=hour)
+            for day in range(7)
+            for hour in (0, 4, 8, 12, 16, 20)
+        ]
+        publications = [slot for slot in slots if slot != slots[3]]
+        publications[4] += timedelta(minutes=45)
+        publications.extend(
+            datetime(2026, 8, 22, hour, tzinfo=timezone.utc) for hour in (0, 4, 8)
+        )
+        state = {
+            "posted_jokes": [
+                {"ts": publication.timestamp()} for publication in publications
+            ]
+        }
+
+        delivery = dashboard._posting_delivery(state, "0 0,4,8,12,16,20 * * *", now)
+
+        self.assertEqual(delivery["windows"]["7"]["expected"], 42)
+        self.assertEqual(delivery["windows"]["7"]["delivered"], 41)
+        self.assertEqual(delivery["windows"]["7"]["missed"], 1)
+        self.assertEqual(delivery["windows"]["7"]["delayed"], 1)
+        self.assertEqual(delivery["windows"]["7"]["delivery_rate"], 97.6)
+        self.assertEqual(delivery["current_streak"], 41)
+
+    def test_operational_alerts_use_aggregate_current_conditions(self):
+        now = datetime(2026, 8, 22, 12, tzinfo=timezone.utc)
+        automation = {
+            "workflows": [
+                {
+                    "name": "bluesky_post_joke",
+                    "last_conclusion": "failure",
+                    "last_run_at": "2026-08-22T11:00:00Z",
+                },
+                {
+                    "name": "python_tests",
+                    "last_conclusion": "failure",
+                    "last_run_at": "2026-08-22T11:00:00Z",
+                },
+                {
+                    "name": "bluesky_dashboard",
+                    "last_conclusion": "success",
+                    "last_run_at": "2026-08-22T01:00:00Z",
+                    "expected_interval_hours": 6.0,
+                },
+            ]
+        }
+        providers = {
+            "providers": [
+                {"configured": True, "healthy": False},
+                {"configured": False, "healthy": False},
+            ]
+        }
+        delivery = {"windows": {"7": {"missed": 2}}}
+
+        alerts = dashboard._operational_alerts(automation, providers, delivery, now)
+
+        self.assertEqual(
+            alerts,
+            [
+                {
+                    "level": "attention",
+                    "kind": "workflow_failure",
+                    "workflow": "bluesky_post_joke",
+                },
+                {
+                    "level": "attention",
+                    "kind": "workflow_overdue",
+                    "workflow": "bluesky_dashboard",
+                },
+                {"level": "attention", "kind": "provider_health", "count": 1},
+                {
+                    "level": "attention",
+                    "kind": "posting_delivery",
+                    "count": 2,
+                    "window_days": 7,
+                },
+            ],
+        )
 
     def test_fetch_workflow_runs_collects_multiple_pages(self):
         runs = [

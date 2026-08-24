@@ -15,12 +15,12 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=8" />
+    <link rel="stylesheet" href="styles.css?v=9" />
     <script
       src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"
       defer
     ></script>
-    <script src="app.js?v=7" defer></script>
+    <script src="app.js?v=8" defer></script>
   </head>
   <body>
     <noscript>
@@ -260,6 +260,26 @@
             </div>
           </div>
 
+          <div class="operational-pulse" aria-live="polite" aria-label="Current operational alerts">
+            <strong>Operational pulse</strong>
+            <div id="operational-pulse"></div>
+          </div>
+
+          <div class="delivery-block" aria-labelledby="delivery-heading">
+            <div class="operations-block-heading">
+              <div>
+                <h3 id="delivery-heading">Posting delivery</h3>
+                <p>Seven and 30 complete UTC days; publications matched within two hours of each scheduled slot</p>
+              </div>
+            </div>
+            <div class="delivery-summary">
+              <div><span>Delivery rate</span><strong id="posting-delivery-rate">--</strong><small id="posting-delivery-rate-30">30 days: --</small></div>
+              <div><span>Delivered slots</span><strong id="posting-delivered">--</strong><small id="posting-delivered-30">30 days: --</small></div>
+              <div><span>Missed slots</span><strong id="posting-missed">--</strong><small id="posting-missed-context">Delayed slots unavailable</small></div>
+              <div><span>Current streak</span><strong id="posting-streak">--</strong><small>Closed slots</small></div>
+            </div>
+          </div>
+
           <div class="operations-layout">
             <article class="operations-block" aria-labelledby="providers-heading">
               <div class="operations-block-heading">
@@ -306,6 +326,7 @@
                       <th>Runs</th>
                       <th>Success</th>
                       <th>Failed</th>
+                      <th>Runtime</th>
                       <th>Latest</th>
                     </tr>
                   </thead>
