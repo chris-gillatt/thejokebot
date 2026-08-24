@@ -1,6 +1,6 @@
 {
   "schema_version": 4,
-  "generated_at": "2026-08-24T00:47:36.914864+00:00",
+  "generated_at": "2026-08-24T06:47:04.312483+00:00",
   "account": {
     "handle": "thejokebot.bsky.social",
     "display_name": "The Joke Bot",
@@ -8,10 +8,10 @@
     "profile_url": "https://bsky.app/profile/thejokebot.bsky.social"
   },
   "latest_joke": {
-    "uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mtrzf2hybw2m",
-    "url": "https://bsky.app/profile/thejokebot.bsky.social/post/3mtrzf2hybw2m",
-    "text": "What did the mommy spider say to the baby spider?\n\nYou spend too much time on the web!\n\n#dadjoke #jokesky #jokes",
-    "created_at": "2026-08-24T00:12:04.591163+00:00",
+    "uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mtsh2dcjpj2w",
+    "url": "https://bsky.app/profile/thejokebot.bsky.social/post/3mtsh2dcjpj2w",
+    "text": "Why did the melons plan a big wedding? Because they cantaloupe!\n\n#dadjoke #humor #jokesky",
+    "created_at": "2026-08-24T04:16:37.150273+00:00",
     "engagement": {
       "likes": 0,
       "replies": 0,
@@ -23,16 +23,16 @@
   "current": {
     "followers": 6412,
     "following": 10833,
-    "profile_posts": 2331,
-    "joke_posts": 692,
+    "profile_posts": 2332,
+    "joke_posts": 693,
     "engagement": {
-      "likes": 3799,
+      "likes": 3800,
       "replies": 270,
       "reposts": 288,
       "quotes": 32,
       "bookmarks": 30
     },
-    "engagement_per_joke": 6.39
+    "engagement_per_joke": 6.38
   },
   "snapshots": [
     {
@@ -209,6 +209,14 @@
       "followers": 6412,
       "following": 10833,
       "profile_posts": 2331,
+      "source": "bluesky_snapshot"
+    },
+    {
+      "period_start": "2026-08-24T06:00:00+00:00",
+      "collected_at": "2026-08-24T06:47:04.312483+00:00",
+      "followers": 6412,
+      "following": 10833,
+      "profile_posts": 2332,
       "source": "bluesky_snapshot"
     }
   ],
@@ -1427,7 +1435,7 @@
     },
     {
       "date": "2026-08-24",
-      "joke_posts": 1,
+      "joke_posts": 2,
       "follows": 4,
       "unfollows": 0
     }
@@ -2802,17 +2810,41 @@
         "created_at": "2026-08-24T00:33:42Z",
         "follows": 4,
         "unfollows": 0
+      },
+      {
+        "id": 32684150196,
+        "attempt": 1,
+        "workflow": "bluesky_follows_and_likes",
+        "created_at": "2026-08-24T02:46:09Z",
+        "follows": 0,
+        "unfollows": 0
+      },
+      {
+        "id": 32690468765,
+        "attempt": 1,
+        "workflow": "bluesky_follows_and_likes",
+        "created_at": "2026-08-24T04:33:36Z",
+        "follows": 0,
+        "unfollows": 0
+      },
+      {
+        "id": 32697805230,
+        "attempt": 1,
+        "workflow": "bluesky_follows_and_likes",
+        "created_at": "2026-08-24T06:33:17Z",
+        "follows": 0,
+        "unfollows": 0
       }
     ]
   },
   "providers": {
-    "retained_publications": 932,
+    "retained_publications": 933,
     "providers": [
       {
         "name": "icanhazdadjoke",
-        "published": 570,
-        "visible_posts": 334,
-        "average_interactions": 6.72,
+        "published": 571,
+        "visible_posts": 335,
+        "average_interactions": 6.7,
         "fallthroughs": 45,
         "rejection_counts": {
           "duplicate": 30,
@@ -2831,7 +2863,7 @@
         "name": "groandeck",
         "published": 188,
         "visible_posts": 188,
-        "average_interactions": 5.61,
+        "average_interactions": 5.62,
         "fallthroughs": 0,
         "rejection_counts": {
           "duplicate": 0,
@@ -2907,20 +2939,20 @@
   },
   "automation": {
     "window_days": 30,
-    "collected_at": "2026-08-24T00:47:36.914864+00:00",
-    "runs": 907,
-    "successful": 894,
+    "collected_at": "2026-08-24T06:47:04.312483+00:00",
+    "runs": 921,
+    "successful": 908,
     "failed": 8,
     "cancelled": 3,
     "success_rate": 99.1,
     "workflows": [
       {
         "name": "bluesky_dashboard",
-        "runs": 19,
-        "successful": 18,
+        "runs": 20,
+        "successful": 19,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-08-24T00:47:12Z",
+        "last_run_at": "2026-08-24T06:46:42Z",
         "last_status": "in_progress",
         "last_conclusion": null
       },
@@ -2940,7 +2972,7 @@
         "successful": 354,
         "failed": 4,
         "cancelled": 1,
-        "last_run_at": "2026-08-24T00:33:42Z",
+        "last_run_at": "2026-08-24T06:33:17Z",
         "last_status": "completed",
         "last_conclusion": "success"
       },
@@ -2960,17 +2992,17 @@
         "successful": 180,
         "failed": 1,
         "cancelled": 2,
-        "last_run_at": "2026-08-24T00:11:46Z",
+        "last_run_at": "2026-08-24T04:16:18Z",
         "last_status": "completed",
         "last_conclusion": "success"
       },
       {
         "name": "bluesky_process_reports",
-        "runs": 178,
-        "successful": 175,
+        "runs": 179,
+        "successful": 176,
         "failed": 3,
         "cancelled": 0,
-        "last_run_at": "2026-08-23T20:47:19Z",
+        "last_run_at": "2026-08-24T04:57:01Z",
         "last_status": "completed",
         "last_conclusion": "success"
       },
@@ -2996,21 +3028,21 @@
       },
       {
         "name": "codeql",
-        "runs": 33,
-        "successful": 33,
+        "runs": 36,
+        "successful": 36,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-08-23T07:23:42Z",
+        "last_run_at": "2026-08-24T05:23:42Z",
         "last_status": "completed",
         "last_conclusion": "success"
       },
       {
         "name": "pr_auto_merge",
-        "runs": 6,
-        "successful": 5,
+        "runs": 9,
+        "successful": 8,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-08-17T05:24:24Z",
+        "last_run_at": "2026-08-24T05:23:41Z",
         "last_status": "completed",
         "last_conclusion": "success"
       },
@@ -3026,31 +3058,31 @@
       },
       {
         "name": "python_tests",
-        "runs": 29,
-        "successful": 29,
+        "runs": 31,
+        "successful": 31,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-08-23T07:23:42Z",
+        "last_run_at": "2026-08-24T05:23:42Z",
         "last_status": "completed",
         "last_conclusion": "success"
       },
       {
         "name": "ruff_quality",
-        "runs": 29,
-        "successful": 29,
+        "runs": 31,
+        "successful": 31,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-08-23T07:23:42Z",
+        "last_run_at": "2026-08-24T05:23:42Z",
         "last_status": "completed",
         "last_conclusion": "success"
       },
       {
         "name": "validate_runtime_config",
-        "runs": 29,
-        "successful": 29,
+        "runs": 31,
+        "successful": 31,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-08-23T07:23:42Z",
+        "last_run_at": "2026-08-24T05:23:42Z",
         "last_status": "completed",
         "last_conclusion": "success"
       }
