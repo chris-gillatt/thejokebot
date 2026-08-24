@@ -15,12 +15,12 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=13" />
+    <link rel="stylesheet" href="styles.css?v=14" />
     <script
       src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"
       defer
     ></script>
-    <script src="app.js?v=12" defer></script>
+    <script src="app.js?v=13" defer></script>
   </head>
   <body>
     <noscript>
@@ -412,7 +412,7 @@
                     <tr>
                       <th>Provider</th>
                       <th>Published</th>
-                      <th>Avg. interactions</th>
+                      <th>Visible avg.</th>
                       <th>Fall-throughs</th>
                       <th>Rejected candidates</th>
                       <th>Health</th>
@@ -422,7 +422,8 @@
                 </table>
               </div>
               <p class="data-note">
-                Fall-throughs are cumulative exhausted provider attempts. Existing data combines duplicate,
+                Interaction averages use currently visible posts and appear after 30 observations; they are
+                descriptive, not a controlled provider comparison. Fall-throughs are cumulative exhausted provider attempts. Existing data combines duplicate,
                 length, malformed-response, and API failures. Detailed rejection counters begin with the
                 telemetry release; earlier fall-throughs remain aggregate-only.
               </p>

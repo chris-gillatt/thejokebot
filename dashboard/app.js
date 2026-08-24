@@ -517,6 +517,7 @@ function durationText(seconds) {
 function renderProviders() {
   const providerMetrics = metrics.providers;
   const providers = providerMetrics.providers;
+  const minimumComparisonPosts = providerMetrics.minimum_comparison_posts || 30;
   const checked = providers.filter(
     (provider) => provider.configured !== false && provider.healthy !== null,
   );
@@ -603,12 +604,20 @@ function renderProviders() {
     }
     appendCell(row, providerName);
     appendCell(row, numberFormat.format(provider.published));
-    appendCell(
-      row,
+    const average = document.createElement("span");
+    average.className = "sample-cell";
+    const averageValue = document.createElement("span");
+    averageValue.textContent =
       provider.average_interactions === null
-        ? "--"
-        : numberFormat.format(provider.average_interactions),
-    );
+        ? "Collecting"
+        : numberFormat.format(provider.average_interactions);
+    const sampleSize = document.createElement("small");
+    sampleSize.textContent =
+      provider.average_interactions === null
+        ? `${numberFormat.format(provider.visible_posts)}/${numberFormat.format(minimumComparisonPosts)} visible posts`
+        : `${numberFormat.format(provider.visible_posts)} visible posts`;
+    average.append(averageValue, sampleSize);
+    appendCell(row, average);
     appendCell(row, numberFormat.format(provider.fallthroughs));
     appendCell(row, rejectionSummary(provider.rejection_counts), "rejection-summary");
     const health = providerHealth(provider);

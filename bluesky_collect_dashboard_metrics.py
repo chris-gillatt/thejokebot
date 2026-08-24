@@ -30,6 +30,7 @@ MAX_WORKFLOW_LOG_BYTES = 25 * 1024 * 1024
 MAX_WORKFLOW_LOG_UNCOMPRESSED_BYTES = 50 * 1024 * 1024
 WORKFLOW_WINDOW_DAYS = 30
 TOP_POST_LIMIT = 6
+PROVIDER_COMPARISON_MIN_POSTS = 30
 POSTING_DELIVERY_WINDOWS = (7, 30)
 POSTING_SLOT_MATCH_HOURS = 2
 CORE_WORKFLOWS = {
@@ -980,7 +981,7 @@ def _provider_metrics(state: dict, joke_posts: list[dict]) -> dict:
                 "average_interactions": round(
                     visible_summary["interactions"] / visible_posts, 2
                 )
-                if visible_posts
+                if visible_posts >= PROVIDER_COMPARISON_MIN_POSTS
                 else None,
                 "fallthroughs": int(failure.get("count") or 0),
                 "rejection_counts": {
@@ -1000,6 +1001,7 @@ def _provider_metrics(state: dict, joke_posts: list[dict]) -> dict:
     providers.sort(key=lambda item: (-item["published"], item["name"]))
     return {
         "retained_publications": sum(retained_publications.values()),
+        "minimum_comparison_posts": PROVIDER_COMPARISON_MIN_POSTS,
         "providers": providers,
     }
 

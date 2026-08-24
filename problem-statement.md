@@ -73,8 +73,10 @@ reconstructed from retained bot state.
 - ✓ Added selectable 7-day, 30-day, and all-time windows for top-performing jokes.
 - Compact or roll up old six-hour snapshots when metrics JSON growth becomes
   material, while retaining useful long-term daily history.
-- Explore provider and hashtag engagement comparisons only with minimum sample
-  sizes and clear caveats; raw averages can otherwise overstate small cohorts.
+- ✓ Provider engagement averages now require 30 currently visible posts and
+  display their sample size with a descriptive-comparison caveat. Hashtag
+  comparison remains deferred until selected tags are retained durably rather
+  than inferred from a survivorship-biased visible-post subset.
 
 ### 5.37 Add dashboard build and run health ✓ Complete
 **Priority: Medium**

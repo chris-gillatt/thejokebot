@@ -212,8 +212,32 @@ class DashboardCollectorTests(unittest.TestCase):
             },
         )
         self.assertTrue(providers["icanhazdadjoke"]["configured"])
-        self.assertEqual(providers["groandeck"]["average_interactions"], 14.0)
+        self.assertEqual(providers["groandeck"]["visible_posts"], 1)
+        self.assertIsNone(providers["groandeck"]["average_interactions"])
         self.assertNotIn("did:audience", json.dumps(metrics))
+
+    def test_provider_average_requires_minimum_visible_sample(self):
+        uri_prefix = "at://did:bot/app.bsky.feed.post/"
+        posts = [
+            _post(f"{uri_prefix}{index}", likeCount=index)
+            for index in range(dashboard.PROVIDER_COMPARISON_MIN_POSTS)
+        ]
+        state = {
+            "posted_jokes": [
+                {"post_uri": post["uri"], "provider": "sampled"} for post in posts
+            ],
+            "provider": {"failures": {}, "health_checks": {}},
+        }
+
+        below_minimum = dashboard._provider_metrics(state, posts[:-1])
+        at_minimum = dashboard._provider_metrics(state, posts)
+
+        self.assertIsNone(below_minimum["providers"][0]["average_interactions"])
+        self.assertEqual(at_minimum["providers"][0]["average_interactions"], 14.5)
+        self.assertEqual(
+            at_minimum["minimum_comparison_posts"],
+            dashboard.PROVIDER_COMPARISON_MIN_POSTS,
+        )
 
     def test_latest_joke_skips_deleted_post(self):
         self.state["reports"]["deleted_post_uris"] = [self.latest_uri]
