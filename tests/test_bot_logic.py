@@ -3639,6 +3639,31 @@ class JokeRetryChainTests(unittest.TestCase):
         self.assertEqual(failure["reason_counts"]["duplicate"], 4)
         self.assertEqual(failure["reason_counts"]["too_long"], 1)
 
+    def test_apply_posting_state_updates_records_hashtags_after_success(self):
+        state = bluesky_state._default_state()
+
+        bluesky_post_joke._apply_posting_state_updates(
+            state,
+            provider_failures=[],
+            used_provider="jokeapi",
+            posted_successfully=True,
+            b64="encoded",
+            post_uri="at://post/1",
+            post_cid="cid-1",
+            posting_hashtag_pool=["#DadJoke", "#pun"],
+            cutoff=0,
+            hashtags_for_post=["#DadJoke", "#pun", "#dadjoke"],
+        )
+
+        self.assertEqual(state["posted_jokes"][0]["hashtags"], ["dadjoke", "pun"])
+
+    def test_add_posted_joke_omits_hashtags_for_legacy_caller(self):
+        state = bluesky_state._default_state()
+
+        bluesky_state.add_posted_joke(state, "encoded", "jokeapi")
+
+        self.assertNotIn("hashtags", state["posted_jokes"][0])
+
     def test_grapheme_len_treats_combining_mark_sequence_as_one(self):
         self.assertEqual(bluesky_post_joke._grapheme_len("e\u0301"), 1)
 

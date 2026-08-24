@@ -75,8 +75,8 @@ reconstructed from retained bot state.
   material, while retaining useful long-term daily history.
 - ✓ Provider engagement averages now require 30 currently visible posts and
   display their sample size with a descriptive-comparison caveat. Hashtag
-  comparison remains deferred until selected tags are retained durably rather
-  than inferred from a survivorship-biased visible-post subset.
+  provenance is retained on future successful posts without historical
+  inference; comparison remains deferred until 30-post cohorts accumulate.
 
 ### 5.37 Add dashboard build and run health ✓ Complete
 **Priority: Medium**

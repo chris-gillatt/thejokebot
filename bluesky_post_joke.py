@@ -325,6 +325,7 @@ def _apply_posting_state_updates(
     post_cid,
     posting_hashtag_pool,
     cutoff,
+    hashtags_for_post=None,
 ):
     for provider_name, error, reason_counts in provider_failures:
         bluesky_state.record_failure(
@@ -345,6 +346,7 @@ def _apply_posting_state_updates(
             used_provider,
             post_uri=post_uri,
             post_cid=post_cid,
+            hashtags=hashtags_for_post,
         )
         bluesky_state.advance_posting_tag_offset(
             latest_state,
@@ -474,6 +476,7 @@ def main():
                 post_cid=post_cid,
                 posting_hashtag_pool=posting_hashtag_pool,
                 cutoff=cutoff,
+                hashtags_for_post=hashtags_for_post,
             ),
             domains="posting",
         )

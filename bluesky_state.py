@@ -397,6 +397,7 @@ def add_posted_joke(
     provider: str,
     post_uri: str | None = None,
     post_cid: str | None = None,
+    hashtags: list[str] | None = None,
 ) -> None:
     """Record a successfully posted joke in state."""
     entry = {"ts": int(time.time()), "b64": b64, "provider": provider}
@@ -404,6 +405,14 @@ def add_posted_joke(
         entry["post_uri"] = post_uri
     if post_cid:
         entry["post_cid"] = post_cid
+    if hashtags:
+        entry["hashtags"] = list(
+            dict.fromkeys(
+                tag.strip().removeprefix("#").lower()
+                for tag in hashtags
+                if tag.strip().removeprefix("#")
+            )
+        )
     state["posted_jokes"].append(entry)
 
 
