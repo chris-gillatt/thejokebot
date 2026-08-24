@@ -22,7 +22,7 @@ from bluesky_common import retry_network_call
 PUBLIC_API_BASE = "https://public.api.bsky.app/xrpc"
 GITHUB_API_BASE = "https://api.github.com"
 METRICS_FILE = Path(__file__).resolve().parent / "dashboard" / "data" / "metrics.json"
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 MAX_FEED_PAGES = 100
 MAX_FEED_RUNTIME_SECONDS = 120
 MAX_WORKFLOW_PAGES = 20
@@ -58,6 +58,7 @@ ACTIVITY_WORKFLOWS = {
     "bluesky_follow_fellows",
     "bluesky_follows_and_likes",
     "bluesky_manage_starter_pack",
+    "bluesky_process_reports",
     "bluesky_unfollow",
 }
 ENGAGEMENT_FIELDS = (
@@ -248,10 +249,59 @@ def fetch_workflow_run_logs(
         )
 
 
+def _moderation_activity_counts(log_text: str) -> dict | None:
+    summaries = re.findall(
+        r"Moderation summary: proposals=(\d+), acknowledgements=(\d+), "
+        r"approved_removals=(\d+), unresolved=(\d+)\.",
+        log_text,
+    )
+    if not summaries:
+        return None
+    proposals, acknowledgements, approved_removals, unresolved = (
+        int(value) for value in summaries[-1]
+    )
+    return {
+        "follows": 0,
+        "unfollows": 0,
+        "proposals": proposals,
+        "acknowledgements": acknowledgements,
+        "approved_removals": approved_removals,
+        "unresolved": unresolved,
+    }
+
+
+def _unfollow_activity_counts(log_text: str) -> dict | None:
+    summaries = re.findall(
+        r"\bSummary: processed=(\d+), unfollowed=(\d+), failed=(\d+), "
+        r"missing_uri=(\d+)\.",
+        log_text,
+    )
+    if not summaries:
+        return None
+    processed, unfollowed, failed, missing_uri = (int(value) for value in summaries[-1])
+    eligible_values = re.findall(r"Found (\d+) users to unfollow", log_text)
+    eligible = int(eligible_values[-1]) if eligible_values else processed
+    return {
+        "follows": 0,
+        "unfollows": unfollowed,
+        "eligible": eligible,
+        "processed": processed,
+        "failed": failed,
+        "missing_uri": missing_uri,
+        "stopped_early": "Run stopped early after throttle detection" in log_text,
+    }
+
+
 def _workflow_activity_counts(workflow_name: str, log_text: str) -> dict | None:
     plain_text = re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", log_text)
     if "Dry-run mode enabled" in plain_text:
         return {"follows": 0, "unfollows": 0}
+    specialised_parser = {
+        "bluesky_process_reports": _moderation_activity_counts,
+        "bluesky_unfollow": _unfollow_activity_counts,
+    }.get(workflow_name)
+    if specialised_parser:
+        return specialised_parser(plain_text)
     if workflow_name == "bluesky_follows_and_likes":
         summaries = re.findall(
             r"Social summary: follow_back_candidates=(\d+), "
@@ -316,28 +366,6 @@ def _workflow_activity_counts(workflow_name: str, log_text: str) -> dict | None:
     if workflow_name == "bluesky_manage_starter_pack":
         follows = len(re.findall(r"\bFollowed list member did:[^\s]+", plain_text))
         return {"follows": follows, "unfollows": 0}
-    if workflow_name == "bluesky_unfollow":
-        summaries = re.findall(
-            r"\bSummary: processed=(\d+), unfollowed=(\d+), failed=(\d+), "
-            r"missing_uri=(\d+)\.",
-            plain_text,
-        )
-        if not summaries:
-            return None
-        processed, unfollowed, failed, missing_uri = (
-            int(value) for value in summaries[-1]
-        )
-        eligible_values = re.findall(r"Found (\d+) users to unfollow", plain_text)
-        eligible = int(eligible_values[-1]) if eligible_values else processed
-        return {
-            "follows": 0,
-            "unfollows": unfollowed,
-            "eligible": eligible,
-            "processed": processed,
-            "failed": failed,
-            "missing_uri": missing_uri,
-            "stopped_early": "Run stopped early after throttle detection" in plain_text,
-        }
     return None
 
 
@@ -394,10 +422,16 @@ def collect_workflow_activity(
             or cached.get("workflow") != workflow_name
             or "processed" not in cached
         )
+        incomplete_moderation = workflow_name == "bluesky_process_reports" and (
+            not cached
+            or cached.get("workflow") != workflow_name
+            or "proposals" not in cached
+        )
         if (
             cached_attempt_matches
             and not incomplete_discovery
             and not incomplete_unfollow
+            and not incomplete_moderation
         ):
             continue
         try:
@@ -613,6 +647,32 @@ def _social_activity_metrics(workflow_activity: dict | None) -> dict:
     }
 
 
+def _moderation_metrics(workflow_activity: dict | None) -> dict:
+    runs = []
+    for run in (workflow_activity or {}).get("runs", []):
+        if run.get("workflow") != "bluesky_process_reports" or "proposals" not in run:
+            continue
+        runs.append(
+            {
+                "created_at": run.get("created_at"),
+                "proposals": max(0, int(run.get("proposals") or 0)),
+                "acknowledgements": max(0, int(run.get("acknowledgements") or 0)),
+                "approved_removals": max(0, int(run.get("approved_removals") or 0)),
+                "unresolved": max(0, int(run.get("unresolved") or 0)),
+            }
+        )
+    latest_unresolved = runs[-1]["unresolved"] if runs else None
+    return {
+        "window_days": WORKFLOW_WINDOW_DAYS,
+        "completed_runs": len(runs),
+        "proposals": sum(run["proposals"] for run in runs),
+        "acknowledgements": sum(run["acknowledgements"] for run in runs),
+        "approved_removals": sum(run["approved_removals"] for run in runs),
+        "unresolved": latest_unresolved,
+        "runs": runs,
+    }
+
+
 def _network_maintenance_metrics(
     state: dict, workflow_activity: dict | None, now: datetime
 ) -> dict:
@@ -712,12 +772,44 @@ def _period_start(now: datetime) -> str:
 def _normalise_existing(existing: dict | None) -> dict:
     if existing is None:
         return {"schema_version": SCHEMA_VERSION, "snapshots": []}
-    if existing.get("schema_version") not in {1, 2, 3, SCHEMA_VERSION}:
+    if existing.get("schema_version") not in {1, 2, 3, 4, SCHEMA_VERSION}:
         raise ValueError("Unsupported dashboard metrics schema version")
     if not isinstance(existing.get("snapshots"), list):
         raise ValueError("Dashboard metrics snapshots must be a list")
     existing["schema_version"] = SCHEMA_VERSION
     return existing
+
+
+def _engagement_momentum(snapshots: list[dict], now: datetime) -> dict:
+    sampled = [
+        item
+        for item in snapshots
+        if item.get("source") == "bluesky_snapshot"
+        and isinstance(item.get("engagement_total"), int)
+        and item.get("collected_at")
+    ]
+    current = sampled[-1] if sampled else None
+    deltas = {}
+    for days in (7, 30):
+        cutoff = now - timedelta(days=days)
+        baseline = next(
+            (
+                item
+                for item in reversed(sampled)
+                if datetime.fromisoformat(item["collected_at"].replace("Z", "+00:00"))
+                <= cutoff
+            ),
+            None,
+        )
+        deltas[str(days)] = (
+            current["engagement_total"] - baseline["engagement_total"]
+            if current and baseline
+            else None
+        )
+    return {
+        "basis": "visible_joke_snapshot_total",
+        "deltas": deltas,
+    }
 
 
 def _provider_metrics(state: dict, joke_posts: list[dict]) -> dict:
@@ -1077,6 +1169,7 @@ def collect_metrics(
         "followers": current["followers"],
         "following": current["following"],
         "profile_posts": current["profile_posts"],
+        "engagement_total": engagement_total,
         "source": "bluesky_snapshot",
     }
     snapshots = [
@@ -1123,6 +1216,8 @@ def collect_metrics(
         "daily_activity": _daily_activity(state, workflow_activity),
         "discovery_activity": _discovery_metrics(workflow_activity),
         "social_activity": _social_activity_metrics(workflow_activity),
+        "moderation_activity": _moderation_metrics(workflow_activity),
+        "engagement_momentum": _engagement_momentum(snapshots, now),
         "network_maintenance": _network_maintenance_metrics(
             state, workflow_activity, now
         ),

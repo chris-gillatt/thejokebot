@@ -723,6 +723,41 @@ td:first-child {
   font: 700 clamp(2.4rem, 5vw, 4.4rem)/1 var(--font-display);
 }
 
+.engagement-momentum {
+  max-width: 310px;
+  margin: 24px 0 0;
+  border-top: 1px solid var(--line);
+}
+
+.engagement-momentum div {
+  padding: 10px 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.engagement-momentum dt,
+.engagement-momentum dd {
+  margin: 0;
+}
+
+.engagement-momentum dt,
+.engagement-history-note {
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.engagement-momentum dd {
+  font-weight: 700;
+}
+
+.engagement-history-note {
+  max-width: 310px;
+  margin: 10px 0 0;
+  line-height: 1.45;
+}
+
 .engagement-chart-block {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 160px;
@@ -831,6 +866,42 @@ td:first-child {
 
 .delivery-block {
   margin-bottom: 48px;
+}
+
+.moderation-block {
+  margin-bottom: 34px;
+}
+
+.moderation-summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border-top: 1px solid #31516a;
+  border-bottom: 1px solid #31516a;
+}
+
+.moderation-summary > div {
+  min-width: 0;
+  padding: 18px 20px;
+  border-left: 1px solid #31516a;
+}
+
+.moderation-summary > div:last-child {
+  border-right: 1px solid #31516a;
+}
+
+.moderation-summary span,
+.moderation-summary strong {
+  display: block;
+}
+
+.moderation-summary span {
+  color: #b8cedd;
+  font-size: 0.72rem;
+}
+
+.moderation-summary strong {
+  margin-top: 6px;
+  font: 700 1.55rem/1 var(--font-display);
 }
 
 .delivery-summary {
@@ -1301,6 +1372,23 @@ footer a {
     gap: 10px;
   }
 
+  .moderation-summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .moderation-summary > div:nth-child(3),
+  .moderation-summary > div:nth-child(4) {
+    border-top: 1px solid #31516a;
+  }
+
+  .moderation-summary > div:nth-child(odd) {
+    border-left: 0;
+  }
+
+  .moderation-summary > div {
+    padding-inline: 14px;
+  }
+
   .delivery-summary {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -1339,11 +1427,11 @@ footer a {
   }
 
   .engagement-chart-block {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .engagement-legend {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .post-grid {

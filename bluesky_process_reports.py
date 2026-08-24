@@ -25,6 +25,20 @@ DEFAULT_MAX_PAGES = _REPORTS_CONFIG["max_pages"]
 DEFAULT_PAGE_LIMIT = _REPORTS_CONFIG["page_limit"]
 DEFAULT_MAX_UNRESOLVED_ATTEMPTS = 3
 
+
+def _moderation_summary_line(
+    proposals: int,
+    acknowledgements: int,
+    approved_removals: int,
+    unresolved: int,
+) -> str:
+    return (
+        f"Moderation summary: proposals={proposals}, "
+        f"acknowledgements={acknowledgements}, "
+        f"approved_removals={approved_removals}, unresolved={unresolved}."
+    )
+
+
 _ACK_TEXT = "Eek! Thanks for flagging that \U0001f648 I'll get it sent for review!"
 
 
@@ -450,6 +464,14 @@ def main() -> None:
                 bluesky_state.record_acknowledged_report_uri(state, reply_uri)
                 print(f"Recorded permanent failure for: {masked_reply_uri}")
 
+    unresolved_count = len(bluesky_state.get_unresolved_notification_attempts(state))
+    bluesky_state.record_moderation_activity(
+        state,
+        proposals=len(proposals),
+        acknowledgements=ack_count,
+        approved_removals=deleted_count,
+        unresolved=unresolved_count,
+    )
     bluesky_state.save_state(state, domains="moderation")
 
     payload = {
@@ -464,6 +486,11 @@ def main() -> None:
     print(f"New report proposals: {len(proposals)}")
     print(f"Report replies acknowledged: {ack_count}")
     print(f"Approved posts deleted: {deleted_count}")
+    print(
+        _moderation_summary_line(
+            len(proposals), ack_count, deleted_count, unresolved_count
+        )
+    )
     print(f"Output written to {output_path}")
 
 

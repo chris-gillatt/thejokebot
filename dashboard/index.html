@@ -15,12 +15,12 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=10" />
+    <link rel="stylesheet" href="styles.css?v=11" />
     <script
       src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"
       defer
     ></script>
-    <script src="app.js?v=9" defer></script>
+    <script src="app.js?v=10" defer></script>
   </head>
   <body>
     <noscript>
@@ -278,6 +278,11 @@
             <p class="eyebrow">Audience response</p>
             <h2 id="engagement-heading">Received engagement</h2>
             <p class="engagement-total"><strong id="engagement-total">--</strong> total interactions</p>
+            <dl class="engagement-momentum">
+              <div><dt>Observed 7-day change</dt><dd id="engagement-change-7">--</dd></div>
+              <div><dt>Observed 30-day change</dt><dd id="engagement-change-30">--</dd></div>
+            </dl>
+            <p id="engagement-history-note" class="engagement-history-note">Collecting snapshot history</p>
           </div>
           <div class="chart-block engagement-chart-block">
             <div class="chart-frame chart-frame-short">
@@ -332,6 +337,21 @@
           <div class="operational-pulse" aria-live="polite" aria-label="Current operational alerts">
             <strong>Operational pulse</strong>
             <div id="operational-pulse"></div>
+          </div>
+
+          <div class="moderation-block" aria-labelledby="moderation-heading">
+            <div class="operations-block-heading">
+              <div>
+                <h3 id="moderation-heading">Moderation outcomes</h3>
+                <p id="moderation-history-note">Collecting report workflow history</p>
+              </div>
+            </div>
+            <div class="moderation-summary">
+              <div><span>Proposals</span><strong id="moderation-proposals">--</strong></div>
+              <div><span>Acknowledged</span><strong id="moderation-acknowledgements">--</strong></div>
+              <div><span>Approved removals</span><strong id="moderation-removals">--</strong></div>
+              <div><span>Currently unresolved</span><strong id="moderation-unresolved">--</strong></div>
+            </div>
           </div>
 
           <div class="delivery-block" aria-labelledby="delivery-heading">

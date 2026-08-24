@@ -93,6 +93,7 @@ def _default_state() -> dict:
             "last_checked_at": None,
             "deleted_post_uris": [],
             "acknowledged_report_uris": [],
+            "activity_events": [],
         },
         "liked_replies": {
             "liked_uris": [],
@@ -169,6 +170,7 @@ def _normalise_state(state: dict) -> dict:
     reports.setdefault("last_checked_at", None)
     reports.setdefault("deleted_post_uris", [])
     reports.setdefault("acknowledged_report_uris", [])
+    reports.setdefault("activity_events", [])
 
     liked_replies = state.setdefault("liked_replies", {})
     liked_replies.setdefault("liked_uris", [])
@@ -498,6 +500,31 @@ def set_reports_checked_now(state: dict) -> None:
     """Set the report polling timestamp to current epoch."""
     reports = state.setdefault("reports", {})
     reports["last_checked_at"] = int(time.time())
+
+
+def record_moderation_activity(
+    state: dict,
+    proposals: int,
+    acknowledgements: int,
+    approved_removals: int,
+    unresolved: int,
+    recorded_at: int | None = None,
+    max_events: int = 540,
+) -> None:
+    """Record a bounded aggregate moderation event without report identifiers."""
+    reports = state.setdefault("reports", {})
+    events = reports.setdefault("activity_events", [])
+    events.append(
+        {
+            "recorded_at": int(recorded_at if recorded_at is not None else time.time()),
+            "proposals": max(0, int(proposals)),
+            "acknowledgements": max(0, int(acknowledgements)),
+            "approved_removals": max(0, int(approved_removals)),
+            "unresolved": max(0, int(unresolved)),
+        }
+    )
+    if len(events) > max_events:
+        reports["activity_events"] = events[-max_events:]
 
 
 def get_deleted_post_uris(state: dict) -> set[str]:

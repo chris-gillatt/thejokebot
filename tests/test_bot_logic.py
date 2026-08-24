@@ -1659,6 +1659,50 @@ class StateJokeHistoryTests(unittest.TestCase):
         uris = bluesky_state.get_deleted_post_uris(state)
         self.assertEqual(uris, {"at://post/1"})
 
+    def test_record_moderation_activity_is_aggregate_and_bounded(self):
+        state = bluesky_state._default_state()
+
+        bluesky_state.record_moderation_activity(
+            state,
+            proposals=3,
+            acknowledgements=2,
+            approved_removals=1,
+            unresolved=4,
+            recorded_at=123,
+            max_events=1,
+        )
+        bluesky_state.record_moderation_activity(
+            state,
+            proposals=1,
+            acknowledgements=1,
+            approved_removals=0,
+            unresolved=2,
+            recorded_at=456,
+            max_events=1,
+        )
+
+        self.assertEqual(
+            state["reports"]["activity_events"],
+            [
+                {
+                    "recorded_at": 456,
+                    "proposals": 1,
+                    "acknowledgements": 1,
+                    "approved_removals": 0,
+                    "unresolved": 2,
+                }
+            ],
+        )
+        self.assertNotIn("uri", json.dumps(state["reports"]["activity_events"]))
+
+    def test_normalise_state_backfills_moderation_activity_events(self):
+        state = bluesky_state._default_state()
+        del state["reports"]["activity_events"]
+
+        normalised = bluesky_state._normalise_state(state)
+
+        self.assertEqual(normalised["reports"]["activity_events"], [])
+
     def test_get_likes_last_checked_at_returns_none_initially(self):
         state = bluesky_state._default_state()
         result = bluesky_state.get_likes_last_checked_at(state)

@@ -298,7 +298,7 @@ Acceptance criteria:
   outcomes: eligible, processed, completed, failed, missing records, and early
   throttle stops. Keep wording operational and avoid exposing selection rules.
 
-#### Phase 4: Moderation and engagement momentum
+#### Phase 4: Moderation and engagement momentum ✓ Complete
 
 - Parse the existing report workflow summaries into proposals, acknowledgements,
   approved removals, and unresolved outcomes. Do not treat all processed reply
@@ -308,6 +308,10 @@ Acceptance criteria:
 - Add engagement totals to future six-hour snapshots, then derive observed 7 and
   30-day gains after enough samples accumulate. Label them as snapshot deltas,
   account for removed/hidden posts, and avoid age-normalised claims.
+
+Resolution-time reporting remains deferred until the new aggregate lifecycle
+events provide a sufficient observed history; no duration is inferred from
+legacy identifier-only state.
 
 #### Phase 5: Provider pressure trends
 

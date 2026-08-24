@@ -7,6 +7,7 @@ from unittest.mock import patch
 
 import bluesky_collect_dashboard_metrics as dashboard
 import bluesky_follows_and_likes
+import bluesky_process_reports
 
 
 class _Response:
@@ -193,6 +194,10 @@ class DashboardCollectorTests(unittest.TestCase):
         self.assertEqual(metrics["latest_joke"]["uri"], self.latest_uri)
         self.assertEqual(len(metrics["snapshots"]), 1)
         self.assertEqual(metrics["snapshots"][0]["followers"], 6400)
+        self.assertEqual(metrics["snapshots"][0]["engagement_total"], 17)
+        self.assertEqual(
+            metrics["engagement_momentum"]["deltas"], {"7": None, "30": None}
+        )
         providers = {item["name"]: item for item in metrics["providers"]["providers"]}
         self.assertEqual(providers["icanhazdadjoke"]["published"], 1)
         self.assertEqual(providers["icanhazdadjoke"]["fallthroughs"], 4)
@@ -239,7 +244,7 @@ class DashboardCollectorTests(unittest.TestCase):
 
     def test_rejects_unknown_schema_version(self):
         with self.assertRaisesRegex(ValueError, "schema version"):
-            dashboard._normalise_existing({"schema_version": 5, "snapshots": []})
+            dashboard._normalise_existing({"schema_version": 6, "snapshots": []})
 
     def test_normalise_existing_upgrades_schema_one(self):
         existing = {"schema_version": 1, "snapshots": []}
@@ -247,6 +252,52 @@ class DashboardCollectorTests(unittest.TestCase):
             dashboard._normalise_existing(existing)["schema_version"],
             dashboard.SCHEMA_VERSION,
         )
+
+    def test_parses_and_summarises_moderation_without_identifiers(self):
+        line = bluesky_process_reports._moderation_summary_line(3, 2, 1, 4)
+
+        counts = dashboard._workflow_activity_counts("bluesky_process_reports", line)
+        activity = {
+            "runs": [
+                {
+                    "workflow": "bluesky_process_reports",
+                    "created_at": "2026-08-22T10:00:00Z",
+                    **counts,
+                }
+            ]
+        }
+        summary = dashboard._moderation_metrics(activity)
+
+        self.assertEqual(summary["proposals"], 3)
+        self.assertEqual(summary["acknowledgements"], 2)
+        self.assertEqual(summary["approved_removals"], 1)
+        self.assertEqual(summary["unresolved"], 4)
+        self.assertNotIn("uri", json.dumps(summary))
+
+    def test_engagement_momentum_requires_full_observed_windows(self):
+        now = datetime(2026, 8, 31, 12, tzinfo=timezone.utc)
+        snapshots = [
+            {
+                "source": "bluesky_snapshot",
+                "collected_at": "2026-08-01T12:00:00Z",
+                "engagement_total": 100,
+            },
+            {
+                "source": "bluesky_snapshot",
+                "collected_at": "2026-08-24T12:00:00Z",
+                "engagement_total": 130,
+            },
+            {
+                "source": "bluesky_snapshot",
+                "collected_at": now.isoformat(),
+                "engagement_total": 145,
+            },
+        ]
+
+        momentum = dashboard._engagement_momentum(snapshots, now)
+
+        self.assertEqual(momentum["deltas"], {"7": 15, "30": 45})
+        self.assertEqual(momentum["basis"], "visible_joke_snapshot_total")
 
     def test_parses_confirmed_follow_and_unfollow_counts(self):
         follows_and_likes = "\n".join(

@@ -407,6 +407,19 @@ function renderEngagement() {
   const entries = Object.entries(metrics.current.engagement);
   const total = entries.reduce((sum, [, count]) => sum + count, 0);
   setText("engagement-total", numberFormat.format(total));
+  const momentum = metrics.engagement_momentum?.deltas || {};
+  const momentumText = (value) => {
+    if (value == null) return "--";
+    return `${value > 0 ? "+" : ""}${numberFormat.format(value)}`;
+  };
+  setText("engagement-change-7", momentumText(momentum["7"]));
+  setText("engagement-change-30", momentumText(momentum["30"]));
+  setText(
+    "engagement-history-note",
+    momentum["30"] != null
+      ? "Changes in visible joke engagement between sampled totals"
+      : "Collecting sampled history; removed or hidden posts can reduce totals",
+  );
   replaceChart("engagement", document.getElementById("engagement-chart"), {
     type: "doughnut",
     data: {
@@ -557,6 +570,31 @@ function renderAutomation() {
   );
   setText("automation-runs", numberFormat.format(automation.runs));
   setText("automation-failed", numberFormat.format(automation.failed));
+
+  const moderation = metrics.moderation_activity || { completed_runs: 0 };
+  const hasModerationHistory = moderation.completed_runs > 0;
+  setText(
+    "moderation-proposals",
+    metricText(hasModerationHistory ? moderation.proposals : null),
+  );
+  setText(
+    "moderation-acknowledgements",
+    metricText(hasModerationHistory ? moderation.acknowledgements : null),
+  );
+  setText(
+    "moderation-removals",
+    metricText(hasModerationHistory ? moderation.approved_removals : null),
+  );
+  setText(
+    "moderation-unresolved",
+    metricText(hasModerationHistory ? moderation.unresolved : null),
+  );
+  setText(
+    "moderation-history-note",
+    hasModerationHistory
+      ? `${numberFormat.format(moderation.completed_runs)} report workflow runs observed over 30 days`
+      : "Report workflow history will appear after the next completed run.",
+  );
 
   const delivery = metrics.posting_delivery;
   const sevenDays = delivery?.windows?.["7"];
