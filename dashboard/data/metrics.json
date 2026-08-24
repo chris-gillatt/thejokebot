@@ -1,6 +1,6 @@
 {
   "schema_version": 4,
-  "generated_at": "2026-08-24T13:38:50.959434+00:00",
+  "generated_at": "2026-08-24T13:47:13.374847+00:00",
   "account": {
     "handle": "thejokebot.bsky.social",
     "display_name": "The Joke Bot",
@@ -221,7 +221,7 @@
     },
     {
       "period_start": "2026-08-24T12:00:00+00:00",
-      "collected_at": "2026-08-24T13:38:50.959434+00:00",
+      "collected_at": "2026-08-24T13:47:13.374847+00:00",
       "followers": 6412,
       "following": 10833,
       "profile_posts": 2334,
@@ -1485,6 +1485,42 @@
         "failed": 0
       }
     ]
+  },
+  "social_activity": {
+    "window_days": 30,
+    "completed_runs": 0,
+    "follow_back_candidates": 0,
+    "follow_back_added": 0,
+    "protected": 0,
+    "interaction_candidates": 0,
+    "interaction_eligible": 0,
+    "interaction_added": 0,
+    "interactions_liked": 0,
+    "failed": 0,
+    "runs": []
+  },
+  "network_maintenance": {
+    "window_days": 30,
+    "response_window": {
+      "days": 30,
+      "active": 1065,
+      "by_source": {
+        "discovery": 552,
+        "interaction": 18,
+        "other": 495
+      }
+    },
+    "unfollow": {
+      "completed_runs": 0,
+      "eligible": 0,
+      "processed": 0,
+      "unfollowed": 0,
+      "failed": 0,
+      "missing_records": 0,
+      "cap_remaining": 0,
+      "stopped_early_runs": 0,
+      "runs": []
+    }
   },
   "workflow_activity": {
     "window_days": 30,
@@ -3030,24 +3066,24 @@
   },
   "automation": {
     "window_days": 30,
-    "collected_at": "2026-08-24T13:38:50.959434+00:00",
-    "runs": 932,
-    "successful": 917,
+    "collected_at": "2026-08-24T13:47:13.374847+00:00",
+    "runs": 937,
+    "successful": 922,
     "failed": 8,
     "cancelled": 3,
     "success_rate": 99.1,
     "workflows": [
       {
         "name": "bluesky_dashboard",
-        "runs": 23,
-        "successful": 22,
+        "runs": 24,
+        "successful": 23,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-08-24T13:38:27Z",
+        "last_run_at": "2026-08-24T13:46:50Z",
         "last_status": "in_progress",
         "last_conclusion": null,
         "latest_duration_seconds": null,
-        "median_duration_seconds": 71,
+        "median_duration_seconds": 72,
         "expected_interval_hours": 6.0
       },
       {
@@ -3143,11 +3179,11 @@
       },
       {
         "name": "codeql",
-        "runs": 38,
-        "successful": 37,
+        "runs": 39,
+        "successful": 38,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-08-24T13:38:27Z",
+        "last_run_at": "2026-08-24T13:46:50Z",
         "last_status": "in_progress",
         "last_conclusion": null,
         "latest_duration_seconds": null,
@@ -3182,11 +3218,11 @@
       },
       {
         "name": "python_tests",
-        "runs": 33,
-        "successful": 32,
+        "runs": 34,
+        "successful": 33,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-08-24T13:38:27Z",
+        "last_run_at": "2026-08-24T13:46:51Z",
         "last_status": "in_progress",
         "last_conclusion": null,
         "latest_duration_seconds": null,
@@ -3195,27 +3231,27 @@
       },
       {
         "name": "ruff_quality",
-        "runs": 33,
-        "successful": 33,
+        "runs": 34,
+        "successful": 34,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-08-24T13:38:27Z",
+        "last_run_at": "2026-08-24T13:46:50Z",
         "last_status": "completed",
         "last_conclusion": "success",
-        "latest_duration_seconds": 18,
+        "latest_duration_seconds": 23,
         "median_duration_seconds": 19,
         "expected_interval_hours": null
       },
       {
         "name": "validate_runtime_config",
-        "runs": 33,
-        "successful": 33,
+        "runs": 34,
+        "successful": 34,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-08-24T13:38:27Z",
+        "last_run_at": "2026-08-24T13:46:51Z",
         "last_status": "completed",
         "last_conclusion": "success",
-        "latest_duration_seconds": 22,
+        "latest_duration_seconds": 20,
         "median_duration_seconds": 20,
         "expected_interval_hours": null
       }
