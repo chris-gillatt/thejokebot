@@ -22,7 +22,7 @@ from bluesky_common import retry_network_call
 PUBLIC_API_BASE = "https://public.api.bsky.app/xrpc"
 GITHUB_API_BASE = "https://api.github.com"
 METRICS_FILE = Path(__file__).resolve().parent / "dashboard" / "data" / "metrics.json"
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 7
 MAX_FEED_PAGES = 100
 MAX_FEED_RUNTIME_SECONDS = 120
 MAX_WORKFLOW_PAGES = 20
@@ -552,6 +552,25 @@ def _top_post_summaries(joke_posts: list[dict], handle: str) -> list[dict]:
     return [_post_summary(post, handle) for post in ranked_posts[:TOP_POST_LIMIT]]
 
 
+def _top_posts_by_window(
+    joke_posts: list[dict], handle: str, now: datetime
+) -> dict[str, list[dict]]:
+    windows = {"all": _top_post_summaries(joke_posts, handle)}
+    for days in (7, 30):
+        cutoff = now - timedelta(days=days)
+        posts = []
+        for post in joke_posts:
+            record = post.get("record", {})
+            created_at = record.get("createdAt") or post.get("indexedAt")
+            if not created_at:
+                continue
+            created = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+            if created >= cutoff:
+                posts.append(post)
+        windows[str(days)] = _top_post_summaries(posts, handle)
+    return windows
+
+
 def _latest_joke_uri(state: dict) -> str:
     deleted = set(state.get("reports", {}).get("deleted_post_uris", []))
     for entry in reversed(state.get("posted_jokes", [])):
@@ -881,7 +900,7 @@ def _period_start(now: datetime) -> str:
 def _normalise_existing(existing: dict | None) -> dict:
     if existing is None:
         return {"schema_version": SCHEMA_VERSION, "snapshots": []}
-    if existing.get("schema_version") not in {1, 2, 3, 4, 5, SCHEMA_VERSION}:
+    if existing.get("schema_version") not in {1, 2, 3, 4, 5, 6, SCHEMA_VERSION}:
         raise ValueError("Unsupported dashboard metrics schema version")
     if not isinstance(existing.get("snapshots"), list):
         raise ValueError("Dashboard metrics snapshots must be a list")
@@ -1342,6 +1361,7 @@ def collect_metrics(
         "posting_delivery": posting_delivery,
         "automation": automation,
         "top_posts": _top_post_summaries(joke_posts, profile["handle"]),
+        "top_posts_by_window": _top_posts_by_window(joke_posts, profile["handle"], now),
     }
 
 

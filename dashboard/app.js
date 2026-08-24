@@ -4,6 +4,7 @@ const colours = ["#087fdb", "#df6255", "#138a78", "#e9aa31", "#08a9cf"];
 const charts = {};
 let metrics;
 let selectedRange = "30";
+let selectedTopRange = "30";
 
 const numberFormat = new Intl.NumberFormat("en-GB");
 const percentageFormat = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 1 });
@@ -763,8 +764,12 @@ function renderAutomation() {
 
 function renderTopPosts() {
   const container = document.getElementById("top-posts");
+  document.getElementById("top-post-range").hidden = !metrics.top_posts_by_window;
+  const posts = metrics.top_posts_by_window?.[selectedTopRange] || metrics.top_posts;
+  const emptyState = document.getElementById("top-posts-empty");
   container.replaceChildren();
-  metrics.top_posts.forEach((post) => {
+  emptyState.hidden = posts.length > 0;
+  posts.forEach((post) => {
     const article = document.createElement("article");
     article.className = "top-post";
     const text = document.createElement("p");
@@ -802,6 +807,15 @@ function bindRangeControls() {
       renderAudienceChart();
       renderActivityChart();
       renderDiscovery();
+    });
+  });
+  document.querySelectorAll("[data-top-range]").forEach((button) => {
+    button.addEventListener("click", () => {
+      selectedTopRange = button.dataset.topRange;
+      document.querySelectorAll("[data-top-range]").forEach((item) => {
+        item.classList.toggle("active", item === button);
+      });
+      renderTopPosts();
     });
   });
 }

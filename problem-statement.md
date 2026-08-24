@@ -70,7 +70,7 @@ reconstructed from retained bot state.
 ### 5.36 Dashboard follow-up improvements ⏳ Deferred
 **Priority: Low**
 
-- Add selectable time windows for top-performing jokes.
+- ✓ Added selectable 7-day, 30-day, and all-time windows for top-performing jokes.
 - Compact or roll up old six-hour snapshots when metrics JSON growth becomes
   material, while retaining useful long-term daily history.
 - Explore provider and hashtag engagement comparisons only with minimum sample

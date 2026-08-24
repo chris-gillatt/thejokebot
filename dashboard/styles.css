@@ -1227,6 +1227,14 @@ td:first-child {
   text-decoration: none;
 }
 
+.top-posts-empty {
+  margin: 0;
+  padding: 28px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+}
+
 footer {
   min-height: 92px;
   padding: 24px max(24px, calc((100vw - var(--content)) / 2));

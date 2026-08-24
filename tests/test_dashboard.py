@@ -231,6 +231,29 @@ class DashboardCollectorTests(unittest.TestCase):
         self.assertTrue(summaries[0]["uri"].endswith("/6"))
         self.assertTrue(summaries[-1]["uri"].endswith("/1"))
 
+    def test_top_posts_by_window_ranks_only_posts_observed_in_each_period(self):
+        now = datetime(2026, 8, 24, tzinfo=timezone.utc)
+        recent = _post("at://did:bot/app.bsky.feed.post/recent", likeCount=2)
+        recent["record"]["createdAt"] = "2026-08-23T00:00:00Z"
+        monthly = _post("at://did:bot/app.bsky.feed.post/monthly", likeCount=5)
+        monthly["record"]["createdAt"] = "2026-08-10T00:00:00Z"
+        older = _post("at://did:bot/app.bsky.feed.post/older", likeCount=9)
+        older["record"]["createdAt"] = "2026-07-01T00:00:00Z"
+
+        windows = dashboard._top_posts_by_window(
+            [recent, monthly, older], "thejokebot.bsky.social", now
+        )
+
+        self.assertEqual([post["uri"] for post in windows["7"]], [recent["uri"]])
+        self.assertEqual(
+            [post["uri"] for post in windows["30"]],
+            [monthly["uri"], recent["uri"]],
+        )
+        self.assertEqual(
+            [post["uri"] for post in windows["all"]],
+            [older["uri"], monthly["uri"], recent["uri"]],
+        )
+
     def test_repeated_feed_cursor_fails_closed(self):
         session = _Session(
             self.profile,
@@ -245,7 +268,7 @@ class DashboardCollectorTests(unittest.TestCase):
 
     def test_rejects_unknown_schema_version(self):
         with self.assertRaisesRegex(ValueError, "schema version"):
-            dashboard._normalise_existing({"schema_version": 7, "snapshots": []})
+            dashboard._normalise_existing({"schema_version": 8, "snapshots": []})
 
     def test_normalise_existing_upgrades_schema_one(self):
         existing = {"schema_version": 1, "snapshots": []}

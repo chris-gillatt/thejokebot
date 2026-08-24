@@ -15,12 +15,12 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=12" />
+    <link rel="stylesheet" href="styles.css?v=13" />
     <script
       src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"
       defer
     ></script>
-    <script src="app.js?v=11" defer></script>
+    <script src="app.js?v=12" defer></script>
   </head>
   <body>
     <noscript>
@@ -300,8 +300,14 @@
               <p class="eyebrow">Recent stand-outs</p>
               <h2 id="top-posts-heading">Top joke posts</h2>
             </div>
+            <div id="top-post-range" class="range-control" role="group" aria-label="Top joke post date range">
+              <button type="button" data-top-range="7">7 days</button>
+              <button type="button" data-top-range="30" class="active">30 days</button>
+              <button type="button" data-top-range="all">All</button>
+            </div>
           </div>
           <div id="top-posts" class="post-grid"></div>
+          <p id="top-posts-empty" class="top-posts-empty" hidden>No joke posts observed in this period.</p>
         </div>
       </section>
 
