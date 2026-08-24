@@ -1,6 +1,6 @@
 {
   "schema_version": 4,
-  "generated_at": "2026-08-24T06:47:04.312483+00:00",
+  "generated_at": "2026-08-24T12:46:37.446778+00:00",
   "account": {
     "handle": "thejokebot.bsky.social",
     "display_name": "The Joke Bot",
@@ -8,14 +8,14 @@
     "profile_url": "https://bsky.app/profile/thejokebot.bsky.social"
   },
   "latest_joke": {
-    "uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mtsh2dcjpj2w",
-    "url": "https://bsky.app/profile/thejokebot.bsky.social/post/3mtsh2dcjpj2w",
-    "text": "Why did the melons plan a big wedding? Because they cantaloupe!\n\n#dadjoke #humor #jokesky",
-    "created_at": "2026-08-24T04:16:37.150273+00:00",
+    "uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mttbgl6dsq2w",
+    "url": "https://bsky.app/profile/thejokebot.bsky.social/post/3mttbgl6dsq2w",
+    "text": "Why was Santa's little helper feeling depressed? Because he has low elf esteem.\n\n#dadjoke #pun #jokesky",
+    "created_at": "2026-08-24T12:08:45.361083+00:00",
     "engagement": {
-      "likes": 0,
+      "likes": 2,
       "replies": 0,
-      "reposts": 0,
+      "reposts": 1,
       "quotes": 0,
       "bookmarks": 0
     }
@@ -23,16 +23,16 @@
   "current": {
     "followers": 6412,
     "following": 10833,
-    "profile_posts": 2332,
-    "joke_posts": 693,
+    "profile_posts": 2334,
+    "joke_posts": 695,
     "engagement": {
-      "likes": 3800,
+      "likes": 3809,
       "replies": 270,
-      "reposts": 288,
+      "reposts": 289,
       "quotes": 32,
       "bookmarks": 30
     },
-    "engagement_per_joke": 6.38
+    "engagement_per_joke": 6.37
   },
   "snapshots": [
     {
@@ -217,6 +217,14 @@
       "followers": 6412,
       "following": 10833,
       "profile_posts": 2332,
+      "source": "bluesky_snapshot"
+    },
+    {
+      "period_start": "2026-08-24T12:00:00+00:00",
+      "collected_at": "2026-08-24T12:46:37.446778+00:00",
+      "followers": 6412,
+      "following": 10833,
+      "profile_posts": 2334,
       "source": "bluesky_snapshot"
     }
   ],
@@ -1435,7 +1443,7 @@
     },
     {
       "date": "2026-08-24",
-      "joke_posts": 2,
+      "joke_posts": 4,
       "follows": 4,
       "unfollows": 0
     }
@@ -2834,17 +2842,41 @@
         "created_at": "2026-08-24T06:33:17Z",
         "follows": 0,
         "unfollows": 0
+      },
+      {
+        "id": 32706911189,
+        "attempt": 1,
+        "workflow": "bluesky_follows_and_likes",
+        "created_at": "2026-08-24T08:33:25Z",
+        "follows": 0,
+        "unfollows": 0
+      },
+      {
+        "id": 32717262493,
+        "attempt": 1,
+        "workflow": "bluesky_follows_and_likes",
+        "created_at": "2026-08-24T10:32:04Z",
+        "follows": 0,
+        "unfollows": 0
+      },
+      {
+        "id": 32727667484,
+        "attempt": 1,
+        "workflow": "bluesky_follows_and_likes",
+        "created_at": "2026-08-24T12:32:51Z",
+        "follows": 0,
+        "unfollows": 0
       }
     ]
   },
   "providers": {
-    "retained_publications": 933,
+    "retained_publications": 935,
     "providers": [
       {
         "name": "icanhazdadjoke",
-        "published": 571,
-        "visible_posts": 335,
-        "average_interactions": 6.7,
+        "published": 573,
+        "visible_posts": 337,
+        "average_interactions": 6.69,
         "fallthroughs": 45,
         "rejection_counts": {
           "duplicate": 30,
@@ -2856,7 +2888,7 @@
         "last_failure_reason": "All 5 jokes from 'icanhazdadjoke' were rejected (5 duplicates, 0 too long)",
         "healthy": true,
         "configured": true,
-        "last_health_check_at": 1787472543,
+        "last_health_check_at": 1787559513,
         "consecutive_health_failures": 0
       },
       {
@@ -2875,7 +2907,7 @@
         "last_failure_reason": null,
         "healthy": true,
         "configured": true,
-        "last_health_check_at": 1787472543,
+        "last_health_check_at": 1787559514,
         "consecutive_health_failures": 0
       },
       {
@@ -2883,18 +2915,18 @@
         "published": 174,
         "visible_posts": 170,
         "average_interactions": 6.58,
-        "fallthroughs": 186,
+        "fallthroughs": 188,
         "rejection_counts": {
-          "duplicate": 40,
+          "duplicate": 50,
           "too_long": 0,
           "network_error": 0,
           "provider_error": 0
         },
-        "last_failure_at": 1787530324,
+        "last_failure_at": 1787573325,
         "last_failure_reason": "All 5 jokes from 'jokeapi' were rejected (5 duplicates, 0 too long)",
         "healthy": true,
         "configured": true,
-        "last_health_check_at": 1787472543,
+        "last_health_check_at": 1787559514,
         "consecutive_health_failures": 0
       },
       {
@@ -2913,7 +2945,7 @@
         "last_failure_reason": null,
         "healthy": true,
         "configured": true,
-        "last_health_check_at": 1787472544,
+        "last_health_check_at": 1787559514,
         "consecutive_health_failures": 0
       },
       {
@@ -2932,14 +2964,14 @@
         "last_failure_reason": null,
         "healthy": true,
         "configured": true,
-        "last_health_check_at": 1787472544,
+        "last_health_check_at": 1787559514,
         "consecutive_health_failures": 0
       }
     ]
   },
   "automation": {
     "window_days": 30,
-    "collected_at": "2026-08-24T06:47:04.312483+00:00",
+    "collected_at": "2026-08-24T12:46:37.446778+00:00",
     "runs": 921,
     "successful": 908,
     "failed": 8,
@@ -2948,11 +2980,11 @@
     "workflows": [
       {
         "name": "bluesky_dashboard",
-        "runs": 20,
-        "successful": 19,
+        "runs": 21,
+        "successful": 20,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-08-24T06:46:42Z",
+        "last_run_at": "2026-08-24T12:46:12Z",
         "last_status": "in_progress",
         "last_conclusion": null
       },
@@ -2972,7 +3004,7 @@
         "successful": 354,
         "failed": 4,
         "cancelled": 1,
-        "last_run_at": "2026-08-24T06:33:17Z",
+        "last_run_at": "2026-08-24T12:32:51Z",
         "last_status": "completed",
         "last_conclusion": "success"
       },
@@ -2992,17 +3024,17 @@
         "successful": 180,
         "failed": 1,
         "cancelled": 2,
-        "last_run_at": "2026-08-24T04:16:18Z",
+        "last_run_at": "2026-08-24T12:08:26Z",
         "last_status": "completed",
         "last_conclusion": "success"
       },
       {
         "name": "bluesky_process_reports",
-        "runs": 179,
-        "successful": 176,
+        "runs": 178,
+        "successful": 175,
         "failed": 3,
         "cancelled": 0,
-        "last_run_at": "2026-08-24T04:57:01Z",
+        "last_run_at": "2026-08-24T08:58:44Z",
         "last_status": "completed",
         "last_conclusion": "success"
       },
@@ -3052,7 +3084,7 @@
         "successful": 31,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-08-23T08:08:38Z",
+        "last_run_at": "2026-08-24T08:18:13Z",
         "last_status": "completed",
         "last_conclusion": "success"
       },
