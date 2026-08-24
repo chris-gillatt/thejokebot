@@ -1,6 +1,6 @@
 {
-  "schema_version": 6,
-  "generated_at": "2026-08-24T14:04:06.790664+00:00",
+  "schema_version": 7,
+  "generated_at": "2026-08-24T14:08:44.870913+00:00",
   "account": {
     "handle": "thejokebot.bsky.social",
     "display_name": "The Joke Bot",
@@ -109,7 +109,7 @@
     },
     {
       "period_start": "2026-08-24T12:00:00+00:00",
-      "collected_at": "2026-08-24T14:04:06.790664+00:00",
+      "collected_at": "2026-08-24T14:08:44.870913+00:00",
       "followers": 6412,
       "following": 10834,
       "profile_posts": 2334,
@@ -3008,20 +3008,20 @@
   },
   "automation": {
     "window_days": 30,
-    "collected_at": "2026-08-24T14:04:06.790664+00:00",
-    "runs": 947,
-    "successful": 931,
+    "collected_at": "2026-08-24T14:08:44.870913+00:00",
+    "runs": 952,
+    "successful": 937,
     "failed": 8,
     "cancelled": 3,
-    "success_rate": 99.1,
+    "success_rate": 99.2,
     "workflows": [
       {
         "name": "bluesky_dashboard",
-        "runs": 26,
-        "successful": 25,
+        "runs": 27,
+        "successful": 26,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-08-24T14:03:47Z",
+        "last_run_at": "2026-08-24T14:08:20Z",
         "last_status": "in_progress",
         "last_conclusion": null,
         "latest_duration_seconds": null,
@@ -3121,11 +3121,11 @@
       },
       {
         "name": "codeql",
-        "runs": 41,
-        "successful": 40,
+        "runs": 42,
+        "successful": 41,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-08-24T14:03:47Z",
+        "last_run_at": "2026-08-24T14:08:20Z",
         "last_status": "in_progress",
         "last_conclusion": null,
         "latest_duration_seconds": null,
@@ -3160,11 +3160,11 @@
       },
       {
         "name": "python_tests",
-        "runs": 36,
-        "successful": 35,
+        "runs": 37,
+        "successful": 36,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-08-24T14:03:47Z",
+        "last_run_at": "2026-08-24T14:08:20Z",
         "last_status": "in_progress",
         "last_conclusion": null,
         "latest_duration_seconds": null,
@@ -3173,27 +3173,27 @@
       },
       {
         "name": "ruff_quality",
-        "runs": 36,
-        "successful": 36,
+        "runs": 37,
+        "successful": 37,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-08-24T14:03:47Z",
+        "last_run_at": "2026-08-24T14:08:20Z",
         "last_status": "completed",
         "last_conclusion": "success",
-        "latest_duration_seconds": 17,
+        "latest_duration_seconds": 21,
         "median_duration_seconds": 19,
         "expected_interval_hours": null
       },
       {
         "name": "validate_runtime_config",
-        "runs": 36,
-        "successful": 35,
+        "runs": 37,
+        "successful": 37,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-08-24T14:03:47Z",
-        "last_status": "in_progress",
-        "last_conclusion": null,
-        "latest_duration_seconds": null,
+        "last_run_at": "2026-08-24T14:08:20Z",
+        "last_status": "completed",
+        "last_conclusion": "success",
+        "latest_duration_seconds": 24,
         "median_duration_seconds": 20,
         "expected_interval_hours": null
       }
@@ -3279,5 +3279,247 @@
         "bookmarks": 0
       }
     }
-  ]
+  ],
+  "top_posts_by_window": {
+    "all": [
+      {
+        "uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mpy6f4ljoe2k",
+        "url": "https://bsky.app/profile/thejokebot.bsky.social/post/3mpy6f4ljoe2k",
+        "text": "Why is 6 afraid of 7 in hexadecimal Canada?\n\nBecause 7 8 9 A?\n\n#humor #humoursky #humorsky",
+        "created_at": "2026-07-06T13:16:47.440187+00:00",
+        "engagement": {
+          "likes": 27,
+          "replies": 0,
+          "reposts": 0,
+          "quotes": 0,
+          "bookmarks": 0
+        }
+      },
+      {
+        "uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mpvlcxxc5o2f",
+        "url": "https://bsky.app/profile/thejokebot.bsky.social/post/3mpvlcxxc5o2f",
+        "text": "Never date a baker. They're too kneady.\n\n#followback #dadjoke #dadjokes",
+        "created_at": "2026-07-05T12:30:14.904496+00:00",
+        "engagement": {
+          "likes": 23,
+          "replies": 0,
+          "reposts": 3,
+          "quotes": 1,
+          "bookmarks": 0
+        }
+      },
+      {
+        "uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mnlnexzvjq2c",
+        "url": "https://bsky.app/profile/thejokebot.bsky.social/post/3mnlnexzvjq2c",
+        "text": "What do you call a pig with three eyes?\n\nPiiig.\n\n#jokes #dadjoke #funny",
+        "created_at": "2026-06-06T02:50:08.999756+00:00",
+        "engagement": {
+          "likes": 24,
+          "replies": 0,
+          "reposts": 2,
+          "quotes": 0,
+          "bookmarks": 0
+        }
+      },
+      {
+        "uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mnl34dlfi52d",
+        "url": "https://bsky.app/profile/thejokebot.bsky.social/post/3mnl34dlfi52d",
+        "text": "Why did the programmer quit his job?\n\nBecause he didn't get arrays.\n\n#jokes #dadjoke #funny",
+        "created_at": "2026-06-05T21:23:11.734876+00:00",
+        "engagement": {
+          "likes": 26,
+          "replies": 0,
+          "reposts": 0,
+          "quotes": 0,
+          "bookmarks": 0
+        }
+      },
+      {
+        "uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mn6hb7o7o22d",
+        "url": "https://bsky.app/profile/thejokebot.bsky.social/post/3mn6hb7o7o22d",
+        "text": "I saw an ad in a shop window, \"Television for sale, $1, volume stuck on full\", I thought, \"I can't turn that down\".\n\n#jokes #dadjoke #funny",
+        "created_at": "2026-05-31T20:56:03.698130+00:00",
+        "engagement": {
+          "likes": 24,
+          "replies": 0,
+          "reposts": 0,
+          "quotes": 0,
+          "bookmarks": 0
+        }
+      },
+      {
+        "uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mn2ryqpirv2d",
+        "url": "https://bsky.app/profile/thejokebot.bsky.social/post/3mn2ryqpirv2d",
+        "text": "A weasel walks into a bar. The bartender says, \"Wow, I've never served a weasel before. What can I get for you?\"\n\"Pop,\" goes the weasel.\n\n#jokes #dadjoke #funny",
+        "created_at": "2026-05-30T09:57:31.812428+00:00",
+        "engagement": {
+          "likes": 17,
+          "replies": 1,
+          "reposts": 6,
+          "quotes": 0,
+          "bookmarks": 0
+        }
+      }
+    ],
+    "7": [
+      {
+        "uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mtdrcltc7i2r",
+        "url": "https://bsky.app/profile/thejokebot.bsky.social/post/3mtdrcltc7i2r",
+        "text": "Dermatologists are always in a hurry.\n\nThey spend all day making rash decisions.\n\n#dadjoke #pun #humorsky",
+        "created_at": "2026-08-18T08:10:15.871220+00:00",
+        "engagement": {
+          "likes": 11,
+          "replies": 0,
+          "reposts": 0,
+          "quotes": 1,
+          "bookmarks": 0
+        }
+      },
+      {
+        "uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mtgbsq3a432y",
+        "url": "https://bsky.app/profile/thejokebot.bsky.social/post/3mtgbsq3a432y",
+        "text": "A man tried to sell me a coffin today. I told him that's the last thing I need.\n\n#dadjoke #humor #mumjokes",
+        "created_at": "2026-08-19T08:10:56.537937+00:00",
+        "engagement": {
+          "likes": 9,
+          "replies": 0,
+          "reposts": 2,
+          "quotes": 0,
+          "bookmarks": 0
+        }
+      },
+      {
+        "uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mtkvk4hnx32y",
+        "url": "https://bsky.app/profile/thejokebot.bsky.social/post/3mtkvk4hnx32y",
+        "text": "My wife told me to stop acting like a flamingo.\n\nI had to put my foot down.\n\n#dadjoke #jokesky #jokes",
+        "created_at": "2026-08-21T04:14:41.349903+00:00",
+        "engagement": {
+          "likes": 7,
+          "replies": 0,
+          "reposts": 3,
+          "quotes": 0,
+          "bookmarks": 0
+        }
+      },
+      {
+        "uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mte6naqnxx23",
+        "url": "https://bsky.app/profile/thejokebot.bsky.social/post/3mte6naqnxx23",
+        "text": "My email password has been hacked.\n\nThat's the third time I've had to rename my cat.\n\n#dadjoke #jokesky #jokes",
+        "created_at": "2026-08-18T12:08:52.011478+00:00",
+        "engagement": {
+          "likes": 8,
+          "replies": 1,
+          "reposts": 1,
+          "quotes": 0,
+          "bookmarks": 0
+        }
+      },
+      {
+        "uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mthjr7m6cb23",
+        "url": "https://bsky.app/profile/thejokebot.bsky.social/post/3mthjr7m6cb23",
+        "text": "Breaking news! Energizer Bunny arrested \u2013 charged with battery.\n\n#dadjoke #humour #pun",
+        "created_at": "2026-08-19T20:05:55.415018+00:00",
+        "engagement": {
+          "likes": 6,
+          "replies": 0,
+          "reposts": 1,
+          "quotes": 0,
+          "bookmarks": 0
+        }
+      },
+      {
+        "uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mtelxostmj2o",
+        "url": "https://bsky.app/profile/thejokebot.bsky.social/post/3mtelxostmj2o",
+        "text": "Camping is intense.\n\n#dadjoke #humor #jokesky",
+        "created_at": "2026-08-18T16:07:20.924841+00:00",
+        "engagement": {
+          "likes": 5,
+          "replies": 1,
+          "reposts": 1,
+          "quotes": 0,
+          "bookmarks": 0
+        }
+      }
+    ],
+    "30": [
+      {
+        "uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3ms37ko2mm524",
+        "url": "https://bsky.app/profile/thejokebot.bsky.social/post/3ms37ko2mm524",
+        "text": "Why are skeletons so calm? Because nothing gets under their skin.\n\n#dadjoke #jokes #humoursky",
+        "created_at": "2026-08-02T05:06:09.766711+00:00",
+        "engagement": {
+          "likes": 11,
+          "replies": 0,
+          "reposts": 4,
+          "quotes": 0,
+          "bookmarks": 1
+        }
+      },
+      {
+        "uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3ms6kq2clhj2l",
+        "url": "https://bsky.app/profile/thejokebot.bsky.social/post/3ms6kq2clhj2l",
+        "text": "\"Dad, I'm cold.\"\n\"Go stand in the corner, I hear it's 90 degrees.\"\n\n#dadjoke #punny #funny",
+        "created_at": "2026-08-03T13:04:00.745536+00:00",
+        "engagement": {
+          "likes": 11,
+          "replies": 0,
+          "reposts": 3,
+          "quotes": 0,
+          "bookmarks": 0
+        }
+      },
+      {
+        "uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mtbb34irxs2z",
+        "url": "https://bsky.app/profile/thejokebot.bsky.social/post/3mtbb34irxs2z",
+        "text": "Two peanuts were walking down the street. One was a salted\n\n#dadjoke #humour #pun",
+        "created_at": "2026-08-17T08:14:25.566266+00:00",
+        "engagement": {
+          "likes": 11,
+          "replies": 2,
+          "reposts": 0,
+          "quotes": 0,
+          "bookmarks": 0
+        }
+      },
+      {
+        "uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3msfodxyvwg24",
+        "url": "https://bsky.app/profile/thejokebot.bsky.social/post/3msfodxyvwg24",
+        "text": "There's not really any training for garbagemen. They just pick things up as they go.\n\n#dadjoke #punny #funny",
+        "created_at": "2026-08-06T08:57:28.817064+00:00",
+        "engagement": {
+          "likes": 11,
+          "replies": 1,
+          "reposts": 1,
+          "quotes": 0,
+          "bookmarks": 0
+        }
+      },
+      {
+        "uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mtdrcltc7i2r",
+        "url": "https://bsky.app/profile/thejokebot.bsky.social/post/3mtdrcltc7i2r",
+        "text": "Dermatologists are always in a hurry.\n\nThey spend all day making rash decisions.\n\n#dadjoke #pun #humorsky",
+        "created_at": "2026-08-18T08:10:15.871220+00:00",
+        "engagement": {
+          "likes": 11,
+          "replies": 0,
+          "reposts": 0,
+          "quotes": 1,
+          "bookmarks": 0
+        }
+      },
+      {
+        "uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mt25bteqie2p",
+        "url": "https://bsky.app/profile/thejokebot.bsky.social/post/3mt25bteqie2p",
+        "text": "Two silk worms had a race. They ended up in a tie.\n\n#dadjoke #jokesky #mumjokes",
+        "created_at": "2026-08-14T12:17:57.765552+00:00",
+        "engagement": {
+          "likes": 10,
+          "replies": 0,
+          "reposts": 2,
+          "quotes": 0,
+          "bookmarks": 0
+        }
+      }
+    ]
+  }
 }
