@@ -15,7 +15,7 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=15" />
+    <link rel="stylesheet" href="styles.css?v=16" />
     <script
       src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"
       defer
@@ -412,7 +412,7 @@
                     <tr>
                       <th>Provider</th>
                       <th>Published</th>
-                      <th>Visible avg.</th>
+                      <th title="Average likes, replies, reposts, quotes, and bookmarks per visible joke">Avg. engagement / joke</th>
                       <th>Fall-throughs</th>
                       <th>Rejected candidates</th>
                       <th>Health</th>
@@ -422,7 +422,7 @@
                 </table>
               </div>
               <p class="data-note">
-                Interaction averages use currently visible posts and appear after 30 observations; they are
+                Average engagement is the combined likes, replies, reposts, quotes, and bookmarks per currently visible joke. It appears after 30 observations and is
                 descriptive, not a controlled provider comparison. Fall-throughs are cumulative exhausted provider attempts. Existing data combines duplicate,
                 length, malformed-response, and API failures. Detailed rejection counters begin with the
                 telemetry release; earlier fall-throughs remain aggregate-only.
