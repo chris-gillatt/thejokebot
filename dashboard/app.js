@@ -574,12 +574,18 @@ function renderProviders() {
   Object.entries(rejectionValues).forEach(([id, value]) => {
     setText(id, metricText(hasPressureHistory ? value : null));
   });
+  const starts = Object.entries(sevenDays?.starting_providers || {})
+    .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+    .map(([name, count]) => `${displayName(name)} ${numberFormat.format(count)}`);
   const sources = Object.entries(sevenDays?.successful_sources || {})
     .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
     .map(([name, count]) => `${displayName(name)} ${numberFormat.format(count)}`);
+  const sourceSummary = [];
+  if (starts.length) sourceSummary.push(`Started: ${starts.join(" · ")}`);
+  if (sources.length) sourceSummary.push(`Published: ${sources.join(" · ")}`);
   setText(
     "provider-source-note",
-    hasPressureHistory && sources.length ? `Selected: ${sources.join(" · ")}` : "--",
+    hasPressureHistory && sourceSummary.length ? sourceSummary.join(" | ") : "--",
   );
 
   const body = document.querySelector("#provider-table tbody");

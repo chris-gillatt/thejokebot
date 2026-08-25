@@ -324,5 +324,5 @@ Joke content is sourced from these third-party APIs:
 - [icanhazdadjoke](https://icanhazdadjoke.com/api) — free dad jokes API
 - [JokeAPI](https://jokeapi.dev) — multi-category joke API
 - [GroanDeck](https://groandeck.com/api/v1/random) — free two-part groan-worthy jokes API
-- [Syrsly Jokes API](https://www.syrsly.com/joke) — text dad-joke endpoint used as a backup provider
+- [Syrsly Jokes API](https://www.syrsly.com/joke) — text dad-joke endpoint in the primary rotation
 - [API Ninjas Jokes](https://api-ninjas.com/api/jokes) — supplementary backup provider

@@ -292,7 +292,7 @@ class DashboardCollectorTests(unittest.TestCase):
 
     def test_rejects_unknown_schema_version(self):
         with self.assertRaisesRegex(ValueError, "schema version"):
-            dashboard._normalise_existing({"schema_version": 8, "snapshots": []})
+            dashboard._normalise_existing({"schema_version": 9, "snapshots": []})
 
     def test_normalise_existing_upgrades_schema_one(self):
         existing = {"schema_version": 1, "snapshots": []}
@@ -325,6 +325,7 @@ class DashboardCollectorTests(unittest.TestCase):
     def test_parses_and_summarises_provider_pressure_from_run_events(self):
         line = bluesky_post_joke._provider_summary_line(
             [("jokeapi", "duplicates", {"duplicate": 4, "too_long": 1})],
+            "jokeapi",
             "groandeck",
             True,
         )
@@ -355,9 +356,20 @@ class DashboardCollectorTests(unittest.TestCase):
                 "provider_error": 0,
             },
         )
+        self.assertEqual(pressure["windows"]["7"]["starting_providers"], {"jokeapi": 1})
         self.assertEqual(
             pressure["windows"]["7"]["successful_sources"], {"groandeck": 1}
         )
+
+    def test_parses_provider_summary_from_before_starting_provider_telemetry(self):
+        counts = dashboard._provider_activity_counts(
+            "Provider summary: attempts=1, successful_source=jokeapi, "
+            "fallthrough=false, static_fallback=false, duplicate=0, "
+            "too_long=0, network_error=0, provider_error=0, posted=true."
+        )
+
+        self.assertIsNone(counts["starting_provider"])
+        self.assertEqual(counts["successful_source"], "jokeapi")
 
     def test_engagement_momentum_requires_full_observed_windows(self):
         now = datetime(2026, 8, 31, 12, tzinfo=timezone.utc)
@@ -840,7 +852,9 @@ class DashboardCollectorTests(unittest.TestCase):
                 "created_at": "2026-08-21T00:00:00Z",
             }
         ]
-        log_text = bluesky_post_joke._provider_summary_line([], "jokeapi", True)
+        log_text = bluesky_post_joke._provider_summary_line(
+            [], "jokeapi", "jokeapi", True
+        )
 
         with patch.object(
             dashboard, "fetch_workflow_run_logs", return_value=log_text
@@ -856,6 +870,7 @@ class DashboardCollectorTests(unittest.TestCase):
 
         fetch_logs.assert_called_once()
         self.assertEqual(activity["runs"][0]["provider_attempts"], 1)
+        self.assertEqual(activity["runs"][0]["starting_provider"], "jokeapi")
         self.assertEqual(activity["runs"][0]["successful_source"], "jokeapi")
         with patch.object(dashboard, "fetch_workflow_run_logs") as fetch_logs:
             dashboard.collect_workflow_activity(

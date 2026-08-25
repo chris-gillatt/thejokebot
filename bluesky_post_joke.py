@@ -271,6 +271,7 @@ def _failure_reason_counts(error: Exception) -> dict[str, int]:
 
 def _provider_summary_line(
     provider_failures: list[tuple[str, str, dict[str, int]]],
+    starting_provider: str,
     used_provider: str,
     posted_successfully: bool,
 ) -> str:
@@ -281,6 +282,7 @@ def _provider_summary_line(
     provider_attempts = len(provider_failures) + (used_provider != "fallback")
     return (
         f"Provider summary: attempts={provider_attempts}, "
+        f"starting_provider={starting_provider}, "
         f"successful_source={used_provider}, "
         f"fallthrough={str(bool(provider_failures)).lower()}, "
         f"static_fallback={str(used_provider == 'fallback').lower()}, "
@@ -318,6 +320,7 @@ def _apply_posting_state_updates(
     latest_state,
     *,
     provider_failures,
+    starting_provider,
     used_provider,
     posted_successfully,
     b64,
@@ -335,7 +338,9 @@ def _apply_posting_state_updates(
             reason_counts=reason_counts,
         )
 
-    # Advance rotation after a successful provider fetch, regardless of post outcome.
+    if starting_provider:
+        bluesky_state.record_provider_started(latest_state, starting_provider)
+
     if used_provider != "fallback":
         bluesky_state.record_provider_used(latest_state, used_provider)
 
@@ -355,6 +360,25 @@ def _apply_posting_state_updates(
         )
 
     bluesky_state.prune_old_jokes(latest_state, cutoff)
+
+
+def _provider_order_for_run(state: dict, override: str | None) -> tuple[list[str], str]:
+    """Return this run's provider chain and its scheduled starting provider."""
+    if override in bluesky_joke_providers.PROVIDERS:
+        return [override], override
+
+    starting_provider = bluesky_state.get_next_provider(state)
+    primary_providers = list(bluesky_joke_providers.PRIMARY_PROVIDERS)
+    start_index = primary_providers.index(starting_provider)
+    ordered_primaries = (
+        primary_providers[start_index:] + primary_providers[:start_index]
+    )
+    return (
+        ordered_primaries
+        + list(bluesky_joke_providers.BACKUP_PROVIDERS)
+        + [bluesky_joke_providers.FALLBACK_PROVIDER],
+        starting_provider,
+    )
 
 
 def main():
@@ -385,17 +409,9 @@ def main():
     # alternating rotation, followed by remaining primaries, then backups,
     # and finally the fallback jokebook.
     provider_override = os.getenv("BLUESKY_JOKE_PROVIDER", "").strip().lower() or None
-    if provider_override in bluesky_joke_providers.PROVIDERS:
-        providers_to_try = [provider_override]
-    else:
-        selected = bluesky_state.get_next_provider(state)
-        primary_providers = list(bluesky_joke_providers.PRIMARY_PROVIDERS)
-        backup_providers = list(bluesky_joke_providers.BACKUP_PROVIDERS)
-        fallback_provider = bluesky_joke_providers.FALLBACK_PROVIDER
-        providers_to_try = [selected]
-        providers_to_try += [p for p in primary_providers if p != selected]
-        providers_to_try += backup_providers
-        providers_to_try += [fallback_provider]
+    providers_to_try, starting_provider = _provider_order_for_run(
+        state, provider_override
+    )
 
     joke = None
     b64 = None
@@ -424,6 +440,7 @@ def main():
         b64 = base64.b64encode(joke.encode("utf-8")).decode()
         used_provider = "fallback"
 
+    assert used_provider is not None
     hashtags_for_post = fit_hashtags_to_joke(
         joke,
         shuffled_pool,
@@ -462,13 +479,17 @@ def main():
     finally:
         print(
             _provider_summary_line(
-                provider_failures, used_provider, posted_successfully
+                provider_failures,
+                starting_provider,
+                used_provider,
+                posted_successfully,
             )
         )
         bluesky_state.update_state(
             lambda latest_state: _apply_posting_state_updates(
                 latest_state,
                 provider_failures=provider_failures,
+                starting_provider=starting_provider,
                 used_provider=used_provider,
                 posted_successfully=posted_successfully,
                 b64=b64,

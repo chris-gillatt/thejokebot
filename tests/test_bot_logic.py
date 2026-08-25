@@ -1483,22 +1483,27 @@ class StateProviderRotationTests(unittest.TestCase):
 
     def test_get_next_provider_alternates_after_first(self):
         state = bluesky_state._default_state()
-        state["provider"]["last_used"] = "icanhazdadjoke"
+        state["provider"]["last_started_primary"] = "icanhazdadjoke"
         self.assertEqual(bluesky_state.get_next_provider(state), "jokeapi")
 
     def test_get_next_provider_advances_to_third(self):
         state = bluesky_state._default_state()
-        state["provider"]["last_used"] = "jokeapi"
+        state["provider"]["last_started_primary"] = "jokeapi"
         self.assertEqual(bluesky_state.get_next_provider(state), "groandeck")
+
+    def test_get_next_provider_advances_to_syrsly(self):
+        state = bluesky_state._default_state()
+        state["provider"]["last_started_primary"] = "groandeck"
+        self.assertEqual(bluesky_state.get_next_provider(state), "syrsly")
 
     def test_get_next_provider_wraps_back_to_first(self):
         state = bluesky_state._default_state()
-        state["provider"]["last_used"] = "groandeck"
+        state["provider"]["last_started_primary"] = "syrsly"
         self.assertEqual(bluesky_state.get_next_provider(state), "icanhazdadjoke")
 
     def test_get_next_provider_honours_valid_override(self):
         state = bluesky_state._default_state()
-        state["provider"]["last_used"] = "icanhazdadjoke"
+        state["provider"]["last_started_primary"] = "icanhazdadjoke"
         self.assertEqual(
             bluesky_state.get_next_provider(state, override="jokeapi"), "jokeapi"
         )
@@ -1513,7 +1518,7 @@ class StateProviderRotationTests(unittest.TestCase):
         state = bluesky_state._default_state()
         self.assertEqual(
             state["provider"]["rotation_order"],
-            ["icanhazdadjoke", "jokeapi", "groandeck"],
+            ["icanhazdadjoke", "jokeapi", "groandeck", "syrsly"],
         )
 
 
@@ -2064,8 +2069,9 @@ class JokeProviderTests(unittest.TestCase):
     def test_groandeck_is_registered_in_providers(self):
         self.assertIn("groandeck", bluesky_joke_providers.PROVIDERS)
 
-    def test_syrsly_is_in_backup_providers(self):
-        self.assertIn("syrsly", bluesky_joke_providers.BACKUP_PROVIDERS)
+    def test_syrsly_is_in_primary_providers(self):
+        self.assertIn("syrsly", bluesky_joke_providers.PRIMARY_PROVIDERS)
+        self.assertNotIn("syrsly", bluesky_joke_providers.BACKUP_PROVIDERS)
 
     def test_syrsly_is_registered_in_providers(self):
         self.assertIn("syrsly", bluesky_joke_providers.PROVIDERS)
@@ -3601,6 +3607,7 @@ class JokeRetryChainTests(unittest.TestCase):
                 ("jokeapi", "duplicates", {"duplicate": 4, "too_long": 1}),
                 ("groandeck", "timeout", {"network_error": 1}),
             ],
+            "jokeapi",
             "jokebot_jokebook",
             True,
         )
@@ -3608,6 +3615,7 @@ class JokeRetryChainTests(unittest.TestCase):
         self.assertEqual(
             line,
             "Provider summary: attempts=3, "
+            "starting_provider=jokeapi, "
             "successful_source=jokebot_jokebook, fallthrough=true, "
             "static_fallback=false, duplicate=4, too_long=1, "
             "network_error=1, provider_error=0, posted=true.",
@@ -3625,6 +3633,7 @@ class JokeRetryChainTests(unittest.TestCase):
                     {"duplicate": 4, "too_long": 1},
                 )
             ],
+            starting_provider="jokeapi",
             used_provider="fallback",
             posted_successfully=False,
             b64=None,
@@ -3638,6 +3647,8 @@ class JokeRetryChainTests(unittest.TestCase):
         self.assertEqual(failure["count"], 1)
         self.assertEqual(failure["reason_counts"]["duplicate"], 4)
         self.assertEqual(failure["reason_counts"]["too_long"], 1)
+        self.assertEqual(state["provider"]["last_started_primary"], "jokeapi")
+        self.assertEqual(bluesky_state.get_next_provider(state), "groandeck")
 
     def test_apply_posting_state_updates_records_hashtags_after_success(self):
         state = bluesky_state._default_state()
@@ -3645,6 +3656,7 @@ class JokeRetryChainTests(unittest.TestCase):
         bluesky_post_joke._apply_posting_state_updates(
             state,
             provider_failures=[],
+            starting_provider="jokeapi",
             used_provider="jokeapi",
             posted_successfully=True,
             b64="encoded",
@@ -3758,16 +3770,37 @@ class JokeRetryChainTests(unittest.TestCase):
         # icanhazdadjoke is PRIMARY_PROVIDERS[0], jokeapi is PRIMARY_PROVIDERS[1]
         self.assertEqual(bluesky_joke_providers.PRIMARY_PROVIDERS[0], "icanhazdadjoke")
 
-        # After setting last_used to icanhazdadjoke, next should be jokeapi (still primary)
-        state["provider"]["last_used"] = "icanhazdadjoke"
+        # After starting with icanhazdadjoke, next should be jokeapi (still primary)
+        state["provider"]["last_started_primary"] = "icanhazdadjoke"
         next_provider = bluesky_state.get_next_provider(state)
         self.assertIn(next_provider, bluesky_joke_providers.PRIMARY_PROVIDERS)
+
+    def test_provider_fallback_chain_cycles_from_scheduled_primary(self):
+        state = bluesky_state._default_state()
+        state["provider"]["last_started_primary"] = "icanhazdadjoke"
+
+        providers, starting_provider = bluesky_post_joke._provider_order_for_run(
+            state, None
+        )
+
+        self.assertEqual(starting_provider, "jokeapi")
+        self.assertEqual(
+            providers,
+            [
+                "jokeapi",
+                "groandeck",
+                "syrsly",
+                "icanhazdadjoke",
+                "api_ninjas",
+                "jokebot_jokebook",
+            ],
+        )
 
     def test_fallback_provider_separate_from_backups(self):
         """Fallback provider (jokebook) is separate from backup providers."""
         self.assertEqual("jokebot_jokebook", bluesky_joke_providers.FALLBACK_PROVIDER)
         self.assertNotIn("jokebot_jokebook", bluesky_joke_providers.BACKUP_PROVIDERS)
-        self.assertIn("syrsly", bluesky_joke_providers.BACKUP_PROVIDERS)
+        self.assertIn("syrsly", bluesky_joke_providers.PRIMARY_PROVIDERS)
         self.assertIn("api_ninjas", bluesky_joke_providers.BACKUP_PROVIDERS)
 
     def test_deduplication_includes_denylisted_jokes(self):

@@ -28,7 +28,7 @@ FOLLOW_RESPONSE_GRACE_PERIOD_SECONDS = FOLLOW_RESPONSE_GRACE_PERIOD_DAYS * 24 * 
 
 # Canonical provider order — the rotation wraps around this list.
 # Add new providers here and they will be included in rotation automatically.
-PROVIDER_ROTATION_ORDER = ["icanhazdadjoke", "jokeapi", "groandeck"]
+PROVIDER_ROTATION_ORDER = ["icanhazdadjoke", "jokeapi", "groandeck", "syrsly"]
 PROVIDER_FAILURE_REASONS = (
     "duplicate",
     "too_long",
@@ -73,6 +73,8 @@ def _default_state() -> dict:
         "provider": {
             "last_used": None,
             "last_used_at": None,
+            "last_started_primary": None,
+            "last_started_primary_at": None,
             "rotation_order": list(PROVIDER_ROTATION_ORDER),
             "failures": {
                 p: _default_provider_failure() for p in PROVIDER_ROTATION_ORDER
@@ -84,7 +86,7 @@ def _default_state() -> dict:
                     "consecutive_failures": 0,
                     "configured": None,
                 }
-                for p in PROVIDER_ROTATION_ORDER + ["syrsly", "api_ninjas"]
+                for p in PROVIDER_ROTATION_ORDER + ["api_ninjas"]
             },
         },
         "reports": {
@@ -151,7 +153,7 @@ def _normalise_state(state: dict) -> dict:
     health_checks = provider.setdefault("health_checks", {})
     all_providers = list(
         (provider.get("rotation_order") or PROVIDER_ROTATION_ORDER)
-    ) + ["syrsly", "api_ninjas"]
+    ) + ["api_ninjas"]
     for provider_name in all_providers:
         health_checks.setdefault(
             provider_name,
@@ -357,7 +359,10 @@ def get_next_provider(state: dict, override: str | None = None) -> str:
     if override and override in rotation:
         return override
 
-    last = state["provider"].get("last_used")
+    last = state["provider"].get("last_started_primary")
+    if last is None:
+        # Preserve the existing cursor when migrating older state files.
+        last = state["provider"].get("last_used")
     if last is None or last not in rotation:
         return rotation[0]
 
@@ -365,8 +370,14 @@ def get_next_provider(state: dict, override: str | None = None) -> str:
     return rotation[(idx + 1) % len(rotation)]
 
 
+def record_provider_started(state: dict, provider: str) -> None:
+    """Advance rotation by recording the primary selected to start this run."""
+    state["provider"]["last_started_primary"] = provider
+    state["provider"]["last_started_primary_at"] = int(time.time())
+
+
 def record_provider_used(state: dict, provider: str) -> None:
-    """Advance the rotation by recording which provider was used this run."""
+    """Record which provider supplied the selected joke this run."""
     state["provider"]["last_used"] = provider
     state["provider"]["last_used_at"] = int(time.time())
 

@@ -22,7 +22,7 @@ from bluesky_common import retry_network_call
 PUBLIC_API_BASE = "https://public.api.bsky.app/xrpc"
 GITHUB_API_BASE = "https://api.github.com"
 METRICS_FILE = Path(__file__).resolve().parent / "dashboard" / "data" / "metrics.json"
-SCHEMA_VERSION = 7
+SCHEMA_VERSION = 8
 MAX_FEED_PAGES = 100
 MAX_FEED_RUNTIME_SECONDS = 120
 MAX_WORKFLOW_PAGES = 20
@@ -296,7 +296,9 @@ def _unfollow_activity_counts(log_text: str) -> dict | None:
 
 def _provider_activity_counts(log_text: str) -> dict | None:
     summaries = re.findall(
-        r"Provider summary: attempts=(\d+), successful_source=([a-z0-9_-]+), "
+        r"Provider summary: attempts=(\d+), "
+        r"(?:starting_provider=([a-z0-9_-]+), )?"
+        r"successful_source=([a-z0-9_-]+), "
         r"fallthrough=(true|false), static_fallback=(true|false), "
         r"duplicate=(\d+), too_long=(\d+), network_error=(\d+), "
         r"provider_error=(\d+), posted=(true|false)\.",
@@ -306,6 +308,7 @@ def _provider_activity_counts(log_text: str) -> dict | None:
         return None
     (
         attempts,
+        starting_provider,
         successful_source,
         fallthrough,
         static_fallback,
@@ -319,6 +322,7 @@ def _provider_activity_counts(log_text: str) -> dict | None:
         "follows": 0,
         "unfollows": 0,
         "provider_attempts": int(attempts),
+        "starting_provider": starting_provider or None,
         "successful_source": successful_source,
         "fallthrough": fallthrough == "true",
         "static_fallback": static_fallback == "true",
@@ -761,6 +765,7 @@ def _provider_pressure_metrics(workflow_activity: dict | None, now: datetime) ->
             {
                 "created_at": run["created_at"],
                 "provider_attempts": max(0, int(run.get("provider_attempts") or 0)),
+                "starting_provider": run.get("starting_provider"),
                 "successful_source": str(run.get("successful_source") or "unknown"),
                 "fallthrough": bool(run.get("fallthrough")),
                 "static_fallback": bool(run.get("static_fallback")),
@@ -788,6 +793,9 @@ def _provider_pressure_metrics(workflow_activity: dict | None, now: datetime) ->
         ]
         fallthroughs = sum(run["fallthrough"] for run in runs)
         attempts = sum(run["provider_attempts"] for run in runs)
+        starts = Counter(
+            run["starting_provider"] for run in runs if run["starting_provider"]
+        )
         sources = Counter(run["successful_source"] for run in runs)
         windows[str(days)] = {
             "completed_runs": len(runs),
@@ -808,6 +816,7 @@ def _provider_pressure_metrics(workflow_activity: dict | None, now: datetime) ->
                     "provider_error",
                 )
             },
+            "starting_providers": dict(sorted(starts.items())),
             "successful_sources": dict(sorted(sources.items())),
         }
     return {"windows": windows, "runs": observed_runs}
@@ -912,7 +921,7 @@ def _period_start(now: datetime) -> str:
 def _normalise_existing(existing: dict | None) -> dict:
     if existing is None:
         return {"schema_version": SCHEMA_VERSION, "snapshots": []}
-    if existing.get("schema_version") not in {1, 2, 3, 4, 5, 6, SCHEMA_VERSION}:
+    if existing.get("schema_version") not in {1, 2, 3, 4, 5, 6, 7, SCHEMA_VERSION}:
         raise ValueError("Unsupported dashboard metrics schema version")
     if not isinstance(existing.get("snapshots"), list):
         raise ValueError("Dashboard metrics snapshots must be a list")

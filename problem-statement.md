@@ -338,6 +338,28 @@ Cross-phase rules:
 - Deliver each phase as a separate commit/PR-sized change with the full local
   quality gate and desktop/mobile visual verification.
 
+### 5.50 Correct primary-provider rotation and promote Syrsly ✓ Complete
+**Priority: High**
+
+Provider telemetry showed that the nominal round-robin rotation was advancing
+from the provider that eventually supplied a joke rather than the primary that
+was scheduled first. A failed JokeAPI attempt followed by an icanhazdadjoke
+success therefore selected JokeAPI again on the next run and could repeatedly
+delay GroanDeck.
+
+Track the scheduled primary independently from the successful source and order
+the remaining primaries cyclically from that slot. Posting telemetry now records
+both values so the dashboard can compare intended starts with publications.
+Historical provider summaries remain readable while new observations accumulate.
+
+Syrsly was promoted from backup to the primary rotation after a live sample of
+50 dad-joke responses produced 50 unique, short, family-appropriate candidates.
+Its known encoded-entity quirk remains covered by the existing multi-pass posting
+sanitiser. API Ninjas remains backup-only because its free tier has a small joke
+pool and more restrictive usage terms; the bundled jokebook remains the offline
+final fallback. Review Syrsly's duplicate rate, fall-throughs, and engagement on
+the dashboard and demote it if production evidence identifies a quality issue.
+
 ### 5.26 Retry transient Bluesky response failures ✓ Complete
 **Priority: High**
 
