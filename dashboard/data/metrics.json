@@ -1,6 +1,6 @@
 {
   "schema_version": 8,
-  "generated_at": "2026-08-28T16:38:17.871377+00:00",
+  "generated_at": "2026-08-28T21:46:13.418129+00:00",
   "account": {
     "handle": "thejokebot.bsky.social",
     "display_name": "The Joke Bot",
@@ -13,26 +13,26 @@
     "text": "As I suspected, someone has been adding soil to my garden. The plot thickens.\n\n#dadjoke #humorsky #funny",
     "created_at": "2026-08-28T16:08:02.957907+00:00",
     "engagement": {
-      "likes": 2,
+      "likes": 4,
       "replies": 0,
-      "reposts": 0,
+      "reposts": 1,
       "quotes": 0,
       "bookmarks": 0
     }
   },
   "current": {
-    "followers": 6450,
-    "following": 11030,
+    "followers": 6452,
+    "following": 11032,
     "profile_posts": 2358,
     "joke_posts": 719,
     "engagement": {
-      "likes": 3892,
+      "likes": 3898,
       "replies": 275,
-      "reposts": 298,
+      "reposts": 301,
       "quotes": 32,
       "bookmarks": 34
     },
-    "engagement_per_joke": 6.3
+    "engagement_per_joke": 6.31
   },
   "snapshots": [
     {
@@ -258,6 +258,15 @@
       "following": 11030,
       "profile_posts": 2358,
       "engagement_total": 4531,
+      "source": "bluesky_snapshot"
+    },
+    {
+      "period_start": "2026-08-28T18:00:00+00:00",
+      "collected_at": "2026-08-28T21:46:13.418129+00:00",
+      "followers": 6452,
+      "following": 11032,
+      "profile_posts": 2358,
+      "engagement_total": 4540,
       "source": "bluesky_snapshot"
     }
   ],
@@ -1501,7 +1510,7 @@
     {
       "date": "2026-08-28",
       "joke_posts": 4,
-      "follows": 252,
+      "follows": 262,
       "unfollows": 0
     }
   ],
@@ -1557,14 +1566,14 @@
   },
   "social_activity": {
     "window_days": 30,
-    "completed_runs": 40,
-    "follow_back_candidates": 270,
-    "follow_back_added": 228,
-    "protected": 675,
-    "interaction_candidates": 634,
+    "completed_runs": 41,
+    "follow_back_candidates": 282,
+    "follow_back_added": 238,
+    "protected": 694,
+    "interaction_candidates": 651,
     "interaction_eligible": 1,
     "interaction_added": 1,
-    "interactions_liked": 15,
+    "interactions_liked": 19,
     "failed": 0,
     "runs": [
       {
@@ -2006,12 +2015,23 @@
         "interaction_added": 1,
         "interactions_liked": 0,
         "failed": 0
+      },
+      {
+        "created_at": "2026-08-28T21:33:19Z",
+        "follow_back_candidates": 12,
+        "follow_back_added": 10,
+        "protected": 19,
+        "interaction_candidates": 17,
+        "interaction_eligible": 0,
+        "interaction_added": 0,
+        "interactions_liked": 4,
+        "failed": 0
       }
     ]
   },
   "moderation_activity": {
     "window_days": 30,
-    "completed_runs": 23,
+    "completed_runs": 24,
     "proposals": 0,
     "acknowledgements": 0,
     "approved_removals": 0,
@@ -2173,6 +2193,13 @@
       },
       {
         "created_at": "2026-08-28T12:30:53Z",
+        "proposals": 0,
+        "acknowledgements": 0,
+        "approved_removals": 0,
+        "unresolved": 0
+      },
+      {
+        "created_at": "2026-08-28T16:46:52Z",
         "proposals": 0,
         "acknowledgements": 0,
         "approved_removals": 0,
@@ -2631,7 +2658,7 @@
   "workflow_activity": {
     "window_days": 30,
     "coverage_start": "2026-08-24T13:00:52+00:00",
-    "expired_before": "2026-08-14T16:17:17+00:00",
+    "expired_before": "2026-08-14T20:50:12+00:00",
     "runs": [
       {
         "id": 31248628017,
@@ -5767,6 +5794,35 @@
         "interaction_added": 1,
         "interactions_liked": 0,
         "failed": 0
+      },
+      {
+        "id": 33191587566,
+        "attempt": 1,
+        "workflow": "bluesky_process_reports",
+        "created_at": "2026-08-28T16:46:52Z",
+        "follows": 0,
+        "unfollows": 0,
+        "proposals": 0,
+        "acknowledgements": 0,
+        "approved_removals": 0,
+        "unresolved": 0
+      },
+      {
+        "id": 33213066764,
+        "attempt": 1,
+        "workflow": "bluesky_follows_and_likes",
+        "created_at": "2026-08-28T21:33:19Z",
+        "follows": 10,
+        "unfollows": 0,
+        "social_summary_observed": true,
+        "follow_back_candidates": 12,
+        "follow_back_added": 10,
+        "protected": 19,
+        "interaction_candidates": 17,
+        "interaction_eligible": 0,
+        "interaction_added": 0,
+        "interactions_liked": 4,
+        "failed": 0
       }
     ]
   },
@@ -5778,7 +5834,7 @@
         "name": "icanhazdadjoke",
         "published": 582,
         "visible_posts": 346,
-        "average_interactions": 6.64,
+        "average_interactions": 6.65,
         "fallthroughs": 47,
         "rejection_counts": {
           "duplicate": 40,
@@ -5797,7 +5853,7 @@
         "name": "groandeck",
         "published": 200,
         "visible_posts": 200,
-        "average_interactions": 5.51,
+        "average_interactions": 5.54,
         "fallthroughs": 0,
         "rejection_counts": {
           "duplicate": 0,
@@ -5875,7 +5931,7 @@
     "schedule": "0 0,4,8,12,16,20 * * *",
     "timezone": "UTC",
     "match_window_hours": 2,
-    "current_streak": 0,
+    "current_streak": 1,
     "windows": {
       "7": {
         "expected": 42,
@@ -5895,24 +5951,24 @@
   },
   "automation": {
     "window_days": 30,
-    "collected_at": "2026-08-28T16:38:17.871377+00:00",
-    "runs": 966,
-    "successful": 954,
+    "collected_at": "2026-08-28T21:46:13.418129+00:00",
+    "runs": 965,
+    "successful": 953,
     "failed": 8,
     "cancelled": 3,
     "success_rate": 99.2,
     "workflows": [
       {
         "name": "bluesky_dashboard",
-        "runs": 49,
-        "successful": 48,
+        "runs": 50,
+        "successful": 49,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-08-28T16:37:55Z",
+        "last_run_at": "2026-08-28T21:45:49Z",
         "last_status": "in_progress",
         "last_conclusion": null,
         "latest_duration_seconds": null,
-        "median_duration_seconds": 114,
+        "median_duration_seconds": 121,
         "expected_interval_hours": 6.0
       },
       {
@@ -5930,15 +5986,15 @@
       },
       {
         "name": "bluesky_follows_and_likes",
-        "runs": 349,
-        "successful": 344,
+        "runs": 348,
+        "successful": 343,
         "failed": 4,
         "cancelled": 1,
-        "last_run_at": "2026-08-28T16:29:20Z",
+        "last_run_at": "2026-08-28T21:33:19Z",
         "last_status": "completed",
         "last_conclusion": "success",
-        "latest_duration_seconds": 83,
-        "median_duration_seconds": 60,
+        "latest_duration_seconds": 64,
+        "median_duration_seconds": 61,
         "expected_interval_hours": 2.0
       },
       {
@@ -5956,8 +6012,8 @@
       },
       {
         "name": "bluesky_post_joke",
-        "runs": 182,
-        "successful": 179,
+        "runs": 181,
+        "successful": 178,
         "failed": 1,
         "cancelled": 2,
         "last_run_at": "2026-08-28T16:07:42Z",
@@ -5973,10 +6029,10 @@
         "successful": 174,
         "failed": 3,
         "cancelled": 0,
-        "last_run_at": "2026-08-28T12:30:53Z",
+        "last_run_at": "2026-08-28T16:46:52Z",
         "last_status": "completed",
         "last_conclusion": "success",
-        "latest_duration_seconds": 24,
+        "latest_duration_seconds": 32,
         "median_duration_seconds": 27,
         "expected_interval_hours": 4.0
       },
@@ -6288,7 +6344,7 @@
         "text": "Why did the frog take the bus to work?\n\nHis car got toad.\n\n#dadjoke #humour #pun",
         "created_at": "2026-08-28T11:50:57.003353+00:00",
         "engagement": {
-          "likes": 4,
+          "likes": 6,
           "replies": 0,
           "reposts": 3,
           "quotes": 0,
