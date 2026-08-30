@@ -1,6 +1,6 @@
 {
   "schema_version": 8,
-  "generated_at": "2026-08-30T12:38:36.374733+00:00",
+  "generated_at": "2026-08-30T18:35:25.416852+00:00",
   "account": {
     "handle": "thejokebot.bsky.social",
     "display_name": "The Joke Bot",
@@ -8,31 +8,31 @@
     "profile_url": "https://bsky.app/profile/thejokebot.bsky.social"
   },
   "latest_joke": {
-    "uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3muceglhujm2y",
-    "url": "https://bsky.app/profile/thejokebot.bsky.social/post/3muceglhujm2y",
-    "text": "What do you call a book about watches?\n\nIt's about time!\n\n#dadjoke #jokes #pun",
-    "created_at": "2026-08-30T12:12:22.964058+00:00",
+    "uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mucrn7lslg2r",
+    "url": "https://bsky.app/profile/thejokebot.bsky.social/post/3mucrn7lslg2r",
+    "text": "I burned 2000 calories today, I left my food in the oven for too long.\n\n#dadjoke #humor #mumjokes",
+    "created_at": "2026-08-30T16:08:44.040861+00:00",
     "engagement": {
-      "likes": 3,
-      "replies": 1,
+      "likes": 4,
+      "replies": 0,
       "reposts": 1,
       "quotes": 0,
       "bookmarks": 0
     }
   },
   "current": {
-    "followers": 6464,
-    "following": 11054,
-    "profile_posts": 2372,
-    "joke_posts": 730,
+    "followers": 6495,
+    "following": 11084,
+    "profile_posts": 2373,
+    "joke_posts": 731,
     "engagement": {
-      "likes": 3953,
-      "replies": 283,
-      "reposts": 307,
+      "likes": 3968,
+      "replies": 284,
+      "reposts": 311,
       "quotes": 32,
       "bookmarks": 34
     },
-    "engagement_per_joke": 6.31
+    "engagement_per_joke": 6.33
   },
   "snapshots": [
     {
@@ -330,6 +330,15 @@
       "following": 11054,
       "profile_posts": 2372,
       "engagement_total": 4609,
+      "source": "bluesky_snapshot"
+    },
+    {
+      "period_start": "2026-08-30T18:00:00+00:00",
+      "collected_at": "2026-08-30T18:35:25.416852+00:00",
+      "followers": 6495,
+      "following": 11084,
+      "profile_posts": 2373,
+      "engagement_total": 4629,
       "source": "bluesky_snapshot"
     }
   ],
@@ -1584,8 +1593,8 @@
     },
     {
       "date": "2026-08-30",
-      "joke_posts": 4,
-      "follows": 8,
+      "joke_posts": 5,
+      "follows": 38,
       "unfollows": 0
     }
   ],
@@ -1641,14 +1650,14 @@
   },
   "social_activity": {
     "window_days": 30,
-    "completed_runs": 61,
-    "follow_back_candidates": 1520,
-    "follow_back_added": 1424,
-    "protected": 1156,
-    "interaction_candidates": 1072,
+    "completed_runs": 64,
+    "follow_back_candidates": 1557,
+    "follow_back_added": 1454,
+    "protected": 1232,
+    "interaction_candidates": 1141,
     "interaction_eligible": 12,
     "interaction_added": 12,
-    "interactions_liked": 36,
+    "interactions_liked": 41,
     "failed": 0,
     "runs": [
       {
@@ -2321,12 +2330,45 @@
         "interaction_added": 0,
         "interactions_liked": 4,
         "failed": 0
+      },
+      {
+        "created_at": "2026-08-30T14:24:26Z",
+        "follow_back_candidates": 5,
+        "follow_back_added": 3,
+        "protected": 23,
+        "interaction_candidates": 21,
+        "interaction_eligible": 0,
+        "interaction_added": 0,
+        "interactions_liked": 0,
+        "failed": 0
+      },
+      {
+        "created_at": "2026-08-30T16:25:59Z",
+        "follow_back_candidates": 6,
+        "follow_back_added": 4,
+        "protected": 25,
+        "interaction_candidates": 23,
+        "interaction_eligible": 0,
+        "interaction_added": 0,
+        "interactions_liked": 5,
+        "failed": 0
+      },
+      {
+        "created_at": "2026-08-30T18:28:52Z",
+        "follow_back_candidates": 26,
+        "follow_back_added": 23,
+        "protected": 28,
+        "interaction_candidates": 25,
+        "interaction_eligible": 0,
+        "interaction_added": 0,
+        "interactions_liked": 0,
+        "failed": 0
       }
     ]
   },
   "moderation_activity": {
     "window_days": 30,
-    "completed_runs": 34,
+    "completed_runs": 36,
     "proposals": 0,
     "acknowledgements": 0,
     "approved_removals": 0,
@@ -2569,6 +2611,20 @@
         "acknowledgements": 0,
         "approved_removals": 0,
         "unresolved": 0
+      },
+      {
+        "created_at": "2026-08-30T12:45:22Z",
+        "proposals": 0,
+        "acknowledgements": 0,
+        "approved_removals": 0,
+        "unresolved": 0
+      },
+      {
+        "created_at": "2026-08-30T16:42:35Z",
+        "proposals": 0,
+        "acknowledgements": 0,
+        "approved_removals": 0,
+        "unresolved": 0
       }
     ]
   },
@@ -2582,12 +2638,12 @@
   "provider_pressure": {
     "windows": {
       "7": {
-        "completed_runs": 35,
-        "posted_runs": 35,
-        "provider_attempts": 53,
+        "completed_runs": 36,
+        "posted_runs": 36,
+        "provider_attempts": 54,
         "average_attempts": 1.5,
         "fallthroughs": 16,
-        "fallthrough_rate": 45.7,
+        "fallthrough_rate": 44.4,
         "static_fallbacks": 0,
         "rejections": {
           "duplicate": 90,
@@ -2599,21 +2655,21 @@
           "groandeck": 8,
           "icanhazdadjoke": 7,
           "jokeapi": 8,
-          "syrsly": 7
+          "syrsly": 8
         },
         "successful_sources": {
           "groandeck": 18,
           "icanhazdadjoke": 13,
-          "syrsly": 4
+          "syrsly": 5
         }
       },
       "30": {
-        "completed_runs": 35,
-        "posted_runs": 35,
-        "provider_attempts": 53,
+        "completed_runs": 36,
+        "posted_runs": 36,
+        "provider_attempts": 54,
         "average_attempts": 1.5,
         "fallthroughs": 16,
-        "fallthrough_rate": 45.7,
+        "fallthrough_rate": 44.4,
         "static_fallbacks": 0,
         "rejections": {
           "duplicate": 90,
@@ -2625,12 +2681,12 @@
           "groandeck": 8,
           "icanhazdadjoke": 7,
           "jokeapi": 8,
-          "syrsly": 7
+          "syrsly": 8
         },
         "successful_sources": {
           "groandeck": 18,
           "icanhazdadjoke": 13,
-          "syrsly": 4
+          "syrsly": 5
         }
       }
     },
@@ -3159,6 +3215,21 @@
           "network_error": 0,
           "provider_error": 0
         }
+      },
+      {
+        "created_at": "2026-08-30T16:08:23Z",
+        "provider_attempts": 1,
+        "starting_provider": "syrsly",
+        "successful_source": "syrsly",
+        "fallthrough": false,
+        "static_fallback": false,
+        "posted": true,
+        "rejections": {
+          "duplicate": 0,
+          "too_long": 0,
+          "network_error": 0,
+          "provider_error": 0
+        }
       }
     ]
   },
@@ -3188,7 +3259,7 @@
   "workflow_activity": {
     "window_days": 30,
     "coverage_start": "2026-08-24T13:00:52+00:00",
-    "expired_before": "2026-08-16T12:05:15+00:00",
+    "expired_before": "2026-08-16T16:04:28+00:00",
     "runs": [
       {
         "id": 31248628017,
@@ -7011,18 +7082,111 @@
         "interaction_added": 0,
         "interactions_liked": 4,
         "failed": 0
+      },
+      {
+        "id": 33312333607,
+        "attempt": 1,
+        "workflow": "bluesky_process_reports",
+        "created_at": "2026-08-30T12:45:22Z",
+        "follows": 0,
+        "unfollows": 0,
+        "proposals": 0,
+        "acknowledgements": 0,
+        "approved_removals": 0,
+        "unresolved": 0
+      },
+      {
+        "id": 33316777097,
+        "attempt": 1,
+        "workflow": "bluesky_follows_and_likes",
+        "created_at": "2026-08-30T14:24:26Z",
+        "follows": 3,
+        "unfollows": 0,
+        "social_summary_observed": true,
+        "follow_back_candidates": 5,
+        "follow_back_added": 3,
+        "protected": 23,
+        "interaction_candidates": 21,
+        "interaction_eligible": 0,
+        "interaction_added": 0,
+        "interactions_liked": 0,
+        "failed": 0
+      },
+      {
+        "id": 33321606917,
+        "attempt": 1,
+        "workflow": "bluesky_post_joke",
+        "created_at": "2026-08-30T16:08:23Z",
+        "follows": 0,
+        "unfollows": 0,
+        "provider_attempts": 1,
+        "starting_provider": "syrsly",
+        "successful_source": "syrsly",
+        "fallthrough": false,
+        "static_fallback": false,
+        "duplicate": 0,
+        "too_long": 0,
+        "network_error": 0,
+        "provider_error": 0,
+        "posted": true
+      },
+      {
+        "id": 33322438317,
+        "attempt": 1,
+        "workflow": "bluesky_follows_and_likes",
+        "created_at": "2026-08-30T16:25:59Z",
+        "follows": 4,
+        "unfollows": 0,
+        "social_summary_observed": true,
+        "follow_back_candidates": 6,
+        "follow_back_added": 4,
+        "protected": 25,
+        "interaction_candidates": 23,
+        "interaction_eligible": 0,
+        "interaction_added": 0,
+        "interactions_liked": 5,
+        "failed": 0
+      },
+      {
+        "id": 33323217982,
+        "attempt": 1,
+        "workflow": "bluesky_process_reports",
+        "created_at": "2026-08-30T16:42:35Z",
+        "follows": 0,
+        "unfollows": 0,
+        "proposals": 0,
+        "acknowledgements": 0,
+        "approved_removals": 0,
+        "unresolved": 0
+      },
+      {
+        "id": 33328185021,
+        "attempt": 1,
+        "workflow": "bluesky_follows_and_likes",
+        "created_at": "2026-08-30T18:28:52Z",
+        "follows": 23,
+        "unfollows": 0,
+        "social_summary_observed": true,
+        "follow_back_candidates": 26,
+        "follow_back_added": 23,
+        "protected": 28,
+        "interaction_candidates": 25,
+        "interaction_eligible": 0,
+        "interaction_added": 0,
+        "interactions_liked": 0,
+        "failed": 0
       }
     ]
   },
   "providers": {
-    "retained_publications": 970,
+    "retained_publications": 971,
     "minimum_comparison_posts": 30,
     "providers": [
       {
         "name": "icanhazdadjoke",
         "published": 586,
         "visible_posts": 350,
-        "average_interactions": 6.64,
+        "average_interactions": 6.66,
         "fallthroughs": 47,
         "rejection_counts": {
           "duplicate": 40,
@@ -7041,7 +7205,7 @@
         "name": "groandeck",
         "published": 206,
         "visible_posts": 206,
-        "average_interactions": 5.56,
+        "average_interactions": 5.6,
         "fallthroughs": 0,
         "rejection_counts": {
           "duplicate": 0,
@@ -7077,8 +7241,8 @@
       },
       {
         "name": "syrsly",
-        "published": 4,
-        "visible_posts": 4,
+        "published": 5,
+        "visible_posts": 5,
         "average_interactions": null,
         "fallthroughs": 3,
         "rejection_counts": {
@@ -7119,7 +7283,7 @@
     "schedule": "0 0,4,8,12,16,20 * * *",
     "timezone": "UTC",
     "match_window_hours": 2,
-    "current_streak": 11,
+    "current_streak": 13,
     "windows": {
       "7": {
         "expected": 42,
@@ -7139,7 +7303,7 @@
   },
   "automation": {
     "window_days": 30,
-    "collected_at": "2026-08-30T12:38:36.374733+00:00",
+    "collected_at": "2026-08-30T18:35:25.416852+00:00",
     "runs": 974,
     "successful": 962,
     "failed": 8,
@@ -7148,15 +7312,15 @@
     "workflows": [
       {
         "name": "bluesky_dashboard",
-        "runs": 57,
-        "successful": 56,
+        "runs": 58,
+        "successful": 57,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-08-30T12:38:08Z",
+        "last_run_at": "2026-08-30T18:35:02Z",
         "last_status": "in_progress",
         "last_conclusion": null,
         "latest_duration_seconds": null,
-        "median_duration_seconds": 128,
+        "median_duration_seconds": 131,
         "expected_interval_hours": 6.0
       },
       {
@@ -7178,10 +7342,10 @@
         "successful": 343,
         "failed": 4,
         "cancelled": 1,
-        "last_run_at": "2026-08-30T12:34:22Z",
+        "last_run_at": "2026-08-30T18:28:52Z",
         "last_status": "completed",
         "last_conclusion": "success",
-        "latest_duration_seconds": 67,
+        "latest_duration_seconds": 77,
         "median_duration_seconds": 62,
         "expected_interval_hours": 2.0
       },
@@ -7200,15 +7364,15 @@
       },
       {
         "name": "bluesky_post_joke",
-        "runs": 183,
-        "successful": 180,
+        "runs": 182,
+        "successful": 179,
         "failed": 1,
         "cancelled": 2,
-        "last_run_at": "2026-08-30T12:11:59Z",
+        "last_run_at": "2026-08-30T16:08:23Z",
         "last_status": "completed",
         "last_conclusion": "success",
-        "latest_duration_seconds": 30,
-        "median_duration_seconds": 28,
+        "latest_duration_seconds": 27,
+        "median_duration_seconds": 27,
         "expected_interval_hours": 4.0
       },
       {
@@ -7217,10 +7381,10 @@
         "successful": 175,
         "failed": 3,
         "cancelled": 0,
-        "last_run_at": "2026-08-30T08:43:19Z",
+        "last_run_at": "2026-08-30T16:42:35Z",
         "last_status": "completed",
         "last_conclusion": "success",
-        "latest_duration_seconds": 26,
+        "latest_duration_seconds": 28,
         "median_duration_seconds": 27,
         "expected_interval_hours": 4.0
       },
@@ -7501,6 +7665,45 @@
     ],
     "7": [
       {
+        "uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mttoylsljb2m",
+        "url": "https://bsky.app/profile/thejokebot.bsky.social/post/3mttoylsljb2m",
+        "text": "I've got this disease where I can't stop making airport puns. The doctor says it terminal.\n\n#dadjoke #jokes #pun",
+        "created_at": "2026-08-24T16:11:28.648445+00:00",
+        "engagement": {
+          "likes": 10,
+          "replies": 1,
+          "reposts": 0,
+          "quotes": 0,
+          "bookmarks": 0
+        }
+      },
+      {
+        "uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3muceglhujm2y",
+        "url": "https://bsky.app/profile/thejokebot.bsky.social/post/3muceglhujm2y",
+        "text": "What do you call a book about watches?\n\nIt's about time!\n\n#dadjoke #jokes #pun",
+        "created_at": "2026-08-30T12:12:22.964058+00:00",
+        "engagement": {
+          "likes": 7,
+          "replies": 1,
+          "reposts": 2,
+          "quotes": 0,
+          "bookmarks": 0
+        }
+      },
+      {
+        "uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mu5qo5j7lc2e",
+        "url": "https://bsky.app/profile/thejokebot.bsky.social/post/3mu5qo5j7lc2e",
+        "text": "As I suspected, someone has been adding soil to my garden. The plot thickens.\n\n#dadjoke #humorsky #funny",
+        "created_at": "2026-08-28T16:08:02.957907+00:00",
+        "engagement": {
+          "likes": 7,
+          "replies": 1,
+          "reposts": 2,
+          "quotes": 0,
+          "bookmarks": 0
+        }
+      },
+      {
         "uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mu5ccg6mlw2k",
         "url": "https://bsky.app/profile/thejokebot.bsky.social/post/3mu5ccg6mlw2k",
         "text": "Why did the frog take the bus to work?\n\nHis car got toad.\n\n#dadjoke #humour #pun",
@@ -7527,51 +7730,12 @@
         }
       },
       {
-        "uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mttoylsljb2m",
-        "url": "https://bsky.app/profile/thejokebot.bsky.social/post/3mttoylsljb2m",
-        "text": "I've got this disease where I can't stop making airport puns. The doctor says it terminal.\n\n#dadjoke #jokes #pun",
-        "created_at": "2026-08-24T16:11:28.648445+00:00",
-        "engagement": {
-          "likes": 9,
-          "replies": 1,
-          "reposts": 0,
-          "quotes": 0,
-          "bookmarks": 0
-        }
-      },
-      {
-        "uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3muaok7kj552z",
-        "url": "https://bsky.app/profile/thejokebot.bsky.social/post/3muaok7kj552z",
-        "text": "What do you call a computer that dances?\n\nA disco drive.\n\n#dadjoke #jokesky #jokes",
-        "created_at": "2026-08-29T20:08:02.610954+00:00",
-        "engagement": {
-          "likes": 6,
-          "replies": 2,
-          "reposts": 1,
-          "quotes": 0,
-          "bookmarks": 0
-        }
-      },
-      {
-        "uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mu7ghsgads2e",
-        "url": "https://bsky.app/profile/thejokebot.bsky.social/post/3mu7ghsgads2e",
-        "text": "What do you call a boy who stopped digging holes? Douglas.\n\n#dadjoke #punny #funny",
-        "created_at": "2026-08-29T08:10:52.067778+00:00",
+        "uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mubwwtvr3z2x",
+        "url": "https://bsky.app/profile/thejokebot.bsky.social/post/3mubwwtvr3z2x",
+        "text": "What do you get when you cross a vampire and a snowman?\n\nFrostbite!\n\n#dadjoke #pun #jokesky",
+        "created_at": "2026-08-30T08:10:56.262367+00:00",
         "engagement": {
           "likes": 7,
-          "replies": 1,
-          "reposts": 0,
-          "quotes": 0,
-          "bookmarks": 0
-        }
-      },
-      {
-        "uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mu5qo5j7lc2e",
-        "url": "https://bsky.app/profile/thejokebot.bsky.social/post/3mu5qo5j7lc2e",
-        "text": "As I suspected, someone has been adding soil to my garden. The plot thickens.\n\n#dadjoke #humorsky #funny",
-        "created_at": "2026-08-28T16:08:02.957907+00:00",
-        "engagement": {
-          "likes": 6,
           "replies": 1,
           "reposts": 1,
           "quotes": 0,
