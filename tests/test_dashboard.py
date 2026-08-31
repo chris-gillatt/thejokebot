@@ -292,7 +292,7 @@ class DashboardCollectorTests(unittest.TestCase):
 
     def test_rejects_unknown_schema_version(self):
         with self.assertRaisesRegex(ValueError, "schema version"):
-            dashboard._normalise_existing({"schema_version": 9, "snapshots": []})
+            dashboard._normalise_existing({"schema_version": 10, "snapshots": []})
 
     def test_normalise_existing_upgrades_schema_one(self):
         existing = {"schema_version": 1, "snapshots": []}
@@ -422,6 +422,8 @@ class DashboardCollectorTests(unittest.TestCase):
                 "interaction_eligible": 4,
                 "interaction_added": 3,
                 "interactions_liked": 7,
+                "starter_pack_follows": 0,
+                "starter_pack_scan_complete": 0,
                 "failed": 2,
             },
             dry_run=False,
@@ -452,6 +454,8 @@ class DashboardCollectorTests(unittest.TestCase):
                 "interaction_eligible": 4,
                 "interaction_added": 3,
                 "interactions_liked": 7,
+                "starter_pack_follows": 0,
+                "starter_pack_scan_complete": 0,
                 "failed": 2,
             },
         )
@@ -979,6 +983,43 @@ class DashboardCollectorTests(unittest.TestCase):
         public_metrics = json.dumps({"social": social, "network": network})
         self.assertNotIn("did:private", public_metrics)
         self.assertNotIn('"id"', public_metrics)
+
+    def test_starter_pack_metrics_export_only_aggregate_public_data(self):
+        now = datetime(2026, 8, 31, 12, tzinfo=timezone.utc)
+        state = {
+            "follow_tracking": {
+                "starter_pack_attribution": {
+                    "coverage_started_at": "2026-08-01T12:00:00Z",
+                    "last_checked_at": "2026-08-31T11:00:00Z",
+                    "high_water_indexed_at": "2026-08-31T10:00:00Z",
+                    "boundary_notification_hashes": ["private-hash"],
+                    "packs": {
+                        "at://did:plc:creator/app.bsky.graph.starterpack/comedy": {
+                            "name": "Comedy people",
+                            "creator_handle": "creator.example",
+                            "daily_counts": {
+                                "2026-08-01": 3,
+                                "2026-08-02": 2,
+                                "2026-08-31": 4,
+                            },
+                        }
+                    },
+                }
+            }
+        }
+
+        metrics = dashboard._starter_pack_attribution_metrics(state, now)
+
+        self.assertEqual(metrics["total_follows"], 6)
+        self.assertEqual(metrics["packs"][0]["follows"], 6)
+        self.assertEqual(
+            metrics["packs"][0]["url"],
+            "https://bsky.app/starter-pack/did:plc:creator/comedy",
+        )
+        public_metrics = json.dumps(metrics)
+        self.assertNotIn("private-hash", public_metrics)
+        self.assertNotIn("high_water", public_metrics)
+        self.assertNotIn("daily_counts", public_metrics)
 
     def test_reconstructs_following_and_posts_without_inventing_followers(self):
         now = datetime(2026, 8, 22, 6, tzinfo=timezone.utc)

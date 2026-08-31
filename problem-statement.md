@@ -360,6 +360,26 @@ pool and more restrictive usage terms; the bundled jokebook remains the offline
 final fallback. Review Syrsly's duplicate rate, fall-throughs, and engagement on
 the dashboard and demote it if production evidence identifies a quality issue.
 
+### 5.51 Report starter-pack follow attribution (Issue #96) ✓ Complete
+**Priority: Medium**
+
+Track authenticated `follow` notifications that include starter-pack metadata
+and publish rolling 30-day counts per pack in the Social activity dashboard.
+Bootstrap at most 30 days of available notifications, then scan newest-first
+from a timestamp and hashed same-timestamp boundary; paging cursors are not
+durable checkpoints.
+
+Persist only aggregate UTC daily counts and public pack metadata. Follower DIDs,
+notification URIs, and raw notifications must not enter state or dashboard data.
+Ignore `starterpack-joined` notifications because they do not represent follows
+attributed to the bot's inclusion in a pack. A scan updates counts and its
+checkpoint only after reaching the previous boundary or bootstrap cutoff.
+
+Dashboard schema v9 exposes pack name, creator handle, stable Bluesky link,
+coverage timestamps, and per-pack counts. It does not infer a percentage of
+overall follower growth because the available account snapshots cannot support
+honest event-level attribution.
+
 ### 5.26 Retry transient Bluesky response failures ✓ Complete
 **Priority: High**
 

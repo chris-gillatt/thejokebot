@@ -304,6 +304,7 @@ function renderDiscovery() {
 
 function renderSocialActivity() {
   const social = metrics.social_activity || { completed_runs: 0, runs: [] };
+  const starterPacks = metrics.starter_pack_attribution || { packs: [] };
   const network = metrics.network_maintenance || {};
   const responseWindow = network.response_window;
   const unfollow = network.unfollow;
@@ -344,6 +345,37 @@ function renderSocialActivity() {
     const value = Number(socialValues[row.dataset.metric]) || 0;
     row.style.setProperty("--flow-width", `${(value * 100) / maximum}%`);
   });
+
+  const starterPackList = document.getElementById("starter-pack-list");
+  const starterPackEmpty = document.getElementById("starter-pack-empty");
+  const packs = starterPacks.packs || [];
+  starterPackList.replaceChildren();
+  setText("starter-pack-total", metricText(starterPacks.last_checked_at ? starterPacks.total_follows : null));
+  setText(
+    "starter-pack-history-note",
+    starterPacks.coverage_started_at
+      ? `${numberFormat.format(starterPacks.window_days || 30)}-day attributed follows`
+      : "Collecting attribution history",
+  );
+  packs.forEach((pack) => {
+    const item = document.createElement("li");
+    const link = document.createElement("a");
+    const details = document.createElement("span");
+    const name = document.createElement("strong");
+    const creator = document.createElement("small");
+    const count = document.createElement("strong");
+    link.href = pack.url;
+    link.target = "_blank";
+    link.rel = "noreferrer";
+    name.textContent = pack.name || "Starter pack";
+    creator.textContent = pack.creator_handle ? `by @${pack.creator_handle}` : "View on Bluesky";
+    count.textContent = numberFormat.format(pack.follows || 0);
+    details.append(name, creator);
+    link.append(details, count);
+    item.append(link);
+    starterPackList.append(item);
+  });
+  starterPackEmpty.hidden = packs.length > 0;
 
   setText("response-window-active", metricText(responseWindow?.active));
   setText("response-discovery", metricText(responseWindow?.by_source?.discovery));

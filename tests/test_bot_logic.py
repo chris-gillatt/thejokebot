@@ -1,4 +1,5 @@
 import base64
+import copy
 import datetime as dt
 import json
 import os
@@ -2297,6 +2298,157 @@ class VerificationHelperTests(unittest.TestCase):
         )
 
 
+class StarterPackAttributionTests(unittest.TestCase):
+    @staticmethod
+    def _notification(uri, indexed_at, *, reason="follow", starter_pack=None):
+        return SimpleNamespace(
+            reason=reason,
+            indexed_at=indexed_at,
+            uri=uri,
+            starter_pack=starter_pack,
+        )
+
+    @staticmethod
+    def _starter_pack():
+        return SimpleNamespace(
+            uri="at://did:plc:creator/app.bsky.graph.starterpack/comedy",
+            creator=SimpleNamespace(handle="creator.example"),
+            record=SimpleNamespace(name="Comedy people"),
+        )
+
+    def test_track_starter_pack_follows_counts_only_attributed_follow(self):
+        indexed_at = "2026-08-31T10:00:00Z"
+        response = SimpleNamespace(
+            notifications=[
+                self._notification(
+                    "at://did:plc:follower/app.bsky.graph.follow/one",
+                    indexed_at,
+                    starter_pack=self._starter_pack(),
+                ),
+                self._notification(
+                    "at://did:plc:follower/app.bsky.graph.follow/two",
+                    indexed_at,
+                ),
+                self._notification(
+                    "at://did:plc:follower/app.bsky.graph.follow/three",
+                    indexed_at,
+                    reason="starterpack-joined",
+                    starter_pack=self._starter_pack(),
+                ),
+            ],
+            cursor=None,
+        )
+        state = bluesky_state._default_state()
+        client = mock.Mock()
+        client.app.bsky.notification.list_notifications.return_value = response
+
+        with mock.patch(
+            "bluesky_follows_and_likes.retry_network_call",
+            side_effect=lambda fn, description: fn(),
+        ):
+            count = bluesky_follows_and_likes.track_starter_pack_follows(
+                client, state, dry_run=False
+            )
+
+        self.assertEqual(count, 1)
+        params = client.app.bsky.notification.list_notifications.call_args.kwargs[
+            "params"
+        ]
+        self.assertEqual(params["reasons"], ["follow"])
+        attribution = bluesky_state.get_starter_pack_attribution(state)
+        pack = attribution["packs"][self._starter_pack().uri]
+        self.assertEqual(pack["daily_counts"], {"2026-08-31": 1})
+        self.assertNotIn("did:plc:follower", str(attribution))
+
+    def test_track_starter_pack_follows_accepts_new_notification_at_boundary(self):
+        indexed_at = "2026-08-31T10:00:00Z"
+        old_notification = self._notification(
+            "at://did:plc:follower/app.bsky.graph.follow/old",
+            indexed_at,
+            starter_pack=self._starter_pack(),
+        )
+        state = bluesky_state._default_state()
+        client = mock.Mock()
+        client.app.bsky.notification.list_notifications.return_value = SimpleNamespace(
+            notifications=[old_notification], cursor=None
+        )
+
+        with mock.patch(
+            "bluesky_follows_and_likes.retry_network_call",
+            side_effect=lambda fn, description: fn(),
+        ):
+            bluesky_follows_and_likes.track_starter_pack_follows(
+                client, state, dry_run=False
+            )
+            new_notification = self._notification(
+                "at://did:plc:follower/app.bsky.graph.follow/new",
+                indexed_at,
+                starter_pack=self._starter_pack(),
+            )
+            client.app.bsky.notification.list_notifications.return_value = (
+                SimpleNamespace(
+                    notifications=[new_notification, old_notification], cursor=None
+                )
+            )
+            count = bluesky_follows_and_likes.track_starter_pack_follows(
+                client, state, dry_run=False
+            )
+
+        self.assertEqual(count, 1)
+        pack = bluesky_state.get_starter_pack_attribution(state)["packs"][
+            self._starter_pack().uri
+        ]
+        self.assertEqual(pack["daily_counts"], {"2026-08-31": 2})
+
+    def test_track_starter_pack_follows_does_not_commit_repeated_cursor_scan(self):
+        response = SimpleNamespace(
+            notifications=[
+                self._notification(
+                    "at://did:plc:follower/app.bsky.graph.follow/one",
+                    "2026-08-31T10:00:00Z",
+                    starter_pack=self._starter_pack(),
+                )
+            ],
+            cursor="same",
+        )
+        state = bluesky_state._default_state()
+        before = copy.deepcopy(state)
+        summary = {}
+        client = mock.Mock()
+        client.app.bsky.notification.list_notifications.return_value = response
+
+        with mock.patch(
+            "bluesky_follows_and_likes.retry_network_call",
+            side_effect=lambda fn, description: fn(),
+        ):
+            count = bluesky_follows_and_likes.track_starter_pack_follows(
+                client, state, dry_run=False, summary=summary
+            )
+
+        self.assertEqual(count, 0)
+        self.assertEqual(summary["starter_pack_scan_complete"], 0)
+        self.assertEqual(state, before)
+
+    def test_empty_bootstrap_scan_does_not_invent_high_water_timestamp(self):
+        state = bluesky_state._default_state()
+        client = mock.Mock()
+        client.app.bsky.notification.list_notifications.return_value = SimpleNamespace(
+            notifications=[], cursor=None
+        )
+
+        with mock.patch(
+            "bluesky_follows_and_likes.retry_network_call",
+            side_effect=lambda fn, description: fn(),
+        ):
+            bluesky_follows_and_likes.track_starter_pack_follows(
+                client, state, dry_run=False
+            )
+
+        attribution = bluesky_state.get_starter_pack_attribution(state)
+        self.assertIsNone(attribution["high_water_indexed_at"])
+        self.assertIsNotNone(attribution["coverage_started_at"])
+
+
 class LikeRepliesTests(unittest.TestCase):
     def test_like_replies_likes_fresh_repost(self):
         now = dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00", "Z")
@@ -3080,6 +3232,61 @@ class FollowGraceTests(unittest.TestCase):
 
         self.assertIn("follow_tracking", normalised)
         self.assertIn("following_snapshot_dids", normalised["follow_tracking"])
+        attribution = normalised["follow_tracking"]["starter_pack_attribution"]
+        self.assertIsNone(attribution["high_water_indexed_at"])
+        self.assertEqual(attribution["boundary_notification_hashes"], [])
+        self.assertEqual(attribution["packs"], {})
+
+    def test_record_starter_pack_attribution_scan_merges_and_prunes_counts(self):
+        state = bluesky_state._default_state()
+        state["follow_tracking"]["starter_pack_attribution"]["packs"] = {
+            "at://did:plc:old/app.bsky.graph.starterpack/old": {
+                "name": "Old pack",
+                "creator_handle": "old.example",
+                "last_observed_at": "2026-07-01T00:00:00Z",
+                "daily_counts": {"2026-07-01": 2},
+            }
+        }
+        observations = [
+            {
+                "pack_uri": "at://did:plc:creator/app.bsky.graph.starterpack/one",
+                "name": "Funny people",
+                "creator_handle": "creator.example",
+                "observed_at": "2026-08-31T10:00:00Z",
+                "date": "2026-08-31",
+            },
+            {
+                "pack_uri": "at://did:plc:creator/app.bsky.graph.starterpack/one",
+                "name": "Funny people",
+                "creator_handle": "creator.example",
+                "observed_at": "2026-08-31T11:00:00Z",
+                "date": "2026-08-31",
+            },
+        ]
+
+        bluesky_state.record_starter_pack_attribution_scan(
+            state,
+            coverage_started_at="2026-08-01T00:00:00Z",
+            checked_at="2026-08-31T12:00:00Z",
+            high_water_indexed_at="2026-08-31T11:00:00Z",
+            boundary_notification_hashes={"hash-b", "hash-a"},
+            observations=observations,
+            cutoff_date="2026-07-26",
+        )
+
+        attribution = bluesky_state.get_starter_pack_attribution(state)
+        self.assertEqual(attribution["coverage_started_at"], "2026-08-01T00:00:00Z")
+        self.assertEqual(attribution["last_checked_at"], "2026-08-31T12:00:00Z")
+        self.assertEqual(attribution["boundary_notification_hashes"], ["hash-a", "hash-b"])
+        self.assertNotIn(
+            "at://did:plc:old/app.bsky.graph.starterpack/old",
+            attribution["packs"],
+        )
+        pack = attribution["packs"][
+            "at://did:plc:creator/app.bsky.graph.starterpack/one"
+        ]
+        self.assertEqual(pack["daily_counts"], {"2026-08-31": 2})
+        self.assertNotIn("did", pack)
 
 
 class FollowFellowsTagRotationTests(unittest.TestCase):

@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import hashlib
 import re
 import time
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 import requests
 import atproto_client.exceptions
@@ -38,6 +39,12 @@ _INTERACTION_FOLLOW_MAX_PAGES = _FOLLOWS_AND_LIKES_CONFIG[
 _INTERACTION_FOLLOW_PAGE_LIMIT = _FOLLOWS_AND_LIKES_CONFIG[
     "interaction_follow_page_limit"
 ]
+_STARTER_PACK_WINDOW_DAYS = 30
+_STARTER_PACK_MAX_PAGES = 20
+_STARTER_PACK_PAGE_LIMIT = 100
+_STARTER_PACK_URI_PATTERN = re.compile(
+    r"^at://(?P<creator>[^/]+)/app\.bsky\.graph\.starterpack/(?P<rkey>[^/]+)$"
+)
 _SOCIAL_SUMMARY_FIELDS = (
     "follow_back_candidates",
     "follow_back_added",
@@ -46,6 +53,8 @@ _SOCIAL_SUMMARY_FIELDS = (
     "interaction_eligible",
     "interaction_added",
     "interactions_liked",
+    "starter_pack_follows",
+    "starter_pack_scan_complete",
     "failed",
 )
 
@@ -330,6 +339,182 @@ def _get_value(obj, *path):
     return cur
 
 
+# ---------------------------------------------------------------------------
+# Starter-pack attribution
+# ---------------------------------------------------------------------------
+
+
+def _starter_pack_observation(notification) -> dict | None:
+    """Return public pack metadata for an attributed follow notification."""
+    if _get_value(notification, "reason") != "follow":
+        return None
+    starter_pack = _get_value(notification, "starter_pack") or _get_value(
+        notification, "starterPack"
+    )
+    pack_uri = str(_get_value(starter_pack, "uri") or "").strip()
+    if not _STARTER_PACK_URI_PATTERN.fullmatch(pack_uri):
+        return None
+    indexed_at = _get_value(notification, "indexed_at") or _get_value(
+        notification, "indexedAt"
+    )
+    try:
+        observed_at = datetime.fromisoformat(
+            str(indexed_at).replace("Z", "+00:00")
+        ).astimezone(timezone.utc)
+    except (ValueError, AttributeError):
+        return None
+    return {
+        "pack_uri": pack_uri,
+        "name": str(_get_value(starter_pack, "record", "name") or "Starter pack"),
+        "creator_handle": str(_get_value(starter_pack, "creator", "handle") or ""),
+        "observed_at": observed_at.isoformat().replace("+00:00", "Z"),
+        "date": observed_at.date().isoformat(),
+    }
+
+
+def _notification_hash(notification) -> str:
+    uri = str(_get_value(notification, "uri") or "")
+    return hashlib.sha256(uri.encode("utf-8")).hexdigest() if uri else ""
+
+
+def _process_starter_pack_page(
+    notifications,
+    stop_epoch: float,
+    previous_boundary_hashes: set[str],
+    page_state: dict,
+) -> bool:
+    """Add unseen observations from one page and report whether to stop paging."""
+    for notification in notifications:
+        notification_epoch = _parse_notification_epoch(notification)
+        if notification_epoch is None:
+            continue
+        indexed_at = _get_value(notification, "indexed_at") or _get_value(
+            notification, "indexedAt"
+        )
+        if (
+            page_state["newest_epoch"] is None
+            or notification_epoch > page_state["newest_epoch"]
+        ):
+            page_state["newest_epoch"] = notification_epoch
+            page_state["newest_indexed_at"] = str(indexed_at)
+            page_state["boundary_hashes"] = set()
+        notification_hash = _notification_hash(notification)
+        if notification_epoch == page_state["newest_epoch"] and notification_hash:
+            page_state["boundary_hashes"].add(notification_hash)
+        if notification_epoch < stop_epoch:
+            return True
+
+        observation = _starter_pack_observation(notification)
+        if observation is None or not notification_hash:
+            continue
+        if notification_hash in page_state["seen_hashes"]:
+            continue
+        page_state["seen_hashes"].add(notification_hash)
+        if (
+            notification_epoch == stop_epoch
+            and notification_hash in previous_boundary_hashes
+        ):
+            continue
+        page_state["observations"].append(observation)
+    return False
+
+
+def _collect_starter_pack_attribution(client, state: dict, now: datetime) -> dict | None:
+    """Collect a complete incremental scan of starter-pack follow attribution."""
+    attribution = bluesky_state.get_starter_pack_attribution(state)
+    high_water = attribution.get("high_water_indexed_at")
+    previous_boundary_hashes = set(attribution.get("boundary_notification_hashes", []))
+    bootstrap_cutoff = now - timedelta(days=_STARTER_PACK_WINDOW_DAYS)
+    stop_epoch = (
+        datetime.fromisoformat(high_water.replace("Z", "+00:00")).timestamp()
+        if high_water
+        else bootstrap_cutoff.timestamp()
+    )
+    cursor = None
+    seen_cursors: set[str] = set()
+    page_state = {
+        "seen_hashes": set(),
+        "observations": [],
+        "newest_indexed_at": None,
+        "newest_epoch": None,
+        "boundary_hashes": set(),
+    }
+    complete = False
+
+    for _ in range(_STARTER_PACK_MAX_PAGES):
+        try:
+            response = retry_network_call(
+                lambda current_cursor=cursor: client.app.bsky.notification.list_notifications(
+                    params={
+                        "cursor": current_cursor,
+                        "limit": _STARTER_PACK_PAGE_LIMIT,
+                        "reasons": ["follow"],
+                    }
+                ),
+                description="listing starter-pack follow notifications",
+            )
+        except (
+            requests.RequestException,
+            TimeoutError,
+            atproto_client.exceptions.NetworkError,
+            atproto_client.exceptions.RequestException,
+        ) as exc:
+            print(f"{Fore.RED}Failed to fetch starter-pack follows: {exc}{Style.RESET_ALL}")
+            return None
+
+        complete = _process_starter_pack_page(
+            _get_value(response, "notifications") or [],
+            stop_epoch,
+            previous_boundary_hashes,
+            page_state,
+        )
+
+        if complete:
+            break
+        next_cursor = _get_value(response, "cursor")
+        if not next_cursor:
+            complete = True
+            break
+        if next_cursor in seen_cursors:
+            return None
+        seen_cursors.add(next_cursor)
+        cursor = next_cursor
+
+    if not complete:
+        return None
+    return {
+        "coverage_started_at": (
+            attribution.get("coverage_started_at")
+            or bootstrap_cutoff.isoformat().replace("+00:00", "Z")
+        ),
+        "checked_at": now.isoformat().replace("+00:00", "Z"),
+        "high_water_indexed_at": page_state["newest_indexed_at"] or high_water,
+        "boundary_notification_hashes": page_state["boundary_hashes"],
+        "observations": page_state["observations"],
+        "cutoff_date": (
+            now - timedelta(days=bluesky_state.STARTER_PACK_ATTRIBUTION_RETENTION_DAYS)
+        ).date().isoformat(),
+    }
+
+
+def track_starter_pack_follows(
+    client, state: dict, dry_run: bool, summary: dict | None = None
+) -> int:
+    """Track aggregate follows attributed to starter packs."""
+    if summary is None:
+        summary = {}
+    scan = _collect_starter_pack_attribution(client, state, datetime.now(timezone.utc))
+    summary["starter_pack_scan_complete"] = int(scan is not None)
+    if scan is None:
+        summary["starter_pack_follows"] = 0
+        return 0
+    count = len(scan["observations"])
+    summary["starter_pack_follows"] = count
+    if not dry_run:
+        bluesky_state.record_starter_pack_attribution_scan(state, **scan)
+    return count
+
+
 def _process_like_page(
     client,
     state,
@@ -532,6 +717,8 @@ def main() -> None:
         "interaction_eligible": 0,
         "interaction_added": 0,
         "interactions_liked": 0,
+        "starter_pack_follows": 0,
+        "starter_pack_scan_complete": 0,
         "failed": 0,
     }
 
@@ -569,6 +756,14 @@ def main() -> None:
     ) as exc:
         social_summary["failed"] += 1
         print(f"{Fore.RED}Interaction-follow failed: {exc}{Style.RESET_ALL}")
+
+    attributed_follows = track_starter_pack_follows(
+        client, state, dry_run, social_summary
+    )
+    print(
+        f"{Fore.GREEN}Observed {attributed_follows} new starter-pack follow"
+        f"{'s' if attributed_follows != 1 else ''}.{Style.RESET_ALL}"
+    )
 
     try:
         liked = like_replies(

@@ -25,6 +25,7 @@ STATE_FILENAMES = {
 }
 FOLLOW_RESPONSE_GRACE_PERIOD_DAYS = 30
 FOLLOW_RESPONSE_GRACE_PERIOD_SECONDS = FOLLOW_RESPONSE_GRACE_PERIOD_DAYS * 24 * 60 * 60
+STARTER_PACK_ATTRIBUTION_RETENTION_DAYS = 37
 
 # Canonical provider order — the rotation wraps around this list.
 # Add new providers here and they will be included in rotation automatically.
@@ -109,6 +110,13 @@ def _default_state() -> dict:
         },
         "follow_tracking": {
             "following_snapshot_dids": [],
+            "starter_pack_attribution": {
+                "coverage_started_at": None,
+                "last_checked_at": None,
+                "high_water_indexed_at": None,
+                "boundary_notification_hashes": [],
+                "packs": {},
+            },
         },
         "follow_fellows": {
             "tag_offset": 0,
@@ -186,6 +194,12 @@ def _normalise_state(state: dict) -> dict:
 
     follow_tracking = state.setdefault("follow_tracking", {})
     follow_tracking.setdefault("following_snapshot_dids", [])
+    attribution = follow_tracking.setdefault("starter_pack_attribution", {})
+    attribution.setdefault("coverage_started_at", None)
+    attribution.setdefault("last_checked_at", None)
+    attribution.setdefault("high_water_indexed_at", None)
+    attribution.setdefault("boundary_notification_hashes", [])
+    attribution.setdefault("packs", {})
 
     follow_fellows_state = state.setdefault("follow_fellows", {})
     follow_fellows_state.setdefault("tag_offset", 0)
@@ -630,6 +644,60 @@ def set_following_snapshot_dids(state: dict, dids: set[str]) -> None:
     follow_tracking["following_snapshot_dids"] = sorted(
         {str(did).strip() for did in dids if str(did).strip()}
     )
+
+
+def get_starter_pack_attribution(state: dict) -> dict:
+    """Return the normalised starter-pack attribution state."""
+    _normalise_state(state)
+    return state["follow_tracking"]["starter_pack_attribution"]
+
+
+def record_starter_pack_attribution_scan(
+    state: dict,
+    *,
+    coverage_started_at: str,
+    checked_at: str,
+    high_water_indexed_at: str | None,
+    boundary_notification_hashes: set[str],
+    observations: list[dict],
+    cutoff_date: str,
+) -> None:
+    """Merge a completed starter-pack notification scan into social state."""
+    attribution = get_starter_pack_attribution(state)
+    if attribution["coverage_started_at"] is None:
+        attribution["coverage_started_at"] = coverage_started_at
+    attribution["last_checked_at"] = checked_at
+    attribution["high_water_indexed_at"] = high_water_indexed_at
+    attribution["boundary_notification_hashes"] = sorted(
+        {value for value in boundary_notification_hashes if value}
+    )
+
+    packs = attribution["packs"]
+    for observation in observations:
+        pack_uri = str(observation.get("pack_uri") or "").strip()
+        observed_date = str(observation.get("date") or "").strip()
+        if not pack_uri or not observed_date:
+            continue
+        pack = packs.setdefault(pack_uri, {"daily_counts": {}})
+        pack["name"] = str(observation.get("name") or "Starter pack").strip()
+        pack["creator_handle"] = str(
+            observation.get("creator_handle") or ""
+        ).strip()
+        pack["last_observed_at"] = str(
+            observation.get("observed_at") or checked_at
+        )
+        daily_counts = pack.setdefault("daily_counts", {})
+        daily_counts[observed_date] = int(daily_counts.get(observed_date) or 0) + 1
+
+    for pack_uri, pack in list(packs.items()):
+        daily_counts = pack.setdefault("daily_counts", {})
+        pack["daily_counts"] = {
+            date: int(count)
+            for date, count in sorted(daily_counts.items())
+            if date >= cutoff_date and int(count) > 0
+        }
+        if not pack["daily_counts"]:
+            del packs[pack_uri]
 
 
 # ---------------------------------------------------------------------------

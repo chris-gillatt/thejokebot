@@ -22,7 +22,7 @@ from bluesky_common import retry_network_call
 PUBLIC_API_BASE = "https://public.api.bsky.app/xrpc"
 GITHUB_API_BASE = "https://api.github.com"
 METRICS_FILE = Path(__file__).resolve().parent / "dashboard" / "data" / "metrics.json"
-SCHEMA_VERSION = 8
+SCHEMA_VERSION = 9
 MAX_FEED_PAGES = 100
 MAX_FEED_RUNTIME_SECONDS = 120
 MAX_WORKFLOW_PAGES = 20
@@ -334,6 +334,30 @@ def _provider_activity_counts(log_text: str) -> dict | None:
     }
 
 
+def _social_summary_counts(plain_text: str) -> dict:
+    summaries = re.findall(
+        r"Social summary: ([^\n]+), dry_run=false\.",
+        plain_text,
+    )
+    if not summaries:
+        return {}
+    values = {
+        field: int(value)
+        for field, value in re.findall(r"([a-z_]+)=(\d+)", summaries[-1])
+    }
+    required = {
+        "follow_back_candidates",
+        "follow_back_added",
+        "protected",
+        "interaction_candidates",
+        "interaction_eligible",
+        "interaction_added",
+        "interactions_liked",
+        "failed",
+    }
+    return values if required.issubset(values) else {}
+
+
 def _workflow_activity_counts(workflow_name: str, log_text: str) -> dict | None:
     plain_text = re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", log_text)
     if "Dry-run mode enabled" in plain_text:
@@ -346,37 +370,14 @@ def _workflow_activity_counts(workflow_name: str, log_text: str) -> dict | None:
     if specialised_parser:
         return specialised_parser(plain_text)
     if workflow_name == "bluesky_follows_and_likes":
-        summaries = re.findall(
-            r"Social summary: follow_back_candidates=(\d+), "
-            r"follow_back_added=(\d+), protected=(\d+), "
-            r"interaction_candidates=(\d+), interaction_eligible=(\d+), "
-            r"interaction_added=(\d+), interactions_liked=(\d+), "
-            r"failed=(\d+), dry_run=false\.",
-            plain_text,
-        )
-        if summaries:
-            (
-                follow_back_candidates,
-                follow_back_added,
-                protected,
-                interaction_candidates,
-                interaction_eligible,
-                interaction_added,
-                interactions_liked,
-                failed,
-            ) = (int(value) for value in summaries[-1])
+        values = _social_summary_counts(plain_text)
+        if values:
             return {
-                "follows": follow_back_added + interaction_added,
+                "follows": values["follow_back_added"]
+                + values["interaction_added"],
                 "unfollows": 0,
                 "social_summary_observed": True,
-                "follow_back_candidates": follow_back_candidates,
-                "follow_back_added": follow_back_added,
-                "protected": protected,
-                "interaction_candidates": interaction_candidates,
-                "interaction_eligible": interaction_eligible,
-                "interaction_added": interaction_added,
-                "interactions_liked": interactions_liked,
-                "failed": failed,
+                **values,
             }
         follows = len(re.findall(r"\bFollowed (?:interactor )?did:[^\s]+", plain_text))
         return {
@@ -705,6 +706,12 @@ def _social_activity_metrics(workflow_activity: dict | None) -> dict:
                 ),
                 "interaction_added": max(0, int(run.get("interaction_added") or 0)),
                 "interactions_liked": max(0, int(run.get("interactions_liked") or 0)),
+                "starter_pack_follows": max(
+                    0, int(run.get("starter_pack_follows") or 0)
+                ),
+                "starter_pack_scan_complete": max(
+                    0, int(run.get("starter_pack_scan_complete") or 0)
+                ),
                 "failed": max(0, int(run.get("failed") or 0)),
             }
         )
@@ -716,6 +723,8 @@ def _social_activity_metrics(workflow_activity: dict | None) -> dict:
         "interaction_eligible",
         "interaction_added",
         "interactions_liked",
+        "starter_pack_follows",
+        "starter_pack_scan_complete",
         "failed",
     )
     return {
@@ -723,6 +732,47 @@ def _social_activity_metrics(workflow_activity: dict | None) -> dict:
         "completed_runs": len(runs),
         **{field: sum(run[field] for run in runs) for field in fields},
         "runs": runs,
+    }
+
+
+def _starter_pack_attribution_metrics(state: dict, now: datetime) -> dict:
+    attribution = state.get("follow_tracking", {}).get(
+        "starter_pack_attribution", {}
+    )
+    cutoff_date = (now - timedelta(days=WORKFLOW_WINDOW_DAYS - 1)).date().isoformat()
+    packs = []
+    for pack_uri, pack in attribution.get("packs", {}).items():
+        match = re.fullmatch(
+            r"at://(?P<creator>[^/]+)/app\.bsky\.graph\.starterpack/(?P<rkey>[^/]+)",
+            pack_uri,
+        )
+        if match is None:
+            continue
+        follows = sum(
+            max(0, int(count or 0))
+            for date, count in pack.get("daily_counts", {}).items()
+            if date >= cutoff_date
+        )
+        if follows <= 0:
+            continue
+        packs.append(
+            {
+                "name": str(pack.get("name") or "Starter pack"),
+                "creator_handle": str(pack.get("creator_handle") or ""),
+                "url": (
+                    "https://bsky.app/starter-pack/"
+                    f"{match.group('creator')}/{match.group('rkey')}"
+                ),
+                "follows": follows,
+            }
+        )
+    packs.sort(key=lambda pack: (-pack["follows"], pack["name"].casefold()))
+    return {
+        "window_days": WORKFLOW_WINDOW_DAYS,
+        "coverage_started_at": attribution.get("coverage_started_at"),
+        "last_checked_at": attribution.get("last_checked_at"),
+        "total_follows": sum(pack["follows"] for pack in packs),
+        "packs": packs,
     }
 
 
@@ -921,7 +971,17 @@ def _period_start(now: datetime) -> str:
 def _normalise_existing(existing: dict | None) -> dict:
     if existing is None:
         return {"schema_version": SCHEMA_VERSION, "snapshots": []}
-    if existing.get("schema_version") not in {1, 2, 3, 4, 5, 6, 7, SCHEMA_VERSION}:
+    if existing.get("schema_version") not in {
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        SCHEMA_VERSION,
+    }:
         raise ValueError("Unsupported dashboard metrics schema version")
     if not isinstance(existing.get("snapshots"), list):
         raise ValueError("Dashboard metrics snapshots must be a list")
@@ -1366,6 +1426,7 @@ def collect_metrics(
         "daily_activity": _daily_activity(state, workflow_activity),
         "discovery_activity": _discovery_metrics(workflow_activity),
         "social_activity": _social_activity_metrics(workflow_activity),
+        "starter_pack_attribution": _starter_pack_attribution_metrics(state, now),
         "moderation_activity": _moderation_metrics(workflow_activity),
         "engagement_momentum": _engagement_momentum(snapshots, now),
         "provider_pressure": _provider_pressure_metrics(workflow_activity, now),
