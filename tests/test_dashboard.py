@@ -3,6 +3,8 @@ import io
 import unittest
 import zipfile
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 import bluesky_collect_dashboard_metrics as dashboard
@@ -292,7 +294,7 @@ class DashboardCollectorTests(unittest.TestCase):
 
     def test_rejects_unknown_schema_version(self):
         with self.assertRaisesRegex(ValueError, "schema version"):
-            dashboard._normalise_existing({"schema_version": 10, "snapshots": []})
+            dashboard._normalise_existing({"schema_version": 11, "snapshots": []})
 
     def test_normalise_existing_upgrades_schema_one(self):
         existing = {"schema_version": 1, "snapshots": []}
@@ -300,6 +302,358 @@ class DashboardCollectorTests(unittest.TestCase):
             dashboard._normalise_existing(existing)["schema_version"],
             dashboard.SCHEMA_VERSION,
         )
+
+    def test_migrates_existing_history_into_sorted_months(self):
+        existing = {
+            "snapshots": [
+                {
+                    "period_start": "2026-09-01T00:00:00+00:00",
+                    "collected_at": "2026-09-01T00:10:00+00:00",
+                    "followers": 11,
+                    "following": 21,
+                    "profile_posts": 31,
+                    "engagement_total": 41,
+                    "source": "bluesky_snapshot",
+                    "private": "discarded",
+                },
+                {
+                    "period_start": "2026-08-31T18:00:00+00:00",
+                    "collected_at": "2026-08-31T18:10:00+00:00",
+                    "followers": 10,
+                    "following": 20,
+                    "profile_posts": 30,
+                    "source": "bluesky_snapshot",
+                },
+                {
+                    "period_start": "2026-08-31T23:59:59+00:00",
+                    "collected_at": "2026-08-31T23:59:59+00:00",
+                    "source": "workflow_history",
+                },
+            ],
+            "workflow_activity": {
+                "runs": [
+                    {
+                        "id": 7,
+                        "attempt": 2,
+                        "workflow": "bluesky_post_joke",
+                        "created_at": "2026-09-01T00:05:00Z",
+                        "provider_attempts": 2,
+                        "starter_pack_follows": 3,
+                        "starter_pack_scan_complete": 1,
+                        "log_text": "discarded",
+                    },
+                    {
+                        "id": 6,
+                        "attempt": 1,
+                        "created_at": "2026-08-31T20:05:00Z",
+                        "follows": 1,
+                        "unfollows": 0,
+                    },
+                ]
+            },
+            "daily_activity": [
+                {
+                    "date": "2026-08-31",
+                    "joke_posts": 4,
+                    "follows": 5,
+                    "unfollows": 6,
+                }
+            ],
+        }
+
+        partitions = dashboard._migrate_existing_history(existing)
+
+        self.assertEqual(list(partitions), ["2026-08", "2026-09"])
+        self.assertEqual(
+            partitions["2026-08"]["account_observations"][0]["followers"], 10
+        )
+        self.assertEqual(partitions["2026-08"]["daily_activity"][0]["joke_posts"], 4)
+        self.assertEqual(
+            partitions["2026-08"]["activity_runs"][0]["workflow"],
+            "legacy_activity",
+        )
+        self.assertEqual(partitions["2026-09"]["activity_runs"][0]["attempt"], 2)
+        self.assertEqual(
+            partitions["2026-09"]["activity_runs"][0]["starter_pack_follows"],
+            3,
+        )
+        serialised = json.dumps(partitions)
+        self.assertNotIn("workflow_history", serialised)
+        self.assertNotIn("private", serialised)
+        self.assertNotIn("log_text", serialised)
+
+    def test_history_merge_replaces_same_identity_and_sorts(self):
+        partition = dashboard._empty_history_partition("2026-08")
+        dashboard._merge_history_records(
+            partition,
+            "account_observations",
+            [
+                {"period_start": "2026-08-31T18:00:00+00:00", "followers": 1},
+                {"period_start": "2026-08-31T12:00:00+00:00", "followers": 2},
+            ],
+        )
+        dashboard._merge_history_records(
+            partition,
+            "account_observations",
+            [{"period_start": "2026-08-31T18:00:00+00:00", "followers": 3}],
+        )
+
+        self.assertEqual(
+            [item["followers"] for item in partition["account_observations"]],
+            [2, 3],
+        )
+
+    def test_history_merge_replaces_legacy_activity_with_attributed_run(self):
+        partition = dashboard._empty_history_partition("2026-08")
+        dashboard._merge_history_records(
+            partition,
+            "activity_runs",
+            [
+                {
+                    "id": 7,
+                    "attempt": 1,
+                    "workflow": "legacy_activity",
+                    "created_at": "2026-08-31T12:00:00Z",
+                }
+            ],
+        )
+        dashboard._merge_history_records(
+            partition,
+            "activity_runs",
+            [
+                {
+                    "id": 7,
+                    "attempt": 1,
+                    "workflow": "bluesky_follows_and_likes",
+                    "created_at": "2026-08-31T12:00:00Z",
+                }
+            ],
+        )
+
+        self.assertEqual(len(partition["activity_runs"]), 1)
+        self.assertEqual(
+            partition["activity_runs"][0]["workflow"],
+            "bluesky_follows_and_likes",
+        )
+
+    def test_history_rejects_non_utc_timestamp(self):
+        with self.assertRaisesRegex(ValueError, "UTC"):
+            dashboard._utc_month("2026-08-31T18:00:00+01:00")
+
+    def test_writes_and_loads_monthly_history_with_manifest(self):
+        existing = {
+            "snapshots": [
+                {
+                    "period_start": "2026-07-31T18:00:00+00:00",
+                    "collected_at": "2026-07-31T18:15:00+00:00",
+                    "followers": 9,
+                    "following": 19,
+                    "profile_posts": 29,
+                    "source": "bluesky_snapshot",
+                },
+                {
+                    "period_start": "2026-08-01T00:00:00+00:00",
+                    "collected_at": "2026-08-01T00:15:00+00:00",
+                    "followers": 10,
+                    "following": 20,
+                    "profile_posts": 30,
+                    "source": "bluesky_snapshot",
+                },
+            ],
+            "daily_activity": [
+                {"date": "2026-07-31", "joke_posts": 4, "follows": 5, "unfollows": 6}
+            ],
+        }
+        partitions = dashboard._migrate_existing_history(existing)
+        now = datetime(2026, 9, 1, tzinfo=timezone.utc)
+
+        with TemporaryDirectory() as temporary_directory:
+            history_dir = Path(temporary_directory)
+            dashboard._write_history(partitions, now, history_dir=history_dir)
+            loaded = dashboard._load_history_partitions(history_dir)
+            manifest = json.loads((history_dir / "index.json").read_text())
+            daily = json.loads((history_dir / "daily.json").read_text())
+
+        self.assertEqual(loaded, partitions)
+        self.assertEqual(
+            [month["month"] for month in manifest["months"]],
+            ["2026-07", "2026-08"],
+        )
+        self.assertEqual(daily["snapshots"][0]["followers"], 9)
+        self.assertEqual(daily["snapshots"][0]["source"], "bluesky_daily")
+        self.assertEqual(daily["daily_activity"][0]["joke_posts"], 4)
+
+    def test_history_partition_rejects_record_in_wrong_month(self):
+        partition = dashboard._empty_history_partition("2026-08")
+        partition["account_observations"] = [
+            {
+                "period_start": "2026-09-01T00:00:00+00:00",
+                "collected_at": "2026-09-01T00:01:00+00:00",
+            }
+        ]
+
+        with self.assertRaisesRegex(ValueError, "wrong month"):
+            dashboard._validate_history_partition(partition, "2026-08")
+
+    def test_history_partition_rejects_unsorted_records(self):
+        partition = dashboard._empty_history_partition("2026-08")
+        partition["daily_activity"] = [
+            {"date": "2026-08-02"},
+            {"date": "2026-08-01"},
+        ]
+
+        with self.assertRaisesRegex(ValueError, "not sorted"):
+            dashboard._validate_history_partition(partition, "2026-08")
+
+    def test_archives_allowlisted_automation_and_operational_telemetry(self):
+        generated_at = "2026-08-31T18:15:00+00:00"
+        metrics = {
+            "generated_at": generated_at,
+            "snapshots": [],
+            "daily_activity": [],
+            "providers": {
+                "providers": [
+                    {
+                        "name": "jokeapi",
+                        "published": 10,
+                        "visible_posts": 8,
+                        "average_interactions": 4.5,
+                        "fallthroughs": 2,
+                        "rejection_counts": {"duplicate": 3},
+                        "healthy": True,
+                        "configured": True,
+                        "last_health_check_at": 123,
+                        "consecutive_health_failures": 0,
+                        "last_failure_reason": "discarded",
+                    }
+                ]
+            },
+            "posting_delivery": {
+                "schedule": "private schedule detail",
+                "current_streak": 7,
+                "windows": {"7": {"expected": 42, "delivered": 40}},
+            },
+            "network_maintenance": {
+                "response_window": {"active": 5},
+                "private_state": "discarded upstream",
+            },
+            "starter_pack_attribution": {
+                "total_follows": 6,
+                "packs": [{"name": "Comedy", "follows": 6}],
+            },
+        }
+        workflow_runs = [
+            {
+                "id": 12,
+                "run_attempt": 2,
+                "name": "python_tests",
+                "created_at": "2026-08-31T17:00:00Z",
+                "updated_at": "2026-08-31T17:05:00Z",
+                "status": "completed",
+                "conclusion": "success",
+                "head_sha": "discarded",
+            },
+            {
+                "id": 13,
+                "name": "untracked_workflow",
+                "created_at": "2026-08-31T17:00:00Z",
+            },
+        ]
+
+        partitions = dashboard._history_from_collection(metrics, workflow_runs)
+
+        partition = partitions["2026-08"]
+        self.assertEqual(partition["automation_runs"][0]["attempt"], 2)
+        self.assertEqual(
+            partition["operational_observations"][0]["providers"][0]["name"],
+            "jokeapi",
+        )
+        self.assertEqual(
+            partition["operational_observations"][0]["network_maintenance"][
+                "response_window"
+            ]["active"],
+            5,
+        )
+        self.assertEqual(
+            partition["operational_observations"][0]["starter_pack_attribution"][
+                "total_follows"
+            ],
+            6,
+        )
+        serialised = json.dumps(partition)
+        self.assertNotIn("head_sha", serialised)
+        self.assertNotIn("untracked_workflow", serialised)
+        self.assertNotIn("last_failure_reason", serialised)
+        self.assertNotIn("private schedule detail", serialised)
+        self.assertNotIn("private_state", serialised)
+
+    def test_collector_existing_rebuilds_recent_cache_from_history(self):
+        existing = {
+            "workflow_activity": {
+                "coverage_start": "2026-07-01T00:00:00+00:00",
+                "expired_before": "2026-07-15T00:00:00+00:00",
+            }
+        }
+        partitions = dashboard._migrate_existing_history(
+            {
+                "snapshots": [
+                    {
+                        "period_start": "2026-07-31T18:00:00+00:00",
+                        "collected_at": "2026-07-31T18:05:00+00:00",
+                        "source": "bluesky_snapshot",
+                    },
+                    {
+                        "period_start": "2026-08-31T18:00:00+00:00",
+                        "collected_at": "2026-08-31T18:05:00+00:00",
+                        "source": "bluesky_snapshot",
+                    },
+                ],
+                "workflow_activity": {
+                    "runs": [
+                        {
+                            "id": 4,
+                            "attempt": 1,
+                            "workflow": "bluesky_post_joke",
+                            "created_at": "2026-08-31T16:00:00Z",
+                        }
+                    ]
+                },
+            }
+        )
+        now = datetime(2026, 9, 1, tzinfo=timezone.utc)
+
+        with TemporaryDirectory() as temporary_directory:
+            rebuilt = dashboard._collector_existing(
+                existing, partitions, now, Path(temporary_directory)
+            )
+
+        self.assertEqual(len(rebuilt["snapshots"]), 2)
+        self.assertEqual(rebuilt["snapshots"][0]["source"], "bluesky_snapshot")
+        self.assertEqual(rebuilt["workflow_activity"]["runs"][0]["id"], 4)
+        self.assertEqual(
+            rebuilt["workflow_activity"]["expired_before"],
+            "2026-07-15T00:00:00+00:00",
+        )
+
+    def test_compact_metrics_keeps_rolling_data_and_removes_collector_cache(self):
+        now = datetime(2026, 9, 1, tzinfo=timezone.utc)
+        metrics = {
+            "snapshots": [
+                {"collected_at": "2026-07-01T00:00:00Z"},
+                {"collected_at": "2026-08-31T00:00:00Z"},
+            ],
+            "daily_activity": [
+                {"date": "2026-07-01"},
+                {"date": "2026-08-31"},
+            ],
+            "workflow_activity": {"runs": [{"id": 1}]},
+        }
+
+        compact = dashboard._compact_metrics(metrics, now)
+
+        self.assertEqual(compact["snapshots"], [metrics["snapshots"][1]])
+        self.assertEqual(compact["daily_activity"], [metrics["daily_activity"][1]])
+        self.assertNotIn("workflow_activity", compact)
 
     def test_parses_and_summarises_moderation_without_identifiers(self):
         line = bluesky_process_reports._moderation_summary_line(3, 2, 1, 4)

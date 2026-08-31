@@ -1,8 +1,10 @@
 const DATA_URL = "data/metrics.json";
+const HISTORY_URL = "data/history/daily.json";
 const EMBED_SCRIPT_URL = "https://embed.bsky.app/static/embed.js";
 const colours = ["#087fdb", "#df6255", "#138a78", "#e9aa31", "#08a9cf"];
 const charts = {};
 let metrics;
+let historyMetrics;
 let selectedRange = "30";
 let selectedTopRange = "30";
 
@@ -110,6 +112,46 @@ function inRange(value) {
   return !cutoff || new Date(value) >= cutoff;
 }
 
+function mergeSeries(historical, recent, identity) {
+  const merged = new Map(historical.map((item) => [identity(item), item]));
+  recent.forEach((item) => merged.set(identity(item), item));
+  return [...merged.values()].sort((left, right) =>
+    identity(left).localeCompare(identity(right)),
+  );
+}
+
+function snapshotSeries() {
+  if (selectedRange !== "all" || !historyMetrics) return metrics.snapshots;
+  return mergeSeries(
+    historyMetrics.snapshots,
+    metrics.snapshots,
+    (item) => item.collected_at,
+  );
+}
+
+function activitySeries() {
+  if (selectedRange !== "all" || !historyMetrics) return metrics.daily_activity;
+  return mergeSeries(historyMetrics.daily_activity, metrics.daily_activity, (item) => item.date);
+}
+
+async function loadHistory() {
+  if (historyMetrics) return true;
+  const status = document.getElementById("history-status");
+  status.hidden = false;
+  status.textContent = "Loading all-time history...";
+  try {
+    const response = await fetch(HISTORY_URL);
+    if (!response.ok) throw new Error(`History request failed: ${response.status}`);
+    historyMetrics = await response.json();
+    status.hidden = true;
+    return true;
+  } catch (error) {
+    console.error(error);
+    status.textContent = "All-time history is unavailable. Select All to retry.";
+    return false;
+  }
+}
+
 function replaceChart(name, context, config) {
   charts[name]?.destroy();
   charts[name] = new Chart(context, config);
@@ -132,8 +174,10 @@ function baseOptions() {
 }
 
 function renderAudienceChart() {
-  const allSnapshots = metrics.snapshots.filter((item) => inRange(item.collected_at));
-  const snapshots = allSnapshots.filter((item) => item.source === "bluesky_snapshot");
+  const allSnapshots = snapshotSeries().filter((item) => inRange(item.collected_at));
+  const snapshots = allSnapshots.filter((item) =>
+    ["bluesky_snapshot", "bluesky_daily"].includes(item.source),
+  );
   const chartFrame = document.getElementById("audience-chart-frame");
   const chartCanvas = document.getElementById("audience-chart");
   const emptyState = document.getElementById("audience-empty");
@@ -190,13 +234,17 @@ function renderAudienceChart() {
       metricText(item.followers),
       metricText(item.following),
       metricText(item.profile_posts),
-      item.source === "bluesky_snapshot" ? "Sampled" : "Reconstructed",
+      item.source === "bluesky_snapshot"
+        ? "Sampled"
+        : item.source === "bluesky_daily"
+          ? "Daily sample"
+          : "Reconstructed",
     ]),
   );
 }
 
 function renderActivityChart() {
-  const activity = metrics.daily_activity.filter((item) => inRange(`${item.date}T23:59:59Z`));
+  const activity = activitySeries().filter((item) => inRange(`${item.date}T23:59:59Z`));
   const options = baseOptions();
   options.scales.y.beginAtZero = true;
   options.scales.y.ticks = { precision: 0 };
@@ -846,11 +894,12 @@ function renderCharts() {
 
 function bindRangeControls() {
   document.querySelectorAll("[data-range]").forEach((button) => {
-    button.addEventListener("click", () => {
+    button.addEventListener("click", async () => {
       selectedRange = button.dataset.range;
       document.querySelectorAll("[data-range]").forEach((item) => {
         item.classList.toggle("active", item === button);
       });
+      if (selectedRange === "all") await loadHistory();
       renderAudienceChart();
       renderActivityChart();
       renderDiscovery();

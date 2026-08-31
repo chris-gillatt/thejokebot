@@ -49,8 +49,14 @@ Follower totals use collection-time snapshots. For up to 30 days, following and
 profile-post totals are reconstructed from aggregate successful-action workflow
 logs and retained post timestamps; unknown historical follower totals remain
 blank rather than being estimated. Joke-post, follow, and unfollow activity is
-also shown by day. Dashboard data contains no follower, liker, replier, or other
-audience DIDs or raw workflow logs.
+also shown by day.
+
+Normalised public telemetry is retained indefinitely in UTC monthly JSON files.
+The initial dashboard payload contains current and rolling 30-day data; selecting
+the all-time range lazily loads daily points derived from the canonical monthly
+history. Detailed workflow, provider, moderation, and social cards remain rolling
+operational views. Dashboard data contains no follower, liker, replier, or other
+audience DIDs, raw workflow logs, or raw API responses.
 
 ## Quick start (local)
 

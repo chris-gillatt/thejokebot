@@ -67,12 +67,15 @@ from <https://chris-gillatt.github.io/thejokebot/>. The generated data excludes
 audience identifiers and distinguishes sampled account totals from activity
 reconstructed from retained bot state.
 
-### 5.36 Dashboard follow-up improvements ⏳ Deferred
+### 5.36 Dashboard follow-up improvements ✓ Complete
 **Priority: Low**
 
 - ✓ Added selectable 7-day, 30-day, and all-time windows for top-performing jokes.
-- Compact or roll up old six-hour snapshots when metrics JSON growth becomes
-  material, while retaining useful long-term daily history.
+- ✓ Retain normalised six-hour telemetry in UTC monthly JSON partitions while
+  keeping the initial dashboard payload to a rolling 30-day window. The all-time
+  audience and activity views load derived daily history on demand. Canonical
+  records are retained indefinitely; destructive downsampling remains deferred
+  until measured repository growth justifies a separate retention decision.
 - ✓ Provider engagement averages now require 30 currently visible posts and
   display their sample size with a descriptive-comparison caveat. Hashtag
   provenance is retained on future successful posts without historical

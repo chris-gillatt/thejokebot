@@ -338,7 +338,7 @@ h3 {
 }
 
 .range-control button {
-  min-height: 38px;
+  min-height: 44px;
   padding: 0 16px;
   border: 0;
   border-right: 1px solid #b7c7cd;
@@ -362,6 +362,14 @@ a:focus-visible,
 summary:focus-visible {
   outline: 3px solid var(--gold);
   outline-offset: 3px;
+}
+
+.history-status {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  text-align: right;
 }
 
 .chart-grid {
