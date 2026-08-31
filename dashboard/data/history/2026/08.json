@@ -291,19 +291,19 @@
     },
     {
       "period_start": "2026-08-31T12:00:00+00:00",
-      "collected_at": "2026-08-31T13:38:48.677488+00:00",
+      "collected_at": "2026-08-31T14:11:59.067482+00:00",
       "followers": 6561,
       "following": 11145,
       "profile_posts": 2378,
       "joke_posts": 736,
       "engagement": {
-        "likes": 3984,
+        "likes": 3986,
         "replies": 285,
         "reposts": 312,
         "quotes": 32,
         "bookmarks": 35
       },
-      "engagement_total": 4648
+      "engagement_total": 4650
     }
   ],
   "activity_runs": [
@@ -13298,27 +13298,27 @@
       "attempt": 1,
       "workflow": "bluesky_dashboard",
       "created_at": "2026-08-31T13:38:24Z",
-      "updated_at": "2026-08-31T13:38:30Z",
-      "status": "in_progress",
-      "conclusion": null
+      "updated_at": "2026-08-31T13:45:05Z",
+      "status": "completed",
+      "conclusion": "success"
     },
     {
       "id": 33398074329,
       "attempt": 1,
       "workflow": "codeql",
       "created_at": "2026-08-31T13:38:24Z",
-      "updated_at": "2026-08-31T13:38:30Z",
-      "status": "in_progress",
-      "conclusion": null
+      "updated_at": "2026-08-31T13:39:46Z",
+      "status": "completed",
+      "conclusion": "success"
     },
     {
       "id": 33398074400,
       "attempt": 1,
       "workflow": "python_tests",
       "created_at": "2026-08-31T13:38:24Z",
-      "updated_at": "2026-08-31T13:38:29Z",
-      "status": "in_progress",
-      "conclusion": null
+      "updated_at": "2026-08-31T13:38:54Z",
+      "status": "completed",
+      "conclusion": "success"
     },
     {
       "id": 33398074386,
@@ -13335,6 +13335,51 @@
       "workflow": "validate_runtime_config",
       "created_at": "2026-08-31T13:38:24Z",
       "updated_at": "2026-08-31T13:38:40Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 33401199262,
+      "attempt": 1,
+      "workflow": "bluesky_dashboard",
+      "created_at": "2026-08-31T14:11:36Z",
+      "updated_at": "2026-08-31T14:11:40Z",
+      "status": "in_progress",
+      "conclusion": null
+    },
+    {
+      "id": 33401199192,
+      "attempt": 1,
+      "workflow": "codeql",
+      "created_at": "2026-08-31T14:11:36Z",
+      "updated_at": "2026-08-31T14:11:41Z",
+      "status": "in_progress",
+      "conclusion": null
+    },
+    {
+      "id": 33401199284,
+      "attempt": 1,
+      "workflow": "python_tests",
+      "created_at": "2026-08-31T14:11:36Z",
+      "updated_at": "2026-08-31T14:11:41Z",
+      "status": "in_progress",
+      "conclusion": null
+    },
+    {
+      "id": 33401199222,
+      "attempt": 1,
+      "workflow": "ruff_quality",
+      "created_at": "2026-08-31T14:11:36Z",
+      "updated_at": "2026-08-31T14:11:56Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 33401199281,
+      "attempt": 1,
+      "workflow": "validate_runtime_config",
+      "created_at": "2026-08-31T14:11:36Z",
+      "updated_at": "2026-08-31T14:11:57Z",
       "status": "completed",
       "conclusion": "success"
     }
@@ -13530,7 +13575,7 @@
   "operational_observations": [
     {
       "period_start": "2026-08-31T12:00:00+00:00",
-      "collected_at": "2026-08-31T13:38:48.677488+00:00",
+      "collected_at": "2026-08-31T14:11:59.067482+00:00",
       "providers": [
         {
           "name": "icanhazdadjoke",
@@ -13619,7 +13664,7 @@
         }
       ],
       "posting_delivery": {
-        "current_streak": 17,
+        "current_streak": 18,
         "windows": {
           "7": {
             "expected": 42,
