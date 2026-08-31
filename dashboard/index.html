@@ -15,17 +15,23 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css?v=18" />
+    <noscript>
+      <style>
+        .dashboard-view-nav { display: none; }
+        [role="tabpanel"][hidden] { display: block; }
+      </style>
+    </noscript>
+    <link rel="stylesheet" href="styles.css?v=19" />
     <script
       src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"
       defer
     ></script>
-    <script src="app.js?v=15" defer></script>
+    <script src="app.js?v=16" defer></script>
   </head>
   <body>
     <noscript>
       <div class="noscript-banner">
-        Dashboard charts require JavaScript.
+        Live dashboard values and charts require JavaScript. Both dashboard views are shown below.
         <a href="https://bsky.app/profile/thejokebot.bsky.social">View The Joke Bot on Bluesky</a>.
       </div>
     </noscript>
@@ -50,7 +56,15 @@
       <img src="images/jokebot_cover.png" alt="" />
     </div>
 
+    <nav class="dashboard-view-nav" aria-label="Dashboard views">
+      <div class="dashboard-tabs section-inner" role="tablist" aria-label="Dashboard view">
+        <button id="audience-tab" type="button" role="tab" aria-selected="true" aria-controls="audience-panel" tabindex="0" data-dashboard-view="audience">Audience</button>
+        <button id="operations-tab" type="button" role="tab" aria-selected="false" aria-controls="operations-panel" tabindex="-1" data-dashboard-view="operations">Operations</button>
+      </div>
+    </nav>
+
     <main>
+      <div id="audience-panel" role="tabpanel" aria-labelledby="audience-tab" data-dashboard-panel="audience">
       <section class="latest-band" aria-labelledby="latest-heading">
         <div class="section-inner latest-layout">
           <div class="section-intro">
@@ -97,9 +111,9 @@
               <h2 id="trends-heading">Growth over time</h2>
             </div>
             <div class="range-control" role="group" aria-label="Chart date range">
-              <button type="button" data-range="7">7 days</button>
-              <button type="button" data-range="30" class="active">30 days</button>
-              <button type="button" data-range="all">All</button>
+              <button type="button" data-range="7" aria-pressed="false">7 days</button>
+              <button type="button" data-range="30" aria-pressed="true" class="active">30 days</button>
+              <button type="button" data-range="all" aria-pressed="false">All</button>
             </div>
             <p class="history-status" id="history-status" role="status" hidden></p>
           </div>
@@ -171,7 +185,7 @@
               <small>Rolling 30 days</small>
             </div>
             <div class="discovery-stat">
-              <span>Completion</span>
+              <span>Follow success rate</span>
               <strong id="discovery-completion">--</strong>
               <small id="discovery-zero-runs">No run history yet</small>
             </div>
@@ -314,9 +328,9 @@
               <h2 id="top-posts-heading">Top joke posts</h2>
             </div>
             <div id="top-post-range" class="range-control" role="group" aria-label="Top joke post date range">
-              <button type="button" data-top-range="7">7 days</button>
-              <button type="button" data-top-range="30" class="active">30 days</button>
-              <button type="button" data-top-range="all">All</button>
+              <button type="button" data-top-range="7" aria-pressed="false">7 days</button>
+              <button type="button" data-top-range="30" aria-pressed="true" class="active">30 days</button>
+              <button type="button" data-top-range="all" aria-pressed="false">All</button>
             </div>
           </div>
           <div id="top-posts" class="post-grid"></div>
@@ -324,6 +338,9 @@
         </div>
       </section>
 
+      </div>
+
+      <div id="operations-panel" role="tabpanel" aria-labelledby="operations-tab" data-dashboard-panel="operations" hidden>
       <section class="dashboard-section operations-section" aria-labelledby="operations-heading">
         <div class="section-inner">
           <div class="section-heading operations-heading">
@@ -411,10 +428,11 @@
           </div>
 
           <div class="operations-layout">
-            <article class="operations-block" aria-labelledby="providers-heading">
+            <details class="operations-detail">
+              <summary><strong id="providers-heading">Joke provider mix</strong><span>View detailed provider data</span></summary>
+              <article class="operations-block" aria-labelledby="providers-heading">
               <div class="operations-block-heading">
                 <div>
-                  <h3 id="providers-heading">Joke provider mix</h3>
                   <p>Publications retained in the rolling joke history</p>
                 </div>
                 <strong id="retained-publications">--</strong>
@@ -440,12 +458,14 @@
                 length, malformed-response, and API failures. Detailed rejection counters begin with the
                 telemetry release; earlier fall-throughs remain aggregate-only.
               </p>
-            </article>
+              </article>
+            </details>
 
-            <article class="operations-block" aria-labelledby="workflows-heading">
+            <details class="operations-detail">
+              <summary><strong id="workflows-heading">Workflow reliability</strong><span>View detailed workflow data</span></summary>
+              <article class="operations-block" aria-labelledby="workflows-heading">
               <div class="operations-block-heading">
                 <div>
-                  <h3 id="workflows-heading">Workflow reliability</h3>
                   <p>Named first-party automation only</p>
                 </div>
               </div>
@@ -464,10 +484,12 @@
                   <tbody></tbody>
                 </table>
               </div>
-            </article>
+              </article>
+            </details>
           </div>
         </div>
       </section>
+      </div>
 
     </main>
 

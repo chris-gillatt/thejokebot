@@ -77,12 +77,7 @@ jobs:
           enablement: true
 
       - name: Prepare Pages artifact
-        run: |
-          mkdir -p .agent-tmp/pages/images
-          cp -R dashboard/. .agent-tmp/pages/
-          cp images/jokebot_cover.png .agent-tmp/pages/images/jokebot_cover.png
-          cp images/jokebot_logo.webp .agent-tmp/pages/images/jokebot_logo.webp
-          touch .agent-tmp/pages/.nojekyll
+        run: ./scripts/prepare-dashboard-pages.sh
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5

@@ -145,6 +145,50 @@ summary {
   filter: saturate(0.9) contrast(0.95);
 }
 
+.dashboard-view-nav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--white);
+  border-bottom: 1px solid var(--line);
+}
+
+.dashboard-tabs {
+  min-height: 58px;
+  display: flex;
+  align-items: end;
+  gap: 30px;
+}
+
+.dashboard-tabs button {
+  min-height: 58px;
+  padding: 0 2px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font: 700 0.9rem/1 var(--font-display);
+}
+
+.dashboard-tabs button:hover {
+  color: var(--ink);
+}
+
+.dashboard-tabs button[aria-selected="true"] {
+  border-bottom-color: var(--blue);
+  color: var(--ink);
+}
+
+.dashboard-tabs button:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: -6px;
+}
+
+[role="tabpanel"][hidden] {
+  display: none;
+}
+
 .section-inner {
   width: min(var(--content), calc(100% - 48px));
   margin-inline: auto;
@@ -1116,6 +1160,44 @@ td:first-child {
   gap: 52px;
 }
 
+.operations-detail {
+  margin: 0;
+  color: var(--white);
+}
+
+.operations-detail > summary {
+  width: 100%;
+  min-height: 58px;
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border-top: 1px solid #31516a;
+  border-bottom: 1px solid #31516a;
+  color: var(--white);
+  list-style-position: inside;
+}
+
+.operations-detail > summary strong {
+  font: 700 1rem/1.2 var(--font-display);
+}
+
+.operations-detail > summary span {
+  color: #b8cedd;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.operations-detail[open] > summary {
+  margin-bottom: 18px;
+  border-top-color: var(--cyan);
+}
+
+.operations-detail > .operations-block {
+  padding-bottom: 14px;
+}
+
 .operations-block {
   min-width: 0;
 }
@@ -1456,6 +1538,15 @@ footer a {
     height: 78px;
   }
 
+  .dashboard-tabs {
+    min-height: 52px;
+    gap: 24px;
+  }
+
+  .dashboard-tabs button {
+    min-height: 52px;
+  }
+
   .section-inner {
     width: min(100% - 28px, var(--content));
   }
@@ -1523,6 +1614,18 @@ footer a {
 
   .operations-table-scroll {
     background: transparent;
+  }
+
+  .operations-layout {
+    gap: 0;
+  }
+
+  .operations-detail > summary {
+    min-height: 54px;
+    padding-inline: 12px;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
   }
 
   .operations-table,

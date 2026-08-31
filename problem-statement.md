@@ -32,6 +32,27 @@ changelog in this file is intentionally brief.
 
 ## 5. Active Backlog
 
+### 5.52 Improve dashboard hierarchy and local preview ✓ Complete
+**Priority: Medium**
+
+Separate the public dashboard into Audience and Operations views so visitor-facing
+statistics are not presented at the same visual priority as maintainer diagnostics.
+Use accessible, deep-linkable tabs; keep operational summaries and alerts visible;
+and collapse the dense provider and workflow tables by default. Clarify discovery
+follow success, expose selected date ranges to assistive technology, and share one
+GitHub Pages staging path between deployment and local preview.
+
+Acceptance criteria:
+- Audience is the default view and Operations is directly addressable by URL hash.
+- Tabs support pointer, keyboard, browser-history, focus, and no-script use.
+- Date-range controls expose their selected state, and discovery labels describe
+  successful follows divided by selected accounts without changing the data schema.
+- Operational alerts and summary metrics remain immediately visible while provider
+  and workflow tables use accessible disclosures on desktop and mobile.
+- Local preview reproduces the deployed artifact layout, including dashboard images.
+- Focused tests and desktop/mobile browser checks cover semantics, navigation,
+  overflow, chart pixels, asset loading, and expanded operational records.
+
 ### 5.35 Publish a GitHub Pages statistics dashboard (Issue #62) ✓ Complete
 **Priority: Medium**
 

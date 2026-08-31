@@ -7,6 +7,7 @@ let metrics;
 let historyMetrics;
 let selectedRange = "30";
 let selectedTopRange = "30";
+const dashboardViews = ["audience", "operations"];
 
 const numberFormat = new Intl.NumberFormat("en-GB");
 const percentageFormat = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 1 });
@@ -31,6 +32,52 @@ const dateTimeFormat = new Intl.DateTimeFormat("en-GB", {
 
 function setText(id, value) {
   document.getElementById(id).textContent = value;
+}
+
+function dashboardViewFromHash() {
+  const view = window.location.hash.slice(1);
+  return dashboardViews.includes(view) ? view : "audience";
+}
+
+function showDashboardView(view) {
+  const selectedView = dashboardViews.includes(view) ? view : "audience";
+  document.querySelectorAll("[data-dashboard-view]").forEach((tab) => {
+    const selected = tab.dataset.dashboardView === selectedView;
+    tab.setAttribute("aria-selected", String(selected));
+    tab.tabIndex = selected ? 0 : -1;
+  });
+  document.querySelectorAll("[data-dashboard-panel]").forEach((panel) => {
+    panel.hidden = panel.dataset.dashboardPanel !== selectedView;
+  });
+  if (selectedView === "audience") {
+    requestAnimationFrame(() => Object.values(charts).forEach((chart) => chart.resize()));
+  }
+}
+
+function selectDashboardView(view) {
+  if (window.location.hash === `#${view}`) showDashboardView(view);
+  else window.location.hash = view;
+}
+
+function bindDashboardViews() {
+  const tabs = [...document.querySelectorAll("[data-dashboard-view]")];
+  tabs.forEach((tab, index) => {
+    tab.addEventListener("click", () => selectDashboardView(tab.dataset.dashboardView));
+    tab.addEventListener("keydown", (event) => {
+      let targetIndex;
+      if (event.key === "ArrowLeft") targetIndex = (index - 1 + tabs.length) % tabs.length;
+      else if (event.key === "ArrowRight") targetIndex = (index + 1) % tabs.length;
+      else if (event.key === "Home") targetIndex = 0;
+      else if (event.key === "End") targetIndex = tabs.length - 1;
+      else return;
+      event.preventDefault();
+      const target = tabs[targetIndex];
+      selectDashboardView(target.dataset.dashboardView);
+      target.focus();
+    });
+  });
+  window.addEventListener("hashchange", () => showDashboardView(dashboardViewFromHash()));
+  showDashboardView(dashboardViewFromHash());
 }
 
 function metricText(value) {
@@ -897,7 +944,9 @@ function bindRangeControls() {
     button.addEventListener("click", async () => {
       selectedRange = button.dataset.range;
       document.querySelectorAll("[data-range]").forEach((item) => {
-        item.classList.toggle("active", item === button);
+        const selected = item === button;
+        item.classList.toggle("active", selected);
+        item.setAttribute("aria-pressed", String(selected));
       });
       if (selectedRange === "all") await loadHistory();
       renderAudienceChart();
@@ -909,7 +958,9 @@ function bindRangeControls() {
     button.addEventListener("click", () => {
       selectedTopRange = button.dataset.topRange;
       document.querySelectorAll("[data-top-range]").forEach((item) => {
-        item.classList.toggle("active", item === button);
+        const selected = item === button;
+        item.classList.toggle("active", selected);
+        item.setAttribute("aria-pressed", String(selected));
       });
       renderTopPosts();
     });
@@ -917,6 +968,7 @@ function bindRangeControls() {
 }
 
 async function initialise() {
+  bindDashboardViews();
   try {
     const response = await fetch(DATA_URL);
     if (!response.ok) throw new Error(`Metrics request failed: ${response.status}`);

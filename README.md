@@ -54,9 +54,20 @@ also shown by day.
 Normalised public telemetry is retained indefinitely in UTC monthly JSON files.
 The initial dashboard payload contains current and rolling 30-day data; selecting
 the all-time range lazily loads daily points derived from the canonical monthly
-history. Detailed workflow, provider, moderation, and social cards remain rolling
-operational views. Dashboard data contains no follower, liker, replier, or other
-audience DIDs, raw workflow logs, or raw API responses.
+history. The default Audience view presents public account and engagement trends;
+the Operations view contains rolling workflow, provider, moderation, and delivery
+health. Discovery follow success is successful follows divided by selected
+accounts. Dashboard data contains no follower, liker, replier, or other audience
+DIDs, raw workflow logs, or raw API responses.
+
+Preview the same staged artifact used by GitHub Pages with:
+
+```bash
+./scripts/preview-dashboard.sh
+```
+
+The preview is served at <http://localhost:8765/>. Set
+`DASHBOARD_PREVIEW_PORT` to use a different local port.
 
 ## Quick start (local)
 
