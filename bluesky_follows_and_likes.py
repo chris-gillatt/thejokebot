@@ -419,7 +419,9 @@ def _process_starter_pack_page(
     return False
 
 
-def _collect_starter_pack_attribution(client, state: dict, now: datetime) -> dict | None:
+def _collect_starter_pack_attribution(
+    client, state: dict, now: datetime
+) -> dict | None:
     """Collect a complete incremental scan of starter-pack follow attribution."""
     attribution = bluesky_state.get_starter_pack_attribution(state)
     high_water = attribution.get("high_water_indexed_at")
@@ -444,12 +446,14 @@ def _collect_starter_pack_attribution(client, state: dict, now: datetime) -> dic
     for _ in range(_STARTER_PACK_MAX_PAGES):
         try:
             response = retry_network_call(
-                lambda current_cursor=cursor: client.app.bsky.notification.list_notifications(
-                    params={
-                        "cursor": current_cursor,
-                        "limit": _STARTER_PACK_PAGE_LIMIT,
-                        "reasons": ["follow"],
-                    }
+                lambda current_cursor=cursor: (
+                    client.app.bsky.notification.list_notifications(
+                        params={
+                            "cursor": current_cursor,
+                            "limit": _STARTER_PACK_PAGE_LIMIT,
+                            "reasons": ["follow"],
+                        }
+                    )
                 ),
                 description="listing starter-pack follow notifications",
             )
@@ -459,7 +463,9 @@ def _collect_starter_pack_attribution(client, state: dict, now: datetime) -> dic
             atproto_client.exceptions.NetworkError,
             atproto_client.exceptions.RequestException,
         ) as exc:
-            print(f"{Fore.RED}Failed to fetch starter-pack follows: {exc}{Style.RESET_ALL}")
+            print(
+                f"{Fore.RED}Failed to fetch starter-pack follows: {exc}{Style.RESET_ALL}"
+            )
             return None
 
         complete = _process_starter_pack_page(
@@ -493,7 +499,9 @@ def _collect_starter_pack_attribution(client, state: dict, now: datetime) -> dic
         "observations": page_state["observations"],
         "cutoff_date": (
             now - timedelta(days=bluesky_state.STARTER_PACK_ATTRIBUTION_RETENTION_DAYS)
-        ).date().isoformat(),
+        )
+        .date()
+        .isoformat(),
     }
 
 

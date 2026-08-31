@@ -680,12 +680,8 @@ def record_starter_pack_attribution_scan(
             continue
         pack = packs.setdefault(pack_uri, {"daily_counts": {}})
         pack["name"] = str(observation.get("name") or "Starter pack").strip()
-        pack["creator_handle"] = str(
-            observation.get("creator_handle") or ""
-        ).strip()
-        pack["last_observed_at"] = str(
-            observation.get("observed_at") or checked_at
-        )
+        pack["creator_handle"] = str(observation.get("creator_handle") or "").strip()
+        pack["last_observed_at"] = str(observation.get("observed_at") or checked_at)
         daily_counts = pack.setdefault("daily_counts", {})
         daily_counts[observed_date] = int(daily_counts.get(observed_date) or 0) + 1
 

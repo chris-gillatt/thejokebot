@@ -3277,7 +3277,9 @@ class FollowGraceTests(unittest.TestCase):
         attribution = bluesky_state.get_starter_pack_attribution(state)
         self.assertEqual(attribution["coverage_started_at"], "2026-08-01T00:00:00Z")
         self.assertEqual(attribution["last_checked_at"], "2026-08-31T12:00:00Z")
-        self.assertEqual(attribution["boundary_notification_hashes"], ["hash-a", "hash-b"])
+        self.assertEqual(
+            attribution["boundary_notification_hashes"], ["hash-a", "hash-b"]
+        )
         self.assertNotIn(
             "at://did:plc:old/app.bsky.graph.starterpack/old",
             attribution["packs"],
