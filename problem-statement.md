@@ -38,17 +38,17 @@ changelog in this file is intentionally brief.
 Separate the public dashboard into Audience and Operations views so visitor-facing
 statistics are not presented at the same visual priority as maintainer diagnostics.
 Use accessible, deep-linkable tabs; keep operational summaries and alerts visible;
-and collapse the dense provider and workflow tables by default. Clarify discovery
-follow success, expose selected date ranges to assistive technology, and share one
-GitHub Pages staging path between deployment and local preview.
+and show complete provider and workflow tables in the Operations view. Clarify
+discovery follow success, expose selected date ranges to assistive technology, and
+share one GitHub Pages staging path between deployment and local preview.
 
 Acceptance criteria:
 - Audience is the default view and Operations is directly addressable by URL hash.
 - Tabs support pointer, keyboard, browser-history, focus, and no-script use.
 - Date-range controls expose their selected state, and discovery labels describe
   successful follows divided by selected accounts without changing the data schema.
-- Operational alerts and summary metrics remain immediately visible while provider
-  and workflow tables use accessible disclosures on desktop and mobile.
+- Operational alerts, summary metrics, provider data, and workflow data remain
+  fully visible on desktop and mobile without nested expansion controls.
 - Local preview reproduces the deployed artifact layout, including dashboard images.
 - Focused tests and desktop/mobile browser checks cover semantics, navigation,
   overflow, chart pixels, asset loading, and expanded operational records.

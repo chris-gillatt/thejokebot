@@ -21,7 +21,7 @@
         [role="tabpanel"][hidden] { display: block; }
       </style>
     </noscript>
-    <link rel="stylesheet" href="styles.css?v=19" />
+    <link rel="stylesheet" href="styles.css?v=20" />
     <script
       src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"
       defer
@@ -428,11 +428,10 @@
           </div>
 
           <div class="operations-layout">
-            <details class="operations-detail">
-              <summary><strong id="providers-heading">Joke provider mix</strong><span>View detailed provider data</span></summary>
-              <article class="operations-block" aria-labelledby="providers-heading">
+            <article class="operations-block" aria-labelledby="providers-heading">
               <div class="operations-block-heading">
                 <div>
+                  <h3 id="providers-heading">Joke provider mix</h3>
                   <p>Publications retained in the rolling joke history</p>
                 </div>
                 <strong id="retained-publications">--</strong>
@@ -458,14 +457,12 @@
                 length, malformed-response, and API failures. Detailed rejection counters begin with the
                 telemetry release; earlier fall-throughs remain aggregate-only.
               </p>
-              </article>
-            </details>
+            </article>
 
-            <details class="operations-detail">
-              <summary><strong id="workflows-heading">Workflow reliability</strong><span>View detailed workflow data</span></summary>
-              <article class="operations-block" aria-labelledby="workflows-heading">
+            <article class="operations-block" aria-labelledby="workflows-heading">
               <div class="operations-block-heading">
                 <div>
+                  <h3 id="workflows-heading">Workflow reliability</h3>
                   <p>Named first-party automation only</p>
                 </div>
               </div>
@@ -484,8 +481,7 @@
                   <tbody></tbody>
                 </table>
               </div>
-              </article>
-            </details>
+            </article>
           </div>
         </div>
       </section>

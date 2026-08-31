@@ -101,27 +101,23 @@ class DashboardUiTests(unittest.TestCase):
                 1,
             )
 
-    def test_operational_overview_precedes_collapsed_tables(self):
+    def test_operational_overview_and_tables_are_fully_visible(self):
         operations_panel = self.by_id["operations-panel"]
         details = [
             node for node in operations_panel.descendants() if node.tag == "details"
         ]
 
-        self.assertEqual(len(details), 2)
+        self.assertEqual(details, [])
         for element_id in (
             "operational-pulse",
             "automation-rate",
             "posting-delivery-rate",
+            "provider-table",
+            "workflow-table",
         ):
-            self.assertNotIn(self.by_id[element_id].parent, details)
-            self.assertFalse(
-                any(
-                    ancestor is not None and ancestor in details
-                    for ancestor in self._ancestors(self.by_id[element_id])
-                )
+            self.assertTrue(
+                self._has_ancestor(self.by_id[element_id], operations_panel)
             )
-        self.assertTrue(self._has_ancestor(self.by_id["provider-table"], details[0]))
-        self.assertTrue(self._has_ancestor(self.by_id["workflow-table"], details[1]))
         self.assertEqual(
             self.by_id["provider-table"].parent.parent.attributes["aria-labelledby"],
             "providers-heading",
