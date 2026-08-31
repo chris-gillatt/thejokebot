@@ -158,6 +158,7 @@ _DEFAULT_CONFIG = {
             "dehler55.bsky.social",
             "dadreplybot.bsky.social",
             "docatcdi.com",
+            "chthonicionic.bsky.social",
         ],
     },
     "follows_and_likes": {
