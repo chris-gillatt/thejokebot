@@ -103,7 +103,7 @@ This runs:
 - Ruff lint (`ruff check .`)
 - Ruff format check (`ruff format --check .`)
 - Workflow lint (`./scripts/lint-workflows.sh`, powered by actionlint)
-- Unit tests (`pytest tests/ -v --tb=short`)
+- Unit tests with application coverage (`pytest-cov`, minimum 75%)
 - Local CodeQL analysis (required by default)
 
 Linting/format checks and tests are a single validation gate in this repository;
@@ -119,7 +119,17 @@ If you only want to run the unit test suite locally (without Ruff/CodeQL), run:
 
 - `./scripts/test-local.sh`
 
-Equivalent GitHub Actions workflow: `python_tests` (runs `python -m pytest tests/ -v --tb=short` on PRs and `main`).
+Equivalent GitHub Actions workflow: `python_tests`. It generates `coverage.xml`,
+submits the analysis to SonarQube Cloud, and fails when either the 75% application
+coverage floor or the Sonar quality gate is not met. Sonar analysis runs for
+`main`, manual dispatches, and trusted pull-request branches; fork pull requests
+do not receive the repository token.
+
+CI-based Sonar analysis requires a repository Actions secret named
+`SONAR_TOKEN`. The same secret must be configured for Dependabot if its pull
+requests are expected to run analysis. Automatic analysis must remain disabled
+under the SonarQube Cloud project's **Administration → Analysis Method** settings
+to prevent duplicate, conflicting analyses.
 
 If you prefer a direct one-liner without the helper script:
 

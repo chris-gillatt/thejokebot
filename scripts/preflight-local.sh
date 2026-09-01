@@ -43,7 +43,11 @@ echo "==> Ruff format check"
 "$REPO_ROOT/scripts/lint-workflows.sh"
 
 echo "==> Unit tests"
-"${PYTHON[@]}" -m pytest tests/ -v --tb=short
+"${PYTHON[@]}" -m pytest tests/ -v --tb=short \
+  --cov \
+  --cov-report=term \
+  --cov-report=xml:coverage.xml \
+  --cov-fail-under=75
 
 if command -v codeql >/dev/null 2>&1; then
   CODEQL_TMP="$REPO_ROOT/.agent-tmp/codeql-local"

@@ -10,8 +10,9 @@ extend-select = ["C901"]
 max-complexity = 10
 
 [tool.coverage.run]
-# Measure all first-party source files; skip read-only submodules.
-omit = ["references/**"]
+# Measure first-party application code; skip tests and read-only submodules.
+omit = ["references/**", "tests/**"]
+relative_files = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

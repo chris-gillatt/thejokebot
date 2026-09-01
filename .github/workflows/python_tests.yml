@@ -55,4 +55,16 @@ jobs:
 
       - name: Run unit tests
         if: github.event_name == 'workflow_dispatch' || steps.changed_files.outputs.non_docs == 'true'
-        run: python -m pytest tests/ -v --tb=short --cov --cov-fail-under=75
+        run: python -m pytest tests/ -v --tb=short --cov --cov-report=term --cov-report=xml:coverage.xml --cov-fail-under=75
+
+      - name: Run SonarQube Cloud analysis
+        if: >
+          (github.event_name == 'workflow_dispatch' || steps.changed_files.outputs.non_docs == 'true') &&
+          (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: SonarSource/sonarqube-scan-action@v8.2.1
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.qualitygate.wait=true
+            -Dsonar.qualitygate.timeout=300

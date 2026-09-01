@@ -32,6 +32,15 @@ changelog in this file is intentionally brief.
 
 ## 5. Active Backlog
 
+### 5.53 Enforce Sonar quality and coverage in CI ✓ Complete
+**Priority: High**
+
+Run CI-based SonarQube Cloud analysis after the Python test suite, import an
+application-only XML coverage report, and wait for the project quality gate so
+failed new-code standards block the workflow. Keep the scanner token in GitHub
+Actions and Dependabot secrets, skip token access for fork pull requests, and
+disable Sonar automatic analysis to prevent duplicate submissions.
+
 ### 5.52 Improve dashboard hierarchy and local preview ✓ Complete
 **Priority: Medium**
 
@@ -164,10 +173,10 @@ both the header and footer.
 All first-party quality tooling now excludes the read-only `references/`
 submodules explicitly. Ruff and coverage retain their root exclusions; pytest
 declares first-party test discovery; Pylance suppresses reference analysis;
-SonarCloud excludes reference, runtime-state, generated dashboard-data, image,
-temporary, and bundled resource paths; and local plus GitHub CodeQL share one
-`paths-ignore` configuration. Actionlint was verified to discover only the root
-repository's workflow directory.
+CI-based SonarQube Cloud analysis excludes reference, runtime-state, generated
+dashboard-data, image, temporary, and bundled resource paths; and local plus
+GitHub CodeQL share one `paths-ignore` configuration. Actionlint was verified to
+discover only the root repository's workflow directory.
 
 ### 5.42 Clarify dashboard workflow status and ranking ✓ Complete
 **Priority: Medium**
