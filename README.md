@@ -16,6 +16,7 @@
 			<a href="https://github.com/chris-gillatt/thejokebot/actions/workflows/ruff_quality.yml"><img src="https://github.com/chris-gillatt/thejokebot/actions/workflows/ruff_quality.yml/badge.svg" alt="ruff_quality" /></a>
 			<a href="https://github.com/chris-gillatt/thejokebot/actions/workflows/validate_runtime_config.yml"><img src="https://github.com/chris-gillatt/thejokebot/actions/workflows/validate_runtime_config.yml/badge.svg" alt="validate_runtime_config" /></a><br />
 			<a href="https://github.com/chris-gillatt/thejokebot/actions/workflows/codeql.yml"><img src="https://github.com/chris-gillatt/thejokebot/actions/workflows/codeql.yml/badge.svg" alt="codeql" /></a><br />
+			<a href="https://sonarcloud.io/summary/overall?id=chris-gillatt_thejokebot"><img src="https://sonarcloud.io/api/project_badges/measure?project=chris-gillatt_thejokebot&amp;metric=alert_status" alt="SonarCloud quality gate" /></a><br />
 			<a href="https://github.com/chris-gillatt/thejokebot/actions/workflows/dependabot-auto-merge.yml"><img src="https://github.com/chris-gillatt/thejokebot/actions/workflows/dependabot-auto-merge.yml/badge.svg" alt="pr_auto_merge" /></a>
 		</td>
 	</tr>

@@ -163,9 +163,11 @@ both the header and footer.
 
 All first-party quality tooling now excludes the read-only `references/`
 submodules explicitly. Ruff and coverage retain their root exclusions; pytest
-declares first-party test discovery; Pylance suppresses reference analysis; and
-local plus GitHub CodeQL share one `paths-ignore` configuration. Actionlint was
-verified to discover only the root repository's workflow directory.
+declares first-party test discovery; Pylance suppresses reference analysis;
+SonarCloud excludes reference, runtime-state, generated dashboard-data, image,
+temporary, and bundled resource paths; and local plus GitHub CodeQL share one
+`paths-ignore` configuration. Actionlint was verified to discover only the root
+repository's workflow directory.
 
 ### 5.42 Clarify dashboard workflow status and ranking ✓ Complete
 **Priority: Medium**
