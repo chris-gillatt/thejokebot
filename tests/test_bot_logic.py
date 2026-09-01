@@ -2831,6 +2831,7 @@ class FollowBackTests(unittest.TestCase):
                 "failed": 0,
             },
         )
+        self.assertNotIn("protected", summary, "follow_back must not set 'protected'")
 
     def test_follow_back_does_not_mutate_after_incomplete_graph_snapshot(self):
         client = mock.Mock()
