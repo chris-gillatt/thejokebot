@@ -2751,6 +2751,44 @@ class BlockReconciliationTests(unittest.TestCase):
 
 
 class FollowBackTests(unittest.TestCase):
+    def test_follow_back_uses_extended_graph_pagination_limits(self):
+        client = mock.Mock()
+        client.me.did = "did:plc:bot"
+
+        with mock.patch(
+            "bluesky_follows_and_likes.fetch_paginated_data",
+            side_effect=[[], []],
+        ) as fetch_paginated_data:
+            bluesky_follows_and_likes.follow_back(
+                client,
+                "jokebot.bsky.social",
+                dry_run=False,
+                action_delay_seconds=0,
+            )
+
+        self.assertEqual(fetch_paginated_data.call_count, 2)
+        follower_call, following_call = fetch_paginated_data.call_args_list
+        self.assertIs(follower_call.args[0], client.get_followers)
+        self.assertEqual(
+            follower_call.kwargs,
+            {
+                "actor": "did:plc:bot",
+                "limit": 100,
+                "max_pages": 1000,
+                "max_runtime_seconds": 180,
+            },
+        )
+        self.assertIs(following_call.args[0], client.get_follows)
+        self.assertEqual(
+            following_call.kwargs,
+            {
+                "actor": "did:plc:bot",
+                "limit": 100,
+                "max_pages": 1000,
+                "max_runtime_seconds": 180,
+            },
+        )
+
     def test_follow_back_skips_dids_in_unfollow_history(self):
         unfollowed_did = "did:plc:unfollowed"
         follower_profile = SimpleNamespace(did=unfollowed_did)
