@@ -2773,9 +2773,9 @@ class FollowBackTests(unittest.TestCase):
             follower_call.kwargs,
             {
                 "actor": "did:plc:bot",
-                "limit": 100,
-                "max_pages": 1000,
-                "max_runtime_seconds": 180,
+                "limit": bluesky_follows_and_likes._FOLLOW_BACK_PAGE_LIMIT,
+                "max_pages": bluesky_follows_and_likes._FOLLOW_BACK_MAX_PAGES,
+                "max_runtime_seconds": bluesky_follows_and_likes._FOLLOW_BACK_MAX_RUNTIME_SECONDS,
             },
         )
         self.assertIs(following_call.args[0], client.get_follows)
@@ -2783,9 +2783,9 @@ class FollowBackTests(unittest.TestCase):
             following_call.kwargs,
             {
                 "actor": "did:plc:bot",
-                "limit": 100,
-                "max_pages": 1000,
-                "max_runtime_seconds": 180,
+                "limit": bluesky_follows_and_likes._FOLLOW_BACK_PAGE_LIMIT,
+                "max_pages": bluesky_follows_and_likes._FOLLOW_BACK_MAX_PAGES,
+                "max_runtime_seconds": bluesky_follows_and_likes._FOLLOW_BACK_MAX_RUNTIME_SECONDS,
             },
         )
 
