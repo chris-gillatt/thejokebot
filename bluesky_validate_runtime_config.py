@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
 import bluesky_config
@@ -19,8 +18,6 @@ WORKFLOW_FILES = {
 
 _WORKFLOW_PATH_PREFIX = ".github/workflows/"
 _WORKFLOW_FALLBACK_PREFIX = ".github/workflows-disabled/"
-
-_CRON_PATTERN = re.compile(r'^\s*-\s*cron:\s*"([^"]+)"(?:\s+#.*)?\s*$', re.MULTILINE)
 
 
 def _estimate_runs_per_week(cron: str) -> float | None:
@@ -64,10 +61,18 @@ def _extract_cron(workflow_path: Path) -> str | None:
     except OSError:
         return None
 
-    match = _CRON_PATTERN.search(content)
-    if not match:
-        return None
-    return match.group(1).strip()
+    prefix = "- cron:"
+    for line in content.splitlines():
+        stripped = line.strip()
+        if not stripped.startswith(prefix):
+            continue
+        quoted = stripped.removeprefix(prefix).strip()
+        if not quoted.startswith('"'):
+            continue
+        value, separator, suffix = quoted[1:].partition('"')
+        if separator and (not suffix.strip() or suffix.lstrip().startswith("#")):
+            return value.strip()
+    return None
 
 
 def _extract_cron_with_fallback(relative_path: str) -> tuple[str | None, str]:

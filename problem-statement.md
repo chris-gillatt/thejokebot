@@ -16,6 +16,7 @@ changelog in this file is intentionally brief.
 - Before push, sync with remote (`git pull --rebase`) because scheduled workflows can update `main`.
 - Before commit/push, run local quality checks (`ruff check`, `ruff format --check`, unit tests, and local CodeQL when available) and fix issues proactively.
 - Treat lint and tests as a combined gate for all code changes: do not consider a change validated if only tests ran without lint/format checks.
+- Require Sonar analysis to report both a passing quality gate and zero unresolved issues; either condition failing blocks delivery.
 
 ## 3. Operational Constraints
 - The project is automation-first (GitHub Actions + script execution).
@@ -40,6 +41,11 @@ application-only XML coverage report, and wait for the project quality gate so
 failed new-code standards block the workflow. Keep the scanner token in GitHub
 Actions and Dependabot secrets, skip token access for fork pull requests, and
 disable Sonar automatic analysis to prevent duplicate submissions.
+
+After each authoritative analysis, query the analysed branch or pull request and
+fail CI unless Sonar reports exactly zero unresolved issues. This explicit check
+prevents permissive quality-gate thresholds from allowing maintainability findings
+to accumulate.
 
 The README now documents local scanner installation, secure token loading,
 coverage generation, CI integration, and gate diagnosis. The project-scoped

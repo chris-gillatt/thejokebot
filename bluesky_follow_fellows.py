@@ -78,29 +78,34 @@ def follow(client, did: str):
         return False
 
 
+def _take_unseen_users(tag, users, seen, limit):
+    selected = []
+    for user in users:
+        if user in seen:
+            continue
+        seen.add(user)
+        selected.append((tag, user))
+        if len(selected) >= limit:
+            break
+    return selected
+
+
 def select_users(tag_users, tag_order, per_tag_limit, overall_limit):
     selected_users = []
     seen = set()
 
     for tag in tag_order:
-        count = 0
-        for user in tag_users[tag]:
-            if user not in seen:
-                seen.add(user)
-                selected_users.append((tag, user))
-                count += 1
-                if count >= per_tag_limit:
-                    break
+        selected_users.extend(
+            _take_unseen_users(tag, tag_users[tag], seen, per_tag_limit)
+        )
 
-    if len(selected_users) < overall_limit:
+    for tag in tag_order:
         additional_needed = overall_limit - len(selected_users)
-        overflow = []
-        for tag in tag_order:
-            for user in tag_users[tag]:
-                if user not in seen:
-                    seen.add(user)
-                    overflow.append((tag, user))
-        selected_users += overflow[:additional_needed]
+        if additional_needed <= 0:
+            break
+        selected_users.extend(
+            _take_unseen_users(tag, tag_users[tag], seen, additional_needed)
+        )
 
     return selected_users[:overall_limit]
 

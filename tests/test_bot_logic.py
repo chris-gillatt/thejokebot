@@ -53,6 +53,28 @@ class RuntimeConfigTests(unittest.TestCase):
     def tearDown(self):
         bluesky_config.clear_runtime_config_cache()
 
+    def test_extract_cron_accepts_inline_comment(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workflow_path = pathlib.Path(temp_dir) / "workflow.yml"
+            workflow_path.write_text(
+                '  - cron: "10 1 * * 3,5" # twice weekly\n', encoding="utf-8"
+            )
+
+            cron = bluesky_validate_runtime_config._extract_cron(workflow_path)
+
+        self.assertEqual(cron, "10 1 * * 3,5")
+
+    def test_extract_cron_does_not_cross_lines(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workflow_path = pathlib.Path(temp_dir) / "workflow.yml"
+            workflow_path.write_text(
+                '  - cron:\n    "10 1 * * 3,5"\n', encoding="utf-8"
+            )
+
+            cron = bluesky_validate_runtime_config._extract_cron(workflow_path)
+
+        self.assertIsNone(cron)
+
     def test_runtime_config_defaults_include_expected_sections(self):
         config = bluesky_config.get_runtime_config()
 
@@ -242,6 +264,24 @@ class RuntimeConfigTests(unittest.TestCase):
 
 
 class RuntimeConfigValidationScriptTests(unittest.TestCase):
+    def test_estimate_runs_per_week_supports_configured_cadences(self):
+        cases = {
+            "*/30 * * * *": 336.0,
+            "10 1 * * 3,5": 2.0,
+            "0 12 1 * *": 1.0 / 4.345,
+            "0 12 1 */2 *": 1.0 / (4.345 * 2),
+            "0 12 * */2 *": None,
+            "invalid": None,
+        }
+
+        for cron, expected in cases.items():
+            with self.subTest(cron=cron):
+                actual = bluesky_config.estimate_runs_per_week(cron)
+                if expected is None:
+                    self.assertIsNone(actual)
+                else:
+                    self.assertAlmostEqual(actual, expected)
+
     def test_validate_runtime_config_returns_no_errors_for_current_repo(self):
         errors = bluesky_validate_runtime_config.validate_runtime_config()
         self.assertEqual(errors, [])
@@ -300,8 +340,8 @@ class LoginClientRetryTests(unittest.TestCase):
             },
             clear=True,
         ):
-            username, password, source = bluesky_common.get_bluesky_credentials(
-                include_source=True
+            username, password, source = (
+                bluesky_common.get_bluesky_credentials_with_source()
             )
 
         self.assertEqual(username, "thejokebot.bsky.social")
@@ -318,8 +358,8 @@ class LoginClientRetryTests(unittest.TestCase):
             },
             clear=True,
         ):
-            username, password, source = bluesky_common.get_bluesky_credentials(
-                include_source=True
+            username, password, source = (
+                bluesky_common.get_bluesky_credentials_with_source()
             )
 
         self.assertEqual(username, "thejokebot.bsky.social")
@@ -1890,6 +1930,33 @@ class ReportPrRoutingTests(unittest.TestCase):
                                     )
 
         self.assertFalse(result)
+        cleanup.assert_called_once_with(branch_name)
+
+    def test_create_pr_for_proposal_returns_branch_after_creating_pr(self):
+        proposal = {"b64": "dGVzdA==", "source_provider": "jokeapi"}
+        branch_name = bluesky_create_report_prs.branch_name_for_b64(
+            proposal["b64"], "denylist"
+        )
+
+        with (
+            mock.patch(
+                "bluesky_create_report_prs.has_remote_branch", return_value=False
+            ),
+            mock.patch(
+                "bluesky_create_report_prs.has_open_pr_for_branch", return_value=False
+            ),
+            mock.patch(
+                "bluesky_create_report_prs._stage_denylist_change", return_value=True
+            ),
+            mock.patch("bluesky_create_report_prs.run_command"),
+            mock.patch("bluesky_create_report_prs._cleanup_local_branch") as cleanup,
+        ):
+            result = bluesky_create_report_prs.create_pr_for_proposal(proposal)
+
+        self.assertEqual(
+            result,
+            bluesky_create_report_prs.branch_name_for_b64(proposal["b64"], "denylist"),
+        )
         cleanup.assert_called_once_with(branch_name)
 
 

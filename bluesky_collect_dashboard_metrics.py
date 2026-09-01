@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import io
 import json
 import os
@@ -21,6 +22,7 @@ from bluesky_common import retry_network_call
 
 PUBLIC_API_BASE = "https://public.api.bsky.app/xrpc"
 GITHUB_API_BASE = "https://api.github.com"
+_UTC_OFFSET = "+00:00"
 METRICS_FILE = Path(__file__).resolve().parent / "dashboard" / "data" / "metrics.json"
 HISTORY_DIR = METRICS_FILE.parent / "history"
 SCHEMA_VERSION = 10
@@ -405,16 +407,21 @@ def _provider_activity_counts(log_text: str) -> dict | None:
 
 
 def _social_summary_counts(plain_text: str) -> dict:
-    summaries = re.findall(
-        r"Social summary: ([^\n]+), dry_run=false\.",
-        plain_text,
-    )
+    prefix = "Social summary: "
+    suffix = ", dry_run=false."
+    summaries = []
+    for line in plain_text.splitlines():
+        start = line.find(prefix)
+        if start >= 0 and line.endswith(suffix):
+            summaries.append(line[start + len(prefix) : -len(suffix)])
     if not summaries:
         return {}
-    values = {
-        field: int(value)
-        for field, value in re.findall(r"([a-z_]+)=(\d+)", summaries[-1])
-    }
+    values = {}
+    for assignment in summaries[-1].split(", "):
+        field, separator, value = assignment.partition("=")
+        if not separator or not field.replace("_", "").islower() or not value.isdigit():
+            return {}
+        values[field] = int(value)
     required = {
         "follow_back_candidates",
         "follow_back_added",
@@ -487,6 +494,94 @@ def _workflow_activity_counts(workflow_name: str, log_text: str) -> dict | None:
     return None
 
 
+def _workflow_run_candidate(
+    run: dict, cutoff: datetime, expired_before: datetime | None
+):
+    workflow_name = str(run.get("name") or "")
+    created_at = run.get("created_at")
+    run_id = run.get("id")
+    if (
+        workflow_name not in ACTIVITY_WORKFLOWS
+        or run.get("conclusion") != "success"
+        or not created_at
+        or run_id is None
+    ):
+        return None
+    created = datetime.fromisoformat(created_at.replace("Z", _UTC_OFFSET))
+    if created < cutoff or (expired_before and created <= expired_before):
+        return None
+    return workflow_name, created_at, int(run_id), created
+
+
+def _cached_workflow_run_complete(cached: dict | None, workflow_name: str) -> bool:
+    required_fields = {
+        "bluesky_follow_fellows": ("selected", "failed"),
+        "bluesky_follows_and_likes": ("social_summary_observed",),
+        "bluesky_unfollow": ("processed",),
+        "bluesky_process_reports": ("proposals",),
+        "bluesky_post_joke": ("provider_attempts",),
+    }
+    return bool(
+        cached
+        and cached.get("workflow") == workflow_name
+        and all(field in cached for field in required_fields.get(workflow_name, ()))
+    )
+
+
+def _collect_run_activity(
+    session,
+    repository,
+    token,
+    workflow_name,
+    run_id,
+    created,
+    expired_before,
+):
+    try:
+        counts = _workflow_activity_counts(
+            workflow_name,
+            fetch_workflow_run_logs(session, repository, run_id, token),
+        )
+    except (
+        OSError,
+        ValueError,
+        zipfile.BadZipFile,
+        requests.RequestException,
+    ) as exc:
+        print(f"Warning: could not collect activity from workflow run {run_id}: {exc}")
+        is_expired = (
+            isinstance(exc, requests.HTTPError)
+            and exc.response is not None
+            and exc.response.status_code == 410
+        )
+        if is_expired and (expired_before is None or created > expired_before):
+            expired_before = created
+        return None, created, expired_before
+    if counts is None:
+        print(f"Warning: workflow run {run_id} has no recognised activity summary")
+        return None, created, expired_before
+    return counts, None, expired_before
+
+
+def _previous_workflow_activity(existing: dict | None, cutoff: datetime) -> tuple:
+    previous_activity = (existing or {}).get("workflow_activity", {})
+    previous_expired_value = previous_activity.get("expired_before")
+    expired_before = (
+        datetime.fromisoformat(previous_expired_value.replace("Z", _UTC_OFFSET))
+        if previous_expired_value
+        else None
+    )
+    cached_runs = {
+        int(item["id"]): item
+        for item in previous_activity.get("runs", [])
+        if item.get("id") is not None
+        and item.get("created_at")
+        and datetime.fromisoformat(item["created_at"].replace("Z", _UTC_OFFSET))
+        >= cutoff
+    }
+    return expired_before, cached_runs
+
+
 def collect_workflow_activity(
     session,
     repository: str,
@@ -496,103 +591,35 @@ def collect_workflow_activity(
     now: datetime,
 ) -> dict:
     cutoff = now - timedelta(days=WORKFLOW_WINDOW_DAYS)
-    previous_activity = (existing or {}).get("workflow_activity", {})
-    previous_expired_value = previous_activity.get("expired_before")
-    expired_before = (
-        datetime.fromisoformat(previous_expired_value.replace("Z", "+00:00"))
-        if previous_expired_value
-        else None
-    )
-    cached_runs = {
-        int(item["id"]): item
-        for item in previous_activity.get("runs", [])
-        if item.get("id") is not None
-        and item.get("created_at")
-        and datetime.fromisoformat(item["created_at"].replace("Z", "+00:00")) >= cutoff
-    }
+    expired_before, cached_runs = _previous_workflow_activity(existing, cutoff)
     unavailable_at = []
 
     for run in workflow_runs:
-        workflow_name = str(run.get("name") or "")
-        created_at = run.get("created_at")
-        run_id = run.get("id")
+        candidate = _workflow_run_candidate(run, cutoff, expired_before)
+        if candidate is None:
+            continue
+        workflow_name, created_at, run_id, created = candidate
         attempt = int(run.get("run_attempt") or 1)
-        if (
-            workflow_name not in ACTIVITY_WORKFLOWS
-            or run.get("conclusion") != "success"
-            or not created_at
-            or run_id is None
-        ):
-            continue
-        created = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
-        if created < cutoff or (expired_before and created <= expired_before):
-            continue
-        cached = cached_runs.get(int(run_id))
+        cached = cached_runs.get(run_id)
         cached_attempt_matches = cached and int(cached.get("attempt") or 1) == attempt
-        incomplete_discovery = workflow_name == "bluesky_follow_fellows" and (
-            not cached
-            or cached.get("workflow") != workflow_name
-            or "selected" not in cached
-            or "failed" not in cached
-        )
-        incomplete_social = workflow_name == "bluesky_follows_and_likes" and (
-            not cached
-            or cached.get("workflow") != workflow_name
-            or "social_summary_observed" not in cached
-        )
-        incomplete_unfollow = workflow_name == "bluesky_unfollow" and (
-            not cached
-            or cached.get("workflow") != workflow_name
-            or "processed" not in cached
-        )
-        incomplete_moderation = workflow_name == "bluesky_process_reports" and (
-            not cached
-            or cached.get("workflow") != workflow_name
-            or "proposals" not in cached
-        )
-        incomplete_provider = workflow_name == "bluesky_post_joke" and (
-            not cached
-            or cached.get("workflow") != workflow_name
-            or "provider_attempts" not in cached
-        )
-        if (
-            cached_attempt_matches
-            and not incomplete_discovery
-            and not incomplete_social
-            and not incomplete_unfollow
-            and not incomplete_moderation
-            and not incomplete_provider
+        if cached_attempt_matches and _cached_workflow_run_complete(
+            cached, workflow_name
         ):
             continue
-        try:
-            counts = _workflow_activity_counts(
-                workflow_name,
-                fetch_workflow_run_logs(session, repository, int(run_id), token),
-            )
-        except (
-            OSError,
-            ValueError,
-            zipfile.BadZipFile,
-            requests.RequestException,
-        ) as exc:
-            print(
-                f"Warning: could not collect activity from workflow run {run_id}: {exc}"
-            )
-            unavailable_at.append(created)
-            if (
-                isinstance(exc, requests.HTTPError)
-                and exc.response is not None
-                and exc.response.status_code == 410
-                and (expired_before is None or created > expired_before)
-            ):
-                expired_before = created
+        counts, unavailable, expired_before = _collect_run_activity(
+            session,
+            repository,
+            token,
+            workflow_name,
+            run_id,
+            created,
+            expired_before,
+        )
+        if unavailable is not None:
+            unavailable_at.append(unavailable)
             continue
-        if counts is None:
-            print(f"Warning: workflow run {run_id} has no recognised activity summary")
-            unavailable_at.append(created)
-            continue
-        cached_runs[int(run_id)] = {
-            "id": int(run_id),
+        cached_runs[run_id] = {
+            "id": run_id,
             "attempt": attempt,
             "workflow": workflow_name,
             "created_at": created_at,
@@ -650,7 +677,7 @@ def _top_posts_by_window(
             created_at = record.get("createdAt") or post.get("indexedAt")
             if not created_at:
                 continue
-            created = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+            created = datetime.fromisoformat(created_at.replace("Z", _UTC_OFFSET))
             if created >= cutoff:
                 posts.append(post)
         windows[str(days)] = _top_post_summaries(posts, handle)
@@ -690,7 +717,9 @@ def _activity_by_day(
         if not created_at:
             continue
         day = (
-            datetime.fromisoformat(created_at.replace("Z", "+00:00")).date().isoformat()
+            datetime.fromisoformat(created_at.replace("Z", _UTC_OFFSET))
+            .date()
+            .isoformat()
         )
         follows[day] += max(0, int(run.get("follows") or 0))
         unfollows[day] = max(unfollows[day], max(0, int(run.get("unfollows") or 0)))
@@ -905,7 +934,7 @@ def _provider_pressure_metrics(workflow_activity: dict | None, now: datetime) ->
         runs = [
             run
             for run in observed_runs
-            if datetime.fromisoformat(run["created_at"].replace("Z", "+00:00"))
+            if datetime.fromisoformat(run["created_at"].replace("Z", _UTC_OFFSET))
             >= cutoff
         ]
         fallthroughs = sum(run["fallthrough"] for run in runs)
@@ -1002,7 +1031,7 @@ def _reconstructed_snapshots(
     coverage_value = workflow_activity.get("coverage_start")
     if not coverage_value:
         return []
-    coverage_start = datetime.fromisoformat(coverage_value.replace("Z", "+00:00"))
+    coverage_start = datetime.fromisoformat(coverage_value.replace("Z", _UTC_OFFSET))
     oldest_day = max(
         (now - timedelta(days=WORKFLOW_WINDOW_DAYS)).date(), coverage_start.date()
     )
@@ -1016,8 +1045,8 @@ def _reconstructed_snapshots(
         if day != now.date():
             snapshots.append(
                 {
-                    "period_start": f"{day_key}T23:59:59+00:00",
-                    "collected_at": f"{day_key}T23:59:59+00:00",
+                    "period_start": f"{day_key}T23:59:59{_UTC_OFFSET}",
+                    "collected_at": f"{day_key}T23:59:59{_UTC_OFFSET}",
                     "followers": None,
                     "following": max(0, following_total),
                     "profile_posts": max(0, post_total),
@@ -1036,7 +1065,7 @@ def _period_start(now: datetime) -> str:
 
 
 def _utc_month(value: str) -> str:
-    timestamp = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    timestamp = datetime.fromisoformat(value.replace("Z", _UTC_OFFSET))
     if timestamp.tzinfo is None or timestamp.utcoffset() != timedelta(0):
         raise ValueError("Dashboard history timestamps must use UTC")
     return timestamp.strftime("%Y-%m")
@@ -1180,7 +1209,7 @@ def _history_from_collection(
     starter_packs = metrics.get("starter_pack_attribution", {})
     operational = {
         "period_start": _period_start(
-            datetime.fromisoformat(metrics["generated_at"].replace("Z", "+00:00"))
+            datetime.fromisoformat(metrics["generated_at"].replace("Z", _UTC_OFFSET))
         ),
         "collected_at": metrics["generated_at"],
         "providers": providers,
@@ -1227,6 +1256,35 @@ def _history_from_collection(
     return dict(sorted(partitions.items()))
 
 
+def _history_record_months_and_identities(records: list[dict], family: str):
+    if family in {"account_observations", "operational_observations"}:
+        return (
+            [_utc_month(item["period_start"]) for item in records],
+            [item["period_start"] for item in records],
+        )
+    if family in {"activity_runs", "automation_runs"}:
+        return (
+            [_utc_month(item["created_at"]) for item in records],
+            [
+                (item["workflow"], int(item["id"]), int(item.get("attempt") or 1))
+                for item in records
+            ],
+        )
+    return ([item["date"][:7] for item in records], [item["date"] for item in records])
+
+
+def _validate_history_records(records, family: str, expected_month: str) -> None:
+    if not isinstance(records, list):
+        raise ValueError(f"Dashboard history {family} must be a list")
+    months, identities = _history_record_months_and_identities(records, family)
+    if any(month != expected_month for month in months):
+        raise ValueError("Dashboard history record is in the wrong month")
+    if len(identities) != len(set(identities)):
+        raise ValueError(f"Dashboard history {family} contains duplicates")
+    if records != sorted(records, key=lambda item: _history_sort_key(item, family)):
+        raise ValueError(f"Dashboard history {family} is not sorted")
+
+
 def _validate_history_partition(partition: dict, expected_month: str) -> None:
     if partition.get("schema_version") != HISTORY_SCHEMA_VERSION:
         raise ValueError("Unsupported dashboard history schema version")
@@ -1234,26 +1292,7 @@ def _validate_history_partition(partition: dict, expected_month: str) -> None:
         raise ValueError("Dashboard history partition month does not match its path")
     for family in HISTORY_RECORD_FIELDS:
         records = partition.get(family)
-        if not isinstance(records, list):
-            raise ValueError(f"Dashboard history {family} must be a list")
-        if family in {"account_observations", "operational_observations"}:
-            months = [_utc_month(item["period_start"]) for item in records]
-            identities = [item["period_start"] for item in records]
-        elif family in {"activity_runs", "automation_runs"}:
-            months = [_utc_month(item["created_at"]) for item in records]
-            identities = [
-                (item["workflow"], int(item["id"]), int(item.get("attempt") or 1))
-                for item in records
-            ]
-        else:
-            months = [item["date"][:7] for item in records]
-            identities = [item["date"] for item in records]
-        if any(month != expected_month for month in months):
-            raise ValueError("Dashboard history record is in the wrong month")
-        if len(identities) != len(set(identities)):
-            raise ValueError(f"Dashboard history {family} contains duplicates")
-        if records != sorted(records, key=lambda item: _history_sort_key(item, family)):
-            raise ValueError(f"Dashboard history {family} is not sorted")
+        _validate_history_records(records, family, expected_month)
 
 
 def _load_history_partitions(history_dir: Path = HISTORY_DIR) -> dict[str, dict]:
@@ -1272,19 +1311,38 @@ def _load_history_partitions(history_dir: Path = HISTORY_DIR) -> dict[str, dict]
 def _merge_history_partitions(
     existing: dict[str, dict], incoming: dict[str, dict]
 ) -> dict[str, dict]:
-    partitions = {
-        month: {
-            family: list(value) if isinstance(value, list) else value
-            for family, value in partition.items()
-        }
-        for month, partition in existing.items()
-    }
+    partitions = copy.deepcopy(existing)
     for month, incoming_partition in incoming.items():
         partition = partitions.setdefault(month, _empty_history_partition(month))
-        for family in HISTORY_RECORD_FIELDS:
-            _merge_history_records(partition, family, incoming_partition[family])
-        _validate_history_partition(partition, month)
+        _merge_history_partition(partition, incoming_partition, month)
     return dict(sorted(partitions.items()))
+
+
+def _merge_history_partition(partition: dict, incoming: dict, month: str) -> None:
+    for family in HISTORY_RECORD_FIELDS:
+        _merge_history_records(partition, family, incoming[family])
+    _validate_history_partition(partition, month)
+
+
+def _merge_history_daily_partition(
+    partition: dict,
+    cutoff,
+    final_observations: dict,
+    activity_by_date: dict,
+) -> None:
+    for observation in partition["account_observations"]:
+        collected = datetime.fromisoformat(
+            observation["collected_at"].replace("Z", _UTC_OFFSET)
+        )
+        if collected.date() >= cutoff:
+            continue
+        current = final_observations.get(collected.date())
+        if current is None or observation["collected_at"] > current["collected_at"]:
+            final_observations[collected.date()] = observation
+    for activity in partition["daily_activity"]:
+        activity_date = datetime.strptime(activity["date"], "%Y-%m-%d").date()
+        if activity_date < cutoff:
+            activity_by_date[activity_date] = activity
 
 
 def _history_daily(partitions: dict[str, dict], now: datetime) -> dict:
@@ -1292,21 +1350,9 @@ def _history_daily(partitions: dict[str, dict], now: datetime) -> dict:
     final_observations = {}
     activity_by_date = {}
     for partition in partitions.values():
-        for observation in partition["account_observations"]:
-            collected = datetime.fromisoformat(
-                observation["collected_at"].replace("Z", "+00:00")
-            )
-            if collected.date() < cutoff:
-                current = final_observations.get(collected.date())
-                if (
-                    current is None
-                    or observation["collected_at"] > current["collected_at"]
-                ):
-                    final_observations[collected.date()] = observation
-        for activity in partition["daily_activity"]:
-            activity_date = datetime.strptime(activity["date"], "%Y-%m-%d").date()
-            if activity_date < cutoff:
-                activity_by_date[activity_date] = activity
+        _merge_history_daily_partition(
+            partition, cutoff, final_observations, activity_by_date
+        )
     snapshots = [
         {**observation, "source": "bluesky_daily"}
         for _, observation in sorted(final_observations.items())
@@ -1394,19 +1440,22 @@ def _collector_existing(
     earlier = [
         item
         for item in observations
-        if datetime.fromisoformat(item["collected_at"].replace("Z", "+00:00")) < cutoff
+        if datetime.fromisoformat(item["collected_at"].replace("Z", _UTC_OFFSET))
+        < cutoff
     ]
     recent = [
         item
         for item in observations
-        if datetime.fromisoformat(item["collected_at"].replace("Z", "+00:00")) >= cutoff
+        if datetime.fromisoformat(item["collected_at"].replace("Z", _UTC_OFFSET))
+        >= cutoff
     ]
     snapshots = ([earlier[-1]] if earlier else []) + recent
     runs = [
         item
         for partition in partitions.values()
         for item in partition["activity_runs"]
-        if datetime.fromisoformat(item["created_at"].replace("Z", "+00:00")) >= cutoff
+        if datetime.fromisoformat(item["created_at"].replace("Z", _UTC_OFFSET))
+        >= cutoff
     ]
     metadata = (existing or {}).get("workflow_activity", {})
     collector_path = history_dir / "collector.json"
@@ -1434,7 +1483,8 @@ def _compact_metrics(metrics: dict, now: datetime) -> dict:
     compact["snapshots"] = [
         item
         for item in metrics["snapshots"]
-        if datetime.fromisoformat(item["collected_at"].replace("Z", "+00:00")) >= cutoff
+        if datetime.fromisoformat(item["collected_at"].replace("Z", _UTC_OFFSET))
+        >= cutoff
     ]
     compact["daily_activity"] = [
         item
@@ -1483,7 +1533,9 @@ def _engagement_momentum(snapshots: list[dict], now: datetime) -> dict:
             (
                 item
                 for item in reversed(sampled)
-                if datetime.fromisoformat(item["collected_at"].replace("Z", "+00:00"))
+                if datetime.fromisoformat(
+                    item["collected_at"].replace("Z", _UTC_OFFSET)
+                )
                 <= cutoff
             ),
             None,
@@ -1587,6 +1639,62 @@ def _daily_schedule_times(cron: str) -> list[tuple[int, int]]:
     return [(hour, minute) for hour in hours for minute in minutes]
 
 
+def _posting_slots(
+    start: datetime, end: datetime, schedule_times: list[tuple[int, int]]
+) -> list[datetime]:
+    slots = []
+    day = start
+    while day < end:
+        slots.extend(
+            day.replace(hour=hour, minute=minute) for hour, minute in schedule_times
+        )
+        day += timedelta(days=1)
+    return slots
+
+
+def _summarise_posting_slots(
+    slots: list[datetime], published_at: list[datetime], match_window: timedelta
+) -> dict:
+    delivered = 0
+    delayed = 0
+    publication_index = 0
+    for slot in slots:
+        while (
+            publication_index < len(published_at)
+            and published_at[publication_index] < slot
+        ):
+            publication_index += 1
+        if (
+            publication_index < len(published_at)
+            and published_at[publication_index] <= slot + match_window
+        ):
+            delivered += 1
+            if published_at[publication_index] > slot + timedelta(minutes=30):
+                delayed += 1
+            publication_index += 1
+    expected = len(slots)
+    return {
+        "expected": expected,
+        "delivered": delivered,
+        "missed": expected - delivered,
+        "delayed": delayed,
+        "delivery_rate": round(delivered * 100 / expected, 1) if expected else None,
+    }
+
+
+def _posting_streak(
+    slots: list[datetime], published_at: list[datetime], match_window: timedelta
+) -> int:
+    streak = 0
+    for slot in reversed(slots):
+        if not any(
+            slot <= published <= slot + match_window for published in published_at
+        ):
+            break
+        streak += 1
+    return streak
+
+
 def _posting_delivery(state: dict, cron: str, now: datetime) -> dict:
     schedule_times = _daily_schedule_times(cron)
     match_window = timedelta(hours=POSTING_SLOT_MATCH_HOURS)
@@ -1596,64 +1704,27 @@ def _posting_delivery(state: dict, cron: str, now: datetime) -> dict:
         if item.get("ts") is not None
     )
 
-    def _slots(start: datetime, end: datetime) -> list[datetime]:
-        slots = []
-        day = start
-        while day < end:
-            slots.extend(
-                day.replace(hour=hour, minute=minute) for hour, minute in schedule_times
-            )
-            day += timedelta(days=1)
-        return slots
-
-    def _summarise(slots: list[datetime]) -> dict:
-        delivered = 0
-        delayed = 0
-        publication_index = 0
-        for slot in slots:
-            while (
-                publication_index < len(published_at)
-                and published_at[publication_index] < slot
-            ):
-                publication_index += 1
-            if (
-                publication_index < len(published_at)
-                and published_at[publication_index] <= slot + match_window
-            ):
-                delivered += 1
-                if published_at[publication_index] > slot + timedelta(minutes=30):
-                    delayed += 1
-                publication_index += 1
-        expected = len(slots)
-        return {
-            "expected": expected,
-            "delivered": delivered,
-            "missed": expected - delivered,
-            "delayed": delayed,
-            "delivery_rate": round(delivered * 100 / expected, 1) if expected else None,
-        }
-
     today = now.replace(hour=0, minute=0, second=0, microsecond=0)
     windows = {
-        str(days): _summarise(_slots(today - timedelta(days=days), today))
+        str(days): _summarise_posting_slots(
+            _posting_slots(today - timedelta(days=days), today, schedule_times),
+            published_at,
+            match_window,
+        )
         for days in POSTING_DELIVERY_WINDOWS
     }
     closed_slots = [
         slot
-        for slot in _slots(today - timedelta(days=max(POSTING_DELIVERY_WINDOWS)), now)
+        for slot in _posting_slots(
+            today - timedelta(days=max(POSTING_DELIVERY_WINDOWS)), now, schedule_times
+        )
         if slot + match_window <= now
     ]
-    streak = 0
-    for slot in reversed(closed_slots):
-        if any(slot <= published <= slot + match_window for published in published_at):
-            streak += 1
-        else:
-            break
     return {
         "schedule": cron,
         "timezone": "UTC",
         "match_window_hours": POSTING_SLOT_MATCH_HOURS,
-        "current_streak": streak,
+        "current_streak": _posting_streak(closed_slots, published_at, match_window),
         "windows": windows,
     }
 
@@ -1676,11 +1747,34 @@ def _workflow_duration_seconds(run: dict) -> int | None:
     updated_at = run.get("updated_at")
     if not created_at or not updated_at or run.get("status") != "completed":
         return None
-    created = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
-    updated = datetime.fromisoformat(updated_at.replace("Z", "+00:00"))
+    created = datetime.fromisoformat(created_at.replace("Z", _UTC_OFFSET))
+    updated = datetime.fromisoformat(updated_at.replace("Z", _UTC_OFFSET))
     if updated < created:
         return None
     return int((updated - created).total_seconds())
+
+
+def _update_workflow_summary(summary: dict, run: dict) -> int | None:
+    summary["runs"] += 1
+    conclusion = run.get("conclusion")
+    conclusion_field = {
+        "success": "successful",
+        "failure": "failed",
+        "cancelled": "cancelled",
+    }.get(conclusion)
+    if conclusion_field:
+        summary[conclusion_field] += 1
+
+    created_at = run.get("created_at")
+    duration = _workflow_duration_seconds(run)
+    if created_at and (
+        summary["last_run_at"] is None or created_at > summary["last_run_at"]
+    ):
+        summary["last_run_at"] = created_at
+        summary["last_status"] = run.get("status")
+        summary["last_conclusion"] = conclusion
+        summary["latest_duration_seconds"] = duration
+    return duration
 
 
 def _workflow_metrics(workflow_runs: list[dict], now: datetime) -> dict:
@@ -1709,23 +1803,7 @@ def _workflow_metrics(workflow_runs: list[dict], now: datetime) -> dict:
         if name not in TRACKED_WORKFLOWS:
             continue
         summary = grouped[name]
-        summary["runs"] += 1
-        conclusion = run.get("conclusion")
-        if conclusion == "success":
-            summary["successful"] += 1
-        elif conclusion == "failure":
-            summary["failed"] += 1
-        elif conclusion == "cancelled":
-            summary["cancelled"] += 1
-        created_at = run.get("created_at")
-        duration = _workflow_duration_seconds(run)
-        if created_at and (
-            summary["last_run_at"] is None or created_at > summary["last_run_at"]
-        ):
-            summary["last_run_at"] = created_at
-            summary["last_status"] = run.get("status")
-            summary["last_conclusion"] = conclusion
-            summary["latest_duration_seconds"] = duration
+        duration = _update_workflow_summary(summary, run)
         if duration is not None:
             durations[name].append(duration)
 
@@ -1761,7 +1839,7 @@ def _operational_alerts(
             and expected_interval
             and (
                 not last_run_at
-                or datetime.fromisoformat(last_run_at.replace("Z", "+00:00"))
+                or datetime.fromisoformat(last_run_at.replace("Z", _UTC_OFFSET))
                 < now - timedelta(hours=expected_interval + 2)
             )
         ):
@@ -1776,7 +1854,7 @@ def _operational_alerts(
             workflow["name"] in CORE_WORKFLOWS
             and workflow.get("last_conclusion") == "failure"
             and last_run_at
-            and datetime.fromisoformat(last_run_at.replace("Z", "+00:00"))
+            and datetime.fromisoformat(last_run_at.replace("Z", _UTC_OFFSET))
             >= recent_cutoff
         ):
             alerts.append(
@@ -1870,7 +1948,7 @@ def collect_metrics(
     ]
     snapshots.append(snapshot)
     existing_days = {
-        datetime.fromisoformat(item["collected_at"].replace("Z", "+00:00")).date()
+        datetime.fromisoformat(item["collected_at"].replace("Z", _UTC_OFFSET)).date()
         for item in snapshots
     }
     snapshots.extend(

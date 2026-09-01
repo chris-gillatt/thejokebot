@@ -67,3 +67,13 @@ jobs:
           args: >
             -Dsonar.qualitygate.wait=true
             -Dsonar.qualitygate.timeout=300
+
+      - name: Require zero unresolved Sonar issues
+        if: >
+          (github.event_name == 'workflow_dispatch' || steps.changed_files.outputs.non_docs == 'true') &&
+          (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_BRANCH: ${{ github.event_name != 'pull_request' && github.ref_name || '' }}
+          SONAR_PULL_REQUEST: ${{ github.event_name == 'pull_request' && github.event.pull_request.number || '' }}
+        run: python scripts/check_sonar_issues.py

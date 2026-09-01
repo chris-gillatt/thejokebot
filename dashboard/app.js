@@ -407,14 +407,8 @@ function renderDiscovery() {
   );
 }
 
-function renderSocialActivity() {
-  const social = metrics.social_activity || { completed_runs: 0, runs: [] };
-  const starterPacks = metrics.starter_pack_attribution || { packs: [] };
-  const network = metrics.network_maintenance || {};
-  const responseWindow = network.response_window;
-  const unfollow = network.unfollow;
+function renderSocialFlow(social) {
   const hasSocialHistory = social.completed_runs > 0;
-  const hasUnfollowHistory = unfollow?.completed_runs > 0;
   const socialValues = {
     "social-follow-candidates": hasSocialHistory ? social.follow_back_candidates : null,
     "social-follow-added": hasSocialHistory ? social.follow_back_added : null,
@@ -450,7 +444,9 @@ function renderSocialActivity() {
     const value = Number(socialValues[row.dataset.metric]) || 0;
     row.style.setProperty("--flow-width", `${(value * 100) / maximum}%`);
   });
+}
 
+function renderStarterPackAttribution(starterPacks) {
   const starterPackList = document.getElementById("starter-pack-list");
   const starterPackEmpty = document.getElementById("starter-pack-empty");
   const packs = starterPacks.packs || [];
@@ -481,7 +477,12 @@ function renderSocialActivity() {
     starterPackList.append(item);
   });
   starterPackEmpty.hidden = packs.length > 0;
+}
 
+function renderNetworkMaintenance(network) {
+  const responseWindow = network.response_window;
+  const unfollow = network.unfollow;
+  const hasUnfollowHistory = unfollow?.completed_runs > 0;
   setText("response-window-active", metricText(responseWindow?.active));
   setText("response-discovery", metricText(responseWindow?.by_source?.discovery));
   setText("response-interaction", metricText(responseWindow?.by_source?.interaction));
@@ -501,7 +502,16 @@ function renderSocialActivity() {
       ? `${numberFormat.format(unfollow.completed_runs)} runs observed · ${numberFormat.format(unfollow.stopped_early_runs)} stopped early`
       : "Maintenance history will appear after the next completed run.",
   );
+}
 
+function renderSocialActivity() {
+  const social = metrics.social_activity || { completed_runs: 0, runs: [] };
+  const starterPacks = metrics.starter_pack_attribution || { packs: [] };
+  const network = metrics.network_maintenance || {};
+  const unfollow = network.unfollow;
+  renderSocialFlow(social);
+  renderStarterPackAttribution(starterPacks);
+  renderNetworkMaintenance(network);
   renderTable(
     "social-table",
     (social.runs || []).map((run) => [
@@ -772,15 +782,7 @@ function renderProviders() {
   });
 }
 
-function renderAutomation() {
-  const automation = metrics.automation || { workflows: [], alerts: [] };
-  setText(
-    "automation-rate",
-    automation.success_rate === null ? "--" : `${numberFormat.format(automation.success_rate)}%`,
-  );
-  setText("automation-runs", numberFormat.format(automation.runs));
-  setText("automation-failed", numberFormat.format(automation.failed));
-
+function renderModerationActivity() {
   const moderation = metrics.moderation_activity || { completed_runs: 0 };
   const hasModerationHistory = moderation.completed_runs > 0;
   setText(
@@ -805,7 +807,9 @@ function renderAutomation() {
       ? `${numberFormat.format(moderation.completed_runs)} report workflow runs observed over 30 days`
       : "Report workflow history will appear after the next completed run.",
   );
+    }
 
+    function renderPostingDelivery() {
   const delivery = metrics.posting_delivery;
   const sevenDays = delivery?.windows?.["7"];
   const thirtyDays = delivery?.windows?.["30"];
@@ -842,7 +846,22 @@ function renderAutomation() {
     "posting-streak",
     delivery ? numberFormat.format(delivery.current_streak) : "--",
   );
+}
 
+function operationalAlertText(alert) {
+  if (alert.kind === "stale_dashboard") return "Dashboard collection is overdue";
+  if (alert.kind === "workflow_failure") return `${displayName(alert.workflow)} failed most recently`;
+  if (alert.kind === "workflow_overdue") return `${displayName(alert.workflow)} is overdue`;
+  if (alert.kind === "provider_health") {
+    return `${numberFormat.format(alert.count)} configured provider${alert.count === 1 ? "" : "s"} need attention`;
+  }
+  if (alert.kind === "posting_delivery") {
+    return `${numberFormat.format(alert.count)} posting slot${alert.count === 1 ? "" : "s"} missed in 7 complete days`;
+  }
+  return "Operational attention needed";
+}
+
+function renderOperationalPulse(automation) {
   const alerts = [...(automation.alerts || [])];
   if (Date.now() - new Date(metrics.generated_at).getTime() > 8 * 60 * 60 * 1000) {
     alerts.unshift({ kind: "stale_dashboard", level: "attention" });
@@ -858,26 +877,16 @@ function renderAutomation() {
     alerts.forEach((alert) => {
       const item = document.createElement("p");
       item.className = `pulse-alert ${alert.level || "attention"}`;
-      if (alert.kind === "stale_dashboard") {
-        item.textContent = "Dashboard collection is overdue";
-      } else if (alert.kind === "workflow_failure") {
-        item.textContent = `${displayName(alert.workflow)} failed most recently`;
-      } else if (alert.kind === "workflow_overdue") {
-        item.textContent = `${displayName(alert.workflow)} is overdue`;
-      } else if (alert.kind === "provider_health") {
-        item.textContent = `${numberFormat.format(alert.count)} configured provider${alert.count === 1 ? "" : "s"} need attention`;
-      } else if (alert.kind === "posting_delivery") {
-        item.textContent = `${numberFormat.format(alert.count)} posting slot${alert.count === 1 ? "" : "s"} missed in 7 complete days`;
-      } else {
-        item.textContent = "Operational attention needed";
-      }
+      item.textContent = operationalAlertText(alert);
       pulse.append(item);
     });
   }
+}
 
+function renderWorkflowTable(workflows) {
   const body = document.querySelector("#workflow-table tbody");
   body.replaceChildren();
-  [...automation.workflows]
+  [...workflows]
     .sort((left, right) => right.runs - left.runs || left.name.localeCompare(right.name))
     .forEach((workflow) => {
       const row = document.createElement("tr");
@@ -912,6 +921,20 @@ function renderAutomation() {
       appendCell(row, latest);
       body.append(row);
     });
+}
+
+function renderAutomation() {
+  const automation = metrics.automation || { workflows: [], alerts: [] };
+  setText(
+    "automation-rate",
+    automation.success_rate === null ? "--" : `${numberFormat.format(automation.success_rate)}%`,
+  );
+  setText("automation-runs", numberFormat.format(automation.runs));
+  setText("automation-failed", numberFormat.format(automation.failed));
+  renderModerationActivity();
+  renderPostingDelivery();
+  renderOperationalPulse(automation);
+  renderWorkflowTable(automation.workflows);
 }
 
 function renderTopPosts() {

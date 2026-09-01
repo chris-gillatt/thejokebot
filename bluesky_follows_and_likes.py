@@ -28,6 +28,7 @@ _DEFAULT_LIKE_MAX_PAGES = _FOLLOWS_AND_LIKES_CONFIG["like_max_pages"]
 _DEFAULT_LIKE_PAGE_LIMIT = _FOLLOWS_AND_LIKES_CONFIG["like_page_limit"]
 _LIKE_WINDOW_SECONDS = 24 * 60 * 60  # only like replies from the last 24 hours
 _LIKE_REASONS = ("reply", "repost")
+_UTC_OFFSET = "+00:00"
 
 _INTERACTION_FOLLOW_REASONS = ("reply", "repost", "like")
 _INTERACTION_WINDOW_SECONDS = (
@@ -69,6 +70,40 @@ def _social_summary_line(summary: dict, dry_run: bool) -> str:
         f"{field}={int(summary.get(field) or 0)}" for field in _SOCIAL_SUMMARY_FIELDS
     )
     return f"Social summary: {counts}, dry_run={'true' if dry_run else 'false'}."
+
+
+def _follow_back_candidates(
+    client, to_follow_back, dry_run, action_delay_seconds, attempted_dids, summary
+):
+    for index, did in enumerate(to_follow_back, start=1):
+        attempted_dids.add(did)
+        masked_did = mask_sensitive(did)
+        print(
+            f"{Fore.YELLOW}({index}/{len(to_follow_back)}) Following {masked_did}...{Style.RESET_ALL}"
+        )
+        if dry_run:
+            print(f"{Fore.YELLOW}[DRY-RUN] Would follow {masked_did}{Style.RESET_ALL}")
+            summary["follow_back_added"] += 1
+        else:
+            try:
+                retry_network_call(
+                    lambda current_did=did: client.follow(current_did),
+                    description=f"following back {masked_did}",
+                )
+                print(f"{Fore.GREEN}Followed {masked_did}{Style.RESET_ALL}")
+                summary["follow_back_added"] += 1
+            except (
+                requests.RequestException,
+                TimeoutError,
+                atproto_client.exceptions.NetworkError,
+            ) as exc:
+                print(
+                    f"{Fore.RED}Failed to follow {masked_did}: {exc}{Style.RESET_ALL}"
+                )
+                summary["failed"] += 1
+
+        if action_delay_seconds > 0 and index < len(to_follow_back):
+            time.sleep(action_delay_seconds)
 
 
 # ---------------------------------------------------------------------------
@@ -148,38 +183,14 @@ def follow_back(
             f"{len(remaining_dids)} actionable follower(s), "
             f"{len(to_follow_back)} not yet attempted.{Style.RESET_ALL}"
         )
-
-        for i, did in enumerate(to_follow_back, start=1):
-            attempted_dids.add(did)
-            masked_did = mask_sensitive(did)
-            print(
-                f"{Fore.YELLOW}({i}/{len(to_follow_back)}) Following {masked_did}...{Style.RESET_ALL}"
-            )
-            if dry_run:
-                print(
-                    f"{Fore.YELLOW}[DRY-RUN] Would follow {masked_did}{Style.RESET_ALL}"
-                )
-                summary["follow_back_added"] += 1
-            else:
-                try:
-                    retry_network_call(
-                        lambda current_did=did: client.follow(current_did),
-                        description=f"following back {masked_did}",
-                    )
-                    print(f"{Fore.GREEN}Followed {masked_did}{Style.RESET_ALL}")
-                    summary["follow_back_added"] += 1
-                except (
-                    requests.RequestException,
-                    TimeoutError,
-                    atproto_client.exceptions.NetworkError,
-                ) as exc:
-                    print(
-                        f"{Fore.RED}Failed to follow {masked_did}: {exc}{Style.RESET_ALL}"
-                    )
-                    summary["failed"] += 1
-
-            if action_delay_seconds > 0 and i < len(to_follow_back):
-                time.sleep(action_delay_seconds)
+        _follow_back_candidates(
+            client,
+            to_follow_back,
+            dry_run,
+            action_delay_seconds,
+            attempted_dids,
+            summary,
+        )
 
         if dry_run:
             print(f"{Fore.GREEN}Follow-back dry run completed.{Style.RESET_ALL}")
@@ -201,10 +212,28 @@ def _parse_notification_epoch(notification):
     if not indexed_at:
         return None
     try:
-        ts = datetime.fromisoformat(indexed_at.replace("Z", "+00:00"))
+        ts = datetime.fromisoformat(indexed_at.replace("Z", _UTC_OFFSET))
         return ts.timestamp()
     except (ValueError, AttributeError):
         return None
+
+
+def _collect_page_interactor_dids(
+    notifications, user_did, cutoff_epoch, interactor_dids
+):
+    for notification in notifications:
+        reason = _get_value(notification, "reason")
+        if reason not in _INTERACTION_FOLLOW_REASONS:
+            continue
+
+        notification_epoch = _parse_notification_epoch(notification)
+        if notification_epoch is not None and notification_epoch < cutoff_epoch:
+            return True
+
+        author_did = _get_value(notification, "author", "did")
+        if author_did and author_did != user_did:
+            interactor_dids.add(author_did)
+    return False
 
 
 def _collect_interactor_dids(client, user_did, cutoff_epoch):
@@ -235,25 +264,9 @@ def _collect_interactor_dids(client, user_did, cutoff_epoch):
             break
 
         notifications = _get_value(response, "notifications") or []
-        stop_paging = False
-
-        for notification in notifications:
-            reason = _get_value(notification, "reason")
-            if reason not in _INTERACTION_FOLLOW_REASONS:
-                continue
-
-            notification_epoch = _parse_notification_epoch(notification)
-            if notification_epoch is not None and notification_epoch < cutoff_epoch:
-                # Notifications are ordered newest-first; once we hit one
-                # older than the cutoff the rest will be too.
-                stop_paging = True
-                break
-
-            author_did = _get_value(notification, "author", "did")
-            if author_did and author_did != user_did:
-                interactor_dids.add(author_did)
-
-        if stop_paging:
+        if _collect_page_interactor_dids(
+            notifications, user_did, cutoff_epoch, interactor_dids
+        ):
             break
 
         cursor = _get_value(response, "cursor")
@@ -409,7 +422,7 @@ def _starter_pack_observation(notification) -> dict | None:
     )
     try:
         observed_at = datetime.fromisoformat(
-            str(indexed_at).replace("Z", "+00:00")
+            str(indexed_at).replace("Z", _UTC_OFFSET)
         ).astimezone(timezone.utc)
     except (ValueError, AttributeError):
         return None
@@ -417,7 +430,7 @@ def _starter_pack_observation(notification) -> dict | None:
         "pack_uri": pack_uri,
         "name": str(_get_value(starter_pack, "record", "name") or "Starter pack"),
         "creator_handle": str(_get_value(starter_pack, "creator", "handle") or ""),
-        "observed_at": observed_at.isoformat().replace("+00:00", "Z"),
+        "observed_at": observed_at.isoformat().replace(_UTC_OFFSET, "Z"),
         "date": observed_at.date().isoformat(),
     }
 
@@ -425,6 +438,45 @@ def _starter_pack_observation(notification) -> dict | None:
 def _notification_hash(notification) -> str:
     uri = str(_get_value(notification, "uri") or "")
     return hashlib.sha256(uri.encode("utf-8")).hexdigest() if uri else ""
+
+
+def _update_starter_pack_page_boundary(
+    notification, notification_epoch, notification_hash, page_state
+):
+    indexed_at = _get_value(notification, "indexed_at") or _get_value(
+        notification, "indexedAt"
+    )
+    if (
+        page_state["newest_epoch"] is None
+        or notification_epoch > page_state["newest_epoch"]
+    ):
+        page_state["newest_epoch"] = notification_epoch
+        page_state["newest_indexed_at"] = str(indexed_at)
+        page_state["boundary_hashes"] = set()
+    if notification_epoch == page_state["newest_epoch"] and notification_hash:
+        page_state["boundary_hashes"].add(notification_hash)
+
+
+def _record_starter_pack_observation(
+    notification,
+    notification_epoch,
+    notification_hash,
+    stop_epoch,
+    previous_boundary_hashes,
+    page_state,
+):
+    observation = _starter_pack_observation(notification)
+    if observation is None or not notification_hash:
+        return
+    if notification_hash in page_state["seen_hashes"]:
+        return
+    page_state["seen_hashes"].add(notification_hash)
+    if (
+        notification_epoch == stop_epoch
+        and notification_hash in previous_boundary_hashes
+    ):
+        return
+    page_state["observations"].append(observation)
 
 
 def _process_starter_pack_page(
@@ -438,34 +490,20 @@ def _process_starter_pack_page(
         notification_epoch = _parse_notification_epoch(notification)
         if notification_epoch is None:
             continue
-        indexed_at = _get_value(notification, "indexed_at") or _get_value(
-            notification, "indexedAt"
-        )
-        if (
-            page_state["newest_epoch"] is None
-            or notification_epoch > page_state["newest_epoch"]
-        ):
-            page_state["newest_epoch"] = notification_epoch
-            page_state["newest_indexed_at"] = str(indexed_at)
-            page_state["boundary_hashes"] = set()
         notification_hash = _notification_hash(notification)
-        if notification_epoch == page_state["newest_epoch"] and notification_hash:
-            page_state["boundary_hashes"].add(notification_hash)
+        _update_starter_pack_page_boundary(
+            notification, notification_epoch, notification_hash, page_state
+        )
         if notification_epoch < stop_epoch:
             return True
-
-        observation = _starter_pack_observation(notification)
-        if observation is None or not notification_hash:
-            continue
-        if notification_hash in page_state["seen_hashes"]:
-            continue
-        page_state["seen_hashes"].add(notification_hash)
-        if (
-            notification_epoch == stop_epoch
-            and notification_hash in previous_boundary_hashes
-        ):
-            continue
-        page_state["observations"].append(observation)
+        _record_starter_pack_observation(
+            notification,
+            notification_epoch,
+            notification_hash,
+            stop_epoch,
+            previous_boundary_hashes,
+            page_state,
+        )
     return False
 
 
@@ -478,7 +516,7 @@ def _collect_starter_pack_attribution(
     previous_boundary_hashes = set(attribution.get("boundary_notification_hashes", []))
     bootstrap_cutoff = now - timedelta(days=_STARTER_PACK_WINDOW_DAYS)
     stop_epoch = (
-        datetime.fromisoformat(high_water.replace("Z", "+00:00")).timestamp()
+        datetime.fromisoformat(high_water.replace("Z", _UTC_OFFSET)).timestamp()
         if high_water
         else bootstrap_cutoff.timestamp()
     )
@@ -541,9 +579,9 @@ def _collect_starter_pack_attribution(
     return {
         "coverage_started_at": (
             attribution.get("coverage_started_at")
-            or bootstrap_cutoff.isoformat().replace("+00:00", "Z")
+            or bootstrap_cutoff.isoformat().replace(_UTC_OFFSET, "Z")
         ),
-        "checked_at": now.isoformat().replace("+00:00", "Z"),
+        "checked_at": now.isoformat().replace(_UTC_OFFSET, "Z"),
         "high_water_indexed_at": page_state["newest_indexed_at"] or high_water,
         "boundary_notification_hashes": page_state["boundary_hashes"],
         "observations": page_state["observations"],
@@ -573,6 +611,49 @@ def track_starter_pack_follows(
     return count
 
 
+def _like_candidate(notification, cutoff_epoch, already_liked):
+    reason = _get_value(notification, "reason")
+    if reason not in _LIKE_REASONS:
+        return None, False
+    notification_epoch = _parse_notification_epoch(notification)
+    if notification_epoch is not None and notification_epoch < cutoff_epoch:
+        return None, True
+    uri = _get_value(notification, "uri")
+    cid = _get_value(notification, "cid")
+    if not uri or not cid:
+        return None, False
+    reply_text = _get_value(notification, "record", "text") or ""
+    if re.search(r"(?:^|\s)#report\b", reply_text, re.IGNORECASE):
+        return None, False
+    if uri in already_liked:
+        return None, False
+    return (reason, uri, cid), False
+
+
+def _like_notification(client, reason, uri, cid, dry_run, summary):
+    masked_uri = mask_sensitive(uri)
+    if dry_run:
+        print(
+            f"{Fore.YELLOW}[DRY-RUN] Would like {reason}: {masked_uri}{Style.RESET_ALL}"
+        )
+        return True
+    try:
+        retry_network_call(
+            lambda: client.like(uri=uri, cid=cid),
+            description=f"liking {reason} {masked_uri}",
+        )
+        print(f"{Fore.GREEN}Liked {reason}: {masked_uri}{Style.RESET_ALL}")
+        return True
+    except (
+        requests.RequestException,
+        TimeoutError,
+        atproto_client.exceptions.NetworkError,
+    ) as exc:
+        print(f"{Fore.RED}Failed to like {masked_uri}: {exc}{Style.RESET_ALL}")
+        summary["failed"] = summary.get("failed", 0) + 1
+        return False
+
+
 def _process_like_page(
     client,
     state,
@@ -590,52 +671,17 @@ def _process_like_page(
     """
     new_likes = 0
     stop_paging = False
-
     for notification in notifications:
-        reason = _get_value(notification, "reason")
-        if reason not in _LIKE_REASONS:
-            continue
-
-        notification_epoch = _parse_notification_epoch(notification)
-        if notification_epoch is not None and notification_epoch < cutoff_epoch:
-            # Notifications are ordered newest-first; once we hit one
-            # older than the cutoff the rest will be too.
-            stop_paging = True
+        candidate, stop_paging = _like_candidate(
+            notification, cutoff_epoch, already_liked
+        )
+        if stop_paging:
             break
-
-        uri = _get_value(notification, "uri")
-        cid = _get_value(notification, "cid")
-        if not uri or not cid:
+        if candidate is None:
             continue
-        masked_uri = mask_sensitive(uri)
-
-        # Never like #report replies — those are handled by the reports workflow.
-        reply_text = _get_value(notification, "record", "text") or ""
-        if re.search(r"(?:^|\s)#report\b", reply_text, re.IGNORECASE):
+        reason, uri, cid = candidate
+        if not _like_notification(client, reason, uri, cid, dry_run, summary):
             continue
-
-        if uri in already_liked:
-            continue
-
-        if dry_run:
-            print(
-                f"{Fore.YELLOW}[DRY-RUN] Would like {reason}: {masked_uri}{Style.RESET_ALL}"
-            )
-        else:
-            try:
-                retry_network_call(
-                    lambda u=uri, c=cid: client.like(uri=u, cid=c),
-                    description=f"liking {reason} {masked_uri}",
-                )
-                print(f"{Fore.GREEN}Liked {reason}: {masked_uri}{Style.RESET_ALL}")
-            except (
-                requests.RequestException,
-                TimeoutError,
-                atproto_client.exceptions.NetworkError,
-            ) as exc:
-                print(f"{Fore.RED}Failed to like {masked_uri}: {exc}{Style.RESET_ALL}")
-                summary["failed"] = summary.get("failed", 0) + 1
-                continue
 
         bluesky_state.record_liked_reply_uri(state, uri)
         already_liked.add(uri)

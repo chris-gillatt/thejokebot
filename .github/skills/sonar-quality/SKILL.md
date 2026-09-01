@@ -16,6 +16,7 @@ Use this workflow for SonarQube Cloud analysis and remediation in The Joke Bot.
 - Never print, commit, or pass `SONAR_TOKEN` as a command-line property.
 - Keep dashboard code in static analysis. Exclude it only from coverage until JavaScript coverage exists.
 - Preserve the Python coverage floor and Sonar quality-gate thresholds unless the user explicitly changes policy.
+- Require zero unresolved Sonar issues. A passing quality gate is necessary but not sufficient.
 - Do not replace deterministic, non-security pseudorandom behaviour merely to silence a security rule.
 
 ## Local Analysis
@@ -45,6 +46,7 @@ Use this workflow for SonarQube Cloud analysis and remediation in The Joke Bot.
    ```
 
 6. Require scanner exit 0 before declaring the gate successful. Exit 3 commonly means upload succeeded but the quality gate failed.
+7. Run `python scripts/check_sonar_issues.py` with `SONAR_TOKEN` still loaded and require exit 0.
 
 ## Diagnose A Failed Gate
 
@@ -78,6 +80,7 @@ Use this workflow for SonarQube Cloud analysis and remediation in The Joke Bot.
 - enforce the 75% pytest coverage floor;
 - invoke the SHA-pinned SonarQube scan action;
 - wait for the quality gate;
+- run `scripts/check_sonar_issues.py` for the analysed branch or pull request and require zero unresolved issues;
 - avoid exposing repository secrets to fork pull requests.
 
 Repository Actions and Dependabot secret stores both need `SONAR_TOKEN` when Dependabot pull requests should run analysis.

@@ -21,6 +21,24 @@ def _extract_page_items(response):
     return None
 
 
+def _pagination_guard_message(cursor, seen_cursors, started_at, max_runtime_seconds):
+    if time.monotonic() - started_at >= max_runtime_seconds:
+        return f"Reached pagination runtime safety limit ({max_runtime_seconds}s)"
+    if cursor is not None and cursor in seen_cursors:
+        return "Repeated pagination cursor detected"
+    return None
+
+
+def _normalise_page(response, cursor):
+    next_cursor = getattr(response, "cursor", None)
+    if cursor is not None and next_cursor == cursor:
+        return None, next_cursor, "Repeated pagination cursor detected"
+    items = _extract_page_items(response)
+    if items is None:
+        return None, next_cursor, "Unexpected paginated response format"
+    return items, next_cursor, None
+
+
 def fetch_paginated_data(
     client_method,
     actor,
@@ -38,18 +56,14 @@ def fetch_paginated_data(
     started_at = time.monotonic()
 
     while pages < max_pages:
-        if time.monotonic() - started_at >= max_runtime_seconds:
-            message = (
-                f"Reached pagination runtime safety limit ({max_runtime_seconds}s)"
-            )
+        message = _pagination_guard_message(
+            cursor, seen_cursors, started_at, max_runtime_seconds
+        )
+        if message:
             _handle_incomplete_pagination(message, require_complete)
             break
 
         if cursor is not None:
-            if cursor in seen_cursors:
-                message = "Repeated pagination cursor detected"
-                _handle_incomplete_pagination(message, require_complete)
-                break
             seen_cursors.add(cursor)
 
         pages += 1
@@ -58,18 +72,8 @@ def fetch_paginated_data(
             description=f"fetching paginated data page {pages}",
         )
 
-        next_cursor = getattr(response, "cursor", None)
-
-        # Detect cursor stall before committing this page's items so we don't
-        # collect a duplicate page.
-        if cursor is not None and next_cursor == cursor:
-            message = "Repeated pagination cursor detected"
-            _handle_incomplete_pagination(message, require_complete)
-            break
-
-        items = _extract_page_items(response)
-        if items is None:
-            message = "Unexpected paginated response format"
+        items, next_cursor, message = _normalise_page(response, cursor)
+        if message:
             _handle_incomplete_pagination(message, require_complete)
             break
         data.extend(items)
@@ -101,6 +105,22 @@ def extract_list_member_did(item) -> str:
     return str(did or "").strip()
 
 
+def _normalise_list_page(response):
+    items = getattr(response, "items", None)
+    cursor = getattr(response, "cursor", None)
+    if isinstance(response, dict):
+        items = response.get("items", []) if items is None else items
+        cursor = response.get("cursor") if cursor is None else cursor
+    return items, cursor
+
+
+def _add_list_member_dids(dids, items):
+    for item in items:
+        did = extract_list_member_did(item)
+        if did:
+            dids.add(did)
+
+
 def fetch_list_member_dids(
     client,
     list_uri: str,
@@ -120,21 +140,12 @@ def fetch_list_member_dids(
             description=description,
         )
 
-        items = getattr(resp, "items", None)
-        if items is None and isinstance(resp, dict):
-            items = resp.get("items", [])
+        items, cursor = _normalise_list_page(resp)
         if not isinstance(items, (list, tuple, set)):
             print("Unexpected list-member response format; stopping early.")
             break
 
-        for item in items or []:
-            did = extract_list_member_did(item)
-            if did:
-                dids.add(did)
-
-        cursor = getattr(resp, "cursor", None)
-        if cursor is None and isinstance(resp, dict):
-            cursor = resp.get("cursor")
+        _add_list_member_dids(dids, items)
         if not cursor:
             break
 

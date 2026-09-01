@@ -312,6 +312,47 @@ def _resolve_notification_proposal(
     return proposal, True
 
 
+def _process_report_notification(
+    notification,
+    client,
+    state,
+    scan_context,
+):
+    parsed = _extract_notification(notification)
+    notification_uri = parsed["notification_uri"]
+    if not notification_uri:
+        return None
+    if notification_uri in scan_context["processed_uris"]:
+        bluesky_state.clear_unresolved_notification_attempt(state, notification_uri)
+        return None
+
+    proposal, should_mark = _resolve_notification_proposal(
+        parsed,
+        scan_context["post_uri_index"],
+        scan_context["denylisted_b64s"],
+        scan_context["seen_b64s"],
+        client,
+    )
+    if should_mark:
+        scan_context["processed_notifications"].add(notification_uri)
+        bluesky_state.clear_unresolved_notification_attempt(state, notification_uri)
+        return proposal
+
+    unresolved_attempts = bluesky_state.increment_unresolved_notification_attempt(
+        state, notification_uri
+    )
+    if unresolved_attempts < scan_context["max_unresolved_attempts"]:
+        return proposal
+    scan_context["processed_notifications"].add(notification_uri)
+    bluesky_state.clear_unresolved_notification_attempt(state, notification_uri)
+    masked_uri = mask_sensitive(notification_uri)
+    print(
+        "Warning: giving up on unresolved report notification "
+        f"after {unresolved_attempts} attempt(s): {masked_uri}"
+    )
+    return proposal
+
+
 def collect_report_proposals(
     client, state: dict, denylisted_b64s: set[str]
 ) -> tuple[list[dict], set[str], int]:
@@ -345,6 +386,14 @@ def collect_report_proposals(
     proposals: list[dict] = []
     seen_b64s: set[str] = set()
     processed_notifications: set[str] = set()
+    scan_context = {
+        "processed_uris": processed_uris,
+        "post_uri_index": post_uri_index,
+        "denylisted_b64s": denylisted_b64s,
+        "seen_b64s": seen_b64s,
+        "processed_notifications": processed_notifications,
+        "max_unresolved_attempts": max_unresolved_attempts,
+    }
 
     pages_fetched = 0
     for _ in range(max_pages):
@@ -373,40 +422,12 @@ def collect_report_proposals(
 
         notifications = _get_value(response, "notifications") or []
         for notification in notifications:
-            parsed = _extract_notification(notification)
-            notification_uri = parsed["notification_uri"]
-            if not notification_uri:
-                continue
-            if notification_uri in processed_uris:
-                bluesky_state.clear_unresolved_notification_attempt(
-                    state, notification_uri
-                )
-                continue
-
-            proposal, should_mark = _resolve_notification_proposal(
-                parsed, post_uri_index, denylisted_b64s, seen_b64s, client
+            proposal = _process_report_notification(
+                notification,
+                client,
+                state,
+                scan_context,
             )
-            if should_mark:
-                processed_notifications.add(notification_uri)
-                bluesky_state.clear_unresolved_notification_attempt(
-                    state, notification_uri
-                )
-            else:
-                unresolved_attempts = (
-                    bluesky_state.increment_unresolved_notification_attempt(
-                        state, notification_uri
-                    )
-                )
-                if unresolved_attempts >= max_unresolved_attempts:
-                    processed_notifications.add(notification_uri)
-                    bluesky_state.clear_unresolved_notification_attempt(
-                        state, notification_uri
-                    )
-                    masked_uri = mask_sensitive(notification_uri)
-                    print(
-                        "Warning: giving up on unresolved report notification "
-                        f"after {unresolved_attempts} attempt(s): {masked_uri}"
-                    )
             if proposal is not None:
                 proposals.append(proposal)
                 seen_b64s.add(proposal["b64"])

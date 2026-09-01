@@ -813,6 +813,7 @@ class DashboardCollectorTests(unittest.TestCase):
                 "failed": 2,
             },
         )
+
         self.assertEqual(
             dashboard._workflow_activity_counts("bluesky_follow_fellows", discovery),
             {"follows": 7, "unfollows": 0, "selected": 8, "failed": 1},
@@ -847,6 +848,14 @@ class DashboardCollectorTests(unittest.TestCase):
             ),
             {"follows": 0, "unfollows": 0},
         )
+
+    def test_social_summary_parser_does_not_cross_lines(self):
+        plain_text = (
+            "Social summary: follow_back_candidates=8,\n"
+            "follow_back_added=5, dry_run=false."
+        )
+
+        self.assertEqual(dashboard._social_summary_counts(plain_text), {})
 
     def test_fetch_workflow_run_logs_reads_zip_archive(self):
         logs = dashboard.fetch_workflow_run_logs(

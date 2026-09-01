@@ -104,7 +104,7 @@ def get_bluesky_password():
     return password, variable_name
 
 
-def get_bluesky_credentials(include_source=False):
+def get_bluesky_credentials_with_source():
     username = os.getenv("BLUESKY_USERNAME", "").strip()
 
     if not username:
@@ -114,10 +114,11 @@ def get_bluesky_credentials(include_source=False):
         )
 
     password, password_source = get_bluesky_password()
+    return username, password, password_source
 
-    if include_source:
-        return username, password, password_source
 
+def get_bluesky_credentials():
+    username, password, _password_source = get_bluesky_credentials_with_source()
     return username, password
 
 
@@ -337,16 +338,51 @@ def _attempt_session_restore(
         return None
 
 
-def login_client():
-    username, password = get_bluesky_credentials()
+def _get_login_max_attempts():
     raw_attempts = os.getenv(
         "BLUESKY_LOGIN_RETRY_ATTEMPTS", str(DEFAULT_LOGIN_RETRY_ATTEMPTS)
     )
     try:
-        max_attempts = int(raw_attempts.strip())
+        return max(1, int(raw_attempts.strip()))
     except ValueError:
-        max_attempts = DEFAULT_LOGIN_RETRY_ATTEMPTS
-    max_attempts = max(1, max_attempts)
+        return DEFAULT_LOGIN_RETRY_ATTEMPTS
+
+
+def _login_with_credentials(
+    client,
+    username,
+    password,
+    max_attempts,
+    retry_delay_seconds,
+    session_persist_enabled,
+    session_file_path,
+):
+    print("Using configured credentials for Bluesky authentication.")
+    delay_seconds = retry_delay_seconds
+    for attempt in range(1, max_attempts + 1):
+        try:
+            client.login(username, password)
+            if session_persist_enabled:
+                _persist_session_string_to_file(client, session_file_path)
+            return client, username
+        except Exception as exc:
+            if not _is_transient_network_error(exc) or attempt >= max_attempts:
+                raise
+            current_delay_seconds = _get_retry_delay(delay_seconds, exc)
+            print(
+                f"Warning: transient Bluesky login failure ({attempt}/{max_attempts}): {exc}. "
+                f"Retrying in {current_delay_seconds:.1f}s."
+            )
+            if current_delay_seconds > 0:
+                time.sleep(current_delay_seconds)
+            delay_seconds *= DEFAULT_NETWORK_RETRY_BACKOFF_FACTOR
+
+    raise RuntimeError("Bluesky login retry loop exited unexpectedly.")
+
+
+def login_client():
+    username, password = get_bluesky_credentials()
+    max_attempts = _get_login_max_attempts()
     retry_delay_seconds = get_float_env(
         "BLUESKY_LOGIN_RETRY_DELAY_SECONDS",
         default=DEFAULT_LOGIN_RETRY_DELAY_SECONDS,
@@ -376,27 +412,15 @@ def login_client():
         if result is not None:
             return result
 
-    print("Using configured credentials for Bluesky authentication.")
-    delay_seconds = retry_delay_seconds
-    for attempt in range(1, max_attempts + 1):
-        try:
-            client.login(username, password)
-            if session_persist_enabled:
-                _persist_session_string_to_file(client, session_file_path)
-            return client, username
-        except Exception as exc:
-            if not _is_transient_network_error(exc) or attempt >= max_attempts:
-                raise
-            current_delay_seconds = _get_retry_delay(delay_seconds, exc)
-            print(
-                f"Warning: transient Bluesky login failure ({attempt}/{max_attempts}): {exc}. "
-                f"Retrying in {current_delay_seconds:.1f}s."
-            )
-            if current_delay_seconds > 0:
-                time.sleep(current_delay_seconds)
-            delay_seconds *= DEFAULT_NETWORK_RETRY_BACKOFF_FACTOR
-
-    raise RuntimeError("Bluesky login retry loop exited unexpectedly.")
+    return _login_with_credentials(
+        client,
+        username,
+        password,
+        max_attempts,
+        retry_delay_seconds,
+        session_persist_enabled,
+        session_file_path,
+    )
 
 
 def retry_network_call(

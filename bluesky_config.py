@@ -8,6 +8,7 @@ _CONFIG_PATH = (
 )
 DERIVED_UNFOLLOW_MAX_ACTIONS = "follow_fellows_monthly_capacity"
 FOLLOW_CAPACITY_WEEKS = 4
+_DEFAULT_POSTING_TAG = "#dadjoke"
 
 
 def _count_cron_field_values(field, minimum, maximum):
@@ -32,6 +33,27 @@ def _count_cron_field_values(field, minimum, maximum):
     return len(parsed)
 
 
+def _cron_weekly_cadence(day_of_month, month, day_of_week):
+    if day_of_month == "*" and month == "*":
+        if day_of_week == "*":
+            return 7.0
+        return _count_cron_field_values(day_of_week, 0, 6)
+
+    if not day_of_month.isdigit() or day_of_week != "*":
+        return None
+    if month == "*":
+        return 1.0 / 4.345
+    if not month.startswith("*/"):
+        return None
+    try:
+        month_step = int(month[2:])
+    except ValueError:
+        return None
+    if month_step <= 0:
+        return None
+    return 1.0 / (4.345 * month_step)
+
+
 def estimate_runs_per_week(cron):
     parts = cron.split()
     if len(parts) != 5:
@@ -41,24 +63,10 @@ def estimate_runs_per_week(cron):
     hour_count = _count_cron_field_values(hour, 0, 23)
     if minute_count is None or hour_count is None:
         return None
-    if day_of_month == "*" and month == "*" and day_of_week == "*":
-        return float(minute_count * hour_count * 7)
-    if day_of_month == "*" and month == "*" and day_of_week != "*":
-        day_count = _count_cron_field_values(day_of_week, 0, 6)
-        if day_count is None:
-            return None
-        return float(minute_count * hour_count * day_count)
-    if day_of_month.isdigit() and month == "*" and day_of_week == "*":
-        return float(minute_count * hour_count) / 4.345
-    if day_of_month.isdigit() and month.startswith("*/") and day_of_week == "*":
-        try:
-            month_step = int(month[2:])
-        except ValueError:
-            return None
-        if month_step <= 0:
-            return None
-        return float(minute_count * hour_count) / (4.345 * month_step)
-    return None
+    weekly_cadence = _cron_weekly_cadence(day_of_month, month, day_of_week)
+    if weekly_cadence is None:
+        return None
+    return float(minute_count * hour_count * weekly_cadence)
 
 
 def _normalise_unfollow_max_actions(value):
@@ -91,7 +99,7 @@ _DEFAULT_CONFIG = {
         "max_attempts": 5,
         "max_post_chars": 300,
         "tag_pool": [
-            "#dadjoke",
+            _DEFAULT_POSTING_TAG,
             "#dadjokes",
             "#joke",
             "#jokes",
@@ -109,9 +117,9 @@ _DEFAULT_CONFIG = {
             "#divertido",
             "#funny",
         ],
-        "hashtags": ["#jokes", "#dadjoke", "#funny"],
+        "hashtags": ["#jokes", _DEFAULT_POSTING_TAG, "#funny"],
         "tag_fallback": "#joke",
-        "tag_default": "#dadjoke",
+        "tag_default": _DEFAULT_POSTING_TAG,
         "tag_max_count": 3,
         "tag_similarity_groups": [
             ["dadjoke", "dadjokes"],
