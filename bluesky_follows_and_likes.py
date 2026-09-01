@@ -79,12 +79,16 @@ def follow_back(
     username: str,
     dry_run: bool,
     action_delay_seconds: float,
-    unfollowed_dids: set | None = None,
     summary: dict | None = None,
 ) -> None:
-    """Follow back any followers the bot is not yet following."""
-    if unfollowed_dids is None:
-        unfollowed_dids = set()
+    """Follow back any followers the bot is not yet following.
+
+    Every current follower is followed back unconditionally.  The unfollow
+    history is intentionally NOT consulted here: if someone has re-followed
+    the bot they have shown fresh intent to engage and deserve a follow-back
+    regardless of prior churn.  Unfollow-history protection applies only to
+    proactive follows (see ``follow_interactors``).
+    """
     if summary is None:
         summary = {}
     user_did = client.me.did
@@ -113,7 +117,6 @@ def follow_back(
     to_follow_back = follower_dids - following_dids
     summary["follow_back_candidates"] = len(to_follow_back)
     summary["follow_back_added"] = 0
-    summary["protected"] = 0
     summary["failed"] = 0
     print(
         f"{Fore.GREEN}Found {len(to_follow_back)} followers to follow back.{Style.RESET_ALL}"
@@ -121,12 +124,6 @@ def follow_back(
 
     for i, did in enumerate(to_follow_back, start=1):
         masked_did = mask_sensitive(did)
-        if did in unfollowed_dids:
-            summary["protected"] += 1
-            print(
-                f"{Fore.YELLOW}({i}/{len(to_follow_back)}) Skipping previously unfollowed {masked_did}.{Style.RESET_ALL}"
-            )
-            continue
         print(
             f"{Fore.YELLOW}({i}/{len(to_follow_back)}) Following {masked_did}...{Style.RESET_ALL}"
         )
@@ -731,7 +728,6 @@ def main() -> None:
         )
 
     state = bluesky_state.load_state()
-    unfollowed_dids = bluesky_state.get_unfollowed_dids(state)
     social_summary = {
         "follow_back_candidates": 0,
         "follow_back_added": 0,
@@ -751,7 +747,6 @@ def main() -> None:
             username,
             dry_run,
             action_delay_seconds,
-            unfollowed_dids,
             social_summary,
         )
     except (

@@ -2789,10 +2789,17 @@ class FollowBackTests(unittest.TestCase):
             },
         )
 
-    def test_follow_back_skips_dids_in_unfollow_history(self):
-        unfollowed_did = "did:plc:unfollowed"
-        follower_profile = SimpleNamespace(did=unfollowed_did)
-        new_follower = SimpleNamespace(did="did:plc:new")
+    def test_follow_back_follows_previously_unfollowed_users_who_refollowed(self):
+        """Re-followers must be followed back even if they appear in unfollow history.
+
+        The unfollow history is intentionally NOT consulted during follow-back.
+        If someone has re-followed the bot they deserve to be followed back
+        regardless of prior churn.
+        """
+        previously_unfollowed_did = "did:plc:unfollowed"
+        new_did = "did:plc:new"
+        follower_profile = SimpleNamespace(did=previously_unfollowed_did)
+        new_follower = SimpleNamespace(did=new_did)
         client = mock.Mock()
         client.me.did = "did:plc:bot"
         summary = {}
@@ -2809,17 +2816,18 @@ class FollowBackTests(unittest.TestCase):
                 "jokebot.bsky.social",
                 dry_run=False,
                 action_delay_seconds=0,
-                unfollowed_dids={unfollowed_did},
                 summary=summary,
             )
 
-        client.follow.assert_called_once_with("did:plc:new")
+        self.assertEqual(client.follow.call_count, 2)
+        followed_dids = {c.args[0] for c in client.follow.call_args_list}
+        self.assertIn(previously_unfollowed_did, followed_dids)
+        self.assertIn(new_did, followed_dids)
         self.assertEqual(
             summary,
             {
                 "follow_back_candidates": 2,
-                "follow_back_added": 1,
-                "protected": 1,
+                "follow_back_added": 2,
                 "failed": 0,
             },
         )
