@@ -674,7 +674,7 @@ duplicate failure when punctuation is the only difference.
 
 Users who reply to, repost, or like the bot's posts are engaged with the content
 and represent natural candidates to follow. The bot should follow them (if not
-already doing so) and apply the same 30-day grace window used for all outbound
+already doing so) and apply the same 90-day grace window used for all outbound
 follows, so they are not unfollowed immediately if they do not follow back.
 
 Guard rules to prevent churn:
@@ -788,20 +788,33 @@ continues to catch drift.
 
 ---
 
-### 5.34 Honour unfollow history in follow-back ✓ Complete
+### 5.34 Separate reactive follow-back from proactive follow policy ✓ Complete
 **Priority: High**
 
-Issue #87 requested that `wt5here.bsky.social` should never be auto-followed
-again. The project already has a DID-based `unfollow_history` state list for
-this purpose, and tag discovery plus interaction-follow paths already exclude
-those DIDs. The follow-back path only logged re-engagement and then still
-followed the account, so a separate permanent-follow block-list would duplicate
-the existing model without fixing the gap.
+Unfollow history prevents proactive discovery and interaction paths from
+restarting follow/unfollow churn. It must not suppress a follow-back after an
+account actively follows the bot again. Permanent exclusions belong in the
+configured block policy rather than unfollow history.
 
-**Resolution:** `bluesky_follows_and_likes.follow_back()` now skips DIDs in
-`unfollow_history`, matching the other auto-follow paths. The resolved DID for
-`wt5here.bsky.social` was moved out of follow grace and into unfollow history
-with `reason="manual_block"`.
+**Resolution:** `bluesky_follows_and_likes.follow_back()` follows every current
+actionable follower regardless of unfollow history. Proactive follow paths still
+honour history, while configured blocks are reconciled before follow-back.
+
+---
+
+### 5.35 Make follow-back converge and soften unfollow eligibility ✓ Complete
+**Priority: High**
+
+Issues #101 and #103 showed that a single partial or stale graph snapshot could
+leave followers outstanding while the workflow still reported success. Issue
+#105 extended the requested response grace from one month to three months.
+
+**Resolution:** Follow-back now requires complete follower and following graph
+pagination, performs bounded fetch-act-verify reconciliation, and fails the run
+if a final snapshot still contains actionable followers. Unfollow graph reads
+also require complete snapshots before any destructive action. The state-backed
+response grace is now 90 days, with the existing monthly unfollow cadence kept
+to spread eligible clean-up without extra API pressure.
 
 ## 6. Explicit "Will Not Do" Decisions
 Do not revisit these without a concrete operational reason.
@@ -821,8 +834,8 @@ Do not revisit these without a concrete operational reason.
 - Report pipeline improvements completed (`#report` acknowledgement, like/report rules, jokebook-aware report handling).
 - Follow script renamed to `bluesky_follow_fellows.py` to reflect conservative behaviour and reduce misleading framing.
 - Unfollow automation now applies safety-first batching controls (per-run cap, inter-batch pause, and throttle-aware early stop).
-- Unfollow schedule set to daily at 12:00 UTC to clear the 4,400+ non-follower backlog; revert to twice-yearly once backlog is exhausted.
-- Re-engagement guardrail implemented: unfollow history recorded in `bot_state.json`; `follow_fellows`, interaction-follow, and follow-back all exclude previously-unfollowed DIDs.
+- Unfollow schedule runs monthly with a state-backed 90-day response grace and safety-first batching controls.
+- Re-engagement guardrail implemented: proactive follow paths exclude unfollow history, while current followers remain eligible for reactive follow-back.
 
 ## 8. Changelog (Milestones)
 - v0.1: Initial governance draft.

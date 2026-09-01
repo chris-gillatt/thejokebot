@@ -2185,6 +2185,21 @@ class PaginationTests(unittest.TestCase):
 
         self.assertEqual([item.did for item in data], ["did:one"])
 
+    def test_fetch_paginated_data_rejects_incomplete_graph_when_required(self):
+        response = SimpleNamespace(
+            followers=[SimpleNamespace(did="did:one")], cursor="same"
+        )
+
+        with self.assertRaisesRegex(
+            bluesky_follower_utils.IncompletePaginationError,
+            "Repeated pagination cursor",
+        ):
+            bluesky_follower_utils.fetch_paginated_data(
+                lambda actor, cursor=None, limit=100: response,
+                actor="did:test",
+                require_complete=True,
+            )
+
     def test_fetch_paginated_data_retries_transient_page_error(self):
         calls = {"count": 0}
 
@@ -2776,6 +2791,7 @@ class FollowBackTests(unittest.TestCase):
                 "limit": bluesky_follows_and_likes._FOLLOW_BACK_PAGE_LIMIT,
                 "max_pages": bluesky_follows_and_likes._FOLLOW_BACK_MAX_PAGES,
                 "max_runtime_seconds": bluesky_follows_and_likes._FOLLOW_BACK_MAX_RUNTIME_SECONDS,
+                "require_complete": True,
             },
         )
         self.assertIs(following_call.args[0], client.get_follows)
@@ -2786,6 +2802,7 @@ class FollowBackTests(unittest.TestCase):
                 "limit": bluesky_follows_and_likes._FOLLOW_BACK_PAGE_LIMIT,
                 "max_pages": bluesky_follows_and_likes._FOLLOW_BACK_MAX_PAGES,
                 "max_runtime_seconds": bluesky_follows_and_likes._FOLLOW_BACK_MAX_RUNTIME_SECONDS,
+                "require_complete": True,
             },
         )
 
@@ -2809,15 +2826,18 @@ class FollowBackTests(unittest.TestCase):
             side_effect=[
                 [follower_profile, new_follower],
                 [],
+                [follower_profile, new_follower],
+                [follower_profile, new_follower],
             ],
         ):
-            bluesky_follows_and_likes.follow_back(
-                client,
-                "jokebot.bsky.social",
-                dry_run=False,
-                action_delay_seconds=0,
-                summary=summary,
-            )
+            with mock.patch("bluesky_follows_and_likes.time.sleep"):
+                bluesky_follows_and_likes.follow_back(
+                    client,
+                    "jokebot.bsky.social",
+                    dry_run=False,
+                    action_delay_seconds=0,
+                    summary=summary,
+                )
 
         self.assertEqual(client.follow.call_count, 2)
         followed_dids = {c.args[0] for c in client.follow.call_args_list}
@@ -2832,6 +2852,72 @@ class FollowBackTests(unittest.TestCase):
             },
         )
         self.assertNotIn("protected", summary, "follow_back must not set 'protected'")
+
+    def test_follow_back_reconciles_until_no_candidates_remain(self):
+        first_did = "did:plc:first"
+        second_did = "did:plc:second"
+        first = SimpleNamespace(did=first_did)
+        second = SimpleNamespace(did=second_did)
+        client = mock.Mock()
+        client.me.did = "did:plc:bot"
+        summary = {}
+
+        with mock.patch(
+            "bluesky_follows_and_likes.fetch_paginated_data",
+            side_effect=[
+                [first],
+                [],
+                [first, second],
+                [first],
+                [first, second],
+                [first, second],
+            ],
+        ):
+            with mock.patch("bluesky_follows_and_likes.time.sleep"):
+                bluesky_follows_and_likes.follow_back(
+                    client,
+                    "jokebot.bsky.social",
+                    dry_run=False,
+                    action_delay_seconds=0,
+                    summary=summary,
+                )
+
+        self.assertEqual(
+            [call.args[0] for call in client.follow.call_args_list],
+            [first_did, second_did],
+        )
+        self.assertEqual(summary["follow_back_candidates"], 2)
+        self.assertEqual(summary["follow_back_added"], 2)
+        self.assertEqual(summary["failed"], 0)
+
+    def test_follow_back_fails_without_retrying_same_did_when_graph_is_stale(self):
+        follower_did = "did:plc:stale"
+        follower = SimpleNamespace(did=follower_did)
+        client = mock.Mock()
+        client.me.did = "did:plc:bot"
+        summary = {}
+
+        def fetch_graph(client_method, **kwargs):
+            if client_method is client.get_followers:
+                return [follower]
+            return []
+
+        with mock.patch(
+            "bluesky_follows_and_likes.fetch_paginated_data",
+            side_effect=fetch_graph,
+        ):
+            with mock.patch("bluesky_follows_and_likes.time.sleep"):
+                with self.assertRaisesRegex(RuntimeError, "did not converge"):
+                    bluesky_follows_and_likes.follow_back(
+                        client,
+                        "jokebot.bsky.social",
+                        dry_run=False,
+                        action_delay_seconds=0,
+                        summary=summary,
+                    )
+
+        client.follow.assert_called_once_with(follower_did)
+        self.assertEqual(summary["failed"], 1)
 
     def test_follow_back_does_not_mutate_after_incomplete_graph_snapshot(self):
         client = mock.Mock()
@@ -3184,6 +3270,13 @@ class UnfollowHistoryTests(unittest.TestCase):
 
 
 class FollowGraceTests(unittest.TestCase):
+    def test_follow_response_grace_period_is_90_days(self):
+        self.assertEqual(bluesky_state.FOLLOW_RESPONSE_GRACE_PERIOD_DAYS, 90)
+        self.assertEqual(
+            bluesky_state.FOLLOW_RESPONSE_GRACE_PERIOD_SECONDS,
+            90 * 24 * 60 * 60,
+        )
+
     def test_get_follow_grace_dids_returns_empty_set_initially(self):
         state = bluesky_state._default_state()
         self.assertEqual(bluesky_state.get_follow_grace_dids(state, cutoff_ts=0), set())

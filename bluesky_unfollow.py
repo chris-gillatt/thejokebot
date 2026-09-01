@@ -343,8 +343,12 @@ def unfollow_users():
             f"{Fore.YELLOW}Fetching followers and following for account.{Style.RESET_ALL}"
         )
 
-        followers = fetch_paginated_data(client.get_followers, user_did)
-        following = fetch_paginated_data(client.get_follows, user_did)
+        followers = fetch_paginated_data(
+            client.get_followers, user_did, require_complete=True
+        )
+        following = fetch_paginated_data(
+            client.get_follows, user_did, require_complete=True
+        )
 
         follower_dids = {follower.did for follower in followers}
         following_map = {follow.did: follow.viewer.following for follow in following}

@@ -2,6 +2,16 @@ import time
 from bluesky_common import retry_network_call
 
 
+class IncompletePaginationError(RuntimeError):
+    """Raised when a caller requires a complete graph but pagination stops early."""
+
+
+def _handle_incomplete_pagination(message, require_complete):
+    if require_complete:
+        raise IncompletePaginationError(message)
+    print(f"{message}; stopping early.")
+
+
 def _extract_page_items(response):
     """Return the items list from a paginated follower/following response, or None."""
     if hasattr(response, "followers"):
@@ -17,24 +27,28 @@ def fetch_paginated_data(
     limit=100,
     max_pages=100,
     max_runtime_seconds=30,
+    require_complete=False,
 ):
     """Fetch paginated data (followers or following) with guardrails."""
     data = []
     cursor = None
+    next_cursor = None
     pages = 0
     seen_cursors = set()
     started_at = time.monotonic()
 
     while pages < max_pages:
         if time.monotonic() - started_at >= max_runtime_seconds:
-            print(
-                f"Reached pagination runtime safety limit ({max_runtime_seconds}s); stopping early."
+            message = (
+                f"Reached pagination runtime safety limit ({max_runtime_seconds}s)"
             )
+            _handle_incomplete_pagination(message, require_complete)
             break
 
         if cursor is not None:
             if cursor in seen_cursors:
-                print("Repeated pagination cursor detected; stopping early.")
+                message = "Repeated pagination cursor detected"
+                _handle_incomplete_pagination(message, require_complete)
                 break
             seen_cursors.add(cursor)
 
@@ -49,12 +63,14 @@ def fetch_paginated_data(
         # Detect cursor stall before committing this page's items so we don't
         # collect a duplicate page.
         if cursor is not None and next_cursor == cursor:
-            print("Repeated pagination cursor detected; stopping early.")
+            message = "Repeated pagination cursor detected"
+            _handle_incomplete_pagination(message, require_complete)
             break
 
         items = _extract_page_items(response)
         if items is None:
-            print("Unexpected paginated response format; stopping early.")
+            message = "Unexpected paginated response format"
+            _handle_incomplete_pagination(message, require_complete)
             break
         data.extend(items)
 
@@ -62,8 +78,9 @@ def fetch_paginated_data(
             break
         cursor = next_cursor
 
-    if pages >= max_pages:
-        print(f"Reached pagination safety limit ({max_pages} pages).")
+    if pages >= max_pages and next_cursor:
+        message = f"Reached pagination safety limit ({max_pages} pages)"
+        _handle_incomplete_pagination(message, require_complete)
 
     return data
 

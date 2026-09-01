@@ -42,6 +42,8 @@ _INTERACTION_FOLLOW_PAGE_LIMIT = _FOLLOWS_AND_LIKES_CONFIG[
 _FOLLOW_BACK_PAGE_LIMIT = 100
 _FOLLOW_BACK_MAX_PAGES = 1000
 _FOLLOW_BACK_MAX_RUNTIME_SECONDS = 180
+_FOLLOW_BACK_MAX_RECONCILIATION_PASSES = 3
+_FOLLOW_BACK_SETTLE_SECONDS = 5
 _STARTER_PACK_WINDOW_DAYS = 30
 _STARTER_PACK_MAX_PAGES = 20
 _STARTER_PACK_PAGE_LIMIT = 100
@@ -96,65 +98,94 @@ def follow_back(
         f"{Fore.YELLOW}Fetching followers and following for account.{Style.RESET_ALL}"
     )
 
-    followers = fetch_paginated_data(
-        client.get_followers,
-        actor=user_did,
-        limit=_FOLLOW_BACK_PAGE_LIMIT,
-        max_pages=_FOLLOW_BACK_MAX_PAGES,
-        max_runtime_seconds=_FOLLOW_BACK_MAX_RUNTIME_SECONDS,
-    )
-    following = fetch_paginated_data(
-        client.get_follows,
-        actor=user_did,
-        limit=_FOLLOW_BACK_PAGE_LIMIT,
-        max_pages=_FOLLOW_BACK_MAX_PAGES,
-        max_runtime_seconds=_FOLLOW_BACK_MAX_RUNTIME_SECONDS,
-    )
-
-    follower_dids = {f.did for f in followers}
-    following_dids = {f.did for f in following}
-
-    to_follow_back = follower_dids - following_dids
-    summary["follow_back_candidates"] = len(to_follow_back)
+    attempted_dids: set[str] = set()
+    observed_candidate_dids: set[str] = set()
+    summary["follow_back_candidates"] = 0
     summary["follow_back_added"] = 0
     summary["failed"] = 0
-    print(
-        f"{Fore.GREEN}Found {len(to_follow_back)} followers to follow back.{Style.RESET_ALL}"
-    )
 
-    for i, did in enumerate(to_follow_back, start=1):
-        masked_did = mask_sensitive(did)
-        print(
-            f"{Fore.YELLOW}({i}/{len(to_follow_back)}) Following {masked_did}...{Style.RESET_ALL}"
+    for pass_number in range(1, _FOLLOW_BACK_MAX_RECONCILIATION_PASSES + 2):
+        followers = fetch_paginated_data(
+            client.get_followers,
+            actor=user_did,
+            limit=_FOLLOW_BACK_PAGE_LIMIT,
+            max_pages=_FOLLOW_BACK_MAX_PAGES,
+            max_runtime_seconds=_FOLLOW_BACK_MAX_RUNTIME_SECONDS,
+            require_complete=True,
         )
-        if dry_run:
-            print(f"{Fore.YELLOW}[DRY-RUN] Would follow {masked_did}{Style.RESET_ALL}")
-        else:
-            try:
-                retry_network_call(
-                    lambda current_did=did: client.follow(current_did),
-                    description=f"following back {masked_did}",
-                )
-                print(f"{Fore.GREEN}Followed {masked_did}{Style.RESET_ALL}")
-                summary["follow_back_added"] += 1
-            except (
-                requests.RequestException,
-                TimeoutError,
-                atproto_client.exceptions.NetworkError,
-            ) as exc:
+        following = fetch_paginated_data(
+            client.get_follows,
+            actor=user_did,
+            limit=_FOLLOW_BACK_PAGE_LIMIT,
+            max_pages=_FOLLOW_BACK_MAX_PAGES,
+            max_runtime_seconds=_FOLLOW_BACK_MAX_RUNTIME_SECONDS,
+            require_complete=True,
+        )
+        follower_dids = {f.did for f in followers}
+        following_dids = {f.did for f in following}
+        remaining_dids = follower_dids - following_dids
+        observed_candidate_dids |= remaining_dids
+        summary["follow_back_candidates"] = len(observed_candidate_dids)
+
+        if not remaining_dids:
+            print(
+                f"{Fore.GREEN}Verified that all actionable followers are followed back.{Style.RESET_ALL}"
+            )
+            print(f"{Fore.GREEN}Follow-back completed.{Style.RESET_ALL}")
+            return
+
+        if pass_number > _FOLLOW_BACK_MAX_RECONCILIATION_PASSES:
+            summary["failed"] += len(remaining_dids)
+            raise RuntimeError(
+                "Follow-back did not converge after "
+                f"{_FOLLOW_BACK_MAX_RECONCILIATION_PASSES} reconciliation passes; "
+                f"{len(remaining_dids)} actionable follower(s) remain."
+            )
+
+        to_follow_back = sorted(remaining_dids - attempted_dids)
+        print(
+            f"{Fore.GREEN}Follow-back pass {pass_number}: found "
+            f"{len(remaining_dids)} actionable follower(s), "
+            f"{len(to_follow_back)} not yet attempted.{Style.RESET_ALL}"
+        )
+
+        for i, did in enumerate(to_follow_back, start=1):
+            attempted_dids.add(did)
+            masked_did = mask_sensitive(did)
+            print(
+                f"{Fore.YELLOW}({i}/{len(to_follow_back)}) Following {masked_did}...{Style.RESET_ALL}"
+            )
+            if dry_run:
                 print(
-                    f"{Fore.RED}Failed to follow {masked_did}: {exc}{Style.RESET_ALL}"
+                    f"{Fore.YELLOW}[DRY-RUN] Would follow {masked_did}{Style.RESET_ALL}"
                 )
-                summary["failed"] += 1
-                continue
+                summary["follow_back_added"] += 1
+            else:
+                try:
+                    retry_network_call(
+                        lambda current_did=did: client.follow(current_did),
+                        description=f"following back {masked_did}",
+                    )
+                    print(f"{Fore.GREEN}Followed {masked_did}{Style.RESET_ALL}")
+                    summary["follow_back_added"] += 1
+                except (
+                    requests.RequestException,
+                    TimeoutError,
+                    atproto_client.exceptions.NetworkError,
+                ) as exc:
+                    print(
+                        f"{Fore.RED}Failed to follow {masked_did}: {exc}{Style.RESET_ALL}"
+                    )
+                    summary["failed"] += 1
+
+            if action_delay_seconds > 0 and i < len(to_follow_back):
+                time.sleep(action_delay_seconds)
 
         if dry_run:
-            summary["follow_back_added"] += 1
+            print(f"{Fore.GREEN}Follow-back dry run completed.{Style.RESET_ALL}")
+            return
 
-        if action_delay_seconds > 0 and i < len(to_follow_back):
-            time.sleep(action_delay_seconds)
-
-    print(f"{Fore.GREEN}Follow-back completed.{Style.RESET_ALL}")
+        time.sleep(_FOLLOW_BACK_SETTLE_SECONDS)
 
 
 # ---------------------------------------------------------------------------
@@ -298,7 +329,14 @@ def follow_interactors(
     print(
         f"{Fore.YELLOW}Fetching current follows for interaction-follow check.{Style.RESET_ALL}"
     )
-    following = fetch_paginated_data(client.get_follows, user_did)
+    following = fetch_paginated_data(
+        client.get_follows,
+        actor=user_did,
+        limit=_FOLLOW_BACK_PAGE_LIMIT,
+        max_pages=_FOLLOW_BACK_MAX_PAGES,
+        max_runtime_seconds=_FOLLOW_BACK_MAX_RUNTIME_SECONDS,
+        require_complete=True,
+    )
     already_following = {f.did for f in following}
 
     cutoff_epoch = time.time() - _INTERACTION_WINDOW_SECONDS
@@ -802,6 +840,10 @@ def main() -> None:
 
     print(_social_summary_line(social_summary, dry_run))
     bluesky_state.save_state(state, domains="social")
+    if social_summary["failed"]:
+        raise RuntimeError(
+            f"Social run completed with {social_summary['failed']} failed action(s)."
+        )
     print(f"{Fore.GREEN}Done.{Style.RESET_ALL}")
 
 
