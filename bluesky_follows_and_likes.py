@@ -39,6 +39,9 @@ _INTERACTION_FOLLOW_MAX_PAGES = _FOLLOWS_AND_LIKES_CONFIG[
 _INTERACTION_FOLLOW_PAGE_LIMIT = _FOLLOWS_AND_LIKES_CONFIG[
     "interaction_follow_page_limit"
 ]
+_FOLLOW_BACK_PAGE_LIMIT = 100
+_FOLLOW_BACK_MAX_PAGES = 1000
+_FOLLOW_BACK_MAX_RUNTIME_SECONDS = 180
 _STARTER_PACK_WINDOW_DAYS = 30
 _STARTER_PACK_MAX_PAGES = 20
 _STARTER_PACK_PAGE_LIMIT = 100
@@ -89,8 +92,20 @@ def follow_back(
         f"{Fore.YELLOW}Fetching followers and following for account.{Style.RESET_ALL}"
     )
 
-    followers = fetch_paginated_data(client.get_followers, user_did)
-    following = fetch_paginated_data(client.get_follows, user_did)
+    followers = fetch_paginated_data(
+        client.get_followers,
+        actor=user_did,
+        limit=_FOLLOW_BACK_PAGE_LIMIT,
+        max_pages=_FOLLOW_BACK_MAX_PAGES,
+        max_runtime_seconds=_FOLLOW_BACK_MAX_RUNTIME_SECONDS,
+    )
+    following = fetch_paginated_data(
+        client.get_follows,
+        actor=user_did,
+        limit=_FOLLOW_BACK_PAGE_LIMIT,
+        max_pages=_FOLLOW_BACK_MAX_PAGES,
+        max_runtime_seconds=_FOLLOW_BACK_MAX_RUNTIME_SECONDS,
+    )
 
     follower_dids = {f.did for f in followers}
     following_dids = {f.did for f in following}
