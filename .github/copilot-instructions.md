@@ -27,6 +27,12 @@
 - Report what was verified and what could not be verified.
 - Treat posting telemetry, `bot_state.json` provider fields, dashboard metrics JSON, and dashboard rendering as one cross-file contract. Changes to any part must include producer-to-collector tests and local desktop/mobile dashboard verification.
 
+## SonarQube Cloud Workflow
+- Use the `sonar-quality` project skill for Sonar configuration, local scans, quality-gate failures, coverage import, and finding remediation.
+- Keep `sonar-project.properties` as the scanner source of truth and keep automatic analysis disabled.
+- Never expose `SONAR_TOKEN`, analyse `references/**`, or declare success without both a passing quality gate and the expected unresolved issue count.
+- Generate fresh Python coverage with `--cov=.` before scanning; an empty Cobertura `<source>` makes Sonar report 0% coverage.
+
 ## Terminal Command Workflow
 - Avoid heredocs for shell commands and file generation to reduce interruption-related issues.
 - Prefer temporary files inside `.agent-tmp/` for intermediate command input.

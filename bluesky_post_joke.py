@@ -2,6 +2,7 @@ import base64
 import html
 import os
 import random
+import secrets
 import time
 
 import requests
@@ -80,7 +81,7 @@ def shuffle_posting_hashtags(
 
     group_lookup = _build_group_lookup(similarity_groups)
     pool_copy = list(hashtag_pool)
-    random.Random(offset).shuffle(pool_copy)
+    random.Random(offset).shuffle(pool_copy)  # NOSONAR - deterministic display order
 
     result = []
     seen_groups: set[int] = set()
@@ -157,7 +158,7 @@ def get_fallback_joke():
         "If this script were a programmer, it would still be debugging hello world.",
         "Looks like this script is throwing exceptions faster than I throw tantrums.",
     ]
-    return random.choice(fallback_jokes)
+    return secrets.choice(fallback_jokes)
 
 
 def get_current_epoch():

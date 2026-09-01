@@ -131,6 +131,45 @@ requests are expected to run analysis. Automatic analysis must remain disabled
 under the SonarQube Cloud project's **Administration → Analysis Method** settings
 to prevent duplicate, conflicting analyses.
 
+### SonarQube Cloud analysis
+
+Install the local scanner on macOS:
+
+- `brew install sonar-scanner`
+
+Add `SONAR_TOKEN='your-token'` to the ignored `.env` file. Do not commit the
+token or pass it as a command-line property, where it may be retained in shell
+history or process output.
+
+Generate the same application-only coverage report used by CI:
+
+- `PYTHONPATH=. .venv/bin/python -m pytest tests/ -q --cov=. --cov-report=xml:coverage.xml --cov-fail-under=75`
+
+Then load the local environment and run the scanner from the repository root:
+
+```shell
+set -a
+source .env
+set +a
+SONAR_HOST_URL=https://sonarcloud.io sonar-scanner \
+	-Dsonar.qualitygate.wait=true \
+	-Dsonar.qualitygate.timeout=300
+unset SONAR_TOKEN
+```
+
+The scanner reads project identity, first-party source boundaries, exclusions,
+Python version, and the Cobertura report path from `sonar-project.properties`.
+The dashboard remains in static analysis but is excluded from coverage because
+the repository currently produces Python coverage only. The coverage XML must
+contain a non-empty `<source>` path so Sonar can map results to Python files.
+
+In CI, `.github/workflows/python_tests.yml` installs the hash-locked dependencies,
+runs the tests, writes `coverage.xml`, invokes the SHA-pinned Sonar action, and
+waits for the quality gate. A failed gate therefore fails the workflow even when
+the analysis upload succeeds. Scanner exit code 3 normally means the report was
+uploaded but the quality gate failed; inspect the failed gate condition in
+SonarQube Cloud before treating it as a scanner fault.
+
 If you prefer a direct one-liner without the helper script:
 
 - `.venv/bin/python -m pytest tests/ -v --tb=short`

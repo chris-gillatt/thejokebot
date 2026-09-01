@@ -12,7 +12,7 @@ max-complexity = 10
 [tool.coverage.run]
 # Measure first-party application code; skip tests and read-only submodules.
 omit = ["references/**", "tests/**"]
-relative_files = true
+source = ["."]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -1,6 +1,7 @@
 const DATA_URL = "data/metrics.json";
 const HISTORY_URL = "data/history/daily.json";
 const EMBED_SCRIPT_URL = "https://embed.bsky.app/static/embed.js";
+const AVATAR_ORIGIN = "https://cdn.bsky.app";
 const colours = ["#087fdb", "#df6255", "#138a78", "#e9aa31", "#08a9cf"];
 const charts = {};
 let metrics;
@@ -32,6 +33,15 @@ const dateTimeFormat = new Intl.DateTimeFormat("en-GB", {
 
 function setText(id, value) {
   document.getElementById(id).textContent = value;
+}
+
+function safeAvatarUrl(value) {
+  try {
+    const url = new URL(value);
+    return url.origin === AVATAR_ORIGIN ? url.href : "";
+  } catch {
+    return "";
+  }
 }
 
 function dashboardViewFromHash() {
@@ -87,7 +97,7 @@ function metricText(value) {
 function renderProfile() {
   const profileLink = document.getElementById("profile-link");
   profileLink.href = metrics.account.profile_url;
-  document.getElementById("profile-avatar").src = metrics.account.avatar;
+  document.getElementById("profile-avatar").src = safeAvatarUrl(metrics.account.avatar);
   setText("profile-handle", `@${metrics.account.handle}`);
   setText("collection-time", `Updated ${dateTimeFormat.format(new Date(metrics.generated_at))}`);
 }
@@ -105,7 +115,7 @@ function renderLatestJoke() {
   const header = document.createElement("div");
   header.className = "post-fallback-header";
   const avatar = document.createElement("img");
-  avatar.src = metrics.account.avatar;
+  avatar.src = safeAvatarUrl(metrics.account.avatar);
   avatar.alt = "";
   const name = document.createElement("span");
   name.textContent = `${metrics.account.display_name} @${metrics.account.handle}`;

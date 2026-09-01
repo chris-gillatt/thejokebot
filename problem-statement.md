@@ -41,6 +41,11 @@ failed new-code standards block the workflow. Keep the scanner token in GitHub
 Actions and Dependabot secrets, skip token access for fork pull requests, and
 disable Sonar automatic analysis to prevent duplicate submissions.
 
+The README now documents local scanner installation, secure token loading,
+coverage generation, CI integration, and gate diagnosis. The project-scoped
+`sonar-quality` Copilot skill retains the verified analysis and remediation
+workflow for future AI sessions without loading that detail into unrelated work.
+
 ### 5.52 Improve dashboard hierarchy and local preview ✓ Complete
 **Priority: Medium**
 

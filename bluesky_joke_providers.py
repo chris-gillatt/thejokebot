@@ -14,7 +14,7 @@ import base64
 import json
 import os
 import pathlib
-import random
+import secrets
 
 import requests
 import bluesky_state
@@ -193,7 +193,7 @@ def fetch_from_jokebot_jokebook() -> str:
     jokes = data.get("jokes", [])
     if not jokes:
         raise ValueError("Jokebook file is empty")
-    encoded = random.choice(jokes)
+    encoded = secrets.choice(jokes)
     return base64.b64decode(encoded).decode()
 
 

@@ -44,7 +44,7 @@ echo "==> Ruff format check"
 
 echo "==> Unit tests"
 "${PYTHON[@]}" -m pytest tests/ -v --tb=short \
-  --cov \
+  --cov=. \
   --cov-report=term \
   --cov-report=xml:coverage.xml \
   --cov-fail-under=75
