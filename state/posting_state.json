@@ -1,7 +1,7 @@
 {
   "provider": {
-    "last_used": "icanhazdadjoke",
-    "last_used_at": 1788509562,
+    "last_used": "groandeck",
+    "last_used_at": 1788524032,
     "rotation_order": [
       "icanhazdadjoke",
       "jokeapi",
@@ -10,23 +10,23 @@
     ],
     "failures": {
       "icanhazdadjoke": {
-        "count": 51,
-        "last_failure_at": 1788293375,
+        "count": 52,
+        "last_failure_at": 1788524032,
         "last_error": "All 5 jokes from 'icanhazdadjoke' were rejected (5 duplicates, 0 too long)",
         "reason_counts": {
-          "duplicate": 60,
+          "duplicate": 65,
           "too_long": 0,
           "network_error": 0,
           "provider_error": 0
         }
       },
       "jokeapi": {
-        "count": 211,
-        "last_failure_at": 1788481444,
-        "last_error": "All 5 jokes from 'jokeapi' were rejected (5 duplicates, 0 too long)",
+        "count": 212,
+        "last_failure_at": 1788524032,
+        "last_error": "All 5 jokes from 'jokeapi' were rejected (4 duplicates, 1 too long)",
         "reason_counts": {
-          "duplicate": 164,
-          "too_long": 1,
+          "duplicate": 168,
+          "too_long": 2,
           "network_error": 0,
           "provider_error": 0
         }
@@ -54,11 +54,11 @@
         }
       }
     },
-    "last_started_primary": "syrsly",
-    "last_started_primary_at": 1788509562
+    "last_started_primary": "icanhazdadjoke",
+    "last_started_primary_at": 1788524032
   },
   "posting": {
-    "tag_offset": 3
+    "tag_offset": 4
   },
   "posted_jokes": [
     {
@@ -6900,6 +6900,18 @@
         "dadjoke",
         "pun",
         "humorsky"
+      ]
+    },
+    {
+      "ts": 1788524032,
+      "b64": "V2hhdCBkbyB5b3UgY2FsbCBhIHdlbGwtZHJlc3NlZCBsaW9uPwoKQSBkYW5keSBsaW9uLg==",
+      "provider": "groandeck",
+      "post_uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3muowttmgve2d",
+      "post_cid": "bafyreigghcvyx5i7vyojnxh5aqjm3sawt5n76ghrej5hidawm6vuynvqnu",
+      "hashtags": [
+        "dadjoke",
+        "jokesky",
+        "jokes"
       ]
     }
   ]
