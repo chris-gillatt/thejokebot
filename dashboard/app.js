@@ -8,6 +8,7 @@ let metrics;
 let historyMetrics;
 let selectedRange = "30";
 let selectedTopRange = "30";
+let blueskyEmbedLoad;
 const dashboardViews = ["audience", "operations"];
 
 const numberFormat = new Intl.NumberFormat("en-GB");
@@ -102,15 +103,10 @@ function renderProfile() {
   setText("collection-time", `Updated ${dateTimeFormat.format(new Date(metrics.generated_at))}`);
 }
 
-function renderLatestJoke() {
-  const latest = metrics.latest_joke;
-  setText("latest-date", dateFormat.format(new Date(latest.created_at)));
-  const stage = document.getElementById("latest-post");
-  stage.replaceChildren();
-
+function createPostEmbed(post) {
   const quote = document.createElement("blockquote");
   quote.className = "bluesky-embed post-fallback";
-  quote.dataset.blueskyUri = latest.uri;
+  quote.dataset.blueskyUri = post.uri;
 
   const header = document.createElement("div");
   header.className = "post-fallback-header";
@@ -123,17 +119,39 @@ function renderLatestJoke() {
 
   const text = document.createElement("p");
   text.className = "post-fallback-text";
-  text.textContent = latest.text;
+  text.textContent = post.text;
   const link = document.createElement("a");
-  link.href = latest.url;
+  link.href = post.url;
   link.textContent = "View on Bluesky";
   quote.append(header, text, link);
-  stage.append(quote);
+  return quote;
+}
 
-  const script = document.createElement("script");
-  script.src = EMBED_SCRIPT_URL;
-  script.async = true;
-  document.head.append(script);
+function loadBlueskyEmbeds(container = document) {
+  if (window.bluesky?.scan) {
+    window.bluesky.scan(container);
+    return;
+  }
+  if (!blueskyEmbedLoad) {
+    blueskyEmbedLoad = new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = EMBED_SCRIPT_URL;
+      script.async = true;
+      script.addEventListener("load", resolve, { once: true });
+      script.addEventListener("error", reject, { once: true });
+      document.head.append(script);
+    });
+  }
+  blueskyEmbedLoad
+    .then(() => window.bluesky?.scan(container))
+    .catch((error) => console.error("Unable to load Bluesky embeds", error));
+}
+
+function renderLatestJoke() {
+  const latest = metrics.latest_joke;
+  setText("latest-date", dateFormat.format(new Date(latest.created_at)));
+  const stage = document.getElementById("latest-post");
+  stage.replaceChildren(createPostEmbed(latest));
 }
 
 function deltaText(current, previous) {
@@ -946,22 +964,11 @@ function renderTopPosts() {
   emptyState.hidden = posts.length > 0;
   posts.forEach((post) => {
     const article = document.createElement("article");
-    article.className = "top-post";
-    const text = document.createElement("p");
-    text.className = "top-post-text";
-    text.textContent = post.text;
-    const footer = document.createElement("div");
-    footer.className = "top-post-footer";
-    const interactions = Object.values(post.engagement).reduce((sum, count) => sum + count, 0);
-    const score = document.createElement("span");
-    score.textContent = `${numberFormat.format(interactions)} interactions`;
-    const link = document.createElement("a");
-    link.href = post.url;
-    link.textContent = "View post";
-    footer.append(score, link);
-    article.append(text, footer);
+    article.className = "top-post-stage";
+    article.append(createPostEmbed(post));
     container.append(article);
   });
+  loadBlueskyEmbeds(container);
 }
 
 function renderCharts() {

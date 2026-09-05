@@ -21,14 +21,14 @@
         [role="tabpanel"][hidden] { display: block; }
       </style>
     </noscript>
-    <link rel="stylesheet" href="styles.css?v=20" />
+    <link rel="stylesheet" href="styles.css?v=21" />
     <script
       src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"
       integrity="sha384-jb8JQMbMoBUzgWatfe6COACi2ljcDdZQ2OxczGA3bGNeWe+6DChMTBJemed7ZnvJ"
       crossorigin="anonymous"
       defer
     ></script>
-    <script src="app.js?v=16" defer></script>
+    <script src="app.js?v=17" defer></script>
   </head>
   <body>
     <noscript>
@@ -335,7 +335,7 @@
               <button type="button" data-top-range="all" aria-pressed="false">All</button>
             </div>
           </div>
-          <div id="top-posts" class="post-grid"></div>
+          <div id="top-posts" class="post-grid" aria-live="polite"></div>
           <p id="top-posts-empty" class="top-posts-empty" hidden>No joke posts observed in this period.</p>
         </div>
       </section>

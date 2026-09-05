@@ -6,6 +6,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DASHBOARD_HTML = REPO_ROOT / "dashboard" / "index.html"
+DASHBOARD_JS = REPO_ROOT / "dashboard" / "app.js"
 
 
 class _Node:
@@ -44,14 +45,14 @@ class _DocumentParser(HTMLParser):
         self.root = _Node("document", [])
         self.stack = [self.root]
 
-    def handle_starttag(self, tag, attributes):
-        node = _Node(tag, attributes, self.stack[-1])
+    def handle_starttag(self, tag, attrs):
+        node = _Node(tag, attrs, self.stack[-1])
         self.stack[-1].children.append(node)
         if tag not in self.VOID_ELEMENTS:
             self.stack.append(node)
 
-    def handle_startendtag(self, tag, attributes):
-        self.handle_starttag(tag, attributes)
+    def handle_startendtag(self, tag, attrs):
+        self.handle_starttag(tag, attrs)
         if tag not in self.VOID_ELEMENTS:
             self.stack.pop()
 
@@ -130,6 +131,15 @@ class DashboardUiTests(unittest.TestCase):
     def test_discovery_uses_clear_success_rate_wording(self):
         text = " ".join(node.text.strip() for node in self.nodes if node.text.strip())
         self.assertIn("Follow success rate", text)
+
+    def test_latest_and_top_jokes_share_the_bluesky_embed_renderer(self):
+        javascript = DASHBOARD_JS.read_text()
+
+        self.assertIn("function createPostEmbed(post)", javascript)
+        self.assertIn("stage.replaceChildren(createPostEmbed(latest))", javascript)
+        self.assertIn("article.append(createPostEmbed(post))", javascript)
+        self.assertIn("window.bluesky.scan(container)", javascript)
+        self.assertEqual(self.by_id["top-posts"].attributes["aria-live"], "polite")
 
     def test_no_script_fallback_exposes_both_dashboard_views(self):
         no_script_styles = [

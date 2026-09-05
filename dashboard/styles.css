@@ -1330,41 +1330,21 @@ td:first-child {
 
 .post-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 18px;
+  gap: 24px;
+  justify-items: center;
 }
 
-.top-post {
-  min-height: 200px;
-  padding: 22px;
-  display: flex;
-  flex-direction: column;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--white);
+.top-post-stage {
+  width: 100%;
+  min-height: 240px;
+  display: grid;
+  place-items: center;
 }
 
-.top-post-text {
-  flex: 1;
-  white-space: pre-wrap;
-  line-height: 1.5;
-}
-
-.top-post-footer {
-  margin-top: 20px;
-  padding-top: 14px;
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  border-top: 1px solid var(--line);
-  color: var(--muted);
-  font-size: 0.82rem;
-}
-
-.top-post-footer a {
-  color: var(--blue);
-  font-weight: 700;
-  text-decoration: none;
+.top-post-stage iframe,
+.top-post-stage .bluesky-embed {
+  width: min(100%, 600px) !important;
+  margin: 0 !important;
 }
 
 .top-posts-empty {
@@ -1449,10 +1429,6 @@ footer a {
   .discovery-stat:nth-child(3),
   .discovery-stat:nth-child(4) {
     border-top: 1px solid #b9c8c5;
-  }
-
-  .post-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .operations-layout {
@@ -1759,10 +1735,6 @@ footer a {
 
   .engagement-legend {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .post-grid {
-    grid-template-columns: 1fr;
   }
 
   footer {
