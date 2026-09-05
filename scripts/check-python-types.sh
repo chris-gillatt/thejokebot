@@ -4,11 +4,11 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT"
 
-PYRIGHT_VERSION="1.1.413"
+PYRIGHT_BIN="$REPO_ROOT/node_modules/.bin/pyright"
 
-if ! command -v npx >/dev/null 2>&1; then
-  echo "ERROR: Missing dependency: npx"
-  echo "Install hint: brew install node"
+if [[ ! -x "$PYRIGHT_BIN" ]]; then
+  echo "ERROR: Missing locked Pyright installation."
+  echo "Install hint: npm ci --ignore-scripts"
   exit 1
 fi
 
@@ -31,10 +31,10 @@ done < <(
 if (( ${#changed_python_files[@]} > 0 )); then
   echo "==> Pyright touched-file check"
   printf '  %s\n' "${changed_python_files[@]}"
-  npx --yes "pyright@${PYRIGHT_VERSION}" "${changed_python_files[@]}"
+  "$PYRIGHT_BIN" "${changed_python_files[@]}"
 else
   echo "==> Pyright touched-file check (no changed Python files)"
 fi
 
 echo "==> Pyright full-project check"
-npx --yes "pyright@${PYRIGHT_VERSION}"
+"$PYRIGHT_BIN"
