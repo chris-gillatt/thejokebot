@@ -8,7 +8,7 @@ import sys
 import time
 from contextlib import ExitStack, contextmanager
 from pathlib import Path
-from typing import Callable, Iterator, Optional, TypeVar
+from typing import Callable, Generator, Optional, TypeVar
 
 # File locking support (Unix-like systems)
 if sys.platform != "win32":
@@ -220,7 +220,9 @@ def _normalise_domains(domains: str | tuple[str, ...]) -> tuple[str, ...]:
 
 
 @contextmanager
-def _state_locks(domains: tuple[str, ...], exclusive: bool) -> Iterator[None]:
+def _state_locks(
+    domains: tuple[str, ...], exclusive: bool
+) -> Generator[None, None, None]:
     if fcntl is None:
         yield
         return
