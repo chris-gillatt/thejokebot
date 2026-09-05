@@ -34,6 +34,16 @@ changelog in this file is intentionally brief.
 
 ## 5. Active Backlog
 
+### 5.54 Refresh reference submodules ⏳ Deferred
+**Priority: Low**
+
+Update the read-only `references/atproto` pin from `db6e2e70` to the current
+upstream head `96c84384`, and `references/bps-website` from `a60aa772` to
+`b0c6582b`, in a separate focused change. They remain pinned for this dashboard
+layout batch because reference updates are unrelated and must not enter
+first-party validation scope. Recheck when Dependabot proposes either update or
+before the next dependency-maintenance batch.
+
 ### 5.53 Enforce Sonar quality and coverage in CI ✓ Complete
 **Priority: High**
 

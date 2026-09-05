@@ -7,6 +7,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DASHBOARD_HTML = REPO_ROOT / "dashboard" / "index.html"
 DASHBOARD_JS = REPO_ROOT / "dashboard" / "app.js"
+DASHBOARD_CSS = REPO_ROOT / "dashboard" / "styles.css"
 
 
 class _Node:
@@ -140,6 +141,22 @@ class DashboardUiTests(unittest.TestCase):
         self.assertIn("article.append(createPostEmbed(post))", javascript)
         self.assertIn("window.bluesky.scan(container)", javascript)
         self.assertEqual(self.by_id["top-posts"].attributes["aria-live"], "polite")
+
+    def test_top_jokes_use_responsive_columns(self):
+        stylesheet = DASHBOARD_CSS.read_text()
+
+        self.assertIn(
+            ".post-grid {\n  display: grid;\n  grid-template-columns: repeat(2, minmax(0, 1fr));",
+            stylesheet,
+        )
+        self.assertIn(
+            "@media (max-width: 900px)",
+            stylesheet,
+        )
+        self.assertIn(
+            ".post-grid {\n    grid-template-columns: 1fr;\n  }",
+            stylesheet,
+        )
 
     def test_no_script_fallback_exposes_both_dashboard_views(self):
         no_script_styles = [
