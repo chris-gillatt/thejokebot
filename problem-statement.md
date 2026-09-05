@@ -16,7 +16,7 @@ changelog in this file is intentionally brief.
 - Before push, run local quality checks as a separate command, then sync with remote (`git pull --rebase`), then push. Scheduled workflows can update `main` while checks run, so validation must not be implemented as a pre-push hook.
 - The local quality gate includes `ruff check`, `ruff format --check`, Pyright, unit tests, and local CodeQL when available; fix issues proactively.
 - Treat lint, type checks, and tests as a combined gate for all code changes: do not consider a change validated if only tests ran without lint/format/type checks.
-- Before completing each issue, sprint, or coherent work batch, check Python, npm, GitHub Actions, and Git submodule dependencies against authoritative upstream sources or current Dependabot results. Apply upgrades separately; document any deliberate pin below with its current version, latest stable version, reason, and review trigger.
+- Before completing each issue, sprint, or coherent work batch, check first-party Python, npm, and GitHub Actions dependencies against authoritative upstream sources or current Dependabot results. Reference submodules are upstream-owned, read-only resources: do not automate or proactively maintain their pinned revisions, and refresh one only when explicitly requested. Apply first-party upgrades separately; document any deliberate pin below with its current version, latest stable version, reason, and review trigger.
 - Require Sonar analysis to report both a passing quality gate and zero unresolved issues; either condition failing blocks delivery.
 
 ## 3. Operational Constraints
@@ -33,16 +33,6 @@ changelog in this file is intentionally brief.
 5. **Session-cache key custody** — cached Bluesky sessions must remain encrypted with `BLUESKY_SESSION_CACHE_KEY`. Rotating that secret invalidates existing cache generations and requires a credential login to seed a replacement.
 
 ## 5. Active Backlog
-
-### 5.54 Refresh reference submodules ⏳ Deferred
-**Priority: Low**
-
-Update the read-only `references/atproto` pin from `db6e2e70` to the current
-upstream head `96c84384`, and `references/bps-website` from `a60aa772` to
-`b0c6582b`, in a separate focused change. They remain pinned for this dashboard
-layout batch because reference updates are unrelated and must not enter
-first-party validation scope. Recheck when Dependabot proposes either update or
-before the next dependency-maintenance batch.
 
 ### 5.53 Enforce Sonar quality and coverage in CI ✓ Complete
 **Priority: High**

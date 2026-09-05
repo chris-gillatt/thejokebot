@@ -13,7 +13,7 @@
 - For any newly introduced workflow element, GitHub Action, dependency, SDK, or tooling reference, always check and use the latest stable available version at implementation time.
 - If the latest version is not used, include an explicit justification in the change notes (for example known vulnerability, incompatibility, upstream regression, or required temporary workaround).
 - Treat unverified or stale versions as technical debt; do not introduce them by default.
-- Before completing each issue, sprint, or coherent batch of work, check all first-party dependency ecosystems (Python, npm, GitHub Actions, and Git submodules) against authoritative upstream sources or current Dependabot results.
+- Before completing each issue, sprint, or coherent batch of work, check all first-party dependency ecosystems (Python, npm, and GitHub Actions) against authoritative upstream sources or current Dependabot results.
 - Update stale dependencies in a separate focused change, or record each deliberate exception with its current version, latest stable version, reason, and review trigger in `problem-statement.md`.
 
 ## Git Commit Policy
@@ -47,6 +47,7 @@
 ## References Directory Policy
 - The `references/` directory contains read-only external resources (submodules, documentation, cookbooks).
 - Never make changes to content within `references/`. All content is considered read-only.
+- Do not enable automated dependency updates for reference submodules or proactively update their pinned revisions. Refresh a reference only when the user explicitly requests it; upstream maintenance belongs to the owning project.
 - Exclude `references/**` from every first-party test, coverage, lint, static-analysis, and editor-analysis configuration. Validate new quality tools against first-party files only.
 - Only pull in updates from upstream sources. Changes should only flow in one direction: from upstream → local.
 - If any changes appear pending in submodules under `references/`, clear them immediately using:
