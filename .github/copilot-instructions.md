@@ -13,6 +13,8 @@
 - For any newly introduced workflow element, GitHub Action, dependency, SDK, or tooling reference, always check and use the latest stable available version at implementation time.
 - If the latest version is not used, include an explicit justification in the change notes (for example known vulnerability, incompatibility, upstream regression, or required temporary workaround).
 - Treat unverified or stale versions as technical debt; do not introduce them by default.
+- Before completing each issue, sprint, or coherent batch of work, check all first-party dependency ecosystems (Python, npm, GitHub Actions, and Git submodules) against authoritative upstream sources or current Dependabot results.
+- Update stale dependencies in a separate focused change, or record each deliberate exception with its current version, latest stable version, reason, and review trigger in `problem-statement.md`.
 
 ## Git Commit Policy
 - Use Conventional Commits for every commit subject line.
@@ -20,10 +22,12 @@
 - Every commit message must explain why the change is being made.
 - When a commit resolves a tracked GitHub issue, include a closing keyword in the commit body (for example `Closes #38` or `Resolves #15`). This allows GitHub to automatically close the issue when the commit lands on the default branch.
 - Keep unrelated changes in separate commits.
-- Before any `git push`, sync with the remote first (`git pull --rebase` unless there is a deliberate reason not to) because the bot's GitHub Actions workflows can update the branch between local changes and push time.
+- Before any `git push`, run the relevant validation as a separate command, then sync with the remote (`git pull --rebase` unless there is a deliberate reason not to), and only then push. The bot's GitHub Actions workflows can update the branch while local checks run.
+- Do not install or rely on a Git pre-push hook for validation; it makes the push operation stale and difficult to recover when automation updates the remote branch.
 
 ## Validation Expectations
 - Run relevant checks before finishing a task (script run, lint, or targeted tests where available).
+- Report the dependency-currency check alongside code validation, including any deferred upgrades and their recorded justification.
 - Report what was verified and what could not be verified.
 - Treat zero unresolved Sonar issues as a repository quality rule. A passing quality gate alone is insufficient; after analysis, verify that the unresolved issue total is exactly zero.
 - Treat posting telemetry, `bot_state.json` provider fields, dashboard metrics JSON, and dashboard rendering as one cross-file contract. Changes to any part must include producer-to-collector tests and local desktop/mobile dashboard verification.
@@ -38,7 +42,7 @@
 - Avoid heredocs for shell commands and file generation to reduce interruption-related issues.
 - Prefer temporary files inside `.agent-tmp/` for intermediate command input.
 - Keep `.agent-tmp/` out of commits except for `.agent-tmp/.gitkeep`.
-- Treat `git pull --rebase` before `git push` as the default terminal workflow for this repository unless the user explicitly asks for a different git strategy.
+- Treat `./scripts/preflight-local.sh`, then `git pull --rebase`, then `git push` as the default terminal workflow for this repository unless the user explicitly asks for a different validation or Git strategy.
 
 ## References Directory Policy
 - The `references/` directory contains read-only external resources (submodules, documentation, cookbooks).

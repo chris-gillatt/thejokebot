@@ -109,12 +109,27 @@ This runs:
 
 Linting, formatting, type checks, and tests are a single validation gate in this
 repository; running only tests is not considered sufficient before commit/push.
-The checked-in pre-push hook runs this gate automatically. Enable it once per
-clone with `git config core.hooksPath .githooks`.
+Run the gate as a separate command before pushing; the repository deliberately
+does not use a pre-push hook. Because scheduled workflows can update `main` while
+the checks run, use this order:
+
+```bash
+./scripts/preflight-local.sh
+git pull --rebase
+git push
+```
+
+Before completing any issue, sprint, or coherent batch of work, also check every
+first-party dependency ecosystem for newer stable releases: Python packages on
+PyPI, npm packages in the npm registry, GitHub Actions against upstream releases,
+and Git submodules through current Dependabot results. Apply dependency upgrades
+as separate focused changes. Record any deliberate pin in `problem-statement.md`
+with its current version, latest stable version, reason, and review trigger.
 
 The type check uses pinned Pyright `1.1.413`, the command-line analysis engine
-used by Pylance, and excludes the read-only `references/` directory through
-`pyrightconfig.json`.
+used by Pylance. Run `npm ci --ignore-scripts` once to install the locked quality
+tool without package lifecycle scripts. `pyrightconfig.json` excludes the
+read-only `references/` directory.
 
 If CodeQL is temporarily unavailable, you can explicitly run in reduced-coverage mode:
 

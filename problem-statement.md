@@ -13,9 +13,10 @@ changelog in this file is intentionally brief.
 - Keep secrets out of source control.
 - Use British English in prose/documentation where practical.
 - Use Conventional Commits with commit messages that explain why.
-- Before push, sync with remote (`git pull --rebase`) because scheduled workflows can update `main`.
-- Before commit/push, run local quality checks (`ruff check`, `ruff format --check`, Pyright, unit tests, and local CodeQL when available) and fix issues proactively.
+- Before push, run local quality checks as a separate command, then sync with remote (`git pull --rebase`), then push. Scheduled workflows can update `main` while checks run, so validation must not be implemented as a pre-push hook.
+- The local quality gate includes `ruff check`, `ruff format --check`, Pyright, unit tests, and local CodeQL when available; fix issues proactively.
 - Treat lint, type checks, and tests as a combined gate for all code changes: do not consider a change validated if only tests ran without lint/format/type checks.
+- Before completing each issue, sprint, or coherent work batch, check Python, npm, GitHub Actions, and Git submodule dependencies against authoritative upstream sources or current Dependabot results. Apply upgrades separately; document any deliberate pin below with its current version, latest stable version, reason, and review trigger.
 - Require Sonar analysis to report both a passing quality gate and zero unresolved issues; either condition failing blocks delivery.
 
 ## 3. Operational Constraints
@@ -97,7 +98,9 @@ the read-only `references/` directory outside the analysis boundary.
 
 Acceptance criteria:
 - Checked-in configuration defines the Python version, environment, and first-party scope.
-- Local preflight, CI, and the versioned pre-push hook require zero diagnostics.
+- A lockfile pins Pyright, installation disables package lifecycle scripts, and
+  checks invoke only the installed local binary.
+- Explicit local preflight and CI require zero diagnostics; pushing does not invoke validation through a Git hook.
 - Existing first-party diagnostics are resolved without suppressions.
 
 ### 5.35 Publish a GitHub Pages statistics dashboard (Issue #62) ✓ Complete
