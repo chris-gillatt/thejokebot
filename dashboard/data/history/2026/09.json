@@ -260,7 +260,7 @@
     },
     {
       "period_start": "2026-09-05T00:00:00+00:00",
-      "collected_at": "2026-09-05T02:40:10.403055+00:00",
+      "collected_at": "2026-09-05T03:07:27.459803+00:00",
       "followers": 6628,
       "following": 10180,
       "profile_posts": 2407,
@@ -3736,27 +3736,27 @@
       "attempt": 1,
       "workflow": "bluesky_dashboard",
       "created_at": "2026-09-05T02:39:45Z",
-      "updated_at": "2026-09-05T02:39:50Z",
-      "status": "in_progress",
-      "conclusion": null
+      "updated_at": "2026-09-05T02:41:18Z",
+      "status": "completed",
+      "conclusion": "success"
     },
     {
       "id": 33939706835,
       "attempt": 1,
       "workflow": "codeql",
       "created_at": "2026-09-05T02:39:45Z",
-      "updated_at": "2026-09-05T02:39:50Z",
-      "status": "in_progress",
-      "conclusion": null
+      "updated_at": "2026-09-05T02:41:00Z",
+      "status": "completed",
+      "conclusion": "success"
     },
     {
       "id": 33939706840,
       "attempt": 1,
       "workflow": "python_tests",
       "created_at": "2026-09-05T02:39:45Z",
-      "updated_at": "2026-09-05T02:39:49Z",
-      "status": "in_progress",
-      "conclusion": null
+      "updated_at": "2026-09-05T02:41:36Z",
+      "status": "completed",
+      "conclusion": "failure"
     },
     {
       "id": 33939706856,
@@ -3773,6 +3773,222 @@
       "workflow": "validate_runtime_config",
       "created_at": "2026-09-05T02:39:46Z",
       "updated_at": "2026-09-05T02:40:03Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 33940242170,
+      "attempt": 1,
+      "workflow": "codeql",
+      "created_at": "2026-09-05T02:51:14Z",
+      "updated_at": "2026-09-05T02:52:28Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 33940242141,
+      "attempt": 1,
+      "workflow": "python_tests",
+      "created_at": "2026-09-05T02:51:14Z",
+      "updated_at": "2026-09-05T02:53:01Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 33940242181,
+      "attempt": 1,
+      "workflow": "ruff_quality",
+      "created_at": "2026-09-05T02:51:14Z",
+      "updated_at": "2026-09-05T02:51:32Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 33940242133,
+      "attempt": 1,
+      "workflow": "validate_runtime_config",
+      "created_at": "2026-09-05T02:51:14Z",
+      "updated_at": "2026-09-05T02:51:32Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 33940279680,
+      "attempt": 1,
+      "workflow": "pr_auto_merge",
+      "created_at": "2026-09-05T02:52:03Z",
+      "updated_at": "2026-09-05T02:52:12Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 33940281460,
+      "attempt": 1,
+      "workflow": "codeql",
+      "created_at": "2026-09-05T02:52:05Z",
+      "updated_at": "2026-09-05T02:53:23Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 33940281508,
+      "attempt": 1,
+      "workflow": "python_tests",
+      "created_at": "2026-09-05T02:52:05Z",
+      "updated_at": "2026-09-05T02:53:50Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 33940281708,
+      "attempt": 1,
+      "workflow": "ruff_quality",
+      "created_at": "2026-09-05T02:52:05Z",
+      "updated_at": "2026-09-05T02:52:20Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 33940281480,
+      "attempt": 1,
+      "workflow": "validate_runtime_config",
+      "created_at": "2026-09-05T02:52:05Z",
+      "updated_at": "2026-09-05T02:52:34Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 33940283316,
+      "attempt": 1,
+      "workflow": "codeql",
+      "created_at": "2026-09-05T02:52:07Z",
+      "updated_at": "2026-09-05T02:53:12Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 33940282909,
+      "attempt": 1,
+      "workflow": "pr_auto_merge",
+      "created_at": "2026-09-05T02:52:07Z",
+      "updated_at": "2026-09-05T02:52:15Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 33940283292,
+      "attempt": 1,
+      "workflow": "python_tests",
+      "created_at": "2026-09-05T02:52:07Z",
+      "updated_at": "2026-09-05T02:53:36Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 33940283294,
+      "attempt": 1,
+      "workflow": "ruff_quality",
+      "created_at": "2026-09-05T02:52:07Z",
+      "updated_at": "2026-09-05T02:52:31Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 33940283260,
+      "attempt": 1,
+      "workflow": "validate_runtime_config",
+      "created_at": "2026-09-05T02:52:07Z",
+      "updated_at": "2026-09-05T02:52:26Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 33940297154,
+      "attempt": 1,
+      "workflow": "pr_auto_merge",
+      "created_at": "2026-09-05T02:52:26Z",
+      "updated_at": "2026-09-05T02:52:36Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 33940298114,
+      "attempt": 1,
+      "workflow": "codeql",
+      "created_at": "2026-09-05T02:52:27Z",
+      "updated_at": "2026-09-05T02:53:45Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 33940298115,
+      "attempt": 1,
+      "workflow": "python_tests",
+      "created_at": "2026-09-05T02:52:27Z",
+      "updated_at": "2026-09-05T02:54:04Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 33940298136,
+      "attempt": 1,
+      "workflow": "ruff_quality",
+      "created_at": "2026-09-05T02:52:27Z",
+      "updated_at": "2026-09-05T02:52:49Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 33940298137,
+      "attempt": 1,
+      "workflow": "validate_runtime_config",
+      "created_at": "2026-09-05T02:52:27Z",
+      "updated_at": "2026-09-05T02:52:43Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 33940961981,
+      "attempt": 1,
+      "workflow": "codeql",
+      "created_at": "2026-09-05T03:07:04Z",
+      "updated_at": "2026-09-05T03:07:10Z",
+      "status": "in_progress",
+      "conclusion": null
+    },
+    {
+      "id": 33940961979,
+      "attempt": 1,
+      "workflow": "validate_runtime_config",
+      "created_at": "2026-09-05T03:07:04Z",
+      "updated_at": "2026-09-05T03:07:24Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 33940963132,
+      "attempt": 1,
+      "workflow": "bluesky_dashboard",
+      "created_at": "2026-09-05T03:07:05Z",
+      "updated_at": "2026-09-05T03:07:09Z",
+      "status": "in_progress",
+      "conclusion": null
+    },
+    {
+      "id": 33940963061,
+      "attempt": 1,
+      "workflow": "python_tests",
+      "created_at": "2026-09-05T03:07:05Z",
+      "updated_at": "2026-09-05T03:07:09Z",
+      "status": "in_progress",
+      "conclusion": null
+    },
+    {
+      "id": 33940963122,
+      "attempt": 1,
+      "workflow": "ruff_quality",
+      "created_at": "2026-09-05T03:07:05Z",
+      "updated_at": "2026-09-05T03:07:22Z",
       "status": "completed",
       "conclusion": "success"
     }
@@ -6364,7 +6580,7 @@
     },
     {
       "period_start": "2026-09-05T00:00:00+00:00",
-      "collected_at": "2026-09-05T02:40:10.403055+00:00",
+      "collected_at": "2026-09-05T03:07:27.459803+00:00",
       "providers": [
         {
           "name": "icanhazdadjoke",
