@@ -58,8 +58,15 @@ the all-time range lazily loads daily points derived from the canonical monthly
 history. The default Audience view presents public account and engagement trends;
 the Operations view contains rolling workflow, provider, moderation, and delivery
 health. Discovery follow success is successful follows divided by selected
-accounts. Dashboard data contains no follower, liker, replier, or other audience
-DIDs, raw workflow logs, or raw API responses.
+accounts. The Audience view combines discovery, interaction-led follows, and
+follow-backs with source-specific success rates, observed follower growth, and
+30/90-day reciprocity cohorts. Starter-pack introductions show separate 7-day
+and 30-day attributed totals.
+
+Pending cohort checkpoints retain only deterministic account hashes in private
+social state and discard them after the 90-day observation. Dashboard data and
+history contain aggregate cohort results only: no follower, liker, replier, or
+other audience DIDs, member hashes, raw workflow logs, or raw API responses.
 
 Preview the same staged artifact used by GitHub Pages with:
 

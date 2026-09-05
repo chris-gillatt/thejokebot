@@ -34,6 +34,47 @@ changelog in this file is intentionally brief.
 
 ## 5. Active Backlog
 
+### 5.56 Reframe dashboard growth and engagement (Issue #107) ✓ Complete
+**Priority: Medium**
+
+Rework the Audience dashboard around measurable growth, reciprocity, and
+engagement. Combine follow-back, interaction-led, and discovery activity into
+one audience-growth view while preserving each source's distinct eligibility
+denominator. Present starter-pack introductions separately because they are an
+inbound attribution signal rather than an outbound follow source.
+
+Track successful outbound follows in privacy-bounded acquisition cohorts. At
+the first complete follower reconciliation on or after 30 and 90 days, record
+whether each acquired account still follows the bot. Follow-back cohorts measure
+follower retention; interaction and discovery cohorts measure follow-back
+conversion and retention. Count one acquisition per account during an open
+90-day window, retain only a deterministic member hash while checkpoints are
+pending, and discard that hash after the 90-day observation. Do not infer
+cohorts from legacy follow-grace or unfollow history.
+
+Acceptance criteria:
+- Show 7-day and 30-day net follower change, source-specific acquisition
+  outcomes, mature 30/90-day reciprocity, and engagement momentum without
+  presenting incomplete observation windows as zero.
+- Reuse complete follower pagination already performed by the social workflow;
+  an incomplete fetch must leave due checkpoints pending and must not add API
+  calls solely for dashboard collection.
+- Export aggregate cohort observations only. Audience DIDs, member hashes,
+  targeting tags, workflow run identifiers, and raw notifications must not
+  enter dashboard data or history.
+- Improve starter-pack introductions with separate 7-day and 30-day counts and
+  ranked contribution shares without implying total-follower attribution.
+- Replace the standalone Discovery activity presentation and generic account-
+  retention privacy copy with a unified, responsive, accessible growth view and
+  metric-specific coverage states.
+- Cover the producer-to-collector contract, state migration, idempotency,
+  checkpoint boundaries, identifier exclusion, and desktop/mobile rendering
+  with focused automated and local visual checks.
+
+Source-specific post engagement, impressions, sentiment, demographics, and
+individual audience reporting remain deferred. Current Bluesky APIs cannot
+support those claims without disproportionate or privacy-sensitive tracking.
+
 ### 5.53 Enforce Sonar quality and coverage in CI ✓ Complete
 **Priority: High**
 

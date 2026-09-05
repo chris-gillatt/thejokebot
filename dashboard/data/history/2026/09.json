@@ -276,19 +276,19 @@
     },
     {
       "period_start": "2026-09-05T06:00:00+00:00",
-      "collected_at": "2026-09-05T06:42:23.278173+00:00",
+      "collected_at": "2026-09-05T07:51:39.864535+00:00",
       "followers": 6628,
       "following": 10180,
       "profile_posts": 2408,
       "joke_posts": 764,
       "engagement": {
-        "likes": 4109,
+        "likes": 4110,
         "replies": 293,
         "reposts": 322,
         "quotes": 34,
         "bookmarks": 34
       },
-      "engagement_total": 4792
+      "engagement_total": 4793
     }
   ],
   "activity_runs": [
@@ -4153,9 +4153,45 @@
       "attempt": 1,
       "workflow": "bluesky_dashboard",
       "created_at": "2026-09-05T06:42:01Z",
-      "updated_at": "2026-09-05T06:42:05Z",
-      "status": "in_progress",
-      "conclusion": null
+      "updated_at": "2026-09-05T06:43:28Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 33951585626,
+      "attempt": 1,
+      "workflow": "codeql",
+      "created_at": "2026-09-05T07:05:22Z",
+      "updated_at": "2026-09-05T07:06:38Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 33951585554,
+      "attempt": 1,
+      "workflow": "python_tests",
+      "created_at": "2026-09-05T07:05:22Z",
+      "updated_at": "2026-09-05T07:07:06Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 33951585638,
+      "attempt": 1,
+      "workflow": "ruff_quality",
+      "created_at": "2026-09-05T07:05:22Z",
+      "updated_at": "2026-09-05T07:05:42Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 33951585612,
+      "attempt": 1,
+      "workflow": "validate_runtime_config",
+      "created_at": "2026-09-05T07:05:22Z",
+      "updated_at": "2026-09-05T07:05:44Z",
+      "status": "completed",
+      "conclusion": "success"
     }
   ],
   "daily_activity": [
@@ -6903,7 +6939,7 @@
     },
     {
       "period_start": "2026-09-05T06:00:00+00:00",
-      "collected_at": "2026-09-05T06:42:23.278173+00:00",
+      "collected_at": "2026-09-05T07:51:39.864535+00:00",
       "providers": [
         {
           "name": "icanhazdadjoke",
@@ -7032,29 +7068,87 @@
           "stopped_early_runs": 0
         }
       },
+      "audience_growth": {
+        "window_days": 30,
+        "net_followers": {
+          "7": 172,
+          "30": null
+        },
+        "sources": {
+          "followback": {
+            "denominator": "candidates",
+            "considered": 1807,
+            "acquired": 1570,
+            "success_rate": 86.9
+          },
+          "interaction": {
+            "denominator": "eligible",
+            "considered": 13,
+            "acquired": 13,
+            "success_rate": 100.0
+          },
+          "discovery": {
+            "denominator": "selected",
+            "considered": 570,
+            "acquired": 570,
+            "success_rate": 100.0
+          }
+        },
+        "cohorts": {
+          "checkpoint_days": [
+            30,
+            90
+          ],
+          "coverage_started_at": null,
+          "periods": []
+        },
+        "coverage": {
+          "social_started_at": "2026-08-24T14:32:56Z",
+          "discovery_started_at": "2026-08-12T01:45:36Z"
+        }
+      },
       "starter_pack_attribution": {
         "window_days": 30,
         "coverage_started_at": "2026-08-01T14:31:28.650280Z",
         "last_checked_at": "2026-09-05T06:39:20.304544Z",
         "total_follows": 94,
+        "windows": {
+          "7": 86,
+          "30": 94
+        },
         "packs": [
           {
             "name": "Tricia the Welsh Daffodil starter pack #274",
             "creator_handle": "thewelshtaffy24.bsky.social",
             "url": "https://bsky.app/starter-pack/did:plc:ylslnx2g5q3wvnvywksuxx7g/3mucse7m74g2y",
-            "follows": 84
+            "follows": 84,
+            "windows": {
+              "7": 84,
+              "30": 84
+            },
+            "share_30_day": 89.4
           },
           {
             "name": "Tricia the Welsh Daffodil starter pack #217",
             "creator_handle": "thewelshtaffy24.bsky.social",
             "url": "https://bsky.app/starter-pack/did:plc:ylslnx2g5q3wvnvywksuxx7g/3mqd6ku64bb22",
-            "follows": 6
+            "follows": 6,
+            "windows": {
+              "7": 2,
+              "30": 6
+            },
+            "share_30_day": 6.4
           },
           {
             "name": "Tricia The Welsh Daffodil starter pack #5",
             "creator_handle": "thewelshtaffy24.bsky.social",
             "url": "https://bsky.app/starter-pack/did:plc:ylslnx2g5q3wvnvywksuxx7g/3mfd4vfyezw2h",
-            "follows": 4
+            "follows": 4,
+            "windows": {
+              "7": 0,
+              "30": 4
+            },
+            "share_30_day": 4.3
           }
         ]
       }

@@ -7,6 +7,7 @@ import pathlib
 import re
 import subprocess
 import tempfile
+import time
 import unittest
 from types import SimpleNamespace
 from unittest import mock
@@ -2889,6 +2890,7 @@ class FollowBackTests(unittest.TestCase):
         client = mock.Mock()
         client.me.did = "did:plc:bot"
         summary = {}
+        state = bluesky_state._default_state()
 
         with mock.patch(
             "bluesky_follows_and_likes.fetch_paginated_data",
@@ -2906,6 +2908,7 @@ class FollowBackTests(unittest.TestCase):
                     dry_run=False,
                     action_delay_seconds=0,
                     summary=summary,
+                    state=state,
                 )
 
         self.assertEqual(client.follow.call_count, 2)
@@ -2921,6 +2924,13 @@ class FollowBackTests(unittest.TestCase):
             },
         )
         self.assertNotIn("protected", summary, "follow_back must not set 'protected'")
+        cohorts = bluesky_state.get_acquisition_cohorts(state)
+        self.assertEqual(
+            cohorts["cohorts"][time.strftime("%Y-%m", time.gmtime())]["followback"][
+                "acquired"
+            ],
+            2,
+        )
 
     def test_follow_back_reconciles_until_no_candidates_remain(self):
         first_did = "did:plc:first"
@@ -2992,6 +3002,11 @@ class FollowBackTests(unittest.TestCase):
         client = mock.Mock()
         client.me.did = "did:plc:bot"
         snapshot_error = atproto_client.exceptions.RequestException()
+        state = bluesky_state._default_state()
+        acquired_at = int(time.time()) - 31 * 24 * 60 * 60
+        bluesky_state.record_acquisition(
+            state, "did:plc:follower", "interaction", acquired_at=acquired_at
+        )
 
         with mock.patch(
             "bluesky_follows_and_likes.fetch_paginated_data",
@@ -3006,9 +3021,46 @@ class FollowBackTests(unittest.TestCase):
                     "jokebot.bsky.social",
                     dry_run=False,
                     action_delay_seconds=0,
+                    state=state,
                 )
 
         client.follow.assert_not_called()
+        member = next(
+            iter(bluesky_state.get_acquisition_cohorts(state)["members"].values())
+        )
+        self.assertIsNone(member["checkpoints"]["30"])
+
+    def test_follow_back_dry_run_does_not_record_or_reconcile_cohorts(self):
+        follower = SimpleNamespace(did="did:plc:follower")
+        state = bluesky_state._default_state()
+        acquired_at = int(time.time()) - 31 * 24 * 60 * 60
+        bluesky_state.record_acquisition(
+            state, follower.did, "interaction", acquired_at=acquired_at
+        )
+        client = mock.Mock()
+        client.me.did = "did:plc:bot"
+
+        with mock.patch(
+            "bluesky_follows_and_likes.fetch_paginated_data",
+            side_effect=[[follower], []],
+        ):
+            bluesky_follows_and_likes.follow_back(
+                client,
+                "jokebot.bsky.social",
+                dry_run=True,
+                action_delay_seconds=0,
+                state=state,
+            )
+
+        cohorts = bluesky_state.get_acquisition_cohorts(state)
+        self.assertEqual(
+            cohorts["cohorts"][time.strftime("%Y-%m", time.gmtime(acquired_at))][
+                "interaction"
+            ]["acquired"],
+            1,
+        )
+        member = next(iter(cohorts["members"].values()))
+        self.assertIsNone(member["checkpoints"]["30"])
 
 
 class FollowInteractorsTests(unittest.TestCase):
@@ -3056,6 +3108,10 @@ class FollowInteractorsTests(unittest.TestCase):
             interactor_did, bluesky_state.get_follow_grace_dids(state, cutoff_ts=0)
         )
         self.assertEqual(state["follow_grace"]["entries"][0]["source"], "interaction")
+        cohort_member = next(
+            iter(bluesky_state.get_acquisition_cohorts(state)["members"].values())
+        )
+        self.assertEqual(cohort_member["source"], "interaction")
 
     def test_follow_interactors_follows_repost_and_like_authors(self):
         """Repost and like notifications should both trigger a follow."""
@@ -3259,6 +3315,7 @@ class FollowInteractorsTests(unittest.TestCase):
 
         self.assertEqual(count, 1)
         client.follow.assert_not_called()
+        self.assertEqual(bluesky_state.get_acquisition_cohorts(state)["members"], {})
 
     def test_follow_interactors_deduplicates_same_author(self):
         """Multiple notifications from the same author should only trigger one follow."""
@@ -3500,7 +3557,146 @@ class FollowGraceTests(unittest.TestCase):
         self.assertNotIn("did", pack)
 
 
+class AcquisitionCohortTests(unittest.TestCase):
+    _DAY = 24 * 60 * 60
+
+    def test_record_acquisition_keeps_only_a_hash_in_active_members(self):
+        state = bluesky_state._default_state()
+
+        recorded = bluesky_state.record_acquisition(
+            state,
+            "did:plc:audience",
+            "interaction",
+            acquired_at=1_788_220_800,
+        )
+
+        cohorts = bluesky_state.get_acquisition_cohorts(state)
+        self.assertTrue(recorded)
+        self.assertEqual(len(cohorts["members"]), 1)
+        self.assertNotIn("did:plc:audience", json.dumps(cohorts))
+        self.assertEqual(cohorts["cohorts"]["2026-09"]["interaction"]["acquired"], 1)
+
+    def test_record_acquisition_preserves_source_during_open_window(self):
+        state = bluesky_state._default_state()
+        acquired_at = 1_788_220_800
+
+        self.assertTrue(
+            bluesky_state.record_acquisition(
+                state, "did:plc:audience", "discovery", acquired_at=acquired_at
+            )
+        )
+        self.assertFalse(
+            bluesky_state.record_acquisition(
+                state, "did:plc:audience", "followback", acquired_at=acquired_at + 1
+            )
+        )
+
+        member = next(
+            iter(bluesky_state.get_acquisition_cohorts(state)["members"].values())
+        )
+        self.assertEqual(member["source"], "discovery")
+
+    def test_reconcile_observes_checkpoints_once_and_closes_at_90_days(self):
+        state = bluesky_state._default_state()
+        acquired_at = 1_788_220_800
+        bluesky_state.record_acquisition(
+            state, "did:plc:retained", "followback", acquired_at=acquired_at
+        )
+
+        before_due = bluesky_state.reconcile_acquisition_cohorts(
+            state,
+            {"did:plc:retained"},
+            observed_at=acquired_at + 30 * self._DAY - 1,
+        )
+        at_30_days = bluesky_state.reconcile_acquisition_cohorts(
+            state,
+            {"did:plc:retained"},
+            observed_at=acquired_at + 30 * self._DAY,
+        )
+        repeated = bluesky_state.reconcile_acquisition_cohorts(
+            state,
+            set(),
+            observed_at=acquired_at + 31 * self._DAY,
+        )
+        at_90_days = bluesky_state.reconcile_acquisition_cohorts(
+            state,
+            set(),
+            observed_at=acquired_at + 90 * self._DAY,
+        )
+
+        self.assertEqual(before_due["30"]["observed"], 0)
+        self.assertEqual(at_30_days["30"], {"observed": 1, "still_following": 1})
+        self.assertEqual(repeated["30"]["observed"], 0)
+        self.assertEqual(at_90_days["90"], {"observed": 1, "still_following": 0})
+        cohorts = bluesky_state.get_acquisition_cohorts(state)
+        self.assertEqual(cohorts["members"], {})
+        totals = cohorts["cohorts"]["2026-09"]["followback"]
+        self.assertEqual(
+            totals["checkpoints"]["30"],
+            {"observed": 1, "still_following": 1},
+        )
+        self.assertEqual(
+            totals["checkpoints"]["90"],
+            {"observed": 1, "still_following": 0},
+        )
+
+    def test_closed_member_can_be_acquired_again(self):
+        state = bluesky_state._default_state()
+        acquired_at = 1_788_220_800
+        bluesky_state.record_acquisition(
+            state, "did:plc:returning", "interaction", acquired_at=acquired_at
+        )
+        bluesky_state.reconcile_acquisition_cohorts(
+            state, set(), observed_at=acquired_at + 90 * self._DAY
+        )
+
+        self.assertTrue(
+            bluesky_state.record_acquisition(
+                state,
+                "did:plc:returning",
+                "followback",
+                acquired_at=acquired_at + 91 * self._DAY,
+            )
+        )
+
+    def test_normalise_state_adds_empty_cohorts_without_legacy_inference(self):
+        old_state = {
+            "follow_tracking": {"following_snapshot_dids": ["did:plc:legacy"]},
+            "follow_grace": {
+                "entries": [
+                    {
+                        "did": "did:plc:legacy",
+                        "followed_at": 1_788_220_800,
+                        "source": "follow_fellows",
+                    }
+                ]
+            },
+        }
+
+        cohorts = bluesky_state.get_acquisition_cohorts(old_state)
+
+        self.assertEqual(cohorts["members"], {})
+        self.assertEqual(cohorts["cohorts"], {})
+        self.assertIsNone(cohorts["coverage_started_at"])
+
+
 class FollowFellowsTagRotationTests(unittest.TestCase):
+    def test_persist_follow_fellows_state_records_discovery_acquisition(self):
+        state = bluesky_state._default_state()
+
+        with mock.patch(
+            "bluesky_follow_fellows.bluesky_state.update_state",
+            side_effect=lambda mutator, domains: mutator(state),
+        ):
+            bluesky_follow_fellows._persist_follow_fellows_state(
+                ["did:plc:discovered"], 1, 3
+            )
+
+        member = next(
+            iter(bluesky_state.get_acquisition_cohorts(state)["members"].values())
+        )
+        self.assertEqual(member["source"], "discovery")
+
     def test_successful_tag_counts_excludes_failed_selections(self):
         selected = [
             ("dadjoke", "did:plc:one"),

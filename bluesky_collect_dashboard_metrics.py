@@ -25,7 +25,7 @@ GITHUB_API_BASE = "https://api.github.com"
 _UTC_OFFSET = "+00:00"
 METRICS_FILE = Path(__file__).resolve().parent / "dashboard" / "data" / "metrics.json"
 HISTORY_DIR = METRICS_FILE.parent / "history"
-SCHEMA_VERSION = 10
+SCHEMA_VERSION = 11
 HISTORY_SCHEMA_VERSION = 1
 HISTORY_RECORD_FIELDS = {
     "account_observations": (
@@ -92,6 +92,7 @@ HISTORY_RECORD_FIELDS = {
         "providers",
         "posting_delivery",
         "network_maintenance",
+        "audience_growth",
         "starter_pack_attribution",
     ),
 }
@@ -836,9 +837,164 @@ def _social_activity_metrics(workflow_activity: dict | None) -> dict:
     }
 
 
+def _follower_growth(snapshots: list[dict], now: datetime) -> dict:
+    sampled = [
+        item
+        for item in snapshots
+        if item.get("source") == "bluesky_snapshot"
+        and isinstance(item.get("followers"), int)
+        and item.get("collected_at")
+    ]
+    current = sampled[-1] if sampled else None
+    windows = {}
+    for days in (7, 30):
+        cutoff = now - timedelta(days=days)
+        baseline = next(
+            (
+                item
+                for item in reversed(sampled)
+                if datetime.fromisoformat(
+                    item["collected_at"].replace("Z", _UTC_OFFSET)
+                )
+                <= cutoff
+            ),
+            None,
+        )
+        windows[str(days)] = (
+            current["followers"] - baseline["followers"]
+            if current and baseline
+            else None
+        )
+    return windows
+
+
+def _cohort_checkpoint_metrics(totals: dict, checkpoint: str, pending_due: int) -> dict:
+    checkpoint_totals = totals.get("checkpoints", {}).get(checkpoint, {})
+    observed = max(0, int(checkpoint_totals.get("observed", 0)))
+    still_following = max(0, int(checkpoint_totals.get("still_following", 0)))
+    return {
+        "observed": observed,
+        "still_following": still_following,
+        "rate": round(still_following * 100 / observed, 1) if observed else None,
+        "pending_due": pending_due,
+    }
+
+
+def _cohort_coverage_started_at(value) -> str | None:
+    if isinstance(value, (int, float)):
+        return datetime.fromtimestamp(value, timezone.utc).isoformat()
+    return value if isinstance(value, str) else None
+
+
+def _cohort_metrics(state: dict, now: datetime) -> dict:
+    cohort_state = state.get("follow_tracking", {}).get("acquisition_cohorts", {})
+    pending_due = Counter()
+    now_timestamp = now.timestamp()
+    for member in cohort_state.get("members", {}).values():
+        source = str(member.get("source") or "")
+        month = str(member.get("cohort_month") or "")
+        acquired_at = float(member.get("acquired_at") or 0)
+        checkpoints = member.get("checkpoints", {})
+        if source not in bluesky_state.ACQUISITION_COHORT_SOURCES or not month:
+            continue
+        for days in bluesky_state.ACQUISITION_COHORT_CHECKPOINT_DAYS:
+            if (
+                checkpoints.get(str(days)) is None
+                and now_timestamp >= acquired_at + days * 24 * 60 * 60
+            ):
+                pending_due[(month, source, str(days))] += 1
+
+    periods = []
+    for month, source_totals in sorted(cohort_state.get("cohorts", {}).items()):
+        for source in bluesky_state.ACQUISITION_COHORT_SOURCES:
+            totals = source_totals.get(source)
+            if not isinstance(totals, dict):
+                continue
+            checkpoints = {}
+            for days in bluesky_state.ACQUISITION_COHORT_CHECKPOINT_DAYS:
+                checkpoint = str(days)
+                checkpoints[checkpoint] = _cohort_checkpoint_metrics(
+                    totals,
+                    checkpoint,
+                    pending_due[(month, source, checkpoint)],
+                )
+            periods.append(
+                {
+                    "month": month,
+                    "source": source,
+                    "acquired": max(0, int(totals.get("acquired") or 0)),
+                    "checkpoints": checkpoints,
+                }
+            )
+
+    return {
+        "checkpoint_days": list(bluesky_state.ACQUISITION_COHORT_CHECKPOINT_DAYS),
+        "coverage_started_at": _cohort_coverage_started_at(
+            cohort_state.get("coverage_started_at")
+        ),
+        "periods": periods,
+    }
+
+
+def _audience_growth_metrics(
+    state: dict,
+    snapshots: list[dict],
+    discovery: dict,
+    social: dict,
+    now: datetime,
+) -> dict:
+    source_values = {
+        "followback": (
+            "candidates",
+            int(social.get("follow_back_candidates") or 0),
+            int(social.get("follow_back_added") or 0),
+        ),
+        "interaction": (
+            "eligible",
+            int(social.get("interaction_eligible") or 0),
+            int(social.get("interaction_added") or 0),
+        ),
+        "discovery": (
+            "selected",
+            int(discovery.get("selected") or 0),
+            int(discovery.get("followed") or 0),
+        ),
+    }
+    sources = {}
+    for source, (denominator, considered, acquired) in source_values.items():
+        sources[source] = {
+            "denominator": denominator,
+            "considered": considered,
+            "acquired": acquired,
+            "success_rate": round(acquired * 100 / considered, 1)
+            if considered
+            else None,
+        }
+    return {
+        "window_days": WORKFLOW_WINDOW_DAYS,
+        "net_followers": _follower_growth(snapshots, now),
+        "sources": sources,
+        "cohorts": _cohort_metrics(state, now),
+        "coverage": {
+            "social_started_at": min(
+                (
+                    run["created_at"]
+                    for run in social.get("runs", [])
+                    if run.get("created_at")
+                ),
+                default=None,
+            ),
+            "discovery_started_at": discovery.get("coverage_start"),
+        },
+    }
+
+
 def _starter_pack_attribution_metrics(state: dict, now: datetime) -> dict:
     attribution = state.get("follow_tracking", {}).get("starter_pack_attribution", {})
-    cutoff_date = (now - timedelta(days=WORKFLOW_WINDOW_DAYS - 1)).date().isoformat()
+    cutoffs = {
+        "7": (now - timedelta(days=6)).date().isoformat(),
+        "30": (now - timedelta(days=WORKFLOW_WINDOW_DAYS - 1)).date().isoformat(),
+    }
     packs = []
     for pack_uri, pack in attribution.get("packs", {}).items():
         match = re.fullmatch(
@@ -847,12 +1003,15 @@ def _starter_pack_attribution_metrics(state: dict, now: datetime) -> dict:
         )
         if match is None:
             continue
-        follows = sum(
-            max(0, int(count or 0))
-            for date, count in pack.get("daily_counts", {}).items()
-            if date >= cutoff_date
-        )
-        if follows <= 0:
+        windows = {
+            window: sum(
+                max(0, int(count or 0))
+                for date, count in pack.get("daily_counts", {}).items()
+                if date >= cutoff
+            )
+            for window, cutoff in cutoffs.items()
+        }
+        if windows["30"] <= 0:
             continue
         packs.append(
             {
@@ -862,15 +1021,26 @@ def _starter_pack_attribution_metrics(state: dict, now: datetime) -> dict:
                     "https://bsky.app/starter-pack/"
                     f"{match.group('creator')}/{match.group('rkey')}"
                 ),
-                "follows": follows,
+                "follows": windows["30"],
+                "windows": windows,
             }
         )
     packs.sort(key=lambda pack: (-pack["follows"], pack["name"].casefold()))
+    totals = {
+        window: sum(pack["windows"][window] for pack in packs) for window in cutoffs
+    }
+    for pack in packs:
+        pack["share_30_day"] = (
+            round(pack["windows"]["30"] * 100 / totals["30"], 1)
+            if totals["30"]
+            else None
+        )
     return {
         "window_days": WORKFLOW_WINDOW_DAYS,
         "coverage_started_at": attribution.get("coverage_started_at"),
         "last_checked_at": attribution.get("last_checked_at"),
-        "total_follows": sum(pack["follows"] for pack in packs),
+        "total_follows": totals["30"],
+        "windows": totals,
         "packs": packs,
     }
 
@@ -1209,6 +1379,7 @@ def _history_from_collection(
         )
     delivery = metrics.get("posting_delivery", {})
     network = metrics.get("network_maintenance", {})
+    audience_growth = metrics.get("audience_growth", {})
     starter_packs = metrics.get("starter_pack_attribution", {})
     operational = {
         "period_start": _period_start(
@@ -1237,15 +1408,60 @@ def _history_from_collection(
                 )
             },
         },
+        "audience_growth": {
+            "window_days": audience_growth.get("window_days"),
+            "net_followers": {
+                window: audience_growth.get("net_followers", {}).get(window)
+                for window in ("7", "30")
+            },
+            "sources": {
+                source: {
+                    field: audience_growth.get("sources", {}).get(source, {}).get(field)
+                    for field in (
+                        "denominator",
+                        "considered",
+                        "acquired",
+                        "success_rate",
+                    )
+                }
+                for source in bluesky_state.ACQUISITION_COHORT_SOURCES
+            },
+            "cohorts": {
+                "checkpoint_days": audience_growth.get("cohorts", {}).get(
+                    "checkpoint_days", []
+                ),
+                "coverage_started_at": audience_growth.get("cohorts", {}).get(
+                    "coverage_started_at"
+                ),
+                "periods": copy.deepcopy(
+                    audience_growth.get("cohorts", {}).get("periods", [])
+                ),
+            },
+            "coverage": {
+                field: audience_growth.get("coverage", {}).get(field)
+                for field in ("social_started_at", "discovery_started_at")
+            },
+        },
         "starter_pack_attribution": {
             "window_days": starter_packs.get("window_days"),
             "coverage_started_at": starter_packs.get("coverage_started_at"),
             "last_checked_at": starter_packs.get("last_checked_at"),
             "total_follows": starter_packs.get("total_follows"),
+            "windows": {
+                window: starter_packs.get("windows", {}).get(window)
+                for window in ("7", "30")
+            },
             "packs": [
                 {
                     field: pack.get(field)
-                    for field in ("name", "creator_handle", "url", "follows")
+                    for field in (
+                        "name",
+                        "creator_handle",
+                        "url",
+                        "follows",
+                        "windows",
+                        "share_30_day",
+                    )
                 }
                 for pack in starter_packs.get("packs", [])
             ],
@@ -1511,6 +1727,7 @@ def _normalise_existing(existing: dict | None) -> dict:
         7,
         8,
         9,
+        10,
         SCHEMA_VERSION,
     }:
         raise ValueError("Unsupported dashboard metrics schema version")
@@ -1975,6 +2192,8 @@ def collect_metrics(
     automation["alerts"] = _operational_alerts(
         automation, providers, posting_delivery, now
     )
+    discovery_activity = _discovery_metrics(workflow_activity)
+    social_activity = _social_activity_metrics(workflow_activity)
 
     return {
         "schema_version": SCHEMA_VERSION,
@@ -1989,8 +2208,11 @@ def collect_metrics(
         "current": current,
         "snapshots": snapshots,
         "daily_activity": _daily_activity(state, workflow_activity),
-        "discovery_activity": _discovery_metrics(workflow_activity),
-        "social_activity": _social_activity_metrics(workflow_activity),
+        "discovery_activity": discovery_activity,
+        "social_activity": social_activity,
+        "audience_growth": _audience_growth_metrics(
+            state, snapshots, discovery_activity, social_activity, now
+        ),
         "starter_pack_attribution": _starter_pack_attribution_metrics(state, now),
         "moderation_activity": _moderation_metrics(workflow_activity),
         "engagement_momentum": _engagement_momentum(snapshots, now),

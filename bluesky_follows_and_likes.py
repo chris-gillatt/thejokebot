@@ -73,7 +73,13 @@ def _social_summary_line(summary: dict, dry_run: bool) -> str:
 
 
 def _follow_back_candidates(
-    client, to_follow_back, dry_run, action_delay_seconds, attempted_dids, summary
+    client,
+    state,
+    to_follow_back,
+    dry_run,
+    action_delay_seconds,
+    attempted_dids,
+    summary,
 ):
     for index, did in enumerate(to_follow_back, start=1):
         attempted_dids.add(did)
@@ -91,6 +97,8 @@ def _follow_back_candidates(
                     description=f"following back {masked_did}",
                 )
                 print(f"{Fore.GREEN}Followed {masked_did}{Style.RESET_ALL}")
+                if state is not None:
+                    bluesky_state.record_acquisition(state, did, "followback")
                 summary["follow_back_added"] += 1
             except (
                 requests.RequestException,
@@ -117,6 +125,7 @@ def follow_back(
     dry_run: bool,
     action_delay_seconds: float,
     summary: dict | None = None,
+    state: dict | None = None,
 ) -> None:
     """Follow back any followers the bot is not yet following.
 
@@ -135,6 +144,7 @@ def follow_back(
 
     attempted_dids: set[str] = set()
     observed_candidate_dids: set[str] = set()
+    cohorts_reconciled = False
     summary["follow_back_candidates"] = 0
     summary["follow_back_added"] = 0
     summary["failed"] = 0
@@ -158,6 +168,9 @@ def follow_back(
         )
         follower_dids = {f.did for f in followers}
         following_dids = {f.did for f in following}
+        if state is not None and not dry_run and not cohorts_reconciled:
+            bluesky_state.reconcile_acquisition_cohorts(state, follower_dids)
+            cohorts_reconciled = True
         remaining_dids = follower_dids - following_dids
         observed_candidate_dids |= remaining_dids
         summary["follow_back_candidates"] = len(observed_candidate_dids)
@@ -185,6 +198,7 @@ def follow_back(
         )
         _follow_back_candidates(
             client,
+            state,
             to_follow_back,
             dry_run,
             action_delay_seconds,
@@ -297,6 +311,7 @@ def _follow_did_list(client, state, to_follow, dry_run, action_delay_seconds):
                 )
                 print(f"{Fore.GREEN}Followed interactor {masked_did}{Style.RESET_ALL}")
                 bluesky_state.record_follow_grace(state, did, source="interaction")
+                bluesky_state.record_acquisition(state, did, "interaction")
                 followed_count += 1
             except (
                 requests.RequestException,
@@ -832,6 +847,7 @@ def main() -> None:
             dry_run,
             action_delay_seconds,
             social_summary,
+            state,
         )
     except (
         ValueError,

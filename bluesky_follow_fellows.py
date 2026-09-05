@@ -152,6 +152,7 @@ def _persist_follow_fellows_state(followed_dids, rotation_step, total_tags):
     def apply_follow_fellows_state_updates(latest_state):
         for did in followed_dids:
             bluesky_state.record_follow_grace(latest_state, did)
+            bluesky_state.record_acquisition(latest_state, did, "discovery")
         bluesky_state.advance_follow_fellows_tag_offset(
             latest_state, rotation_step, total_tags
         )

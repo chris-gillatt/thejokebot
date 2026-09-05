@@ -294,7 +294,7 @@ class DashboardCollectorTests(unittest.TestCase):
 
     def test_rejects_unknown_schema_version(self):
         with self.assertRaisesRegex(ValueError, "schema version"):
-            dashboard._normalise_existing({"schema_version": 11, "snapshots": []})
+            dashboard._normalise_existing({"schema_version": 12, "snapshots": []})
 
     def test_normalise_existing_upgrades_schema_one(self):
         existing = {"schema_version": 1, "snapshots": []}
@@ -537,9 +537,37 @@ class DashboardCollectorTests(unittest.TestCase):
                 "response_window": {"active": 5},
                 "private_state": "discarded upstream",
             },
+            "audience_growth": {
+                "window_days": 30,
+                "net_followers": {"7": 4, "30": 12},
+                "sources": {
+                    "followback": {
+                        "denominator": "candidates",
+                        "considered": 3,
+                        "acquired": 3,
+                        "success_rate": 100.0,
+                        "private_member_hash": "discarded",
+                    }
+                },
+                "cohorts": {
+                    "checkpoint_days": [30, 90],
+                    "coverage_started_at": "2026-08-01T00:00:00+00:00",
+                    "periods": [],
+                    "members": {"private-hash": {}},
+                },
+                "coverage": {"social_started_at": "2026-08-01T00:00:00Z"},
+            },
             "starter_pack_attribution": {
                 "total_follows": 6,
-                "packs": [{"name": "Comedy", "follows": 6}],
+                "windows": {"7": 2, "30": 6},
+                "packs": [
+                    {
+                        "name": "Comedy",
+                        "follows": 6,
+                        "windows": {"7": 2, "30": 6},
+                        "share_30_day": 100.0,
+                    }
+                ],
             },
         }
         workflow_runs = [
@@ -580,12 +608,20 @@ class DashboardCollectorTests(unittest.TestCase):
             ],
             6,
         )
+        self.assertEqual(
+            partition["operational_observations"][0]["audience_growth"][
+                "net_followers"
+            ]["30"],
+            12,
+        )
         serialised = json.dumps(partition)
         self.assertNotIn("head_sha", serialised)
         self.assertNotIn("untracked_workflow", serialised)
         self.assertNotIn("last_failure_reason", serialised)
         self.assertNotIn("private schedule detail", serialised)
         self.assertNotIn("private_state", serialised)
+        self.assertNotIn("private_member_hash", serialised)
+        self.assertNotIn("private-hash", serialised)
 
     def test_collector_existing_rebuilds_recent_cache_from_history(self):
         existing = {
@@ -1377,7 +1413,9 @@ class DashboardCollectorTests(unittest.TestCase):
         metrics = dashboard._starter_pack_attribution_metrics(state, now)
 
         self.assertEqual(metrics["total_follows"], 6)
+        self.assertEqual(metrics["windows"], {"7": 4, "30": 6})
         self.assertEqual(metrics["packs"][0]["follows"], 6)
+        self.assertEqual(metrics["packs"][0]["share_30_day"], 100.0)
         self.assertEqual(
             metrics["packs"][0]["url"],
             "https://bsky.app/starter-pack/did:plc:creator/comedy",
@@ -1386,6 +1424,86 @@ class DashboardCollectorTests(unittest.TestCase):
         self.assertNotIn("private-hash", public_metrics)
         self.assertNotIn("high_water", public_metrics)
         self.assertNotIn("daily_counts", public_metrics)
+
+    def test_audience_growth_keeps_source_denominators_and_aggregate_cohorts(self):
+        now = datetime(2026, 9, 5, 12, tzinfo=timezone.utc)
+        acquired_at = int(datetime(2026, 7, 1, tzinfo=timezone.utc).timestamp())
+        state = dashboard.bluesky_state._default_state()
+        dashboard.bluesky_state.record_acquisition(
+            state, "did:private:retained", "interaction", acquired_at=acquired_at
+        )
+        dashboard.bluesky_state.reconcile_acquisition_cohorts(
+            state,
+            {"did:private:retained"},
+            observed_at=acquired_at + 30 * 24 * 60 * 60,
+        )
+        snapshots = [
+            {
+                "source": "bluesky_snapshot",
+                "collected_at": "2026-08-01T12:00:00+00:00",
+                "followers": 90,
+            },
+            {
+                "source": "bluesky_snapshot",
+                "collected_at": "2026-08-29T12:00:00+00:00",
+                "followers": 100,
+            },
+            {
+                "source": "bluesky_snapshot",
+                "collected_at": now.isoformat(),
+                "followers": 108,
+            },
+        ]
+        discovery = {
+            "selected": 20,
+            "followed": 10,
+            "coverage_start": "2026-08-06T00:00:00Z",
+            "runs": [],
+        }
+        social = {
+            "follow_back_candidates": 8,
+            "follow_back_added": 8,
+            "interaction_eligible": 5,
+            "interaction_added": 3,
+            "runs": [{"created_at": "2026-08-06T01:00:00Z"}],
+        }
+
+        metrics = dashboard._audience_growth_metrics(
+            state, snapshots, discovery, social, now
+        )
+
+        self.assertEqual(metrics["net_followers"], {"7": 8, "30": 18})
+        self.assertEqual(
+            metrics["sources"]["interaction"],
+            {
+                "denominator": "eligible",
+                "considered": 5,
+                "acquired": 3,
+                "success_rate": 60.0,
+            },
+        )
+        checkpoint = metrics["cohorts"]["periods"][0]["checkpoints"]["30"]
+        self.assertEqual(checkpoint["observed"], 1)
+        self.assertEqual(checkpoint["rate"], 100.0)
+        public_metrics = json.dumps(metrics)
+        self.assertNotIn("did:private", public_metrics)
+        self.assertNotIn("members", public_metrics)
+
+    def test_audience_growth_marks_unobserved_windows_unavailable(self):
+        now = datetime(2026, 9, 5, 12, tzinfo=timezone.utc)
+        snapshots = [
+            {
+                "source": "bluesky_snapshot",
+                "collected_at": now.isoformat(),
+                "followers": 108,
+            }
+        ]
+
+        metrics = dashboard._audience_growth_metrics({}, snapshots, {}, {}, now)
+
+        self.assertEqual(metrics["net_followers"], {"7": None, "30": None})
+        self.assertIsNone(metrics["sources"]["discovery"]["success_rate"])
+        self.assertEqual(metrics["cohorts"]["periods"], [])
 
     def test_reconstructs_following_and_posts_without_inventing_followers(self):
         now = datetime(2026, 8, 22, 6, tzinfo=timezone.utc)

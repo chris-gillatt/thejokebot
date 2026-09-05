@@ -95,6 +95,10 @@ function metricText(value) {
   return value == null ? "--" : numberFormat.format(value);
 }
 
+function signedNumber(value) {
+  return `${value > 0 ? "+" : ""}${numberFormat.format(value)}`;
+}
+
 function renderProfile() {
   const profileLink = document.getElementById("profile-link");
   profileLink.href = metrics.account.profile_url;
@@ -341,127 +345,98 @@ function renderActivityChart() {
   );
 }
 
-function renderDiscovery() {
-  const discovery = metrics.discovery_activity || {
-    runs: [],
-    followed: 0,
-    completed_runs: 0,
-    completion_rate: null,
-    median_per_run: null,
-    average_per_run: null,
-    zero_result_runs: 0,
-    coverage_start: null,
+function checkpointSummary(periods, source, checkpoint) {
+  const values = periods
+    .filter((period) => period.source === source)
+    .map((period) => period.checkpoints?.[checkpoint] || {});
+  const observed = values.reduce((total, value) => total + (value.observed || 0), 0);
+  const stillFollowing = values.reduce((total, value) => total + (value.still_following || 0), 0);
+  const pending = values.reduce((total, value) => total + (value.pending_due || 0), 0);
+  return {
+    observed,
+    stillFollowing,
+    pending,
+    rate: observed ? (stillFollowing * 100) / observed : null,
   };
-  const runs = discovery.runs;
-  setText("discovery-followed", numberFormat.format(discovery.followed));
-  setText("discovery-runs", numberFormat.format(discovery.completed_runs));
-  setText(
-    "discovery-completion",
-    discovery.completion_rate === null ? "--" : `${percentageFormat.format(discovery.completion_rate)}%`,
-  );
-  setText(
-    "discovery-median",
-    discovery.median_per_run === null ? "--" : numberFormat.format(discovery.median_per_run),
-  );
-  setText(
-    "discovery-average",
-    discovery.average_per_run === null
-      ? "Median accounts added"
-      : `${numberFormat.format(discovery.average_per_run)} average per run`,
-  );
-  setText(
-    "discovery-zero-runs",
-    discovery.completed_runs
-      ? `${numberFormat.format(discovery.zero_result_runs)} zero-result runs`
-      : "No run history yet",
-  );
-  setText(
-    "discovery-coverage",
-    discovery.coverage_start
-      ? `Since ${dateFormat.format(new Date(discovery.coverage_start))}`
-      : "Collecting history",
-  );
-
-  const chartFrame = document.getElementById("discovery-chart-frame");
-  const chartCanvas = document.getElementById("discovery-chart");
-  const emptyState = document.getElementById("discovery-empty");
-  const dataDetails = document.getElementById("discovery-details");
-  const hasRuns = runs.length > 0;
-  chartCanvas.hidden = !hasRuns;
-  emptyState.hidden = hasRuns;
-  dataDetails.hidden = !hasRuns;
-  chartFrame.classList.toggle("is-empty", !hasRuns);
-
-  if (hasRuns) {
-    const options = baseOptions();
-    options.scales.y.beginAtZero = true;
-    options.scales.y.ticks = { precision: 0 };
-    replaceChart("discovery", chartCanvas, {
-      type: "bar",
-      data: {
-        labels: runs.map((run) => dateTimeFormat.format(new Date(run.created_at))),
-        datasets: [
-          { label: "Considered", data: runs.map((run) => run.selected), backgroundColor: colours[3] },
-          { label: "Added", data: runs.map((run) => run.followed), backgroundColor: colours[2] },
-        ],
-      },
-      options,
-    });
-  } else {
-    charts.discovery?.destroy();
-    delete charts.discovery;
-    emptyState.textContent = discovery.completed_runs
-      ? "No completed discovery runs in this period."
-      : "Discovery history will appear after the next completed run.";
-  }
-  renderTable(
-    "discovery-table",
-    runs.map((run) => [
-      dateTimeFormat.format(new Date(run.created_at)),
-      numberFormat.format(run.selected),
-      numberFormat.format(run.followed),
-      run.selected ? `${percentageFormat.format((run.followed * 100) / run.selected)}%` : "--",
-    ]),
-  );
 }
 
-function renderSocialFlow(social) {
-  const hasSocialHistory = social.completed_runs > 0;
-  const socialValues = {
-    "social-follow-candidates": hasSocialHistory ? social.follow_back_candidates : null,
-    "social-follow-added": hasSocialHistory ? social.follow_back_added : null,
-    "social-interaction-candidates": hasSocialHistory ? social.interaction_candidates : null,
-    "social-interaction-eligible": hasSocialHistory ? social.interaction_eligible : null,
-    "social-interaction-added": hasSocialHistory ? social.interaction_added : null,
-    "social-interactions-liked": hasSocialHistory ? social.interactions_liked : null,
+function renderAudienceGrowth() {
+  const growth = metrics.audience_growth || { net_followers: {}, sources: {}, cohorts: { periods: [] } };
+  const periods = growth.cohorts?.periods || [];
+  const net7 = growth.net_followers?.["7"];
+  const net30 = growth.net_followers?.["30"];
+  const engagement30 = metrics.engagement_momentum?.deltas?.["30"];
+  setText("growth-net-7", net7 === null || net7 === undefined ? "--" : signedNumber(net7));
+  setText("growth-net-30", net30 === null || net30 === undefined ? "--" : signedNumber(net30));
+  setText(
+    "growth-engagement-30",
+    engagement30 === null || engagement30 === undefined ? "--" : signedNumber(engagement30),
+  );
+
+  const all30 = ["followback", "interaction", "discovery"].map((source) =>
+    checkpointSummary(periods, source, "30"),
+  );
+  const observed30 = all30.reduce((total, value) => total + value.observed, 0);
+  const retained30 = all30.reduce((total, value) => total + value.stillFollowing, 0);
+  setText(
+    "growth-reciprocity-30",
+    observed30 ? `${percentageFormat.format((retained30 * 100) / observed30)}%` : "--",
+  );
+  setText(
+    "growth-reciprocity-note",
+    observed30 ? `${numberFormat.format(observed30)} accounts observed` : "Collecting cohort history",
+  );
+  setText(
+    "growth-coverage",
+    growth.cohorts?.coverage_started_at
+      ? `Cohorts observed since ${dateFormat.format(new Date(growth.cohorts.coverage_started_at))}`
+      : "Collecting source and cohort history",
+  );
+
+  const denominatorLabels = {
+    candidates: "candidates",
+    eligible: "eligible accounts",
+    selected: "selected accounts",
   };
-  Object.entries(socialValues).forEach(([id, value]) => setText(id, metricText(value)));
-  setText(
-    "social-history-note",
-    hasSocialHistory
-      ? `${numberFormat.format(social.completed_runs)} runs observed over 30 days`
-      : "Social run history will appear after the next completed run.",
-  );
-  setText(
-    "social-protected",
-    hasSocialHistory
-      ? `${numberFormat.format(social.protected)} protected or previously handled`
-      : "-- protected or previously handled",
-  );
-  setText(
-    "social-failed",
-    hasSocialHistory
-      ? `${numberFormat.format(social.failed)} failed actions`
-      : "-- failed actions",
-  );
-  const maximum = Math.max(
-    1,
-    ...Object.values(socialValues).map((value) => Number(value) || 0),
-  );
-  document.querySelectorAll(".social-flow-row").forEach((row) => {
-    const value = Number(socialValues[row.dataset.metric]) || 0;
-    row.style.setProperty("--flow-width", `${(value * 100) / maximum}%`);
+  ["followback", "interaction", "discovery"].forEach((source) => {
+    const values = growth.sources?.[source] || {};
+    const checkpoint30 = checkpointSummary(periods, source, "30");
+    const checkpoint90 = checkpointSummary(periods, source, "90");
+    setText(`growth-${source}-acquired`, metricText(values.acquired));
+    setText(
+      `growth-${source}-context`,
+      values.considered === undefined
+        ? "Collecting activity"
+        : `of ${numberFormat.format(values.considered)} ${denominatorLabels[values.denominator] || "accounts"}`,
+    );
+    setText(
+      `growth-${source}-success`,
+      values.success_rate === null || values.success_rate === undefined
+        ? "--"
+        : `${percentageFormat.format(values.success_rate)}%`,
+    );
+    [["30", checkpoint30], ["90", checkpoint90]].forEach(([checkpoint, summary]) => {
+      const suffix = summary.pending ? ` · ${summary.pending} due` : "";
+      setText(
+        `growth-${source}-${checkpoint}`,
+        summary.rate === null ? `Collecting${suffix}` : `${percentageFormat.format(summary.rate)}%${suffix}`,
+      );
+    });
   });
+
+  renderTable(
+    "growth-cohort-table",
+    periods.map((period) => [
+      period.month,
+      period.source,
+      numberFormat.format(period.acquired),
+      numberFormat.format(period.checkpoints["30"].observed),
+      period.checkpoints["30"].rate === null ? "--" : `${percentageFormat.format(period.checkpoints["30"].rate)}%`,
+      numberFormat.format(period.checkpoints["90"].observed),
+      period.checkpoints["90"].rate === null ? "--" : `${percentageFormat.format(period.checkpoints["90"].rate)}%`,
+    ]),
+  );
+  document.getElementById("growth-cohort-details").hidden = periods.length === 0;
 }
 
 function renderStarterPackAttribution(starterPacks) {
@@ -469,7 +444,8 @@ function renderStarterPackAttribution(starterPacks) {
   const starterPackEmpty = document.getElementById("starter-pack-empty");
   const packs = starterPacks.packs || [];
   starterPackList.replaceChildren();
-  setText("starter-pack-total", metricText(starterPacks.last_checked_at ? starterPacks.total_follows : null));
+  setText("starter-pack-total-7", metricText(starterPacks.last_checked_at ? starterPacks.windows?.["7"] : null));
+  setText("starter-pack-total-30", metricText(starterPacks.last_checked_at ? starterPacks.windows?.["30"] : null));
   setText(
     "starter-pack-history-note",
     starterPacks.coverage_started_at
@@ -488,7 +464,7 @@ function renderStarterPackAttribution(starterPacks) {
     link.rel = "noreferrer";
     name.textContent = pack.name || "Starter pack";
     creator.textContent = pack.creator_handle ? `by @${pack.creator_handle}` : "View on Bluesky";
-    count.textContent = numberFormat.format(pack.follows || 0);
+    count.textContent = `${numberFormat.format(pack.follows || 0)} · ${percentageFormat.format(pack.share_30_day || 0)}%`;
     details.append(name, creator);
     link.append(details, count);
     item.append(link);
@@ -523,25 +499,11 @@ function renderNetworkMaintenance(network) {
 }
 
 function renderSocialActivity() {
-  const social = metrics.social_activity || { completed_runs: 0, runs: [] };
   const starterPacks = metrics.starter_pack_attribution || { packs: [] };
   const network = metrics.network_maintenance || {};
   const unfollow = network.unfollow;
-  renderSocialFlow(social);
   renderStarterPackAttribution(starterPacks);
   renderNetworkMaintenance(network);
-  renderTable(
-    "social-table",
-    (social.runs || []).map((run) => [
-      dateTimeFormat.format(new Date(run.created_at)),
-      run.follow_back_candidates,
-      run.follow_back_added,
-      run.interaction_candidates,
-      run.interaction_added,
-      run.interactions_liked,
-      run.failed,
-    ]),
-  );
   renderTable(
     "unfollow-table",
     (unfollow?.runs || []).map((run) => [
@@ -974,7 +936,7 @@ function renderTopPosts() {
 function renderCharts() {
   renderAudienceChart();
   renderActivityChart();
-  renderDiscovery();
+  renderAudienceGrowth();
   renderSocialActivity();
   renderEngagement();
 }
@@ -991,7 +953,6 @@ function bindRangeControls() {
       if (selectedRange === "all") await loadHistory();
       renderAudienceChart();
       renderActivityChart();
-      renderDiscovery();
     });
   });
   document.querySelectorAll("[data-top-range]").forEach((button) => {

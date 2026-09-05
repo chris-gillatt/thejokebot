@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import sys
@@ -26,6 +27,9 @@ STATE_FILENAMES = {
 FOLLOW_RESPONSE_GRACE_PERIOD_DAYS = 90
 FOLLOW_RESPONSE_GRACE_PERIOD_SECONDS = FOLLOW_RESPONSE_GRACE_PERIOD_DAYS * 24 * 60 * 60
 STARTER_PACK_ATTRIBUTION_RETENTION_DAYS = 37
+ACQUISITION_COHORT_SCHEMA_VERSION = 1
+ACQUISITION_COHORT_SOURCES = ("followback", "interaction", "discovery")
+ACQUISITION_COHORT_CHECKPOINT_DAYS = (30, 90)
 
 # Canonical provider order — the rotation wraps around this list.
 # Add new providers here and they will be included in rotation automatically.
@@ -110,6 +114,12 @@ def _default_state() -> dict:
         },
         "follow_tracking": {
             "following_snapshot_dids": [],
+            "acquisition_cohorts": {
+                "schema_version": ACQUISITION_COHORT_SCHEMA_VERSION,
+                "coverage_started_at": None,
+                "members": {},
+                "cohorts": {},
+            },
             "starter_pack_attribution": {
                 "coverage_started_at": None,
                 "last_checked_at": None,
@@ -194,6 +204,11 @@ def _normalise_state(state: dict) -> dict:
 
     follow_tracking = state.setdefault("follow_tracking", {})
     follow_tracking.setdefault("following_snapshot_dids", [])
+    acquisition_cohorts = follow_tracking.setdefault("acquisition_cohorts", {})
+    acquisition_cohorts.setdefault("schema_version", ACQUISITION_COHORT_SCHEMA_VERSION)
+    acquisition_cohorts.setdefault("coverage_started_at", None)
+    acquisition_cohorts.setdefault("members", {})
+    acquisition_cohorts.setdefault("cohorts", {})
     attribution = follow_tracking.setdefault("starter_pack_attribution", {})
     attribution.setdefault("coverage_started_at", None)
     attribution.setdefault("last_checked_at", None)
@@ -644,6 +659,118 @@ def set_following_snapshot_dids(state: dict, dids: set[str]) -> None:
     follow_tracking["following_snapshot_dids"] = sorted(
         {str(did).strip() for did in dids if str(did).strip()}
     )
+
+
+def _acquisition_member_hash(did: str) -> str:
+    return hashlib.sha256(did.strip().encode("utf-8")).hexdigest()
+
+
+def get_acquisition_cohorts(state: dict) -> dict:
+    """Return the normalised private acquisition-cohort state."""
+    _normalise_state(state)
+    return state["follow_tracking"]["acquisition_cohorts"]
+
+
+def _acquisition_source_totals(cohorts: dict, month: str, source: str) -> dict:
+    month_totals = cohorts["cohorts"].setdefault(month, {})
+    return month_totals.setdefault(
+        source,
+        {
+            "acquired": 0,
+            "checkpoints": {
+                str(days): {"observed": 0, "still_following": 0}
+                for days in ACQUISITION_COHORT_CHECKPOINT_DAYS
+            },
+        },
+    )
+
+
+def record_acquisition(
+    state: dict,
+    did: str,
+    source: str,
+    *,
+    acquired_at: int | None = None,
+) -> bool:
+    """Record one acquisition per account during its open 90-day window."""
+    normalised_did = did.strip()
+    if not normalised_did:
+        raise ValueError("Acquisition DID must not be empty")
+    if source not in ACQUISITION_COHORT_SOURCES:
+        raise ValueError(f"Unknown acquisition source: {source}")
+
+    cohorts = get_acquisition_cohorts(state)
+    member_hash = _acquisition_member_hash(normalised_did)
+    if member_hash in cohorts["members"]:
+        return False
+
+    acquired_timestamp = int(time.time()) if acquired_at is None else int(acquired_at)
+    cohort_month = time.strftime("%Y-%m", time.gmtime(acquired_timestamp))
+    cohorts["members"][member_hash] = {
+        "source": source,
+        "acquired_at": acquired_timestamp,
+        "cohort_month": cohort_month,
+        "checkpoints": {str(days): None for days in ACQUISITION_COHORT_CHECKPOINT_DAYS},
+    }
+    source_totals = _acquisition_source_totals(cohorts, cohort_month, source)
+    source_totals["acquired"] += 1
+    if cohorts["coverage_started_at"] is None:
+        cohorts["coverage_started_at"] = acquired_timestamp
+    else:
+        cohorts["coverage_started_at"] = min(
+            int(cohorts["coverage_started_at"]), acquired_timestamp
+        )
+    return True
+
+
+def reconcile_acquisition_cohorts(
+    state: dict,
+    follower_dids: set[str],
+    *,
+    observed_at: int | None = None,
+) -> dict[str, dict[str, int]]:
+    """Observe due 30/90-day checkpoints against a complete follower set."""
+    observed_timestamp = int(time.time()) if observed_at is None else int(observed_at)
+    follower_hashes = {
+        _acquisition_member_hash(did)
+        for did in follower_dids
+        if isinstance(did, str) and did.strip()
+    }
+    cohorts = get_acquisition_cohorts(state)
+    result = {
+        str(days): {"observed": 0, "still_following": 0}
+        for days in ACQUISITION_COHORT_CHECKPOINT_DAYS
+    }
+
+    for member_hash, member in list(cohorts["members"].items()):
+        acquired_at = int(member.get("acquired_at") or 0)
+        source = str(member.get("source") or "")
+        cohort_month = str(member.get("cohort_month") or "")
+        if source not in ACQUISITION_COHORT_SOURCES or not cohort_month:
+            continue
+        checkpoints = member.setdefault("checkpoints", {})
+        source_totals = _acquisition_source_totals(cohorts, cohort_month, source)
+        for days in ACQUISITION_COHORT_CHECKPOINT_DAYS:
+            checkpoint = str(days)
+            if checkpoints.get(checkpoint) is not None:
+                continue
+            if observed_timestamp < acquired_at + days * 24 * 60 * 60:
+                continue
+            still_following = member_hash in follower_hashes
+            checkpoints[checkpoint] = {
+                "observed_at": observed_timestamp,
+                "still_following": still_following,
+            }
+            checkpoint_totals = source_totals["checkpoints"][checkpoint]
+            checkpoint_totals["observed"] += 1
+            checkpoint_totals["still_following"] += int(still_following)
+            result[checkpoint]["observed"] += 1
+            result[checkpoint]["still_following"] += int(still_following)
+
+        if checkpoints.get("90") is not None:
+            del cohorts["members"][member_hash]
+
+    return result
 
 
 def get_starter_pack_attribution(state: dict) -> dict:

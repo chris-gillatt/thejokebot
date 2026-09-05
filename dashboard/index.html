@@ -165,58 +165,69 @@
         </div>
       </section>
 
-      <section class="dashboard-section discovery-section" aria-labelledby="discovery-heading">
+      <section class="dashboard-section audience-growth-section" aria-labelledby="audience-growth-heading">
         <div class="section-inner">
-          <div class="section-heading discovery-heading">
+          <div class="section-heading audience-growth-heading">
             <div>
               <p class="eyebrow">Network growth</p>
-              <h2 id="discovery-heading">Discovery activity</h2>
+              <h2 id="audience-growth-heading">Audience growth</h2>
             </div>
-            <p class="discovery-note">Aggregate account discovery outcomes. No account or targeting details are retained.</p>
+            <p class="section-note growth-note" id="growth-coverage">Collecting source and cohort history</p>
           </div>
 
-          <div class="discovery-summary" aria-label="Discovery activity summary">
-            <div class="discovery-stat">
-              <span>Accounts added</span>
-              <strong id="discovery-followed">--</strong>
-              <small id="discovery-coverage">Collecting history</small>
+          <div class="growth-summary" aria-label="Audience growth summary">
+            <div class="growth-stat">
+              <span>7-day net followers</span>
+              <strong id="growth-net-7">--</strong>
+              <small>Observed account snapshots</small>
             </div>
-            <div class="discovery-stat">
-              <span>Runs observed</span>
-              <strong id="discovery-runs">--</strong>
-              <small>Rolling 30 days</small>
+            <div class="growth-stat">
+              <span>30-day net followers</span>
+              <strong id="growth-net-30">--</strong>
+              <small>Observed account snapshots</small>
             </div>
-            <div class="discovery-stat">
-              <span>Follow success rate</span>
-              <strong id="discovery-completion">--</strong>
-              <small id="discovery-zero-runs">No run history yet</small>
+            <div class="growth-stat">
+              <span>30-day engagement gain</span>
+              <strong id="growth-engagement-30">--</strong>
+              <small>Visible joke interactions</small>
             </div>
-            <div class="discovery-stat">
-              <span>Typical run</span>
-              <strong id="discovery-median">--</strong>
-              <small id="discovery-average">Median accounts added</small>
+            <div class="growth-stat">
+              <span>30-day reciprocity</span>
+              <strong id="growth-reciprocity-30">--</strong>
+              <small id="growth-reciprocity-note">Collecting cohort history</small>
             </div>
           </div>
 
-          <div class="chart-block discovery-chart-block">
-            <div class="chart-title">
-              <h3>Recent outcomes</h3>
-              <span>Accounts considered and added per completed run</span>
-            </div>
-            <div class="chart-frame" id="discovery-chart-frame">
-              <p class="discovery-empty" id="discovery-empty" hidden></p>
-              <canvas id="discovery-chart"></canvas>
-            </div>
-            <details id="discovery-details">
-              <summary>View discovery data</summary>
-              <div class="table-scroll">
-                <table id="discovery-table">
-                  <thead><tr><th>Date</th><th>Considered</th><th>Added</th><th>Completion</th></tr></thead>
-                  <tbody></tbody>
-                </table>
-              </div>
-            </details>
+          <div class="growth-source-grid" aria-label="30-day acquisition sources">
+            <article class="growth-source" data-growth-source="followback">
+              <span>Follow-backs</span>
+              <strong id="growth-followback-acquired">--</strong>
+              <small id="growth-followback-context">Collecting activity</small>
+              <dl><div><dt>Success</dt><dd id="growth-followback-success">--</dd></div><div><dt>30 days</dt><dd id="growth-followback-30">--</dd></div><div><dt>90 days</dt><dd id="growth-followback-90">--</dd></div></dl>
+            </article>
+            <article class="growth-source" data-growth-source="interaction">
+              <span>Interaction-led</span>
+              <strong id="growth-interaction-acquired">--</strong>
+              <small id="growth-interaction-context">Collecting activity</small>
+              <dl><div><dt>Success</dt><dd id="growth-interaction-success">--</dd></div><div><dt>30 days</dt><dd id="growth-interaction-30">--</dd></div><div><dt>90 days</dt><dd id="growth-interaction-90">--</dd></div></dl>
+            </article>
+            <article class="growth-source" data-growth-source="discovery">
+              <span>Discovery</span>
+              <strong id="growth-discovery-acquired">--</strong>
+              <small id="growth-discovery-context">Collecting activity</small>
+              <dl><div><dt>Success</dt><dd id="growth-discovery-success">--</dd></div><div><dt>30 days</dt><dd id="growth-discovery-30">--</dd></div><div><dt>90 days</dt><dd id="growth-discovery-90">--</dd></div></dl>
+            </article>
           </div>
+
+          <details id="growth-cohort-details">
+            <summary>View cohort observations</summary>
+            <div class="table-scroll">
+              <table id="growth-cohort-table">
+                <thead><tr><th>Month</th><th>Source</th><th>Acquired</th><th>30-day observed</th><th>30-day reciprocity</th><th>90-day observed</th><th>90-day reciprocity</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </details>
         </div>
       </section>
 
@@ -225,38 +236,13 @@
           <div class="section-heading social-heading">
             <div>
               <p class="eyebrow">Account relationships</p>
-              <h2 id="social-heading">Social activity</h2>
+              <h2 id="social-heading">Relationship health</h2>
             </div>
-            <p class="section-note social-note">Broad 30-day outcomes only. Account and targeting details are not retained.</p>
+            <p class="section-note social-note">Response windows, maintenance, and attributed introductions</p>
           </div>
 
           <div class="social-layout">
-            <article class="social-block" aria-labelledby="social-flow-heading">
-              <div class="social-block-heading">
-                <h3 id="social-flow-heading">Follow and response flow</h3>
-                <p id="social-history-note">Collecting history</p>
-              </div>
-              <div class="social-flow">
-                <div class="social-flow-row" data-metric="social-follow-candidates"><span>Follow-back candidates</span><strong id="social-follow-candidates">--</strong></div>
-                <div class="social-flow-row" data-metric="social-follow-added"><span>Follow-backs added</span><strong id="social-follow-added">--</strong></div>
-                <div class="social-flow-row" data-metric="social-interaction-candidates"><span>Recent interactors</span><strong id="social-interaction-candidates">--</strong></div>
-                <div class="social-flow-row" data-metric="social-interaction-eligible"><span>Eligible interactors</span><strong id="social-interaction-eligible">--</strong></div>
-                <div class="social-flow-row" data-metric="social-interaction-added"><span>Interactor follows</span><strong id="social-interaction-added">--</strong></div>
-                <div class="social-flow-row" data-metric="social-interactions-liked"><span>Interactions liked</span><strong id="social-interactions-liked">--</strong></div>
-              </div>
-              <div class="social-footnotes"><span id="social-protected">-- protected or previously handled</span><span id="social-failed">-- failed actions</span></div>
-              <details>
-                <summary>View social run data</summary>
-                <div class="table-scroll social-table-scroll">
-                  <table id="social-table">
-                    <thead><tr><th>Date</th><th>Follow-back candidates</th><th>Added</th><th>Interactors</th><th>Added</th><th>Liked</th><th>Failed</th></tr></thead>
-                    <tbody></tbody>
-                  </table>
-                </div>
-              </details>
-            </article>
-
-            <article class="social-block" aria-labelledby="maintenance-heading">
+            <article class="social-block maintenance-block" aria-labelledby="maintenance-heading">
               <div class="social-block-heading">
                 <h3 id="maintenance-heading">Network maintenance</h3>
                 <p id="unfollow-history-note">Collecting history</p>
@@ -292,7 +278,10 @@
                   <h3 id="starter-pack-heading">Starter pack introductions</h3>
                   <p id="starter-pack-history-note">Collecting attribution history</p>
                 </div>
-                <strong id="starter-pack-total">--</strong>
+                <div class="starter-pack-totals" aria-label="Attributed starter-pack introductions">
+                  <div><span>7 days</span><strong id="starter-pack-total-7">--</strong></div>
+                  <div><span>30 days</span><strong id="starter-pack-total-30">--</strong></div>
+                </div>
               </div>
               <ul id="starter-pack-list" class="starter-pack-list"></ul>
               <p id="starter-pack-empty" class="starter-pack-empty">Attributed follows will appear after the next completed social run.</p>

@@ -465,17 +465,17 @@ summary:focus-visible {
   line-height: 1.5;
 }
 
-.discovery-section {
+.audience-growth-section {
   background: #edf3f1;
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
 }
 
-.discovery-heading {
+.audience-growth-heading {
   margin-bottom: 30px;
 }
 
-.discovery-note {
+.growth-note {
   max-width: 430px;
   margin: 0;
   color: var(--muted);
@@ -484,7 +484,7 @@ summary:focus-visible {
   line-height: 1.5;
 }
 
-.discovery-summary {
+.growth-summary {
   margin-bottom: 44px;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -492,23 +492,23 @@ summary:focus-visible {
   border-bottom: 1px solid #b9c8c5;
 }
 
-.discovery-stat {
+.growth-stat {
   min-width: 0;
   padding: 22px 24px 24px;
   border-left: 1px solid #b9c8c5;
 }
 
-.discovery-stat:last-child {
+.growth-stat:last-child {
   border-right: 1px solid #b9c8c5;
 }
 
-.discovery-stat span,
-.discovery-stat strong,
-.discovery-stat small {
+.growth-stat span,
+.growth-stat strong,
+.growth-stat small {
   display: block;
 }
 
-.discovery-stat span {
+.growth-stat span {
   color: var(--muted);
   font-size: 0.75rem;
   font-weight: 700;
@@ -516,33 +516,76 @@ summary:focus-visible {
   letter-spacing: 0.06em;
 }
 
-.discovery-stat strong {
+.growth-stat strong {
   margin-top: 7px;
   font: 700 clamp(1.8rem, 3vw, 2.7rem)/1 var(--font-display);
 }
 
-.discovery-stat small {
+.growth-stat small {
   margin-top: 7px;
   color: var(--muted);
   font-size: 0.78rem;
 }
 
-.discovery-chart-block {
-  max-width: 880px;
-}
-
-.discovery-chart-block .chart-frame.is-empty {
-  height: 180px;
+.growth-source-grid {
   display: grid;
-  place-items: center;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
 }
 
-.discovery-empty {
-  max-width: 380px;
-  margin: 0;
+.growth-source {
+  min-width: 0;
+  padding: 20px;
+  border-top: 3px solid var(--teal);
+  background: var(--white);
+}
+
+.growth-source > span,
+.growth-source > strong,
+.growth-source > small {
+  display: block;
+}
+
+.growth-source > span {
   color: var(--muted);
-  text-align: center;
-  line-height: 1.5;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.growth-source > strong {
+  margin-top: 8px;
+  font: 700 2.2rem/1 var(--font-display);
+}
+
+.growth-source > small {
+  min-height: 2.6em;
+  margin-top: 6px;
+  color: var(--muted);
+}
+
+.growth-source dl {
+  margin: 18px 0 0;
+}
+
+.growth-source dl div {
+  padding: 8px 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.growth-source dt,
+.growth-source dd {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.growth-source dd {
+  text-align: right;
+  font-weight: 700;
 }
 
 .social-section {
@@ -560,8 +603,7 @@ summary:focus-visible {
 
 .social-layout {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 54px;
+  gap: 42px;
 }
 
 .social-block {
@@ -583,6 +625,31 @@ summary:focus-visible {
 
 .starter-pack-heading > strong {
   font: 700 2rem/1 var(--font-display);
+  color: var(--teal-dark);
+}
+
+.starter-pack-totals {
+  display: flex;
+  gap: 24px;
+  text-align: right;
+}
+
+.starter-pack-totals span,
+.starter-pack-totals strong {
+  display: block;
+}
+
+.starter-pack-totals span {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.starter-pack-totals strong {
+  margin-top: 5px;
+  font: 700 1.8rem/1 var(--font-display);
   color: var(--teal-dark);
 }
 
@@ -1427,13 +1494,17 @@ footer a {
     grid-template-columns: 1fr;
   }
 
-  .discovery-summary {
+  .growth-summary {
     grid-template-columns: repeat(2, 1fr);
   }
 
-  .discovery-stat:nth-child(3),
-  .discovery-stat:nth-child(4) {
+  .growth-stat:nth-child(3),
+  .growth-stat:nth-child(4) {
     border-top: 1px solid #b9c8c5;
+  }
+
+  .growth-source-grid {
+    grid-template-columns: 1fr;
   }
 
   .operations-layout {
@@ -1539,16 +1610,26 @@ footer a {
     text-align: left;
   }
 
-  .discovery-note {
+  .growth-note {
     text-align: left;
   }
 
-  .discovery-stat:nth-child(odd) {
+  .growth-stat:nth-child(odd) {
     border-left: 0;
   }
 
-  .discovery-stat {
+  .growth-stat {
     padding-inline: 14px;
+  }
+
+  .starter-pack-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .starter-pack-totals {
+    justify-content: space-between;
+    text-align: left;
   }
 
   .operations-summary {

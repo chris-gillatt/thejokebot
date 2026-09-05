@@ -129,9 +129,37 @@ class DashboardUiTests(unittest.TestCase):
             "workflows-heading",
         )
 
-    def test_discovery_uses_clear_success_rate_wording(self):
+    def test_audience_growth_unifies_sources_and_removes_generic_privacy_copy(self):
         text = " ".join(node.text.strip() for node in self.nodes if node.text.strip())
-        self.assertIn("Follow success rate", text)
+
+        self.assertIn("Audience growth", text)
+        self.assertNotIn("Discovery activity", text)
+        self.assertNotIn("Account and targeting details are not retained", text)
+        for source_id in ("followback", "interaction", "discovery"):
+            self.assertIn(f"growth-{source_id}-success", self.by_id)
+            self.assertIn(f"growth-{source_id}-30", self.by_id)
+            self.assertIn(f"growth-{source_id}-90", self.by_id)
+        self.assertEqual(self.by_id["growth-cohort-table"].tag, "table")
+
+    def test_starter_pack_introductions_show_separate_windows(self):
+        self.assertIn("starter-pack-total-7", self.by_id)
+        self.assertIn("starter-pack-total-30", self.by_id)
+        self.assertEqual(
+            self.by_id["starter-pack-total-7"].parent.attributes,
+            {},
+        )
+
+    def test_audience_growth_has_responsive_source_layout(self):
+        stylesheet = DASHBOARD_CSS.read_text()
+
+        self.assertIn(
+            ".growth-source-grid {\n  display: grid;\n  grid-template-columns: repeat(3, minmax(0, 1fr));",
+            stylesheet,
+        )
+        self.assertIn(
+            ".growth-source-grid {\n    grid-template-columns: 1fr;\n  }",
+            stylesheet,
+        )
 
     def test_latest_and_top_jokes_share_the_bluesky_embed_renderer(self):
         javascript = DASHBOARD_JS.read_text()
