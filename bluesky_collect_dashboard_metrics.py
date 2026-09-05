@@ -592,7 +592,7 @@ def collect_workflow_activity(
 ) -> dict:
     cutoff = now - timedelta(days=WORKFLOW_WINDOW_DAYS)
     expired_before, cached_runs = _previous_workflow_activity(existing, cutoff)
-    unavailable_at = []
+    unavailable_at: list[datetime] = []
 
     for run in workflow_runs:
         candidate = _workflow_run_candidate(run, cutoff, expired_before)
@@ -618,6 +618,8 @@ def collect_workflow_activity(
         if unavailable is not None:
             unavailable_at.append(unavailable)
             continue
+        if counts is None:
+            continue
         cached_runs[run_id] = {
             "id": run_id,
             "attempt": attempt,
@@ -626,9 +628,10 @@ def collect_workflow_activity(
             **counts,
         }
 
-    coverage_start = max(
-        [cutoff, *unavailable_at, *([expired_before] if expired_before else [])]
-    )
+    coverage_candidates = [cutoff, *unavailable_at]
+    if expired_before is not None:
+        coverage_candidates.append(expired_before)
+    coverage_start = max(coverage_candidates)
     return {
         "window_days": WORKFLOW_WINDOW_DAYS,
         "coverage_start": coverage_start.isoformat(),
@@ -1757,11 +1760,15 @@ def _workflow_duration_seconds(run: dict) -> int | None:
 def _update_workflow_summary(summary: dict, run: dict) -> int | None:
     summary["runs"] += 1
     conclusion = run.get("conclusion")
-    conclusion_field = {
-        "success": "successful",
-        "failure": "failed",
-        "cancelled": "cancelled",
-    }.get(conclusion)
+    conclusion_field = (
+        {
+            "success": "successful",
+            "failure": "failed",
+            "cancelled": "cancelled",
+        }.get(conclusion)
+        if isinstance(conclusion, str)
+        else None
+    )
     if conclusion_field:
         summary[conclusion_field] += 1
 

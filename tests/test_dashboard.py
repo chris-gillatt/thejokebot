@@ -659,6 +659,7 @@ class DashboardCollectorTests(unittest.TestCase):
         line = bluesky_process_reports._moderation_summary_line(3, 2, 1, 4)
 
         counts = dashboard._workflow_activity_counts("bluesky_process_reports", line)
+        assert counts is not None
         activity = {
             "runs": [
                 {
@@ -684,6 +685,7 @@ class DashboardCollectorTests(unittest.TestCase):
             True,
         )
         counts = dashboard._workflow_activity_counts("bluesky_post_joke", line)
+        assert counts is not None
         activity = {
             "runs": [
                 {
@@ -722,6 +724,7 @@ class DashboardCollectorTests(unittest.TestCase):
             "too_long=0, network_error=0, provider_error=0, posted=true."
         )
 
+        assert counts is not None
         self.assertIsNone(counts["starting_provider"])
         self.assertEqual(counts["successful_source"], "jokeapi")
 

@@ -14,8 +14,8 @@ changelog in this file is intentionally brief.
 - Use British English in prose/documentation where practical.
 - Use Conventional Commits with commit messages that explain why.
 - Before push, sync with remote (`git pull --rebase`) because scheduled workflows can update `main`.
-- Before commit/push, run local quality checks (`ruff check`, `ruff format --check`, unit tests, and local CodeQL when available) and fix issues proactively.
-- Treat lint and tests as a combined gate for all code changes: do not consider a change validated if only tests ran without lint/format checks.
+- Before commit/push, run local quality checks (`ruff check`, `ruff format --check`, Pyright, unit tests, and local CodeQL when available) and fix issues proactively.
+- Treat lint, type checks, and tests as a combined gate for all code changes: do not consider a change validated if only tests ran without lint/format/type checks.
 - Require Sonar analysis to report both a passing quality gate and zero unresolved issues; either condition failing blocks delivery.
 
 ## 3. Operational Constraints
@@ -72,6 +72,33 @@ Acceptance criteria:
 - Local preview reproduces the deployed artifact layout, including dashboard images.
 - Focused tests and desktop/mobile browser checks cover semantics, navigation,
   overflow, chart pixels, asset loading, and expanded operational records.
+
+### 5.54 Render top jokes as native Bluesky posts ✓ Complete
+**Priority: Low**
+
+Present every ranked Top Joke with the same official Bluesky embed and resilient
+local fallback used by the latest joke. Preserve the 7-day, 30-day, and all-time
+rankings, and rescan only newly rendered results when the selected range changes.
+The existing metrics payload supplies every post URI, so this enhancement adds no
+dashboard collection or Bluesky API calls.
+
+Acceptance criteria:
+- Latest and ranked jokes share one fallback and native-embed renderer.
+- Changing the Top Joke range initialises the replacement embeds.
+- Up to six embeds remain readable without horizontal overflow on desktop and mobile.
+- The fallback remains usable when the third-party embed script is unavailable.
+
+### 5.55 Enforce Pylance-compatible Python type checks ✓ Complete
+**Priority: High**
+
+Run pinned Pyright analysis, using the same analysis engine as Pylance, against
+every changed Python file and the complete first-party project before push. Keep
+the read-only `references/` directory outside the analysis boundary.
+
+Acceptance criteria:
+- Checked-in configuration defines the Python version, environment, and first-party scope.
+- Local preflight, CI, and the versioned pre-push hook require zero diagnostics.
+- Existing first-party diagnostics are resolved without suppressions.
 
 ### 5.35 Publish a GitHub Pages statistics dashboard (Issue #62) ✓ Complete
 **Priority: Medium**

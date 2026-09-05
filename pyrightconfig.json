@@ -1,0 +1,16 @@
+{
+  "include": [
+    "*.py",
+    "scripts/**/*.py",
+    "tests/**/*.py"
+  ],
+  "exclude": [
+    ".agent-tmp/**",
+    ".venv/**",
+    "references/**"
+  ],
+  "pythonVersion": "3.12",
+  "venvPath": ".",
+  "venv": ".venv",
+  "typeCheckingMode": "basic"
+}

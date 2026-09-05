@@ -25,7 +25,7 @@ _AT_URI_PATTERN = re.compile(r"^at://([^/]+)/([^/]+)/([^/]+)$")
 
 def load_starter_pack_config() -> dict:
     """Load starter-pack config from disk with safe defaults."""
-    default = {
+    default: dict = {
         "starter_pack": {
             "enabled": False,
             "name": "The Joke Bot Funnies",
@@ -56,42 +56,39 @@ def load_starter_pack_config() -> dict:
     if not isinstance(starter, dict):
         return default
 
-    sync = starter.get("sync") if isinstance(starter.get("sync"), dict) else {}
+    sync_value = starter.get("sync")
+    sync = sync_value if isinstance(sync_value, dict) else {}
+    default_starter: dict = default["starter_pack"]
+    default_sync: dict = default_starter["sync"]
 
-    default["starter_pack"].update(
+    default_starter.update(
         {
-            "enabled": bool(starter.get("enabled", default["starter_pack"]["enabled"])),
-            "name": str(starter.get("name", default["starter_pack"]["name"])).strip(),
+            "enabled": bool(starter.get("enabled", default_starter["enabled"])),
+            "name": str(starter.get("name", default_starter["name"])).strip(),
             "description": str(
-                starter.get("description", default["starter_pack"]["description"])
+                starter.get("description", default_starter["description"])
             ).strip(),
             "source_list_uri": str(
-                starter.get(
-                    "source_list_uri", default["starter_pack"]["source_list_uri"]
-                )
+                starter.get("source_list_uri", default_starter["source_list_uri"])
             ).strip(),
             "record_key": str(
-                starter.get("record_key", default["starter_pack"]["record_key"])
+                starter.get("record_key", default_starter["record_key"])
             ).strip(),
             "starter_pack_uri": str(
-                starter.get(
-                    "starter_pack_uri", default["starter_pack"]["starter_pack_uri"]
-                )
+                starter.get("starter_pack_uri", default_starter["starter_pack_uri"])
             ).strip(),
         }
     )
-    default["starter_pack"]["sync"].update(
+    default_sync.update(
         {
             "follow_list_members": bool(
                 sync.get(
                     "follow_list_members",
-                    default["starter_pack"]["sync"]["follow_list_members"],
+                    default_sync["follow_list_members"],
                 )
             ),
             "upsert_record": bool(
-                sync.get(
-                    "upsert_record", default["starter_pack"]["sync"]["upsert_record"]
-                )
+                sync.get("upsert_record", default_sync["upsert_record"])
             ),
         }
     )
@@ -134,8 +131,9 @@ def _extract_record_value(record_response) -> dict:
     if value is None and isinstance(record_response, dict):
         value = record_response.get("value")
 
-    if hasattr(value, "model_dump"):
-        value = value.model_dump()
+    model_dump = getattr(value, "model_dump", None)
+    if callable(model_dump):
+        value = model_dump()
 
     if not isinstance(value, dict):
         raise ValueError("Unexpected response format from get_record.")

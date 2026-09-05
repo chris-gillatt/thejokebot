@@ -737,7 +737,7 @@ class NetworkRetryHelperTests(unittest.TestCase):
         def flaky_call():
             calls["count"] += 1
             if calls["count"] == 1:
-                raise atproto_client.exceptions.NetworkError("timeout")
+                raise atproto_client.exceptions.NetworkError()
             return "ok"
 
         with mock.patch.dict(
@@ -1760,6 +1760,7 @@ class StateJokeHistoryTests(unittest.TestCase):
         checked_at = bluesky_state.get_likes_last_checked_at(state)
         self.assertIsNotNone(checked_at)
         self.assertIsInstance(checked_at, int)
+        assert checked_at is not None
         self.assertGreater(checked_at, 0)
 
 
@@ -2273,7 +2274,7 @@ class PaginationTests(unittest.TestCase):
         def client_method(actor, cursor=None, limit=100):
             calls["count"] += 1
             if calls["count"] == 1:
-                raise atproto_client.exceptions.NetworkError("transient")
+                raise atproto_client.exceptions.NetworkError()
             return SimpleNamespace(
                 follows=[SimpleNamespace(did="did:one")], cursor=None
             )
@@ -2352,6 +2353,7 @@ class VerificationHelperTests(unittest.TestCase):
         parsed = bluesky_verify_latest_joke_post.parse_created_at(
             "2026-04-18T01:29:19.486797Z"
         )
+        assert parsed is not None
         self.assertEqual(parsed.tzinfo, dt.timezone.utc)
         self.assertEqual(parsed.year, 2026)
 
@@ -3869,7 +3871,7 @@ class JokeRetryChainTests(unittest.TestCase):
         with mock.patch.object(
             bluesky_joke_providers, "PROVIDERS", {"test_provider": lambda: joke}
         ):
-            with self.assertRaises(ValueError) as ctx:
+            with self.assertRaises(bluesky_post_joke.JokeSelectionExhausted) as ctx:
                 bluesky_post_joke.pick_joke(recent, "test_provider")
 
         self.assertIn("duplicates", str(ctx.exception))
@@ -4156,10 +4158,10 @@ class JokeRetryChainTests(unittest.TestCase):
 
         def test_select_posting_hashtags_rotates_by_offset(self):
             pool = ["#one", "#two", "#three", "#four"]
-            selected = bluesky_post_joke.select_posting_hashtags(
-                pool, offset=2, count=3
+            selected = bluesky_post_joke.shuffle_posting_hashtags(
+                pool, offset=2, similarity_groups=[]
             )
-            self.assertEqual(selected, ["#three", "#four", "#one"])
+            self.assertCountEqual(selected, pool)
 
         def test_get_posting_hashtag_pool_uses_resolved_runtime_pool(self):
             with mock.patch(

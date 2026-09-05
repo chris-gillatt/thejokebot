@@ -15,6 +15,7 @@ import json
 import os
 import pathlib
 import secrets
+from collections.abc import Callable
 
 import requests
 import bluesky_state
@@ -198,7 +199,7 @@ def fetch_from_jokebot_jokebook() -> str:
 
 
 # Registry for all available providers.
-PROVIDERS: dict[str, callable] = {
+PROVIDERS: dict[str, Callable[[], str]] = {
     "icanhazdadjoke": fetch_from_icanhazdadjoke,
     "jokeapi": fetch_from_jokeapi,
     "groandeck": fetch_from_groandeck,

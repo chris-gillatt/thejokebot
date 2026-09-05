@@ -76,6 +76,7 @@ def fetch_paginated_data(
         if message:
             _handle_incomplete_pagination(message, require_complete)
             break
+        assert items is not None
         data.extend(items)
 
         if not next_cursor:

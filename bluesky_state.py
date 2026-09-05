@@ -212,9 +212,7 @@ def _normalise_state(state: dict) -> dict:
 
 
 def _normalise_domains(domains: str | tuple[str, ...]) -> tuple[str, ...]:
-    selected = (domains,)
-    if isinstance(domains, tuple):
-        selected = domains
+    selected = domains if isinstance(domains, tuple) else (domains,)
     unknown = set(selected) - set(STATE_FILENAMES)
     if unknown:
         raise ValueError(f"Unknown state domain(s): {', '.join(sorted(unknown))}")

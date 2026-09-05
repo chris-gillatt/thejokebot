@@ -102,12 +102,19 @@ This runs:
 
 - Ruff lint (`ruff check .`)
 - Ruff format check (`ruff format --check .`)
+- Pyright checks for changed Python files and the full first-party project (`./scripts/check-python-types.sh`)
 - Workflow lint (`./scripts/lint-workflows.sh`, powered by actionlint)
 - Unit tests with application coverage (`pytest-cov`, minimum 75%)
 - Local CodeQL analysis (required by default)
 
-Linting/format checks and tests are a single validation gate in this repository;
-running only tests is not considered sufficient before commit/push.
+Linting, formatting, type checks, and tests are a single validation gate in this
+repository; running only tests is not considered sufficient before commit/push.
+The checked-in pre-push hook runs this gate automatically. Enable it once per
+clone with `git config core.hooksPath .githooks`.
+
+The type check uses pinned Pyright `1.1.413`, the command-line analysis engine
+used by Pylance, and excludes the read-only `references/` directory through
+`pyrightconfig.json`.
 
 If CodeQL is temporarily unavailable, you can explicitly run in reduced-coverage mode:
 
