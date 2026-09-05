@@ -676,7 +676,7 @@
       "at://did:plc:d6jpn5znb7g6iwhimlb5fbrh/app.bsky.feed.post/3mururgrmgc22",
       "at://did:plc:ewb7glyvsxc63hxjgdmoupnk/app.bsky.feed.post/3murpufz4322h"
     ],
-    "last_checked_at": 1788625616
+    "last_checked_at": 1788633015
   },
   "unfollow_history": {
     "entries": [
@@ -47256,10 +47256,10 @@
     ],
     "starter_pack_attribution": {
       "coverage_started_at": "2026-08-01T14:31:28.650280Z",
-      "last_checked_at": "2026-09-05T16:26:56.166726Z",
-      "high_water_indexed_at": "2026-09-05T14:58:37.394Z",
+      "last_checked_at": "2026-09-05T18:30:14.624381Z",
+      "high_water_indexed_at": "2026-09-05T17:16:26.617Z",
       "boundary_notification_hashes": [
-        "d354e7d8aa50fda3d659be48a8436a193697b166deefb251d22dc16afa285462"
+        "821f4e16219cf9e315066647cac78ff16969045b356114dc7b91a3086ddcccf0"
       ],
       "packs": {
         "at://did:plc:ylslnx2g5q3wvnvywksuxx7g/app.bsky.graph.starterpack/3mucse7m74g2y": {
@@ -47310,9 +47310,35 @@
     },
     "acquisition_cohorts": {
       "schema_version": 1,
-      "coverage_started_at": null,
-      "members": {},
-      "cohorts": {}
+      "coverage_started_at": 1788632962,
+      "members": {
+        "edc77c37b793af9abb5868d405958ce12044933926a26dd62181ad9ccbb02eae": {
+          "source": "followback",
+          "acquired_at": 1788632962,
+          "cohort_month": "2026-09",
+          "checkpoints": {
+            "30": null,
+            "90": null
+          }
+        }
+      },
+      "cohorts": {
+        "2026-09": {
+          "followback": {
+            "acquired": 1,
+            "checkpoints": {
+              "30": {
+                "observed": 0,
+                "still_following": 0
+              },
+              "90": {
+                "observed": 0,
+                "still_following": 0
+              }
+            }
+          }
+        }
+      }
     }
   },
   "follow_fellows": {
