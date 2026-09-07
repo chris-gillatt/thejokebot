@@ -681,9 +681,10 @@
       "at://did:plc:w72hxitzs3ckdwaa732q3dfu/app.bsky.feed.repost/3muvoeqytir2y",
       "at://did:plc:ni5y2pxxnleh7euux7orrhlr/app.bsky.feed.post/3muw7obfnb22h",
       "at://did:plc:ni5y2pxxnleh7euux7orrhlr/app.bsky.feed.repost/3muw7nzrwjc2t",
-      "at://did:plc:m4iyqh6cybk5hsvreffxsltf/app.bsky.feed.post/3muwhrwopcs2f"
+      "at://did:plc:m4iyqh6cybk5hsvreffxsltf/app.bsky.feed.post/3muwhrwopcs2f",
+      "at://did:web:areen5342.bske.social/app.bsky.feed.repost/3muxcsishoa22"
     ],
-    "last_checked_at": 1788805994
+    "last_checked_at": 1788812908
   },
   "unfollow_history": {
     "entries": [
@@ -38580,6 +38581,11 @@
         "did": "did:plc:ni5y2pxxnleh7euux7orrhlr",
         "followed_at": 1788777036,
         "source": "interaction"
+      },
+      {
+        "did": "did:web:areen5342.bske.social",
+        "followed_at": 1788812907,
+        "source": "interaction"
       }
     ]
   },
@@ -47278,10 +47284,10 @@
     ],
     "starter_pack_attribution": {
       "coverage_started_at": "2026-08-01T14:31:28.650280Z",
-      "last_checked_at": "2026-09-07T18:33:14.011816Z",
-      "high_water_indexed_at": "2026-09-07T16:01:46.764Z",
+      "last_checked_at": "2026-09-07T20:28:27.838313Z",
+      "high_water_indexed_at": "2026-09-07T19:47:10.947Z",
       "boundary_notification_hashes": [
-        "65827a025f9e1d11f3f7d51a03cd68b4322bc6c38066f7e5b4a87eed91882a67"
+        "49b0187e9a51a1c4fafc5d61fad960cca5196fb0060c261fe3cf416fbbfc52ab"
       ],
       "packs": {
         "at://did:plc:ylslnx2g5q3wvnvywksuxx7g/app.bsky.graph.starterpack/3mucse7m74g2y": {
@@ -47488,12 +47494,57 @@
             "30": null,
             "90": null
           }
+        },
+        "47af80efff3338a060ab0377acc13340d9b9f508686cee158a632d6db1ff0b9c": {
+          "source": "followback",
+          "acquired_at": 1788812855,
+          "cohort_month": "2026-09",
+          "checkpoints": {
+            "30": null,
+            "90": null
+          }
+        },
+        "20249a44afda688cf947e3cf529b9b66c3b27427d454a1d0d47c3121274d4cc2": {
+          "source": "followback",
+          "acquired_at": 1788812855,
+          "cohort_month": "2026-09",
+          "checkpoints": {
+            "30": null,
+            "90": null
+          }
+        },
+        "bcdedf13689cd9d3067527b99fc2f5caf8bcc896e81c90786571d41d1bb0f696": {
+          "source": "followback",
+          "acquired_at": 1788812855,
+          "cohort_month": "2026-09",
+          "checkpoints": {
+            "30": null,
+            "90": null
+          }
+        },
+        "7f2c4851198b8473ef9af2f36fe46e331d0b00727eb9d0bdc3c617e7cd30b202": {
+          "source": "followback",
+          "acquired_at": 1788812855,
+          "cohort_month": "2026-09",
+          "checkpoints": {
+            "30": null,
+            "90": null
+          }
+        },
+        "7cf4a0e1761aeef095b371dfc66764501ab7576232c24f522b7512ea986f96ce": {
+          "source": "interaction",
+          "acquired_at": 1788812907,
+          "cohort_month": "2026-09",
+          "checkpoints": {
+            "30": null,
+            "90": null
+          }
         }
       },
       "cohorts": {
         "2026-09": {
           "followback": {
-            "acquired": 14,
+            "acquired": 18,
             "checkpoints": {
               "30": {
                 "observed": 0,
@@ -47506,7 +47557,7 @@
             }
           },
           "interaction": {
-            "acquired": 3,
+            "acquired": 4,
             "checkpoints": {
               "30": {
                 "observed": 0,
