@@ -678,9 +678,11 @@
       "at://did:plc:d6jpn5znb7g6iwhimlb5fbrh/app.bsky.feed.post/3musrwogn6s2t",
       "at://did:plc:6gibfju2z42qv3djgamwj4hv/app.bsky.feed.repost/3musqjqrhjj2i",
       "at://did:plc:o2ivsi4llx4vmccf4qpav4of/app.bsky.feed.repost/3mutnuwxjnu23",
-      "at://did:plc:w72hxitzs3ckdwaa732q3dfu/app.bsky.feed.repost/3muvoeqytir2y"
+      "at://did:plc:w72hxitzs3ckdwaa732q3dfu/app.bsky.feed.repost/3muvoeqytir2y",
+      "at://did:plc:ni5y2pxxnleh7euux7orrhlr/app.bsky.feed.post/3muw7obfnb22h",
+      "at://did:plc:ni5y2pxxnleh7euux7orrhlr/app.bsky.feed.repost/3muw7nzrwjc2t"
     ],
-    "last_checked_at": 1788770482
+    "last_checked_at": 1788777037
   },
   "unfollow_history": {
     "entries": [
@@ -38572,6 +38574,11 @@
         "did": "did:plc:dfijrshd5rzvdgh6yxdt6vv6",
         "followed_at": 1788755747,
         "source": "interaction"
+      },
+      {
+        "did": "did:plc:ni5y2pxxnleh7euux7orrhlr",
+        "followed_at": 1788777036,
+        "source": "interaction"
       }
     ]
   },
@@ -47270,7 +47277,7 @@
     ],
     "starter_pack_attribution": {
       "coverage_started_at": "2026-08-01T14:31:28.650280Z",
-      "last_checked_at": "2026-09-07T08:41:22.215294Z",
+      "last_checked_at": "2026-09-07T10:30:36.730589Z",
       "high_water_indexed_at": "2026-09-07T07:51:00.050Z",
       "boundary_notification_hashes": [
         "2f7db522ada4f40e64ca49f876e684f000d378b49658a6bbead9604e81045949"
@@ -47444,6 +47451,15 @@
             "30": null,
             "90": null
           }
+        },
+        "f39534c3d6597225cf7a0724f335b20908144a7d9ed3a8cbf9d2bd032729c036": {
+          "source": "interaction",
+          "acquired_at": 1788777036,
+          "cohort_month": "2026-09",
+          "checkpoints": {
+            "30": null,
+            "90": null
+          }
         }
       },
       "cohorts": {
@@ -47462,7 +47478,7 @@
             }
           },
           "interaction": {
-            "acquired": 2,
+            "acquired": 3,
             "checkpoints": {
               "30": {
                 "observed": 0,
