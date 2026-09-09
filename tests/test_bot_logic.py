@@ -1006,7 +1006,15 @@ class UnfollowIgnoreValidationTests(unittest.TestCase):
             bluesky_unfollow.DEFAULT_IGNORABLE_USERNAMES,
         )
         self.assertIn(
+            "wholesomememe.bsky.social",
+            bluesky_unfollow.DEFAULT_IGNORABLE_USERNAMES,
+        )
+        self.assertIn(
             "dadreplybot.bsky.social",
+            bluesky_validate_unfollow_ignore.DEFAULT_IGNORABLE_HANDLES,
+        )
+        self.assertIn(
+            "wholesomememe.bsky.social",
             bluesky_validate_unfollow_ignore.DEFAULT_IGNORABLE_HANDLES,
         )
         self.assertIn(
