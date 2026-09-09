@@ -114,6 +114,31 @@ class RuntimeConfigTests(unittest.TestCase):
         self.assertEqual(config["follow_fellows"]["per_tag_limit"], 4)
         self.assertEqual(config["follow_fellows"]["global_follow_limit"], 150)
 
+    def test_runtime_unfollow_ignorable_handles_merge_with_built_in_defaults(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = pathlib.Path(temp_dir) / "runtime.json"
+            config_path.write_text(
+                json.dumps(
+                    {
+                        "unfollow": {
+                            "default_ignorable_handles": ["wholesomememe.bsky.social"]
+                        }
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            config = bluesky_config.load_runtime_config(config_path, strict=True)
+
+        self.assertIn(
+            "chthonicionic.bsky.social",
+            config["unfollow"]["default_ignorable_handles"],
+        )
+        self.assertIn(
+            "wholesomememe.bsky.social",
+            config["unfollow"]["default_ignorable_handles"],
+        )
+
     def test_unfollow_cap_tracks_four_weeks_of_follow_fellows_capacity(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             config_path = pathlib.Path(temp_dir) / "runtime.json"
@@ -1001,30 +1026,17 @@ class UnfollowControlTests(unittest.TestCase):
 
 class UnfollowIgnoreValidationTests(unittest.TestCase):
     def test_default_ignorable_handles_include_dad_reply_bot(self):
-        self.assertIn(
+        expected_handles = (
             "dadreplybot.bsky.social",
-            bluesky_unfollow.DEFAULT_IGNORABLE_USERNAMES,
-        )
-        self.assertIn(
             "wholesomememe.bsky.social",
-            bluesky_unfollow.DEFAULT_IGNORABLE_USERNAMES,
-        )
-        self.assertIn(
-            "dadreplybot.bsky.social",
-            bluesky_validate_unfollow_ignore.DEFAULT_IGNORABLE_HANDLES,
-        )
-        self.assertIn(
-            "wholesomememe.bsky.social",
-            bluesky_validate_unfollow_ignore.DEFAULT_IGNORABLE_HANDLES,
-        )
-        self.assertIn(
             "docatcdi.com",
-            bluesky_unfollow.DEFAULT_IGNORABLE_USERNAMES,
         )
-        self.assertIn(
-            "docatcdi.com",
-            bluesky_validate_unfollow_ignore.DEFAULT_IGNORABLE_HANDLES,
-        )
+        for handle in expected_handles:
+            with self.subTest(handle=handle):
+                self.assertIn(handle, bluesky_unfollow.DEFAULT_IGNORABLE_USERNAMES)
+                self.assertIn(
+                    handle, bluesky_validate_unfollow_ignore.DEFAULT_IGNORABLE_HANDLES
+                )
 
     def test_parse_ignore_handles_deduplicates_and_sorts(self):
         handles = bluesky_validate_unfollow_ignore.parse_ignore_handles(
