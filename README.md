@@ -87,8 +87,8 @@ The preview is served at <http://localhost:8765/>. Set
 	- `.venv/bin/python -m pip install --no-deps --no-build-isolation --editable .`
 4. Copy and set environment values:
 	- `cp .env.example .env`
-5. Run a script:
-	- `.venv/bin/python bluesky_post_joke.py`
+5. Run a command:
+	- `.venv/bin/thejokebot-post-joke`
 
 ## Syncing repo and submodules
 
@@ -231,7 +231,7 @@ Set these in `.env` (keep values quoted):
 | `BLUESKY_PASSWORD` | Explicit override only | Full Bluesky account password. Used only when `BLUESKY_PASSWORD_SOURCE=account_password`; never selected automatically. |
 | `BLUESKY_SESSION_CACHE_KEY` | Production workflows | Repository secret used to encrypt cached Bluesky session credentials before GitHub cache storage. |
 | `API_NINJAS_API_KEY` | No | API key for the API Ninjas jokes endpoint. Only needed if you want the `api_ninjas` backup provider. |
-| `BLUESKY_DRY_RUN` | No | Set to `true` to log actions without applying them (also used by `bluesky_manage_starter_pack.py` for preview mode). |
+| `BLUESKY_DRY_RUN` | No | Set to `true` to log actions without applying them (also used by `thejokebot-manage-starter-pack` for preview mode). |
 | `BLUESKY_ACTION_DELAY_SECONDS` | No | Seconds to wait between follow/unfollow actions. |
 | `BLUESKY_NETWORK_RETRY_ATTEMPTS` | No | Max attempts for transient network retries across API fetch/follow/like/unfollow/report calls (default `3`). |
 | `BLUESKY_NETWORK_RETRY_DELAY_SECONDS` | No | Initial retry delay in seconds for transient network failures (default `1`). |
@@ -277,22 +277,22 @@ Secrets are not stored in runtime config and must remain in GitHub Secrets/local
 
 Validation guard rail:
 
-- `bluesky_validate_runtime_config.py` validates runtime-config schema and checks that `workflow_schedules` metadata matches cron expressions in workflow files.
+- `thejokebot-validate-runtime-config` validates runtime-config schema and checks that `workflow_schedules` metadata matches cron expressions in workflow files.
 - It also enforces cadence-aware guard rails for high-blast-radius controls (report paging and unfollow/follow action caps) so risky schedule+limit combinations fail fast.
 - GitHub Actions workflow `validate_runtime_config` runs this check on `pull_request`, `push` to `main`, and manual dispatch.
 
 ## Runtime safety controls
 
-- **Dry run:** set `BLUESKY_DRY_RUN='true'` to log actions without applying them. Applies to `bluesky_follows_and_likes.py`, `bluesky_unfollow.py`, and `bluesky_follow_fellows.py`.
+- **Dry run:** set `BLUESKY_DRY_RUN='true'` to log actions without applying them. Applies to `thejokebot-follows-and-likes`, `thejokebot-unfollow`, and `thejokebot-follow-fellows`.
 - **Throttling:** set `BLUESKY_ACTION_DELAY_SECONDS='1.5'` (example) to slow follow/unfollow/like loops.
 - **Network retries:** set `BLUESKY_NETWORK_RETRY_ATTEMPTS`, `BLUESKY_NETWORK_RETRY_DELAY_SECONDS`, and `BLUESKY_NETWORK_RETRY_BACKOFF_FACTOR` to tune bounded retries for transient network/API failures.
 - **Unfollow capacity and batching:** the default monthly cap matches four weeks of configured follow-fellows capacity. At the current `150` follows per run and twice-weekly cadence, that is `1,200` unfollows; `BLUESKY_UNFOLLOW_MAX_ACTIONS` can override it. Actions remain batched in groups of `50` with `60`-second pauses and stop early on throttling.
-- **Follow-fellows cadence:** `bluesky_follow_fellows.py` runs twice weekly, rotates tag priority between runs, and uses the configured per-run cap and hashtag set from `resources/jokebot_runtime_config.json`.
-- **Post hashtag rotation:** `bluesky_post_joke.py` rotates hashtags on each successful post using runtime precedence (`posting.tag_pool` → `follow_fellows.hashtags` → `posting.hashtags`) and calculates per-post length budget from selected tags before accepting a joke candidate.
-- **Report retry bound:** `bluesky_process_reports.py` retries unresolved report notifications up to `BLUESKY_REPORT_MAX_UNRESOLVED_ATTEMPTS` before marking them processed to avoid infinite retry churn.
+- **Follow-fellows cadence:** `thejokebot-follow-fellows` runs twice weekly, rotates tag priority between runs, and uses the configured per-run cap and hashtag set from `resources/jokebot_runtime_config.json`.
+- **Post hashtag rotation:** `thejokebot-post-joke` rotates hashtags on each successful post using runtime precedence (`posting.tag_pool` → `follow_fellows.hashtags` → `posting.hashtags`) and calculates per-post length budget from selected tags before accepting a joke candidate.
+- **Report retry bound:** `thejokebot-process-reports` retries unresolved report notifications up to `BLUESKY_REPORT_MAX_UNRESOLVED_ATTEMPTS` before marking them processed to avoid infinite retry churn.
 - **Starter-pack/list protection:** if `resources/jokebot_starter_pack.json` is enabled and points to a valid source list URI, all members of that list are automatically protected from unfollowing (unioned with `BLUESKY_UNFOLLOW_IGNORE`).
-- **Follow grace protection:** `bluesky_unfollow.py` skips newly followed accounts for `90` days before they can become eligible for unfollow.
-- **Post length preflight:** `bluesky_post_joke.py` skips over-long jokes and retries provider fetches before posting, using grapheme-aware length checks so posts stay within Bluesky's 300-character limit after hashtags are appended.
+- **Follow grace protection:** `thejokebot-unfollow` skips newly followed accounts for `90` days before they can become eligible for unfollow.
+- **Post length preflight:** `thejokebot-post-joke` skips over-long jokes and retries provider fetches before posting, using grapheme-aware length checks so posts stay within Bluesky's 300-character limit after hashtags are appended.
 
 ### Maintain persistent account blocks
 
@@ -362,19 +362,21 @@ If a posted joke is unsuitable, any Bluesky user can flag it:
 
 The report triggers an automated PR adding the joke to the denylist. Once a maintainer merges the PR, the joke will never be posted again and the original post is deleted from the account on the next report run.
 
-## Scripts
+## Commands
 
-| Script | Purpose |
+| Command | Purpose |
 |---|---|
-| `bluesky_post_joke.py` | Fetch a joke, append a rotated hashtag window, post to Bluesky, and maintain posting state. |
-| `bluesky_follows_and_likes.py` | Follow back new followers, follow users who interact with the bot's posts (replies, reposts, likes from the last 24 hours), and like replies to the bot's posts. |
-| `bluesky_unfollow.py` | Unfollow accounts that do not follow back, while respecting protected handles, starter-pack protections, and the 90-day follow grace window. |
-| `bluesky_follow_fellows.py` | Search a rotating set of humour/follow-back hashtags and follow up to the configured per-run cap. |
-| `bluesky_verify_latest_joke_post.py` | Read-only check that a recent joke post exists on the account. |
-| `bluesky_collect_dashboard_metrics.py` | Collect aggregate public profile, joke-post, engagement, and activity metrics for the static dashboard. |
-| `bluesky_manage_starter_pack.py` | Convert/synchronise a starter pack from a configured Bluesky list and optionally follow missing list members. |
-| `bluesky_process_reports.py` | Poll reply notifications for `#report`, map replies to posted jokes, delete approved denylist posts, and write PR proposals. |
-| `bluesky_create_report_prs.py` | Open one denylist PR per new report proposal. |
+| `thejokebot-post-joke` | Fetch a joke, append a rotated hashtag window, post to Bluesky, and maintain posting state. |
+| `thejokebot-follows-and-likes` | Follow back new followers, follow users who interact with the bot's posts (replies, reposts, likes from the last 24 hours), and like replies to the bot's posts. |
+| `thejokebot-unfollow` | Unfollow accounts that do not follow back, while respecting protected handles, starter-pack protections, and the 90-day follow grace window. |
+| `thejokebot-follow-fellows` | Search a rotating set of humour/follow-back hashtags and follow up to the configured per-run cap. |
+| `thejokebot-verify-latest-joke-post` | Read-only check that a recent joke post exists on the account. |
+| `thejokebot-collect-dashboard-metrics` | Collect aggregate public profile, joke-post, engagement, and activity metrics for the static dashboard. |
+| `thejokebot-manage-starter-pack` | Convert/synchronise a starter pack from a configured Bluesky list and optionally follow missing list members. |
+| `thejokebot-process-reports` | Poll reply notifications for `#report`, map replies to posted jokes, delete approved denylist posts, and write PR proposals. |
+| `thejokebot-create-report-prs` | Open one denylist PR per new report proposal. |
+| `thejokebot-validate-runtime-config` | Validate runtime configuration and workflow schedule metadata. |
+| `thejokebot-validate-unfollow-ignore` | Validate protected unfollow accounts against the current Bluesky account. |
 
 ## Starter pack workflow
 
@@ -399,7 +401,7 @@ Run it via workflow dispatch: `bluesky_manage_starter_pack`.
 The report pipeline runs every 4 hours via `bluesky_process_reports`.
 
 1. It scans replies for `#report`, maps each report to a posted joke, and ignores duplicates.
-2. It writes proposals to `.agent-tmp/report_proposals.json` and opens denylist PRs via `bluesky_create_report_prs.py`.
+2. It writes proposals to `.agent-tmp/report_proposals.json` and opens denylist PRs via `thejokebot-create-report-prs`.
 3. It updates `state/moderation_state.json` so notifications and deletions are not reprocessed.
 4. Unresolved notifications are retried up to `BLUESKY_REPORT_MAX_UNRESOLVED_ATTEMPTS` before being marked processed.
 

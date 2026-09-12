@@ -34,7 +34,7 @@ changelog in this file is intentionally brief.
 
 ## 5. Active Backlog
 
-### 5.57 Adopt a conventional Python application layout (Issue #112)
+### 5.57 Adopt a conventional Python application layout (Issue #112) ✓ Complete
 **Priority: Medium**
 
 Reorganise first-party Python code as an application-only `src/thejokebot`

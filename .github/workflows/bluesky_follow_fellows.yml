@@ -52,7 +52,7 @@ jobs:
           BLUESKY_SESSION_RESTORE_ENABLED: "true"
           BLUESKY_SESSION_PERSIST_ENABLED: "true"
           BLUESKY_SESSION_FILE_PATH: .agent-tmp/bluesky_session.txt
-        run: python bluesky_follow_fellows.py
+        run: thejokebot-follow-fellows
 
       - name: Encrypt Bluesky session cache
         if: always()

@@ -55,7 +55,7 @@ jobs:
           else
             export BLUESKY_DRY_RUN="true"
           fi
-          python bluesky_manage_starter_pack.py --mode "$MODE"
+          thejokebot-manage-starter-pack --mode "$MODE"
 
       - name: Commit pulled config changes
         if: ${{ inputs.mode == 'pull' && inputs.apply_changes == true }}

@@ -31,4 +31,4 @@ jobs:
           python -m pip install --no-deps --no-build-isolation --editable .
 
       - name: Validate central runtime config
-        run: python bluesky_validate_runtime_config.py
+        run: thejokebot-validate-runtime-config

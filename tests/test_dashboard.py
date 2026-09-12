@@ -7,10 +7,10 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
-import bluesky_collect_dashboard_metrics as dashboard
-import bluesky_follows_and_likes
-import bluesky_post_joke
-import bluesky_process_reports
+from thejokebot.commands import collect_dashboard_metrics as dashboard
+from thejokebot.commands import follows_and_likes as bluesky_follows_and_likes
+from thejokebot.commands import post_joke as bluesky_post_joke
+from thejokebot.commands import process_reports as bluesky_process_reports
 
 
 class _Response:

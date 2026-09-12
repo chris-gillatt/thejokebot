@@ -441,5 +441,9 @@ def unfollow_users():
         print(f"{Fore.RED}An unexpected error occurred: {e}{Style.RESET_ALL}")
 
 
-if __name__ == "__main__":
+def main() -> None:
     unfollow_users()
+
+
+if __name__ == "__main__":
+    main()

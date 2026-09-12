@@ -9,7 +9,7 @@ on:
       - main
     paths:
       - "dashboard/**"
-      - "bluesky_collect_dashboard_metrics.py"
+      - "src/thejokebot/commands/collect_dashboard_metrics.py"
       - ".github/workflows/bluesky_dashboard.yml"
 
 concurrency:
@@ -44,7 +44,7 @@ jobs:
         env:
           BLUESKY_USERNAME: ${{ vars.BLUESKY_USERNAME }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python bluesky_collect_dashboard_metrics.py
+        run: thejokebot-collect-dashboard-metrics
 
       - name: Persist dashboard metrics
         run: |

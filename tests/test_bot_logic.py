@@ -17,20 +17,26 @@ import requests
 from thejokebot import blocks as blocks
 from thejokebot import runtime as runtime
 from thejokebot import config as runtime_config
-import bluesky_create_report_prs
+from thejokebot.commands import create_report_prs as bluesky_create_report_prs
 from thejokebot import denylist as joke_denylist
 from thejokebot import followers as followers
-import bluesky_follow_fellows
-import bluesky_follows_and_likes
+from thejokebot.commands import follow_fellows as bluesky_follow_fellows
+from thejokebot.commands import follows_and_likes as bluesky_follows_and_likes
 from thejokebot import providers as joke_providers
-import bluesky_manage_starter_pack
-import bluesky_post_joke
-import bluesky_process_reports
+from thejokebot.commands import manage_starter_pack as bluesky_manage_starter_pack
+from thejokebot.commands import post_joke as bluesky_post_joke
+from thejokebot.commands import process_reports as bluesky_process_reports
 from thejokebot import state as bot_state
-import bluesky_unfollow
-import bluesky_validate_unfollow_ignore
-import bluesky_validate_runtime_config
-import bluesky_verify_latest_joke_post
+from thejokebot.commands import unfollow as bluesky_unfollow
+from thejokebot.commands import (
+    validate_unfollow_ignore as bluesky_validate_unfollow_ignore,
+)
+from thejokebot.commands import (
+    validate_runtime_config as bluesky_validate_runtime_config,
+)
+from thejokebot.commands import (
+    verify_latest_joke_post as bluesky_verify_latest_joke_post,
+)
 from thejokebot.followers import extract_list_member_did
 
 
@@ -1079,16 +1085,18 @@ class UnfollowIgnoreValidationTests(unittest.TestCase):
         )
 
         with mock.patch(
-            "bluesky_unfollow.login_client",
+            "thejokebot.commands.unfollow.login_client",
             return_value=(client, "thejokebot.bsky.social"),
         ):
-            with mock.patch("bluesky_unfollow.fetch_paginated_data", return_value=[]):
+            with mock.patch(
+                "thejokebot.commands.unfollow.fetch_paginated_data", return_value=[]
+            ):
                 with mock.patch(
-                    "bluesky_unfollow.get_runtime_controls",
+                    "thejokebot.commands.unfollow.get_runtime_controls",
                     return_value={"dry_run": True, "action_delay_seconds": 0.0},
                 ):
                     with mock.patch(
-                        "bluesky_unfollow.get_unfollow_controls",
+                        "thejokebot.commands.unfollow.get_unfollow_controls",
                         return_value={
                             "max_actions": 0,
                             "batch_size": 50,
@@ -1096,17 +1104,18 @@ class UnfollowIgnoreValidationTests(unittest.TestCase):
                         },
                     ):
                         with mock.patch(
-                            "bluesky_unfollow.retry_network_call",
+                            "thejokebot.commands.unfollow.retry_network_call",
                             side_effect=lambda call, description: call(),
                         ):
                             with mock.patch(
-                                "bluesky_unfollow._state.load_state", return_value=state
+                                "thejokebot.commands.unfollow._state.load_state",
+                                return_value=state,
                             ):
                                 with mock.patch(
-                                    "bluesky_unfollow._state.prune_unfollow_history"
+                                    "thejokebot.commands.unfollow._state.prune_unfollow_history"
                                 ):
                                     with mock.patch(
-                                        "bluesky_unfollow._state.save_state"
+                                        "thejokebot.commands.unfollow._state.save_state"
                                     ) as save_state:
                                         bluesky_unfollow.unfollow_users()
 
@@ -1151,25 +1160,27 @@ class UnfollowIgnoreValidationTests(unittest.TestCase):
         ]
 
         with mock.patch(
-            "bluesky_unfollow.login_client",
+            "thejokebot.commands.unfollow.login_client",
             return_value=(client, "thejokebot.bsky.social"),
         ):
             with mock.patch(
-                "bluesky_unfollow.fetch_paginated_data",
+                "thejokebot.commands.unfollow.fetch_paginated_data",
                 side_effect=[followers, following],
             ):
                 with mock.patch(
-                    "bluesky_unfollow._resolve_ignorable_dids", return_value=set()
+                    "thejokebot.commands.unfollow._resolve_ignorable_dids",
+                    return_value=set(),
                 ):
                     with mock.patch(
-                        "bluesky_unfollow._load_source_list_uri", return_value=""
+                        "thejokebot.commands.unfollow._load_source_list_uri",
+                        return_value="",
                     ):
                         with mock.patch(
-                            "bluesky_unfollow.get_runtime_controls",
+                            "thejokebot.commands.unfollow.get_runtime_controls",
                             return_value={"dry_run": True, "action_delay_seconds": 0.0},
                         ):
                             with mock.patch(
-                                "bluesky_unfollow.get_unfollow_controls",
+                                "thejokebot.commands.unfollow.get_unfollow_controls",
                                 return_value={
                                     "max_actions": 0,
                                     "batch_size": 50,
@@ -1177,17 +1188,17 @@ class UnfollowIgnoreValidationTests(unittest.TestCase):
                                 },
                             ):
                                 with mock.patch(
-                                    "bluesky_unfollow._state.load_state",
+                                    "thejokebot.commands.unfollow._state.load_state",
                                     return_value=state,
                                 ):
                                     with mock.patch(
-                                        "bluesky_unfollow._state.prune_unfollow_history"
+                                        "thejokebot.commands.unfollow._state.prune_unfollow_history"
                                     ):
                                         with mock.patch(
-                                            "bluesky_unfollow._state.save_state"
+                                            "thejokebot.commands.unfollow._state.save_state"
                                         ) as save_state:
                                             with mock.patch(
-                                                "bluesky_unfollow._execute_unfollow_loop",
+                                                "thejokebot.commands.unfollow._execute_unfollow_loop",
                                                 return_value=(0, 0, 0, False),
                                             ) as execute_unfollow_loop:
                                                 bluesky_unfollow.unfollow_users()
@@ -1206,7 +1217,7 @@ class UnfollowIgnoreValidationTests(unittest.TestCase):
 class StarterPackManagerTests(unittest.TestCase):
     def test_load_starter_pack_config_defaults_when_missing(self):
         with mock.patch(
-            "bluesky_manage_starter_pack._CONFIG_PATH",
+            "thejokebot.commands.manage_starter_pack._CONFIG_PATH",
             pathlib.Path("/tmp/does-not-exist-jokebot-starter-pack-config.json"),
         ):
             cfg = bluesky_manage_starter_pack.load_starter_pack_config()
@@ -1265,7 +1276,7 @@ class StarterPackManagerTests(unittest.TestCase):
         client.me.did = "did:plc:test"
 
         with mock.patch(
-            "bluesky_manage_starter_pack.retry_network_call",
+            "thejokebot.commands.manage_starter_pack.retry_network_call",
             side_effect=lambda call, description: call(),
         ):
             result = bluesky_manage_starter_pack.upsert_starter_pack_record(
@@ -1297,7 +1308,7 @@ class StarterPackManagerTests(unittest.TestCase):
         )
 
         with mock.patch(
-            "bluesky_manage_starter_pack.retry_network_call",
+            "thejokebot.commands.manage_starter_pack.retry_network_call",
             side_effect=lambda call, description: call(),
         ):
             result = bluesky_manage_starter_pack.upsert_starter_pack_record(
@@ -1390,7 +1401,7 @@ class StarterPackManagerTests(unittest.TestCase):
         )
 
         with mock.patch(
-            "bluesky_manage_starter_pack.retry_network_call",
+            "thejokebot.commands.manage_starter_pack.retry_network_call",
             side_effect=lambda call, description: call(),
         ):
             result = bluesky_manage_starter_pack.pull_starter_pack_record(
@@ -1414,7 +1425,7 @@ class StarterPackManagerTests(unittest.TestCase):
         )
 
         with mock.patch(
-            "bluesky_manage_starter_pack.retry_network_call",
+            "thejokebot.commands.manage_starter_pack.retry_network_call",
             side_effect=lambda call, description: call(),
         ):
             result = bluesky_manage_starter_pack.pull_starter_pack_record(
@@ -1438,7 +1449,7 @@ class StarterPackManagerTests(unittest.TestCase):
         )
 
         with mock.patch(
-            "bluesky_manage_starter_pack.retry_network_call",
+            "thejokebot.commands.manage_starter_pack.retry_network_call",
             side_effect=lambda call, description: call(),
         ):
             result = bluesky_manage_starter_pack.pull_starter_pack_record(
@@ -1475,7 +1486,9 @@ class StarterPackManagerTests(unittest.TestCase):
             tmp_path = pathlib.Path(tmp.name)
 
         try:
-            with mock.patch("bluesky_manage_starter_pack._CONFIG_PATH", tmp_path):
+            with mock.patch(
+                "thejokebot.commands.manage_starter_pack._CONFIG_PATH", tmp_path
+            ):
                 bluesky_manage_starter_pack.write_starter_pack_config_updates(
                     {"name": "New Name", "description": "New desc"}
                 )
@@ -1489,14 +1502,16 @@ class StarterPackManagerTests(unittest.TestCase):
         self.assertEqual(updated["starter_pack"]["source_list_uri"], "at://x")
 
     def test_main_pull_mode_fetches_live_preview_without_source_list_uri(self):
-        with mock.patch("bluesky_manage_starter_pack._parse_args") as parse_args:
+        with mock.patch(
+            "thejokebot.commands.manage_starter_pack._parse_args"
+        ) as parse_args:
             parse_args.return_value = SimpleNamespace(mode="pull")
             with mock.patch(
-                "bluesky_manage_starter_pack.get_runtime_controls",
+                "thejokebot.commands.manage_starter_pack.get_runtime_controls",
                 return_value={"dry_run": True, "action_delay_seconds": 0.0},
             ):
                 with mock.patch(
-                    "bluesky_manage_starter_pack.load_starter_pack_config",
+                    "thejokebot.commands.manage_starter_pack.load_starter_pack_config",
                     return_value={
                         "starter_pack": {
                             "enabled": True,
@@ -1511,15 +1526,15 @@ class StarterPackManagerTests(unittest.TestCase):
                     },
                 ):
                     with mock.patch(
-                        "bluesky_manage_starter_pack.login_client",
+                        "thejokebot.commands.manage_starter_pack.login_client",
                         return_value=(mock.Mock(), "user"),
                     ):
                         with mock.patch(
-                            "bluesky_manage_starter_pack.pull_starter_pack_record",
+                            "thejokebot.commands.manage_starter_pack.pull_starter_pack_record",
                             return_value={"description": "Live"},
                         ) as pull_record:
                             with mock.patch(
-                                "bluesky_manage_starter_pack.write_starter_pack_config_updates"
+                                "thejokebot.commands.manage_starter_pack.write_starter_pack_config_updates"
                             ) as write_updates:
                                 result = bluesky_manage_starter_pack.main()
 
@@ -1857,7 +1872,9 @@ class ReportPrRoutingTests(unittest.TestCase):
         self.assertIn("`````text\npreview with ```` inside\n`````", body)
 
     def test_cleanup_local_branch_checks_out_main_then_deletes_branch(self):
-        with mock.patch("bluesky_create_report_prs.run_command") as run_command:
+        with mock.patch(
+            "thejokebot.commands.create_report_prs.run_command"
+        ) as run_command:
             bluesky_create_report_prs._cleanup_local_branch("chore/report-denylist-abc")
 
         run_command.assert_has_calls(
@@ -1878,7 +1895,9 @@ class ReportPrRoutingTests(unittest.TestCase):
             stderr="authentication failed",
         )
 
-        with mock.patch("bluesky_create_report_prs.run_command", return_value=result):
+        with mock.patch(
+            "thejokebot.commands.create_report_prs.run_command", return_value=result
+        ):
             has_open_pr = bluesky_create_report_prs.has_open_pr_for_branch(
                 "chore/report-denylist-abc"
             )
@@ -1893,7 +1912,9 @@ class ReportPrRoutingTests(unittest.TestCase):
             stderr="",
         )
 
-        with mock.patch("bluesky_create_report_prs.run_command", return_value=result):
+        with mock.patch(
+            "thejokebot.commands.create_report_prs.run_command", return_value=result
+        ):
             has_open_pr = bluesky_create_report_prs.has_open_pr_for_branch(
                 "chore/report-denylist-abc"
             )
@@ -1918,27 +1939,29 @@ class ReportPrRoutingTests(unittest.TestCase):
             return subprocess.CompletedProcess(args=args, returncode=0)
 
         with mock.patch(
-            "bluesky_create_report_prs.has_remote_branch", return_value=False
+            "thejokebot.commands.create_report_prs.has_remote_branch",
+            return_value=False,
         ):
             with mock.patch(
-                "bluesky_create_report_prs.has_open_pr_for_branch", return_value=False
+                "thejokebot.commands.create_report_prs.has_open_pr_for_branch",
+                return_value=False,
             ):
                 with mock.patch(
-                    "bluesky_create_report_prs.joke_denylist.load_denylist",
+                    "thejokebot.commands.create_report_prs.joke_denylist.load_denylist",
                     return_value={"version": 1, "jokes": []},
                 ):
                     with mock.patch(
-                        "bluesky_create_report_prs.joke_denylist.add_denylist_entry",
+                        "thejokebot.commands.create_report_prs.joke_denylist.add_denylist_entry",
                         return_value=True,
                     ):
                         with mock.patch(
-                            "bluesky_create_report_prs.joke_denylist.save_denylist"
+                            "thejokebot.commands.create_report_prs.joke_denylist.save_denylist"
                         ):
                             with mock.patch(
-                                "bluesky_create_report_prs._cleanup_local_branch"
+                                "thejokebot.commands.create_report_prs._cleanup_local_branch"
                             ) as cleanup:
                                 with mock.patch(
-                                    "bluesky_create_report_prs.run_command",
+                                    "thejokebot.commands.create_report_prs.run_command",
                                     side_effect=_run_side_effect,
                                 ):
                                     result = bluesky_create_report_prs.create_pr_for_proposal(
@@ -1956,16 +1979,21 @@ class ReportPrRoutingTests(unittest.TestCase):
 
         with (
             mock.patch(
-                "bluesky_create_report_prs.has_remote_branch", return_value=False
+                "thejokebot.commands.create_report_prs.has_remote_branch",
+                return_value=False,
             ),
             mock.patch(
-                "bluesky_create_report_prs.has_open_pr_for_branch", return_value=False
+                "thejokebot.commands.create_report_prs.has_open_pr_for_branch",
+                return_value=False,
             ),
             mock.patch(
-                "bluesky_create_report_prs._stage_denylist_change", return_value=True
+                "thejokebot.commands.create_report_prs._stage_denylist_change",
+                return_value=True,
             ),
-            mock.patch("bluesky_create_report_prs.run_command"),
-            mock.patch("bluesky_create_report_prs._cleanup_local_branch") as cleanup,
+            mock.patch("thejokebot.commands.create_report_prs.run_command"),
+            mock.patch(
+                "thejokebot.commands.create_report_prs._cleanup_local_branch"
+            ) as cleanup,
         ):
             result = bluesky_create_report_prs.create_pr_for_proposal(proposal)
 
@@ -2434,7 +2462,7 @@ class StarterPackAttributionTests(unittest.TestCase):
         client.app.bsky.notification.list_notifications.return_value = response
 
         with mock.patch(
-            "bluesky_follows_and_likes.retry_network_call",
+            "thejokebot.commands.follows_and_likes.retry_network_call",
             side_effect=lambda fn, description: fn(),
         ):
             count = bluesky_follows_and_likes.track_starter_pack_follows(
@@ -2465,7 +2493,7 @@ class StarterPackAttributionTests(unittest.TestCase):
         )
 
         with mock.patch(
-            "bluesky_follows_and_likes.retry_network_call",
+            "thejokebot.commands.follows_and_likes.retry_network_call",
             side_effect=lambda fn, description: fn(),
         ):
             bluesky_follows_and_likes.track_starter_pack_follows(
@@ -2509,7 +2537,7 @@ class StarterPackAttributionTests(unittest.TestCase):
         client.app.bsky.notification.list_notifications.return_value = response
 
         with mock.patch(
-            "bluesky_follows_and_likes.retry_network_call",
+            "thejokebot.commands.follows_and_likes.retry_network_call",
             side_effect=lambda fn, description: fn(),
         ):
             count = bluesky_follows_and_likes.track_starter_pack_follows(
@@ -2528,7 +2556,7 @@ class StarterPackAttributionTests(unittest.TestCase):
         )
 
         with mock.patch(
-            "bluesky_follows_and_likes.retry_network_call",
+            "thejokebot.commands.follows_and_likes.retry_network_call",
             side_effect=lambda fn, description: fn(),
         ):
             bluesky_follows_and_likes.track_starter_pack_follows(
@@ -2557,7 +2585,7 @@ class LikeRepliesTests(unittest.TestCase):
         client.app.bsky.notification.list_notifications.return_value = response
 
         with mock.patch(
-            "bluesky_follows_and_likes.retry_network_call",
+            "thejokebot.commands.follows_and_likes.retry_network_call",
             side_effect=lambda fn, description: fn(),
         ):
             with mock.patch("thejokebot.state.save_state"):
@@ -2596,7 +2624,7 @@ class LikeRepliesTests(unittest.TestCase):
         client.app.bsky.notification.list_notifications.return_value = response
 
         with mock.patch(
-            "bluesky_follows_and_likes.retry_network_call",
+            "thejokebot.commands.follows_and_likes.retry_network_call",
             side_effect=lambda fn, description: fn(),
         ):
             with mock.patch("thejokebot.state.save_state"):
@@ -2630,7 +2658,7 @@ class LikeRepliesTests(unittest.TestCase):
         client.app.bsky.notification.list_notifications.return_value = response
 
         with mock.patch(
-            "bluesky_follows_and_likes.retry_network_call",
+            "thejokebot.commands.follows_and_likes.retry_network_call",
             side_effect=lambda fn, description: fn(),
         ):
             with mock.patch("thejokebot.state.save_state"):
@@ -2660,7 +2688,7 @@ class LikeRepliesTests(unittest.TestCase):
         client.app.bsky.notification.list_notifications.return_value = response
 
         with mock.patch(
-            "bluesky_follows_and_likes.retry_network_call",
+            "thejokebot.commands.follows_and_likes.retry_network_call",
             side_effect=lambda fn, description: fn(),
         ):
             with mock.patch("thejokebot.state.save_state"):
@@ -2819,19 +2847,19 @@ class BlockReconciliationTests(unittest.TestCase):
         client = mock.Mock()
 
         with mock.patch(
-            "bluesky_follows_and_likes.get_runtime_controls",
+            "thejokebot.commands.follows_and_likes.get_runtime_controls",
             return_value={"dry_run": False, "action_delay_seconds": 0},
         ):
             with mock.patch(
-                "bluesky_follows_and_likes.login_client",
+                "thejokebot.commands.follows_and_likes.login_client",
                 return_value=(client, "jokebot.bsky.social"),
             ):
                 with mock.patch(
-                    "bluesky_follows_and_likes.blocks.reconcile_configured_blocks",
+                    "thejokebot.commands.follows_and_likes.blocks.reconcile_configured_blocks",
                     side_effect=ValueError("invalid block policy"),
                 ):
                     with mock.patch(
-                        "bluesky_follows_and_likes.bot_state.load_state"
+                        "thejokebot.commands.follows_and_likes.bot_state.load_state"
                     ) as load_state:
                         with self.assertRaisesRegex(ValueError, "invalid block policy"):
                             bluesky_follows_and_likes.main()
@@ -2845,7 +2873,7 @@ class FollowBackTests(unittest.TestCase):
         client.me.did = "did:plc:bot"
 
         with mock.patch(
-            "bluesky_follows_and_likes.fetch_paginated_data",
+            "thejokebot.commands.follows_and_likes.fetch_paginated_data",
             side_effect=[[], []],
         ) as fetch_paginated_data:
             bluesky_follows_and_likes.follow_back(
@@ -2897,7 +2925,7 @@ class FollowBackTests(unittest.TestCase):
         state = bot_state._default_state()
 
         with mock.patch(
-            "bluesky_follows_and_likes.fetch_paginated_data",
+            "thejokebot.commands.follows_and_likes.fetch_paginated_data",
             side_effect=[
                 [follower_profile, new_follower],
                 [],
@@ -2905,7 +2933,7 @@ class FollowBackTests(unittest.TestCase):
                 [follower_profile, new_follower],
             ],
         ):
-            with mock.patch("bluesky_follows_and_likes.time.sleep"):
+            with mock.patch("thejokebot.commands.follows_and_likes.time.sleep"):
                 bluesky_follows_and_likes.follow_back(
                     client,
                     "jokebot.bsky.social",
@@ -2946,7 +2974,7 @@ class FollowBackTests(unittest.TestCase):
         summary = {}
 
         with mock.patch(
-            "bluesky_follows_and_likes.fetch_paginated_data",
+            "thejokebot.commands.follows_and_likes.fetch_paginated_data",
             side_effect=[
                 [first],
                 [],
@@ -2956,7 +2984,7 @@ class FollowBackTests(unittest.TestCase):
                 [first, second],
             ],
         ):
-            with mock.patch("bluesky_follows_and_likes.time.sleep"):
+            with mock.patch("thejokebot.commands.follows_and_likes.time.sleep"):
                 bluesky_follows_and_likes.follow_back(
                     client,
                     "jokebot.bsky.social",
@@ -2986,10 +3014,10 @@ class FollowBackTests(unittest.TestCase):
             return []
 
         with mock.patch(
-            "bluesky_follows_and_likes.fetch_paginated_data",
+            "thejokebot.commands.follows_and_likes.fetch_paginated_data",
             side_effect=fetch_graph,
         ):
-            with mock.patch("bluesky_follows_and_likes.time.sleep"):
+            with mock.patch("thejokebot.commands.follows_and_likes.time.sleep"):
                 with self.assertRaisesRegex(RuntimeError, "did not converge"):
                     bluesky_follows_and_likes.follow_back(
                         client,
@@ -3013,7 +3041,7 @@ class FollowBackTests(unittest.TestCase):
         )
 
         with mock.patch(
-            "bluesky_follows_and_likes.fetch_paginated_data",
+            "thejokebot.commands.follows_and_likes.fetch_paginated_data",
             side_effect=[
                 [SimpleNamespace(did="did:plc:follower")],
                 snapshot_error,
@@ -3045,7 +3073,7 @@ class FollowBackTests(unittest.TestCase):
         client.me.did = "did:plc:bot"
 
         with mock.patch(
-            "bluesky_follows_and_likes.fetch_paginated_data",
+            "thejokebot.commands.follows_and_likes.fetch_paginated_data",
             side_effect=[[follower], []],
         ):
             bluesky_follows_and_likes.follow_back(
@@ -3095,10 +3123,11 @@ class FollowInteractorsTests(unittest.TestCase):
         client.app.bsky.notification.list_notifications.return_value = response
 
         with mock.patch(
-            "bluesky_follows_and_likes.fetch_paginated_data", return_value=[]
+            "thejokebot.commands.follows_and_likes.fetch_paginated_data",
+            return_value=[],
         ):
             with mock.patch(
-                "bluesky_follows_and_likes.retry_network_call",
+                "thejokebot.commands.follows_and_likes.retry_network_call",
                 side_effect=lambda fn, description: fn(),
             ):
                 with mock.patch("thejokebot.state.save_state"):
@@ -3134,10 +3163,11 @@ class FollowInteractorsTests(unittest.TestCase):
         client.app.bsky.notification.list_notifications.return_value = response
 
         with mock.patch(
-            "bluesky_follows_and_likes.fetch_paginated_data", return_value=[]
+            "thejokebot.commands.follows_and_likes.fetch_paginated_data",
+            return_value=[],
         ):
             with mock.patch(
-                "bluesky_follows_and_likes.retry_network_call",
+                "thejokebot.commands.follows_and_likes.retry_network_call",
                 side_effect=lambda fn, description: fn(),
             ):
                 with mock.patch("thejokebot.state.save_state"):
@@ -3164,11 +3194,11 @@ class FollowInteractorsTests(unittest.TestCase):
         summary = {}
 
         with mock.patch(
-            "bluesky_follows_and_likes.fetch_paginated_data",
+            "thejokebot.commands.follows_and_likes.fetch_paginated_data",
             return_value=[already_following_profile],
         ):
             with mock.patch(
-                "bluesky_follows_and_likes.retry_network_call",
+                "thejokebot.commands.follows_and_likes.retry_network_call",
                 side_effect=lambda fn, description: fn(),
             ):
                 count = bluesky_follows_and_likes.follow_interactors(
@@ -3200,10 +3230,11 @@ class FollowInteractorsTests(unittest.TestCase):
         client.app.bsky.notification.list_notifications.return_value = response
 
         with mock.patch(
-            "bluesky_follows_and_likes.fetch_paginated_data", return_value=[]
+            "thejokebot.commands.follows_and_likes.fetch_paginated_data",
+            return_value=[],
         ):
             with mock.patch(
-                "bluesky_follows_and_likes.retry_network_call",
+                "thejokebot.commands.follows_and_likes.retry_network_call",
                 side_effect=lambda fn, description: fn(),
             ):
                 count = bluesky_follows_and_likes.follow_interactors(
@@ -3226,10 +3257,11 @@ class FollowInteractorsTests(unittest.TestCase):
         client.app.bsky.notification.list_notifications.return_value = response
 
         with mock.patch(
-            "bluesky_follows_and_likes.fetch_paginated_data", return_value=[]
+            "thejokebot.commands.follows_and_likes.fetch_paginated_data",
+            return_value=[],
         ):
             with mock.patch(
-                "bluesky_follows_and_likes.retry_network_call",
+                "thejokebot.commands.follows_and_likes.retry_network_call",
                 side_effect=lambda fn, description: fn(),
             ):
                 count = bluesky_follows_and_likes.follow_interactors(
@@ -3255,10 +3287,11 @@ class FollowInteractorsTests(unittest.TestCase):
         client.app.bsky.notification.list_notifications.return_value = response
 
         with mock.patch(
-            "bluesky_follows_and_likes.fetch_paginated_data", return_value=[]
+            "thejokebot.commands.follows_and_likes.fetch_paginated_data",
+            return_value=[],
         ):
             with mock.patch(
-                "bluesky_follows_and_likes.retry_network_call",
+                "thejokebot.commands.follows_and_likes.retry_network_call",
                 side_effect=lambda fn, description: fn(),
             ):
                 count = bluesky_follows_and_likes.follow_interactors(
@@ -3280,10 +3313,11 @@ class FollowInteractorsTests(unittest.TestCase):
         client.app.bsky.notification.list_notifications.return_value = response
 
         with mock.patch(
-            "bluesky_follows_and_likes.fetch_paginated_data", return_value=[]
+            "thejokebot.commands.follows_and_likes.fetch_paginated_data",
+            return_value=[],
         ):
             with mock.patch(
-                "bluesky_follows_and_likes.retry_network_call",
+                "thejokebot.commands.follows_and_likes.retry_network_call",
                 side_effect=lambda fn, description: fn(),
             ):
                 count = bluesky_follows_and_likes.follow_interactors(
@@ -3305,10 +3339,11 @@ class FollowInteractorsTests(unittest.TestCase):
         client.app.bsky.notification.list_notifications.return_value = response
 
         with mock.patch(
-            "bluesky_follows_and_likes.fetch_paginated_data", return_value=[]
+            "thejokebot.commands.follows_and_likes.fetch_paginated_data",
+            return_value=[],
         ):
             with mock.patch(
-                "bluesky_follows_and_likes.retry_network_call",
+                "thejokebot.commands.follows_and_likes.retry_network_call",
                 side_effect=lambda fn, description: fn(),
             ):
                 count = bluesky_follows_and_likes.follow_interactors(
@@ -3336,10 +3371,11 @@ class FollowInteractorsTests(unittest.TestCase):
         client.app.bsky.notification.list_notifications.return_value = response
 
         with mock.patch(
-            "bluesky_follows_and_likes.fetch_paginated_data", return_value=[]
+            "thejokebot.commands.follows_and_likes.fetch_paginated_data",
+            return_value=[],
         ):
             with mock.patch(
-                "bluesky_follows_and_likes.retry_network_call",
+                "thejokebot.commands.follows_and_likes.retry_network_call",
                 side_effect=lambda fn, description: fn(),
             ):
                 with mock.patch("thejokebot.state.save_state"):
@@ -3687,7 +3723,7 @@ class FollowFellowsTagRotationTests(unittest.TestCase):
         state = bot_state._default_state()
 
         with mock.patch(
-            "bluesky_follow_fellows.bot_state.update_state",
+            "thejokebot.commands.follow_fellows.bot_state.update_state",
             side_effect=lambda mutator, domains: mutator(state),
         ):
             bluesky_follow_fellows._persist_follow_fellows_state(
@@ -3941,57 +3977,59 @@ class PostingTagSelectionTests(unittest.TestCase):
         mock_client.send_post.return_value = {"uri": "at://post/1", "cid": "cid1"}
 
         with mock.patch(
-            "bluesky_post_joke.login_client", return_value=(mock_client, None)
+            "thejokebot.commands.post_joke.login_client",
+            return_value=(mock_client, None),
         ):
             with mock.patch(
-                "bluesky_post_joke.joke_providers.PROVIDERS",
+                "thejokebot.commands.post_joke.joke_providers.PROVIDERS",
                 {"test_provider": lambda: long_joke},
             ):
                 with mock.patch(
-                    "bluesky_post_joke.joke_providers.PRIMARY_PROVIDERS",
+                    "thejokebot.commands.post_joke.joke_providers.PRIMARY_PROVIDERS",
                     ["test_provider"],
                 ):
                     with mock.patch(
-                        "bluesky_post_joke.joke_providers.BACKUP_PROVIDERS", []
+                        "thejokebot.commands.post_joke.joke_providers.BACKUP_PROVIDERS",
+                        [],
                     ):
                         with mock.patch(
-                            "bluesky_post_joke.joke_providers.FALLBACK_PROVIDER",
+                            "thejokebot.commands.post_joke.joke_providers.FALLBACK_PROVIDER",
                             "test_provider",
                         ):
                             with mock.patch(
-                                "bluesky_post_joke.bot_state.load_state",
+                                "thejokebot.commands.post_joke.bot_state.load_state",
                                 return_value=bot_state._default_state(),
                             ):
                                 with mock.patch(
-                                    "bluesky_post_joke.bot_state.get_next_provider",
+                                    "thejokebot.commands.post_joke.bot_state.get_next_provider",
                                     return_value="test_provider",
                                 ):
                                     with mock.patch(
-                                        "bluesky_post_joke.bot_state.get_recent_b64s",
+                                        "thejokebot.commands.post_joke.bot_state.get_recent_b64s",
                                         return_value=set(),
                                     ):
                                         with mock.patch(
-                                            "bluesky_post_joke.joke_denylist.load_denylist",
+                                            "thejokebot.commands.post_joke.joke_denylist.load_denylist",
                                             return_value={"jokes": []},
                                         ):
                                             with mock.patch(
-                                                "bluesky_post_joke.joke_denylist.get_denylisted_b64s",
+                                                "thejokebot.commands.post_joke.joke_denylist.get_denylisted_b64s",
                                                 return_value=set(),
                                             ):
                                                 with mock.patch(
-                                                    "bluesky_post_joke.bot_state.record_provider_used"
+                                                    "thejokebot.commands.post_joke.bot_state.record_provider_used"
                                                 ):
                                                     with mock.patch(
-                                                        "bluesky_post_joke.bot_state.add_posted_joke"
+                                                        "thejokebot.commands.post_joke.bot_state.add_posted_joke"
                                                     ):
                                                         with mock.patch(
-                                                            "bluesky_post_joke.bot_state.advance_posting_tag_offset"
+                                                            "thejokebot.commands.post_joke.bot_state.advance_posting_tag_offset"
                                                         ):
                                                             with mock.patch(
-                                                                "bluesky_post_joke.bot_state.prune_old_jokes"
+                                                                "thejokebot.commands.post_joke.bot_state.prune_old_jokes"
                                                             ):
                                                                 with mock.patch(
-                                                                    "bluesky_post_joke.bot_state.update_state",
+                                                                    "thejokebot.commands.post_joke.bot_state.update_state",
                                                                     side_effect=lambda mutator, **kwargs: (
                                                                         mutator(
                                                                             bot_state._default_state()
@@ -4363,7 +4401,7 @@ class JokeRetryChainTests(unittest.TestCase):
 
         def test_get_posting_hashtag_pool_uses_resolved_runtime_pool(self):
             with mock.patch(
-                "bluesky_post_joke.runtime_config.get_posting_tag_runtime_config",
+                "thejokebot.commands.post_joke.runtime_config.get_posting_tag_runtime_config",
                 return_value={"tag_pool": ["#dadjokes", "#punny"]},
             ):
                 pool = bluesky_post_joke.get_posting_hashtag_pool()
@@ -4372,7 +4410,7 @@ class JokeRetryChainTests(unittest.TestCase):
 
         def test_get_posting_hashtag_pool_uses_default_posting_hashtags(self):
             with mock.patch(
-                "bluesky_post_joke.runtime_config.get_posting_tag_runtime_config",
+                "thejokebot.commands.post_joke.runtime_config.get_posting_tag_runtime_config",
                 return_value={"tag_pool": bluesky_post_joke.DEFAULT_POSTING_HASHTAGS},
             ):
                 pool = bluesky_post_joke.get_posting_hashtag_pool()
@@ -4464,11 +4502,11 @@ class StarterPackFollowSyncTests(unittest.TestCase):
         client.me.did = "did:plc:bot"
 
         with mock.patch(
-            "bluesky_manage_starter_pack.fetch_paginated_data",
+            "thejokebot.commands.manage_starter_pack.fetch_paginated_data",
             return_value=[SimpleNamespace(did="did:plc:a")],
         ):
             with mock.patch(
-                "bluesky_manage_starter_pack.retry_network_call",
+                "thejokebot.commands.manage_starter_pack.retry_network_call",
                 side_effect=lambda fn, description: fn(),
             ):
                 already, followed = (
@@ -4488,7 +4526,7 @@ class StarterPackFollowSyncTests(unittest.TestCase):
         client.me.did = "did:plc:bot"
 
         with mock.patch(
-            "bluesky_manage_starter_pack.fetch_paginated_data",
+            "thejokebot.commands.manage_starter_pack.fetch_paginated_data",
             return_value=[],
         ):
             _, followed = bluesky_manage_starter_pack.ensure_following_list_members(
@@ -4506,11 +4544,11 @@ class StarterPackFollowSyncTests(unittest.TestCase):
         client.me.did = "did:plc:bot"
 
         with mock.patch(
-            "bluesky_manage_starter_pack.fetch_paginated_data",
+            "thejokebot.commands.manage_starter_pack.fetch_paginated_data",
             return_value=[],
         ):
             with mock.patch(
-                "bluesky_manage_starter_pack.retry_network_call",
+                "thejokebot.commands.manage_starter_pack.retry_network_call",
                 side_effect=lambda fn, description: fn(),
             ):
                 _, followed = bluesky_manage_starter_pack.ensure_following_list_members(
@@ -4528,7 +4566,7 @@ class StarterPackFollowSyncTests(unittest.TestCase):
         client.me.did = "did:plc:bot"
 
         with mock.patch(
-            "bluesky_manage_starter_pack.fetch_paginated_data",
+            "thejokebot.commands.manage_starter_pack.fetch_paginated_data",
             return_value=[
                 SimpleNamespace(did="did:plc:a"),
                 SimpleNamespace(did="did:plc:b"),
@@ -4569,7 +4607,7 @@ class StarterPackFollowSyncTests(unittest.TestCase):
         client.com.atproto.repo.put_record.side_effect = capture_put
 
         with mock.patch(
-            "bluesky_manage_starter_pack.retry_network_call",
+            "thejokebot.commands.manage_starter_pack.retry_network_call",
             side_effect=lambda fn, description: fn(),
         ):
             bluesky_manage_starter_pack.upsert_starter_pack_record(
@@ -4605,7 +4643,7 @@ class ReportNotificationCollectionTests(unittest.TestCase):
         ]
 
         with mock.patch(
-            "bluesky_process_reports.retry_network_call",
+            "thejokebot.commands.process_reports.retry_network_call",
             side_effect=lambda fn, description: fn(),
         ):
             with mock.patch.dict(os.environ, {"BLUESKY_REPORT_MAX_PAGES": "1"}):
@@ -4629,7 +4667,7 @@ class ReportNotificationCollectionTests(unittest.TestCase):
         client.app.bsky.notification.list_notifications.return_value = response
 
         with mock.patch(
-            "bluesky_process_reports.retry_network_call",
+            "thejokebot.commands.process_reports.retry_network_call",
             side_effect=lambda fn, description: fn(),
         ):
             proposals, processed, pages = (
@@ -4657,11 +4695,11 @@ class ReportNotificationCollectionTests(unittest.TestCase):
         client.app.bsky.notification.list_notifications.return_value = response
 
         with mock.patch(
-            "bluesky_process_reports.retry_network_call",
+            "thejokebot.commands.process_reports.retry_network_call",
             side_effect=lambda fn, description: fn(),
         ):
             with mock.patch(
-                "bluesky_process_reports._extract_notification",
+                "thejokebot.commands.process_reports._extract_notification",
                 return_value={
                     "notification_uri": "at://did:plc:bot/app.bsky.feed.post/notif1",
                     "reason": "like",
@@ -4695,7 +4733,7 @@ class ReportNotificationCollectionTests(unittest.TestCase):
         client.app.bsky.notification.list_notifications.return_value = response
 
         with mock.patch(
-            "bluesky_process_reports.retry_network_call",
+            "thejokebot.commands.process_reports.retry_network_call",
             side_effect=lambda fn, description: fn(),
         ):
             proposals, processed, pages = (
@@ -4721,11 +4759,11 @@ class ReportNotificationCollectionTests(unittest.TestCase):
         )
 
         with mock.patch(
-            "bluesky_process_reports.retry_network_call",
+            "thejokebot.commands.process_reports.retry_network_call",
             side_effect=lambda fn, description: fn(),
         ):
             with mock.patch(
-                "bluesky_process_reports._extract_notification",
+                "thejokebot.commands.process_reports._extract_notification",
                 return_value={
                     "notification_uri": notification_uri,
                     "reason": "reply",
@@ -4740,7 +4778,7 @@ class ReportNotificationCollectionTests(unittest.TestCase):
                 },
             ):
                 with mock.patch(
-                    "bluesky_process_reports._resolve_notification_proposal",
+                    "thejokebot.commands.process_reports._resolve_notification_proposal",
                     return_value=(None, False),
                 ):
                     with mock.patch.dict(
@@ -4775,11 +4813,11 @@ class ReportNotificationCollectionTests(unittest.TestCase):
         )
 
         with mock.patch(
-            "bluesky_process_reports.retry_network_call",
+            "thejokebot.commands.process_reports.retry_network_call",
             side_effect=lambda fn, description: fn(),
         ):
             with mock.patch(
-                "bluesky_process_reports._extract_notification",
+                "thejokebot.commands.process_reports._extract_notification",
                 return_value={
                     "notification_uri": notification_uri,
                     "reason": "reply",
@@ -4794,7 +4832,7 @@ class ReportNotificationCollectionTests(unittest.TestCase):
                 },
             ):
                 with mock.patch(
-                    "bluesky_process_reports._resolve_notification_proposal",
+                    "thejokebot.commands.process_reports._resolve_notification_proposal",
                     return_value=(None, False),
                 ):
                     with mock.patch.dict(
@@ -4832,7 +4870,7 @@ class ApprovedReportDeletionTests(unittest.TestCase):
         }
 
         with mock.patch(
-            "bluesky_process_reports.retry_network_call",
+            "thejokebot.commands.process_reports.retry_network_call",
             side_effect=lambda fn, description: fn(),
         ):
             count = bluesky_process_reports.delete_approved_report_posts(
@@ -5098,22 +5136,23 @@ class FollowFellowsMainTests(unittest.TestCase):
         state = bot_state._default_state()
 
         with mock.patch(
-            "bluesky_follow_fellows.login_client",
+            "thejokebot.commands.follow_fellows.login_client",
             return_value=(client, "thejokebot.bsky.social"),
         ):
             with mock.patch(
-                "bluesky_follow_fellows.get_runtime_controls",
+                "thejokebot.commands.follow_fellows.get_runtime_controls",
                 return_value={"dry_run": True, "action_delay_seconds": 0.0},
             ):
                 with mock.patch(
-                    "bluesky_follow_fellows.fetch_paginated_data", return_value=[]
+                    "thejokebot.commands.follow_fellows.fetch_paginated_data",
+                    return_value=[],
                 ):
                     with mock.patch(
-                        "bluesky_follow_fellows.bot_state.load_state",
+                        "thejokebot.commands.follow_fellows.bot_state.load_state",
                         return_value=state,
                     ):
                         with mock.patch(
-                            "bluesky_follow_fellows.retry_network_call",
+                            "thejokebot.commands.follow_fellows.retry_network_call",
                             side_effect=lambda fn, description: fn(),
                         ):
                             bluesky_follow_fellows.main()
@@ -5131,23 +5170,23 @@ class FollowFellowsMainTests(unittest.TestCase):
         state = bot_state._default_state()
 
         with mock.patch(
-            "bluesky_follow_fellows.login_client",
+            "thejokebot.commands.follow_fellows.login_client",
             return_value=(client, "thejokebot.bsky.social"),
         ):
             with mock.patch(
-                "bluesky_follow_fellows.get_runtime_controls",
+                "thejokebot.commands.follow_fellows.get_runtime_controls",
                 return_value={"dry_run": True, "action_delay_seconds": 0.0},
             ):
                 with mock.patch(
-                    "bluesky_follow_fellows.fetch_paginated_data",
+                    "thejokebot.commands.follow_fellows.fetch_paginated_data",
                     return_value=[SimpleNamespace(did=already_did)],
                 ):
                     with mock.patch(
-                        "bluesky_follow_fellows.bot_state.load_state",
+                        "thejokebot.commands.follow_fellows.bot_state.load_state",
                         return_value=state,
                     ):
                         with mock.patch(
-                            "bluesky_follow_fellows.retry_network_call",
+                            "thejokebot.commands.follow_fellows.retry_network_call",
                             side_effect=lambda fn, description: fn(),
                         ):
                             bluesky_follow_fellows.main()
@@ -5165,22 +5204,23 @@ class FollowFellowsMainTests(unittest.TestCase):
         bot_state.record_unfollow(state, prev_unfollowed)
 
         with mock.patch(
-            "bluesky_follow_fellows.login_client",
+            "thejokebot.commands.follow_fellows.login_client",
             return_value=(client, "thejokebot.bsky.social"),
         ):
             with mock.patch(
-                "bluesky_follow_fellows.get_runtime_controls",
+                "thejokebot.commands.follow_fellows.get_runtime_controls",
                 return_value={"dry_run": True, "action_delay_seconds": 0.0},
             ):
                 with mock.patch(
-                    "bluesky_follow_fellows.fetch_paginated_data", return_value=[]
+                    "thejokebot.commands.follow_fellows.fetch_paginated_data",
+                    return_value=[],
                 ):
                     with mock.patch(
-                        "bluesky_follow_fellows.bot_state.load_state",
+                        "thejokebot.commands.follow_fellows.bot_state.load_state",
                         return_value=state,
                     ):
                         with mock.patch(
-                            "bluesky_follow_fellows.retry_network_call",
+                            "thejokebot.commands.follow_fellows.retry_network_call",
                             side_effect=lambda fn, description: fn(),
                         ):
                             bluesky_follow_fellows.main()
@@ -5196,26 +5236,27 @@ class FollowFellowsMainTests(unittest.TestCase):
         state = bot_state._default_state()
 
         with mock.patch(
-            "bluesky_follow_fellows.login_client",
+            "thejokebot.commands.follow_fellows.login_client",
             return_value=(client, "thejokebot.bsky.social"),
         ):
             with mock.patch(
-                "bluesky_follow_fellows.get_runtime_controls",
+                "thejokebot.commands.follow_fellows.get_runtime_controls",
                 return_value={"dry_run": False, "action_delay_seconds": 0.0},
             ):
                 with mock.patch(
-                    "bluesky_follow_fellows.fetch_paginated_data", return_value=[]
+                    "thejokebot.commands.follow_fellows.fetch_paginated_data",
+                    return_value=[],
                 ):
                     with mock.patch(
-                        "bluesky_follow_fellows.bot_state.load_state",
+                        "thejokebot.commands.follow_fellows.bot_state.load_state",
                         return_value=state,
                     ):
                         with mock.patch(
-                            "bluesky_follow_fellows.retry_network_call",
+                            "thejokebot.commands.follow_fellows.retry_network_call",
                             side_effect=lambda fn, description: fn(),
                         ):
                             with mock.patch(
-                                "bluesky_follow_fellows.bot_state.update_state",
+                                "thejokebot.commands.follow_fellows.bot_state.update_state",
                                 side_effect=lambda mutator, **kwargs: mutator(state),
                             ) as update_state:
                                 bluesky_follow_fellows.main()

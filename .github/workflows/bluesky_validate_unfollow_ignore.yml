@@ -35,4 +35,4 @@ jobs:
           BLUESKY_FAIL_ON_STALE_IGNORE: "true"
         run: |
           export BLUESKY_UNFOLLOW_IGNORE="${BLUESKY_UNFOLLOW_IGNORE_SECRET:-$BLUESKY_UNFOLLOW_IGNORE_VAR}"
-          python bluesky_validate_unfollow_ignore.py
+          thejokebot-validate-unfollow-ignore

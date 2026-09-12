@@ -9,6 +9,19 @@ description = "Automation for The Joke Bot on Bluesky"
 readme = "README.md"
 requires-python = ">=3.12"
 
+[project.scripts]
+thejokebot-collect-dashboard-metrics = "thejokebot.commands.collect_dashboard_metrics:main"
+thejokebot-create-report-prs = "thejokebot.commands.create_report_prs:main"
+thejokebot-follow-fellows = "thejokebot.commands.follow_fellows:main"
+thejokebot-follows-and-likes = "thejokebot.commands.follows_and_likes:main"
+thejokebot-manage-starter-pack = "thejokebot.commands.manage_starter_pack:main"
+thejokebot-post-joke = "thejokebot.commands.post_joke:main"
+thejokebot-process-reports = "thejokebot.commands.process_reports:main"
+thejokebot-unfollow = "thejokebot.commands.unfollow:main"
+thejokebot-validate-runtime-config = "thejokebot.commands.validate_runtime_config:main"
+thejokebot-validate-unfollow-ignore = "thejokebot.commands.validate_unfollow_ignore:main"
+thejokebot-verify-latest-joke-post = "thejokebot.commands.verify_latest_joke_post:main"
+
 [tool.setuptools.packages.find]
 where = ["src"]
 

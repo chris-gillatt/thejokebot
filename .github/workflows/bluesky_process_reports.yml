@@ -56,7 +56,7 @@ jobs:
           BLUESKY_SESSION_PERSIST_ENABLED: "true"
           BLUESKY_SESSION_FILE_PATH: .agent-tmp/bluesky_session.txt
           BLUESKY_REPORT_OUTPUT: .agent-tmp/report_proposals.json
-        run: python bluesky_process_reports.py
+        run: thejokebot-process-reports
 
       - name: Encrypt Bluesky session cache
         if: always()
@@ -103,4 +103,4 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          python bluesky_create_report_prs.py
+          thejokebot-create-report-prs

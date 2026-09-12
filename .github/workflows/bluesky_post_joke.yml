@@ -55,7 +55,7 @@ jobs:
           BLUESKY_SESSION_PERSIST_ENABLED: "true"
           BLUESKY_SESSION_FILE_PATH: .agent-tmp/bluesky_session.txt
           API_NINJAS_API_KEY: ${{ secrets.API_NINJAS_API_KEY }}
-        run: python bluesky_post_joke.py
+        run: thejokebot-post-joke
 
       - name: Encrypt Bluesky session cache
         if: always()
