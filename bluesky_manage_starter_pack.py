@@ -3,7 +3,6 @@
 import argparse
 import datetime as dt
 import json
-import pathlib
 import re
 import time
 
@@ -17,8 +16,9 @@ from bluesky_common import (
     retry_network_call,
 )
 from bluesky_follower_utils import fetch_list_member_dids, fetch_paginated_data
+from thejokebot.paths import RESOURCES_DIR
 
-_CONFIG_PATH = pathlib.Path(__file__).parent / "resources" / "jokebot_starter_pack.json"
+_CONFIG_PATH = RESOURCES_DIR / "jokebot_starter_pack.json"
 _STARTERPACK_COLLECTION = "app.bsky.graph.starterpack"
 _AT_URI_PATTERN = re.compile(r"^at://([^/]+)/([^/]+)/([^/]+)$")
 

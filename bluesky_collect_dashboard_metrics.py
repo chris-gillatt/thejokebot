@@ -19,11 +19,12 @@ import requests
 import bluesky_config
 import bluesky_state
 from bluesky_common import retry_network_call
+from thejokebot.paths import DASHBOARD_DIR
 
 PUBLIC_API_BASE = "https://public.api.bsky.app/xrpc"
 GITHUB_API_BASE = "https://api.github.com"
 _UTC_OFFSET = "+00:00"
-METRICS_FILE = Path(__file__).resolve().parent / "dashboard" / "data" / "metrics.json"
+METRICS_FILE = DASHBOARD_DIR / "data" / "metrics.json"
 HISTORY_DIR = METRICS_FILE.parent / "history"
 SCHEMA_VERSION = 11
 HISTORY_SCHEMA_VERSION = 1

@@ -11,13 +11,15 @@ from contextlib import ExitStack, contextmanager
 from pathlib import Path
 from typing import Callable, Generator, Optional, TypeVar
 
+from thejokebot.paths import LEGACY_STATE_FILE
+
 # File locking support (Unix-like systems)
 if sys.platform != "win32":
     import fcntl
 else:
     fcntl = None  # type: ignore
 
-STATE_FILE = str(Path(__file__).resolve().parent / "bot_state.json")
+STATE_FILE = str(LEGACY_STATE_FILE)
 STATE_FILENAMES = {
     "posting": "posting_state.json",
     "social": "social_state.json",

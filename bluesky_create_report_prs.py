@@ -10,10 +10,11 @@ import sys
 from pathlib import Path
 
 import bluesky_denylist
+from thejokebot.paths import AGENT_TMP_DIR, RESOURCES_DIR
 
-DEFAULT_PROPOSALS_PATH = Path(".agent-tmp/report_proposals.json")
-DENYLIST_PATH = Path("resources/jokebot_denylist.json")
-JOKEBOOK_PATH = Path("resources/jokebot_jokebook.json")
+DEFAULT_PROPOSALS_PATH = AGENT_TMP_DIR / "report_proposals.json"
+DENYLIST_PATH = RESOURCES_DIR / "jokebot_denylist.json"
+JOKEBOOK_PATH = RESOURCES_DIR / "jokebot_jokebook.json"
 JOKEBOOK_PROVIDER_NAME = "jokebot_jokebook"
 
 

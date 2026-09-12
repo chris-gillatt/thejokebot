@@ -79,13 +79,16 @@ The preview is served at <http://localhost:8765/>. Set
 
 ## Quick start (local)
 
-1. Install Python 3.11 or newer.
-2. Install dependencies:
-	- `python -m pip install -r requirements.txt`
-3. Copy and set environment values:
+1. Install Python 3.12 or newer.
+2. Create a virtual environment and install the locked dependencies:
+	- `python3.12 -m venv .venv`
+	- `.venv/bin/python -m pip install --require-hashes --only-binary=:all: -r requirements.lock`
+3. Install the application from the checkout:
+	- `.venv/bin/python -m pip install --no-deps --no-build-isolation --editable .`
+4. Copy and set environment values:
 	- `cp .env.example .env`
-4. Run a script:
-	- `python bluesky_post_joke.py`
+5. Run a script:
+	- `.venv/bin/python bluesky_post_joke.py`
 
 ## Syncing repo and submodules
 
@@ -104,6 +107,10 @@ Run this at the start of each development session to ensure `references/` (atpro
 Before commit/push, run the local preflight gate:
 
 - `./scripts/preflight-local.sh`
+
+The application must first be installed in editable mode as shown in the quick
+start. Preflight reports a direct installation command when that package is
+missing.
 
 This runs:
 

@@ -13,12 +13,12 @@ BLUESKY_JOKE_PROVIDER for local testing or emergency use.
 import base64
 import json
 import os
-import pathlib
 import secrets
 from collections.abc import Callable
 
 import requests
 import bluesky_state
+from thejokebot.paths import RESOURCES_DIR
 
 JOKE_TIMEOUT_SECONDS = 15
 
@@ -56,7 +56,7 @@ BACKUP_PROVIDERS = ["api_ninjas"]
 # succeed, making it the final safety net in the provider chain.
 FALLBACK_PROVIDER = "jokebot_jokebook"
 
-_JOKEBOOK_PATH = pathlib.Path(__file__).parent / "resources" / "jokebot_jokebook.json"
+_JOKEBOOK_PATH = RESOURCES_DIR / "jokebot_jokebook.json"
 
 
 def fetch_from_icanhazdadjoke(timeout: int = JOKE_TIMEOUT_SECONDS) -> str:

@@ -7,7 +7,9 @@ import os
 import time
 from pathlib import Path
 
-DENYLIST_FILE = Path(__file__).resolve().parent / "resources" / "jokebot_denylist.json"
+from thejokebot.paths import RESOURCES_DIR
+
+DENYLIST_FILE = RESOURCES_DIR / "jokebot_denylist.json"
 
 
 def _default_payload() -> dict:

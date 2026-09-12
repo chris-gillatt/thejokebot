@@ -3,9 +3,9 @@ import json
 import math
 from pathlib import Path
 
-_CONFIG_PATH = (
-    Path(__file__).resolve().parent / "resources" / "jokebot_runtime_config.json"
-)
+from thejokebot.paths import RESOURCES_DIR
+
+_CONFIG_PATH = RESOURCES_DIR / "jokebot_runtime_config.json"
 DERIVED_UNFOLLOW_MAX_ACTIONS = "follow_fellows_monthly_capacity"
 FOLLOW_CAPACITY_WEEKS = 4
 _DEFAULT_POSTING_TAG = "#dadjoke"

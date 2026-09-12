@@ -34,6 +34,12 @@ if ! "${PYTHON[@]}" -m pytest --version >/dev/null 2>&1; then
   fail_with_install_hint "pytest (Python module)" "${PYTHON[*]} -m pip install pytest"
 fi
 
+if ! "${PYTHON[@]}" -c "import thejokebot" >/dev/null 2>&1; then
+  fail_with_install_hint \
+    "editable thejokebot package" \
+    "${PYTHON[*]} -m pip install --no-deps --no-build-isolation --editable ."
+fi
+
 echo "==> Ruff lint"
 "${PYTHON[@]}" -m ruff check .
 

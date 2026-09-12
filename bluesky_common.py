@@ -11,20 +11,20 @@ import requests
 from atproto import Client
 from atproto_client.request import Request as _AtprotoRequest
 from dotenv import load_dotenv
+from thejokebot.paths import AGENT_TMP_DIR, ENV_FILE
 
 DEFAULT_LOGIN_RETRY_ATTEMPTS = 3
 DEFAULT_LOGIN_RETRY_DELAY_SECONDS = 2.0
 DEFAULT_NETWORK_RETRY_ATTEMPTS = 3
 DEFAULT_NETWORK_RETRY_DELAY_SECONDS = 1.0
 DEFAULT_NETWORK_RETRY_BACKOFF_FACTOR = 2.0
-DEFAULT_SESSION_FILE_PATH = ".agent-tmp/bluesky_session.txt"
+DEFAULT_SESSION_FILE_PATH = str(AGENT_TMP_DIR / "bluesky_session.txt")
 DEFAULT_PASSWORD_SOURCE = "app_password"
 
 
 def _load_local_env_file():
-    env_path = Path(__file__).resolve().parent / ".env"
-    if env_path.exists():
-        load_dotenv(dotenv_path=env_path, override=False)
+    if ENV_FILE.exists():
+        load_dotenv(dotenv_path=ENV_FILE, override=False)
 
 
 _load_local_env_file()

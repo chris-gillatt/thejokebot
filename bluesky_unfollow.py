@@ -1,7 +1,6 @@
 import os
 import time
 import json
-import pathlib
 import requests
 import atproto_client.exceptions
 import bluesky_config
@@ -20,15 +19,14 @@ from bluesky_common import (
     mask_sensitive,
 )
 import bluesky_state as _state
+from thejokebot.paths import RESOURCES_DIR
 
 _UNFOLLOW_CONFIG = bluesky_config.get_unfollow_config()
 DEFAULT_UNFOLLOW_MAX_ACTIONS = _UNFOLLOW_CONFIG["max_actions"]
 DEFAULT_UNFOLLOW_BATCH_SIZE = _UNFOLLOW_CONFIG["batch_size"]
 DEFAULT_UNFOLLOW_BATCH_PAUSE_SECONDS = _UNFOLLOW_CONFIG["batch_pause_seconds"]
 DEFAULT_IGNORABLE_USERNAMES = tuple(_UNFOLLOW_CONFIG["default_ignorable_handles"])
-_STARTER_PACK_CONFIG_PATH = (
-    pathlib.Path(__file__).parent / "resources" / "jokebot_starter_pack.json"
-)
+_STARTER_PACK_CONFIG_PATH = RESOURCES_DIR / "jokebot_starter_pack.json"
 
 
 def get_unfollow_controls():

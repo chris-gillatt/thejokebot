@@ -34,6 +34,45 @@ changelog in this file is intentionally brief.
 
 ## 5. Active Backlog
 
+### 5.57 Adopt a conventional Python application layout (Issue #112)
+**Priority: Medium**
+
+Reorganise first-party Python code as an application-only `src/thejokebot`
+package used by local tooling and GitHub Actions. Preserve repository-backed
+configuration in `resources/`, runtime data in `state/` and `.agent-tmp/`, and
+the static frontend in `dashboard/` rather than treating them as package data.
+
+Deliver the migration as three independently operational commits: establish
+package metadata and central path contracts; move and rename shared modules;
+then move command modules and switch workflows to installed console commands.
+Validate and push each checkpoint before starting the next one.
+
+Acceptance criteria:
+- Runtime behaviour, environment variables, state formats, workflow triggers,
+  and dashboard data contracts remain unchanged.
+- Repository-owned paths resolve correctly regardless of the current working
+  directory and remain replaceable by focused tests.
+- Active automation installs the checked-out application and ultimately invokes
+  named console commands instead of root Python files.
+- Ruff, Pyright, workflow lint, unit tests, application coverage, CodeQL, and
+  Sonar remain green throughout the migration.
+- The final tree contains no first-party root `bluesky_*.py` modules, stale flat
+  imports, compatibility shims, or `PYTHONPATH=.` workarounds.
+
+Publishing to PyPI, moving mutable resources into a wheel, dependency-file
+consolidation, and behavioural refactoring are outside this issue.
+
+Dependency currency check (12 September 2026):
+- `atproto` is locked at `0.0.71`; latest stable is `0.0.72`.
+- `regex` is locked at `2026.9.3`; latest stable is `2026.9.10`.
+- Pyright is pinned at `1.1.413`; latest stable is `1.1.414`.
+
+These pre-existing upgrades are deferred to keep structural and dependency
+changes independently attributable. Review them in the next dedicated
+dependency-maintenance change after issue #112. All other direct Python and npm
+dependencies are current, workflow actions use their latest release families,
+and Dependabot reports no open alerts.
+
 ### 5.56 Reframe dashboard growth and engagement (Issue #107) ✓ Complete
 **Priority: Medium**
 
