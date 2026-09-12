@@ -218,6 +218,15 @@ from <https://chris-gillatt.github.io/thejokebot/>. The generated data excludes
 audience identifiers and distinguishes sampled account totals from activity
 reconstructed from retained bot state.
 
+**Trigger decision (12 September 2026):** Keep scheduled six-hour collection as
+the dashboard freshness contract. Triggering collection after every operational
+workflow completion was tested and rejected: the eight-workflow fan-in would
+increase dashboard collection from 4 to about 29 runs per day, completed events
+also include failed runs, and the dashboard concurrency group serialises rather
+than deduplicates queued runs. Bot-authored state commits using `GITHUB_TOKEN`
+not starting downstream push workflows is therefore intentional; their data is
+collected by the next scheduled dashboard run.
+
 ### 5.36 Dashboard follow-up improvements ✓ Complete
 **Priority: Low**
 
