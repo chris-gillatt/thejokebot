@@ -1,6 +1,6 @@
 {
   "schema_version": 11,
-  "generated_at": "2026-09-12T02:55:55.631959+00:00",
+  "generated_at": "2026-09-12T03:09:07.821038+00:00",
   "account": {
     "handle": "thejokebot.bsky.social",
     "display_name": "The Joke Bot",
@@ -1143,7 +1143,7 @@
     },
     {
       "period_start": "2026-09-12T00:00:00+00:00",
-      "collected_at": "2026-09-12T02:55:55.631959+00:00",
+      "collected_at": "2026-09-12T03:09:07.821038+00:00",
       "followers": 6687,
       "following": 10379,
       "profile_posts": 2451,
@@ -4203,7 +4203,7 @@
   "audience_growth": {
     "window_days": 30,
     "net_followers": {
-      "7": 67,
+      "7": 59,
       "30": null
     },
     "sources": {
@@ -5136,7 +5136,7 @@
   "engagement_momentum": {
     "basis": "visible_joke_snapshot_total",
     "deltas": {
-      "7": 214,
+      "7": 202,
       "30": null
     }
   },
@@ -7007,24 +7007,24 @@
   },
   "automation": {
     "window_days": 30,
-    "collected_at": "2026-09-12T02:55:55.631959+00:00",
-    "runs": 966,
-    "successful": 916,
+    "collected_at": "2026-09-12T03:09:07.821038+00:00",
+    "runs": 965,
+    "successful": 915,
     "failed": 37,
     "cancelled": 0,
     "success_rate": 96.1,
     "workflows": [
       {
         "name": "bluesky_dashboard",
-        "runs": 118,
-        "successful": 116,
+        "runs": 119,
+        "successful": 117,
         "failed": 1,
         "cancelled": 0,
-        "last_run_at": "2026-09-12T02:55:32Z",
+        "last_run_at": "2026-09-12T03:08:44Z",
         "last_status": "in_progress",
         "last_conclusion": null,
         "latest_duration_seconds": null,
-        "median_duration_seconds": 104,
+        "median_duration_seconds": 103,
         "expected_interval_hours": 6.0
       },
       {
@@ -7042,8 +7042,8 @@
       },
       {
         "name": "bluesky_follows_and_likes",
-        "runs": 252,
-        "successful": 251,
+        "runs": 249,
+        "successful": 248,
         "failed": 1,
         "cancelled": 0,
         "last_run_at": "2026-09-12T02:35:27Z",
@@ -7068,8 +7068,8 @@
       },
       {
         "name": "bluesky_post_joke",
-        "runs": 129,
-        "successful": 129,
+        "runs": 128,
+        "successful": 128,
         "failed": 0,
         "cancelled": 0,
         "last_run_at": "2026-09-12T00:23:39Z",
@@ -7081,8 +7081,8 @@
       },
       {
         "name": "bluesky_process_reports",
-        "runs": 130,
-        "successful": 130,
+        "runs": 128,
+        "successful": 128,
         "failed": 0,
         "cancelled": 0,
         "last_run_at": "2026-09-12T01:06:27Z",
@@ -7120,11 +7120,11 @@
       },
       {
         "name": "codeql",
-        "runs": 73,
-        "successful": 66,
+        "runs": 74,
+        "successful": 67,
         "failed": 6,
         "cancelled": 0,
-        "last_run_at": "2026-09-12T02:55:32Z",
+        "last_run_at": "2026-09-12T03:08:44Z",
         "last_status": "in_progress",
         "last_conclusion": null,
         "latest_duration_seconds": null,
@@ -7159,11 +7159,11 @@
       },
       {
         "name": "python_tests",
-        "runs": 70,
-        "successful": 60,
+        "runs": 71,
+        "successful": 61,
         "failed": 9,
         "cancelled": 0,
-        "last_run_at": "2026-09-12T02:55:32Z",
+        "last_run_at": "2026-09-12T03:08:44Z",
         "last_status": "in_progress",
         "last_conclusion": null,
         "latest_duration_seconds": null,
@@ -7172,27 +7172,27 @@
       },
       {
         "name": "ruff_quality",
-        "runs": 70,
-        "successful": 63,
+        "runs": 71,
+        "successful": 64,
         "failed": 7,
         "cancelled": 0,
-        "last_run_at": "2026-09-12T02:55:32Z",
+        "last_run_at": "2026-09-12T03:08:44Z",
         "last_status": "completed",
         "last_conclusion": "success",
-        "latest_duration_seconds": 18,
+        "latest_duration_seconds": 16,
         "median_duration_seconds": 19,
         "expected_interval_hours": null
       },
       {
         "name": "validate_runtime_config",
-        "runs": 70,
-        "successful": 63,
+        "runs": 71,
+        "successful": 64,
         "failed": 7,
         "cancelled": 0,
-        "last_run_at": "2026-09-12T02:55:32Z",
+        "last_run_at": "2026-09-12T03:08:44Z",
         "last_status": "completed",
         "last_conclusion": "success",
-        "latest_duration_seconds": 20,
+        "latest_duration_seconds": 15,
         "median_duration_seconds": 20,
         "expected_interval_hours": null
       }
