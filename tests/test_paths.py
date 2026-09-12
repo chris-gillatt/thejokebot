@@ -21,6 +21,27 @@ from thejokebot import paths
 
 
 class RepositoryPathTests(unittest.TestCase):
+    def test_dashboard_refreshes_after_operational_workflows(self):
+        repository_root = Path(__file__).resolve().parents[1]
+        dashboard_workflow = (
+            repository_root / ".github" / "workflows" / "bluesky_dashboard.yml"
+        ).read_text(encoding="utf-8")
+        producers = {
+            "bluesky_follow_fellows",
+            "bluesky_follows_and_likes",
+            "bluesky_manage_starter_pack",
+            "bluesky_post_joke",
+            "bluesky_process_reports",
+            "bluesky_unfollow",
+            "bluesky_validate_unfollow_ignore",
+            "provider_health_check",
+        }
+
+        self.assertIn("  workflow_run:\n", dashboard_workflow)
+        self.assertIn("      - completed\n", dashboard_workflow)
+        for producer in producers:
+            self.assertIn(f"      - {producer}\n", dashboard_workflow)
+
     def test_first_party_code_does_not_import_deleted_root_modules(self):
         repository_root = Path(__file__).resolve().parents[1]
         deleted_modules = {
