@@ -383,17 +383,9 @@ def _validate_config(payload):
         minimum=0.0,
         field_name="unfollow.batch_pause_seconds",
     )
-    runtime_default_ignorable_handles = _ensure_string_list(
+    unfollow["default_ignorable_handles"] = _ensure_string_list(
         unfollow.get("default_ignorable_handles", []),
         "unfollow.default_ignorable_handles",
-    )
-    built_in_default_ignorable_handles = _DEFAULT_CONFIG["unfollow"][
-        "default_ignorable_handles"
-    ]
-    unfollow["default_ignorable_handles"] = list(
-        dict.fromkeys(
-            built_in_default_ignorable_handles + runtime_default_ignorable_handles
-        )
     )
     cfg["unfollow"] = unfollow
 
