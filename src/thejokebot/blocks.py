@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 
 from atproto import models
 
-from bluesky_common import mask_sensitive, retry_network_call
+from thejokebot.runtime import mask_sensitive, retry_network_call
 
 BLOCK_DIDS_ENV = "BLUESKY_BLOCK_DIDS"
 _DID_PATTERN = re.compile(

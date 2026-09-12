@@ -9,13 +9,13 @@ import time
 import atproto_client.exceptions
 import requests
 
-from bluesky_common import (
+from thejokebot.runtime import (
     get_runtime_controls,
     login_client,
     mask_sensitive,
     retry_network_call,
 )
-from bluesky_follower_utils import fetch_list_member_dids, fetch_paginated_data
+from thejokebot.followers import fetch_list_member_dids, fetch_paginated_data
 from thejokebot.paths import RESOURCES_DIR
 
 _CONFIG_PATH = RESOURCES_DIR / "jokebot_starter_pack.json"

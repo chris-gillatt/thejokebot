@@ -9,14 +9,14 @@ import requests
 import atproto_client.exceptions
 import regex
 
-import bluesky_denylist
-import bluesky_config
-import bluesky_joke_providers
-import bluesky_state
-from bluesky_common import login_client
+from thejokebot import denylist as joke_denylist
+from thejokebot import config as runtime_config
+from thejokebot import providers as joke_providers
+from thejokebot import state as bot_state
+from thejokebot.runtime import login_client
 
 # Joke memory and posting defaults now come from central runtime config.
-_POSTING_CONFIG = bluesky_config.get_posting_config()
+_POSTING_CONFIG = runtime_config.get_posting_config()
 DAYS_LIMIT = _POSTING_CONFIG["days_limit"]
 MAX_ATTEMPTS = _POSTING_CONFIG["max_attempts"]
 BLUESKY_MAX_POST_CHARS = _POSTING_CONFIG["max_post_chars"]
@@ -58,7 +58,7 @@ def get_max_joke_chars(hashtags: list[str]) -> int:
 
 def get_posting_hashtag_pool() -> list[str]:
     """Return the resolved posting tag pool from central runtime tag resolution."""
-    return list(bluesky_config.get_posting_tag_runtime_config()["tag_pool"])
+    return list(runtime_config.get_posting_tag_runtime_config()["tag_pool"])
 
 
 def _build_group_lookup(similarity_groups: list[list[str]]) -> dict[str, int]:
@@ -229,7 +229,7 @@ def pick_joke(
     Returns (joke_text, b64_encoded) on success, raises ValueError if all attempts
     are duplicates, too long, or the provider raises.
     """
-    fetch_fn = bluesky_joke_providers.PROVIDERS[provider_name]
+    fetch_fn = joke_providers.PROVIDERS[provider_name]
     selected_hashtags = hashtags or DEFAULT_POSTING_HASHTAGS
     max_joke_chars = get_max_joke_chars(selected_hashtags)
     recent_dedupe_b64s = {
@@ -332,7 +332,7 @@ def _apply_posting_state_updates(
     hashtags_for_post=None,
 ):
     for provider_name, error, reason_counts in provider_failures:
-        bluesky_state.record_failure(
+        bot_state.record_failure(
             latest_state,
             provider_name,
             error,
@@ -340,13 +340,13 @@ def _apply_posting_state_updates(
         )
 
     if starting_provider:
-        bluesky_state.record_provider_started(latest_state, starting_provider)
+        bot_state.record_provider_started(latest_state, starting_provider)
 
     if used_provider != "fallback":
-        bluesky_state.record_provider_used(latest_state, used_provider)
+        bot_state.record_provider_used(latest_state, used_provider)
 
     if posted_successfully:
-        bluesky_state.add_posted_joke(
+        bot_state.add_posted_joke(
             latest_state,
             b64,
             used_provider,
@@ -354,39 +354,39 @@ def _apply_posting_state_updates(
             post_cid=post_cid,
             hashtags=hashtags_for_post,
         )
-        bluesky_state.advance_posting_tag_offset(
+        bot_state.advance_posting_tag_offset(
             latest_state,
             1,
             len(posting_hashtag_pool),
         )
 
-    bluesky_state.prune_old_jokes(latest_state, cutoff)
+    bot_state.prune_old_jokes(latest_state, cutoff)
 
 
 def _provider_order_for_run(state: dict, override: str | None) -> tuple[list[str], str]:
     """Return this run's provider chain and its scheduled starting provider."""
-    if override in bluesky_joke_providers.PROVIDERS:
+    if override in joke_providers.PROVIDERS:
         return [override], override
 
-    starting_provider = bluesky_state.get_next_provider(state)
-    primary_providers = list(bluesky_joke_providers.PRIMARY_PROVIDERS)
+    starting_provider = bot_state.get_next_provider(state)
+    primary_providers = list(joke_providers.PRIMARY_PROVIDERS)
     start_index = primary_providers.index(starting_provider)
     ordered_primaries = (
         primary_providers[start_index:] + primary_providers[:start_index]
     )
     return (
         ordered_primaries
-        + list(bluesky_joke_providers.BACKUP_PROVIDERS)
-        + [bluesky_joke_providers.FALLBACK_PROVIDER],
+        + list(joke_providers.BACKUP_PROVIDERS)
+        + [joke_providers.FALLBACK_PROVIDER],
         starting_provider,
     )
 
 
 def main():
-    state = bluesky_state.load_state()
+    state = bot_state.load_state()
     cutoff = get_current_epoch() - (DAYS_LIMIT * 86400)
 
-    tag_runtime = bluesky_config.get_posting_tag_runtime_config()
+    tag_runtime = runtime_config.get_posting_tag_runtime_config()
     tag_fallback = tag_runtime["tag_fallback"]
     tag_default = tag_runtime["tag_default"]
     tag_max_count = tag_runtime["tag_max_count"]
@@ -394,7 +394,7 @@ def main():
     posting_hashtag_pool = tag_runtime["tag_pool"]
     tag_pool_source = tag_runtime["tag_pool_source"]
 
-    tag_offset = bluesky_state.get_posting_tag_offset(state)
+    tag_offset = bot_state.get_posting_tag_offset(state)
     shuffled_pool = shuffle_posting_hashtags(
         posting_hashtag_pool, tag_offset, tag_similarity_groups
     )
@@ -402,9 +402,9 @@ def main():
         f"Posting tag pool source: {tag_pool_source} ({len(posting_hashtag_pool)} tags)"
     )
 
-    recent_b64s = bluesky_state.get_recent_b64s(state, cutoff)
-    denylist_payload = bluesky_denylist.load_denylist()
-    recent_b64s |= bluesky_denylist.get_denylisted_b64s(denylist_payload)
+    recent_b64s = bot_state.get_recent_b64s(state, cutoff)
+    denylist_payload = joke_denylist.load_denylist()
+    recent_b64s |= joke_denylist.get_denylisted_b64s(denylist_payload)
 
     # Determine provider order: explicit override or next primary provider in
     # alternating rotation, followed by remaining primaries, then backups,
@@ -486,7 +486,7 @@ def main():
                 posted_successfully,
             )
         )
-        bluesky_state.update_state(
+        bot_state.update_state(
             lambda latest_state: _apply_posting_state_updates(
                 latest_state,
                 provider_failures=provider_failures,

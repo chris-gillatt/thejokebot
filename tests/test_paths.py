@@ -1,3 +1,4 @@
+import ast
 import subprocess
 import sys
 import tempfile
@@ -5,19 +6,53 @@ import unittest
 from pathlib import Path
 
 import bluesky_collect_dashboard_metrics
-import bluesky_common
-import bluesky_config
+from thejokebot import runtime as runtime
+from thejokebot import config as runtime_config
 import bluesky_create_report_prs
-import bluesky_denylist
-import bluesky_joke_providers
+from thejokebot import denylist as joke_denylist
+from thejokebot import providers as joke_providers
 import bluesky_manage_starter_pack
 import bluesky_process_reports
-import bluesky_state
+from thejokebot import state as bot_state
 import bluesky_unfollow
 from thejokebot import paths
 
 
 class RepositoryPathTests(unittest.TestCase):
+    def test_first_party_code_does_not_import_deleted_root_modules(self):
+        repository_root = Path(__file__).resolve().parents[1]
+        deleted_modules = {
+            "bluesky_blocks",
+            "bluesky_common",
+            "bluesky_config",
+            "bluesky_denylist",
+            "bluesky_follower_utils",
+            "bluesky_joke_providers",
+            "bluesky_state",
+        }
+        python_files = list(repository_root.glob("*.py"))
+        for directory in ("src", "scripts", "tests"):
+            python_files.extend((repository_root / directory).rglob("*.py"))
+
+        stale_imports = []
+        for python_file in python_files:
+            tree = ast.parse(python_file.read_text(encoding="utf-8"))
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Import):
+                    imported_modules = {
+                        alias.name.split(".", 1)[0] for alias in node.names
+                    }
+                elif isinstance(node, ast.ImportFrom) and node.module:
+                    imported_modules = {node.module.split(".", 1)[0]}
+                else:
+                    continue
+                for module in deleted_modules & imported_modules:
+                    stale_imports.append(
+                        f"{python_file.relative_to(repository_root)}:{node.lineno}: {module}"
+                    )
+
+        self.assertEqual(stale_imports, [])
+
     def test_defaults_resolve_to_repository_owned_paths(self):
         repository_root = Path(__file__).resolve().parents[1]
 
@@ -28,22 +63,20 @@ class RepositoryPathTests(unittest.TestCase):
         self.assertEqual(paths.DASHBOARD_DIR, repository_root / "dashboard")
         self.assertEqual(paths.AGENT_TMP_DIR, repository_root / ".agent-tmp")
         self.assertEqual(
-            bluesky_common.DEFAULT_SESSION_FILE_PATH,
+            runtime.DEFAULT_SESSION_FILE_PATH,
             str(repository_root / ".agent-tmp" / "bluesky_session.txt"),
         )
         self.assertEqual(
-            bluesky_config._CONFIG_PATH,
+            runtime_config._CONFIG_PATH,
             repository_root / "resources" / "jokebot_runtime_config.json",
         )
+        self.assertEqual(bot_state.STATE_FILE, str(repository_root / "bot_state.json"))
         self.assertEqual(
-            bluesky_state.STATE_FILE, str(repository_root / "bot_state.json")
-        )
-        self.assertEqual(
-            bluesky_denylist.DENYLIST_FILE,
+            joke_denylist.DENYLIST_FILE,
             repository_root / "resources" / "jokebot_denylist.json",
         )
         self.assertEqual(
-            bluesky_joke_providers._JOKEBOOK_PATH,
+            joke_providers._JOKEBOOK_PATH,
             repository_root / "resources" / "jokebot_jokebook.json",
         )
         self.assertEqual(

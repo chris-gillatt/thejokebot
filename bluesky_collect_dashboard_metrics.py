@@ -16,9 +16,9 @@ from statistics import median
 
 import requests
 
-import bluesky_config
-import bluesky_state
-from bluesky_common import retry_network_call
+from thejokebot import config as runtime_config
+from thejokebot import state as bot_state
+from thejokebot.runtime import retry_network_call
 from thejokebot.paths import DASHBOARD_DIR
 
 PUBLIC_API_BASE = "https://public.api.bsky.app/xrpc"
@@ -896,9 +896,9 @@ def _cohort_metrics(state: dict, now: datetime) -> dict:
         month = str(member.get("cohort_month") or "")
         acquired_at = float(member.get("acquired_at") or 0)
         checkpoints = member.get("checkpoints", {})
-        if source not in bluesky_state.ACQUISITION_COHORT_SOURCES or not month:
+        if source not in bot_state.ACQUISITION_COHORT_SOURCES or not month:
             continue
-        for days in bluesky_state.ACQUISITION_COHORT_CHECKPOINT_DAYS:
+        for days in bot_state.ACQUISITION_COHORT_CHECKPOINT_DAYS:
             if (
                 checkpoints.get(str(days)) is None
                 and now_timestamp >= acquired_at + days * 24 * 60 * 60
@@ -907,12 +907,12 @@ def _cohort_metrics(state: dict, now: datetime) -> dict:
 
     periods = []
     for month, source_totals in sorted(cohort_state.get("cohorts", {}).items()):
-        for source in bluesky_state.ACQUISITION_COHORT_SOURCES:
+        for source in bot_state.ACQUISITION_COHORT_SOURCES:
             totals = source_totals.get(source)
             if not isinstance(totals, dict):
                 continue
             checkpoints = {}
-            for days in bluesky_state.ACQUISITION_COHORT_CHECKPOINT_DAYS:
+            for days in bot_state.ACQUISITION_COHORT_CHECKPOINT_DAYS:
                 checkpoint = str(days)
                 checkpoints[checkpoint] = _cohort_checkpoint_metrics(
                     totals,
@@ -929,7 +929,7 @@ def _cohort_metrics(state: dict, now: datetime) -> dict:
             )
 
     return {
-        "checkpoint_days": list(bluesky_state.ACQUISITION_COHORT_CHECKPOINT_DAYS),
+        "checkpoint_days": list(bot_state.ACQUISITION_COHORT_CHECKPOINT_DAYS),
         "coverage_started_at": _cohort_coverage_started_at(
             cohort_state.get("coverage_started_at")
         ),
@@ -1150,7 +1150,7 @@ def _network_maintenance_metrics(
         "interaction": "interaction",
         "manual_reconciled": "other",
     }
-    grace_cutoff = now.timestamp() - bluesky_state.FOLLOW_RESPONSE_GRACE_PERIOD_SECONDS
+    grace_cutoff = now.timestamp() - bot_state.FOLLOW_RESPONSE_GRACE_PERIOD_SECONDS
     source_counts = Counter(
         source_names.get(str(entry.get("source") or ""), "other")
         for entry in state.get("follow_grace", {}).get("entries", [])
@@ -1174,7 +1174,7 @@ def _network_maintenance_metrics(
     return {
         "window_days": WORKFLOW_WINDOW_DAYS,
         "response_window": {
-            "days": bluesky_state.FOLLOW_RESPONSE_GRACE_PERIOD_DAYS,
+            "days": bot_state.FOLLOW_RESPONSE_GRACE_PERIOD_DAYS,
             "active": sum(source_counts.values()),
             "by_source": {
                 source: source_counts[source]
@@ -1425,7 +1425,7 @@ def _history_from_collection(
                         "success_rate",
                     )
                 }
-                for source in bluesky_state.ACQUISITION_COHORT_SOURCES
+                for source in bot_state.ACQUISITION_COHORT_SOURCES
             },
             "cohorts": {
                 "checkpoint_days": audience_growth.get("cohorts", {}).get(
@@ -1817,7 +1817,7 @@ def _provider_metrics(state: dict, joke_posts: list[dict]) -> dict:
                 "fallthroughs": int(failure.get("count") or 0),
                 "rejection_counts": {
                     reason: int(reason_counts.get(reason) or 0)
-                    for reason in bluesky_state.PROVIDER_FAILURE_REASONS
+                    for reason in bot_state.PROVIDER_FAILURE_REASONS
                 },
                 "last_failure_at": failure.get("last_failure_at"),
                 "last_failure_reason": failure.get("last_error"),
@@ -2003,7 +2003,7 @@ def _update_workflow_summary(summary: dict, run: dict) -> int | None:
 
 
 def _workflow_metrics(workflow_runs: list[dict], now: datetime) -> dict:
-    schedules = bluesky_config.get_workflow_schedule_config()
+    schedules = runtime_config.get_workflow_schedule_config()
     grouped = {
         name: {
             "name": name,
@@ -2187,7 +2187,7 @@ def collect_metrics(
     automation = _workflow_metrics(workflow_runs or [], now)
     posting_delivery = _posting_delivery(
         state,
-        bluesky_config.get_workflow_schedule_config()["bluesky_post_joke"],
+        runtime_config.get_workflow_schedule_config()["bluesky_post_joke"],
         now,
     )
     automation["alerts"] = _operational_alerts(
@@ -2275,7 +2275,7 @@ def main() -> None:
     )
     metrics = collect_metrics(
         actor,
-        bluesky_state.load_state(),
+        bot_state.load_state(),
         collector_existing,
         session=session,
         now=now,

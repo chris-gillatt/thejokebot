@@ -4,8 +4,8 @@ import os
 import unittest
 from unittest import mock
 
-import bluesky_joke_providers
-import bluesky_state
+from thejokebot import providers as joke_providers
+from thejokebot import state as bot_state
 from scripts import update_provider_health
 
 
@@ -18,7 +18,7 @@ class ProviderHealthTests(unittest.TestCase):
                     os.environ, {"API_NINJAS_API_KEY": "test-key"}, clear=False
                 ):
                     with mock.patch.dict(
-                        bluesky_joke_providers.PROVIDERS,
+                        joke_providers.PROVIDERS,
                         {provider_name: fetch_provider},
                         clear=False,
                     ):
@@ -33,7 +33,7 @@ class ProviderHealthTests(unittest.TestCase):
 
     def test_provider_exception_is_recorded_as_failure(self):
         with mock.patch.dict(
-            bluesky_joke_providers.PROVIDERS,
+            joke_providers.PROVIDERS,
             {"jokeapi": mock.Mock(side_effect=TimeoutError("timed out"))},
             clear=False,
         ):
@@ -51,7 +51,7 @@ class ProviderHealthTests(unittest.TestCase):
         self.assertEqual(result["error"], "API_NINJAS_API_KEY is not set")
 
     def test_health_state_tracks_failures_and_recovery(self):
-        state = bluesky_state._default_state()
+        state = bot_state._default_state()
         failed = {
             "jokeapi": {
                 "success": False,
@@ -86,7 +86,7 @@ class ProviderHealthTests(unittest.TestCase):
         self.assertEqual(update_provider_health._critical_failures(recovered), [])
 
     def test_unconfigured_provider_resets_failure_streak(self):
-        state = bluesky_state._default_state()
+        state = bot_state._default_state()
         state["provider"]["health_checks"]["api_ninjas"] = {
             "last_check_success": False,
             "consecutive_failures": 3,

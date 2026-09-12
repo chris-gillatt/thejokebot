@@ -11,17 +11,22 @@ from pathlib import Path
 import requests
 import atproto_client.exceptions
 
-import bluesky_config
-import bluesky_denylist
-import bluesky_state
+from thejokebot import config as runtime_config
+from thejokebot import denylist as joke_denylist
+from thejokebot import state as bot_state
 from atproto import models
-from bluesky_common import get_int_env, login_client, mask_sensitive, retry_network_call
+from thejokebot.runtime import (
+    get_int_env,
+    login_client,
+    mask_sensitive,
+    retry_network_call,
+)
 from thejokebot.paths import AGENT_TMP_DIR
 
 REPORT_TAG_PATTERN = re.compile(r"(?:^|\s)#report\b", re.IGNORECASE)
 TRAILING_TAGS_PATTERN = re.compile(r"\n\n(?:#\w+\s*)+$", re.IGNORECASE)
 DEFAULT_OUTPUT_PATH = AGENT_TMP_DIR / "report_proposals.json"
-_REPORTS_CONFIG = bluesky_config.get_reports_config()
+_REPORTS_CONFIG = runtime_config.get_reports_config()
 DEFAULT_MAX_PAGES = _REPORTS_CONFIG["max_pages"]
 DEFAULT_PAGE_LIMIT = _REPORTS_CONFIG["page_limit"]
 DEFAULT_MAX_UNRESOLVED_ATTEMPTS = 3
@@ -244,7 +249,7 @@ def delete_approved_report_posts(client, denylist: dict, state: dict) -> int:
 
     Returns the number of posts deleted in this run.
     """
-    already_deleted = bluesky_state.get_deleted_post_uris(state)
+    already_deleted = bot_state.get_deleted_post_uris(state)
     deleted_count = 0
 
     for entry in denylist.get("jokes", []):
@@ -254,12 +259,12 @@ def delete_approved_report_posts(client, denylist: dict, state: dict) -> int:
         success, should_retry = _delete_post(client, uri)
         masked_uri = mask_sensitive(uri)
         if success:
-            bluesky_state.record_deleted_post_uri(state, uri)
+            bot_state.record_deleted_post_uri(state, uri)
             deleted_count += 1
             print(f"Deleted approved report post: {masked_uri}")
         elif not should_retry:
             # Mark permanent failures to avoid retrying forever
-            bluesky_state.record_deleted_post_uri(state, uri)
+            bot_state.record_deleted_post_uri(state, uri)
             print(f"Recorded permanent failure for: {masked_uri}")
 
     return deleted_count
@@ -324,7 +329,7 @@ def _process_report_notification(
     if not notification_uri:
         return None
     if notification_uri in scan_context["processed_uris"]:
-        bluesky_state.clear_unresolved_notification_attempt(state, notification_uri)
+        bot_state.clear_unresolved_notification_attempt(state, notification_uri)
         return None
 
     proposal, should_mark = _resolve_notification_proposal(
@@ -336,16 +341,16 @@ def _process_report_notification(
     )
     if should_mark:
         scan_context["processed_notifications"].add(notification_uri)
-        bluesky_state.clear_unresolved_notification_attempt(state, notification_uri)
+        bot_state.clear_unresolved_notification_attempt(state, notification_uri)
         return proposal
 
-    unresolved_attempts = bluesky_state.increment_unresolved_notification_attempt(
+    unresolved_attempts = bot_state.increment_unresolved_notification_attempt(
         state, notification_uri
     )
     if unresolved_attempts < scan_context["max_unresolved_attempts"]:
         return proposal
     scan_context["processed_notifications"].add(notification_uri)
-    bluesky_state.clear_unresolved_notification_attempt(state, notification_uri)
+    bot_state.clear_unresolved_notification_attempt(state, notification_uri)
     masked_uri = mask_sensitive(notification_uri)
     print(
         "Warning: giving up on unresolved report notification "
@@ -372,8 +377,8 @@ def collect_report_proposals(
     - processed_notifications: URIs to persist as processed this run
     - pages_fetched: number of notification pages requested
     """
-    processed_uris = bluesky_state.get_processed_notification_uris(state)
-    post_uri_index = bluesky_state.get_post_uri_index(state)
+    processed_uris = bot_state.get_processed_notification_uris(state)
+    post_uri_index = bot_state.get_post_uri_index(state)
 
     page_limit = get_int_env("BLUESKY_REPORT_PAGE_LIMIT", DEFAULT_PAGE_LIMIT, minimum=1)
     max_pages = get_int_env("BLUESKY_REPORT_MAX_PAGES", DEFAULT_MAX_PAGES, minimum=1)
@@ -450,9 +455,9 @@ def _write_output(output_path: Path, payload: dict) -> None:
 def main() -> None:
     output_path = Path(os.getenv("BLUESKY_REPORT_OUTPUT", str(DEFAULT_OUTPUT_PATH)))
 
-    state = bluesky_state.load_state()
-    denylist = bluesky_denylist.load_denylist()
-    denylisted_b64s = bluesky_denylist.get_denylisted_b64s(denylist)
+    state = bot_state.load_state()
+    denylist = joke_denylist.load_denylist()
+    denylisted_b64s = joke_denylist.get_denylisted_b64s(denylist)
 
     client, _ = login_client()
 
@@ -465,12 +470,12 @@ def main() -> None:
     )
 
     for notification_uri in processed_notifications:
-        bluesky_state.record_processed_notification(state, notification_uri)
-    bluesky_state.prune_processed_notifications(state)
-    bluesky_state.prune_unresolved_notification_attempts(state)
-    bluesky_state.set_reports_checked_now(state)
+        bot_state.record_processed_notification(state, notification_uri)
+    bot_state.prune_processed_notifications(state)
+    bot_state.prune_unresolved_notification_attempts(state)
+    bot_state.set_reports_checked_now(state)
 
-    acknowledged_uris = bluesky_state.get_acknowledged_report_uris(state)
+    acknowledged_uris = bot_state.get_acknowledged_report_uris(state)
     ack_count = 0
     for proposal in proposals:
         reply_uri = proposal.get("source_reply_uri")
@@ -478,23 +483,23 @@ def main() -> None:
             success, should_retry = acknowledge_report(client, proposal)
             masked_reply_uri = mask_sensitive(reply_uri)
             if success:
-                bluesky_state.record_acknowledged_report_uri(state, reply_uri)
+                bot_state.record_acknowledged_report_uri(state, reply_uri)
                 ack_count += 1
                 print(f"Acknowledged report reply: {masked_reply_uri}")
             elif not should_retry:
                 # Mark permanent failures to avoid retrying forever
-                bluesky_state.record_acknowledged_report_uri(state, reply_uri)
+                bot_state.record_acknowledged_report_uri(state, reply_uri)
                 print(f"Recorded permanent failure for: {masked_reply_uri}")
 
-    unresolved_count = len(bluesky_state.get_unresolved_notification_attempts(state))
-    bluesky_state.record_moderation_activity(
+    unresolved_count = len(bot_state.get_unresolved_notification_attempts(state))
+    bot_state.record_moderation_activity(
         state,
         proposals=len(proposals),
         acknowledgements=ack_count,
         approved_removals=deleted_count,
         unresolved=unresolved_count,
     )
-    bluesky_state.save_state(state, domains="moderation")
+    bot_state.save_state(state, domains="moderation")
 
     payload = {
         "source": "app.bsky.notification.listNotifications",

@@ -1,5 +1,5 @@
 import time
-from bluesky_common import retry_network_call
+from thejokebot.runtime import retry_network_call
 
 
 class IncompletePaginationError(RuntimeError):

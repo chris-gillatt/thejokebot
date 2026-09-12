@@ -7,8 +7,8 @@ import os
 import atproto_client.exceptions
 import requests
 
-import bluesky_config
-from bluesky_common import (
+from thejokebot import config as runtime_config
+from thejokebot.runtime import (
     get_bool_env,
     login_client,
     mask_sensitive,
@@ -16,7 +16,7 @@ from bluesky_common import (
 )
 
 DEFAULT_IGNORABLE_HANDLES = tuple(
-    bluesky_config.get_unfollow_config()["default_ignorable_handles"]
+    runtime_config.get_unfollow_config()["default_ignorable_handles"]
 )
 _STALE_ERROR_MARKERS = (
     "profile not found",

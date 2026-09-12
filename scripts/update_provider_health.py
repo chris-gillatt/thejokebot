@@ -10,13 +10,12 @@ import os
 import sys
 import time
 
-import bluesky_joke_providers
-import bluesky_state
+from thejokebot import providers as joke_providers
+from thejokebot import state as bot_state
 
 # All providers to monitor: primary, backup, and fallback.
 ALL_PROVIDERS = (
-    list(bluesky_state.PROVIDER_ROTATION_ORDER)
-    + bluesky_joke_providers.BACKUP_PROVIDERS
+    list(bot_state.PROVIDER_ROTATION_ORDER) + joke_providers.BACKUP_PROVIDERS
 )
 
 
@@ -38,7 +37,7 @@ def check_provider_health(provider_name: str) -> dict:
             "error": "API_NINJAS_API_KEY is not set",
             "check_at": check_at,
         }
-    fetch_fn = bluesky_joke_providers.PROVIDERS.get(provider_name)
+    fetch_fn = joke_providers.PROVIDERS.get(provider_name)
     if not fetch_fn:
         return {
             "success": False,
@@ -95,7 +94,7 @@ def _apply_health_results(state: dict, health_results: dict) -> dict:
 def _critical_failures(health_checks: dict) -> list[tuple[str, int]]:
     return [
         (provider_name, health_checks[provider_name]["consecutive_failures"])
-        for provider_name in bluesky_state.PROVIDER_ROTATION_ORDER
+        for provider_name in bot_state.PROVIDER_ROTATION_ORDER
         if health_checks.get(provider_name, {}).get("consecutive_failures", 0) >= 2
     ]
 
@@ -117,7 +116,7 @@ def main():
         else:
             print(f"✗ {provider_name}: FAILED — {result['error']}")
 
-    health_checks = bluesky_state.update_state(
+    health_checks = bot_state.update_state(
         lambda state: _apply_health_results(state, health_results),
         domains="provider_health",
     )

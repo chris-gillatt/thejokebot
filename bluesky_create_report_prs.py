@@ -9,7 +9,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-import bluesky_denylist
+from thejokebot import denylist as joke_denylist
 from thejokebot.paths import AGENT_TMP_DIR, RESOURCES_DIR
 
 DEFAULT_PROPOSALS_PATH = AGENT_TMP_DIR / "report_proposals.json"
@@ -169,8 +169,8 @@ def _stage_jokebook_change(b64_value: str, joke_hash: str) -> bool:
 
 
 def _stage_denylist_change(proposal: dict, b64_value: str, joke_hash: str) -> bool:
-    denylist = bluesky_denylist.load_denylist(DENYLIST_PATH)
-    added = bluesky_denylist.add_denylist_entry(
+    denylist = joke_denylist.load_denylist(DENYLIST_PATH)
+    added = joke_denylist.add_denylist_entry(
         denylist,
         b64=b64_value,
         source_post_uri=proposal.get("source_post_uri") or "",
@@ -181,7 +181,7 @@ def _stage_denylist_change(proposal: dict, b64_value: str, joke_hash: str) -> bo
     if not added:
         print(f"Skipping already denylisted joke hash {joke_hash}")
         return False
-    bluesky_denylist.save_denylist(denylist, DENYLIST_PATH)
+    joke_denylist.save_denylist(denylist, DENYLIST_PATH)
     run_command(["git", "add", str(DENYLIST_PATH)])
     return True
 

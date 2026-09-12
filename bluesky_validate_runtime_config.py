@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import bluesky_config
+from thejokebot import config as runtime_config
 
 WORKFLOW_FILES = {
     "bluesky_post_joke": ".github/workflows/bluesky_post_joke.yml",
@@ -21,7 +21,7 @@ _WORKFLOW_FALLBACK_PREFIX = ".github/workflows-disabled/"
 
 
 def _estimate_runs_per_week(cron: str) -> float | None:
-    return bluesky_config.estimate_runs_per_week(cron)
+    return runtime_config.estimate_runs_per_week(cron)
 
 
 def _validate_guard_rails(config: dict, schedules: dict[str, str]) -> list[str]:
@@ -97,7 +97,7 @@ def validate_runtime_config() -> list[str]:
     errors: list[str] = []
 
     try:
-        config = bluesky_config.load_runtime_config(strict=True)
+        config = runtime_config.load_runtime_config(strict=True)
     except (FileNotFoundError, ValueError) as exc:
         return [str(exc)]
 

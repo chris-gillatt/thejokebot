@@ -1428,11 +1428,11 @@ class DashboardCollectorTests(unittest.TestCase):
     def test_audience_growth_keeps_source_denominators_and_aggregate_cohorts(self):
         now = datetime(2026, 9, 5, 12, tzinfo=timezone.utc)
         acquired_at = int(datetime(2026, 7, 1, tzinfo=timezone.utc).timestamp())
-        state = dashboard.bluesky_state._default_state()
-        dashboard.bluesky_state.record_acquisition(
+        state = dashboard.bot_state._default_state()
+        dashboard.bot_state.record_acquisition(
             state, "did:private:retained", "interaction", acquired_at=acquired_at
         )
-        dashboard.bluesky_state.reconcile_acquisition_cohorts(
+        dashboard.bot_state.reconcile_acquisition_cohorts(
             state,
             {"did:private:retained"},
             observed_at=acquired_at + 30 * 24 * 60 * 60,

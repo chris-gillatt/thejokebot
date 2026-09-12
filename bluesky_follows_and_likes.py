@@ -11,18 +11,18 @@ import requests
 import atproto_client.exceptions
 from colorama import Fore, Style
 
-import bluesky_blocks
-import bluesky_config
-import bluesky_state
-from bluesky_common import (
+from thejokebot import blocks as blocks
+from thejokebot import config as runtime_config
+from thejokebot import state as bot_state
+from thejokebot.runtime import (
     get_runtime_controls,
     login_client,
     mask_sensitive,
     retry_network_call,
 )
-from bluesky_follower_utils import fetch_paginated_data
+from thejokebot.followers import fetch_paginated_data
 
-_FOLLOWS_AND_LIKES_CONFIG = bluesky_config.get_follows_and_likes_config()
+_FOLLOWS_AND_LIKES_CONFIG = runtime_config.get_follows_and_likes_config()
 
 _DEFAULT_LIKE_MAX_PAGES = _FOLLOWS_AND_LIKES_CONFIG["like_max_pages"]
 _DEFAULT_LIKE_PAGE_LIMIT = _FOLLOWS_AND_LIKES_CONFIG["like_page_limit"]
@@ -98,7 +98,7 @@ def _follow_back_candidates(
                 )
                 print(f"{Fore.GREEN}Followed {masked_did}{Style.RESET_ALL}")
                 if state is not None:
-                    bluesky_state.record_acquisition(state, did, "followback")
+                    bot_state.record_acquisition(state, did, "followback")
                 summary["follow_back_added"] += 1
             except (
                 requests.RequestException,
@@ -169,7 +169,7 @@ def follow_back(
         follower_dids = {f.did for f in followers}
         following_dids = {f.did for f in following}
         if state is not None and not dry_run and not cohorts_reconciled:
-            bluesky_state.reconcile_acquisition_cohorts(state, follower_dids)
+            bot_state.reconcile_acquisition_cohorts(state, follower_dids)
             cohorts_reconciled = True
         remaining_dids = follower_dids - following_dids
         observed_candidate_dids |= remaining_dids
@@ -310,8 +310,8 @@ def _follow_did_list(client, state, to_follow, dry_run, action_delay_seconds):
                     description=f"following interactor {masked_did}",
                 )
                 print(f"{Fore.GREEN}Followed interactor {masked_did}{Style.RESET_ALL}")
-                bluesky_state.record_follow_grace(state, did, source="interaction")
-                bluesky_state.record_acquisition(state, did, "interaction")
+                bot_state.record_follow_grace(state, did, source="interaction")
+                bot_state.record_acquisition(state, did, "interaction")
                 followed_count += 1
             except (
                 requests.RequestException,
@@ -351,8 +351,8 @@ def follow_interactors(
     user_did = client.me.did
     if summary is None:
         summary = {}
-    grace_dids = bluesky_state.get_follow_grace_dids(state)
-    unfollowed_dids = bluesky_state.get_unfollowed_dids(state)
+    grace_dids = bot_state.get_follow_grace_dids(state)
+    unfollowed_dids = bot_state.get_unfollowed_dids(state)
 
     print(
         f"{Fore.YELLOW}Fetching current follows for interaction-follow check.{Style.RESET_ALL}"
@@ -394,7 +394,7 @@ def follow_interactors(
     summary["failed"] = summary.get("failed", 0) + len(to_follow) - followed_count
 
     if followed_count > 0 and not dry_run:
-        bluesky_state.prune_follow_grace(state)
+        bot_state.prune_follow_grace(state)
 
     print(f"{Fore.GREEN}Interaction-follow completed.{Style.RESET_ALL}")
     return followed_count
@@ -526,7 +526,7 @@ def _collect_starter_pack_attribution(
     client, state: dict, now: datetime
 ) -> dict | None:
     """Collect a complete incremental scan of starter-pack follow attribution."""
-    attribution = bluesky_state.get_starter_pack_attribution(state)
+    attribution = bot_state.get_starter_pack_attribution(state)
     high_water = attribution.get("high_water_indexed_at")
     previous_boundary_hashes = set(attribution.get("boundary_notification_hashes", []))
     bootstrap_cutoff = now - timedelta(days=_STARTER_PACK_WINDOW_DAYS)
@@ -601,7 +601,7 @@ def _collect_starter_pack_attribution(
         "boundary_notification_hashes": page_state["boundary_hashes"],
         "observations": page_state["observations"],
         "cutoff_date": (
-            now - timedelta(days=bluesky_state.STARTER_PACK_ATTRIBUTION_RETENTION_DAYS)
+            now - timedelta(days=bot_state.STARTER_PACK_ATTRIBUTION_RETENTION_DAYS)
         )
         .date()
         .isoformat(),
@@ -622,7 +622,7 @@ def track_starter_pack_follows(
     count = len(scan["observations"])
     summary["starter_pack_follows"] = count
     if not dry_run:
-        bluesky_state.record_starter_pack_attribution_scan(state, **scan)
+        bot_state.record_starter_pack_attribution_scan(state, **scan)
     return count
 
 
@@ -698,7 +698,7 @@ def _process_like_page(
         if not _like_notification(client, reason, uri, cid, dry_run, summary):
             continue
 
-        bluesky_state.record_liked_reply_uri(state, uri)
+        bot_state.record_liked_reply_uri(state, uri)
         already_liked.add(uri)
         new_likes += 1
 
@@ -723,7 +723,7 @@ def like_replies(
 
     Returns the number of new likes performed.
     """
-    already_liked = bluesky_state.get_liked_reply_uris(state)
+    already_liked = bot_state.get_liked_reply_uris(state)
     if summary is None:
         summary = {}
     liked_count = 0
@@ -767,8 +767,8 @@ def like_replies(
 
         # Persist after each page so progress survives an interruption.
         if page_new_likes > 0:
-            bluesky_state.prune_liked_reply_uris(state)
-            bluesky_state.save_state(state, domains="social")
+            bot_state.prune_liked_reply_uris(state)
+            bot_state.save_state(state, domains="social")
 
         if stop_paging:
             break
@@ -777,7 +777,7 @@ def like_replies(
         if not cursor:
             break
 
-    bluesky_state.set_likes_checked_now(state)
+    bot_state.set_likes_checked_now(state)
     summary["interactions_liked"] = liked_count
     return liked_count
 
@@ -814,7 +814,7 @@ def main() -> None:
         print(f"{Fore.RED}Login failed: {exc}{Style.RESET_ALL}")
         return
 
-    reconciled_blocks = bluesky_blocks.reconcile_configured_blocks(
+    reconciled_blocks = blocks.reconcile_configured_blocks(
         client,
         dry_run=dry_run,
         action_delay_seconds=action_delay_seconds,
@@ -826,7 +826,7 @@ def main() -> None:
             f"{'s' if reconciled_blocks != 1 else ''} {action} action.{Style.RESET_ALL}"
         )
 
-    state = bluesky_state.load_state()
+    state = bot_state.load_state()
     social_summary = {
         "follow_back_candidates": 0,
         "follow_back_added": 0,
@@ -901,7 +901,7 @@ def main() -> None:
         print(f"{Fore.RED}Interaction liking failed: {exc}{Style.RESET_ALL}")
 
     print(_social_summary_line(social_summary, dry_run))
-    bluesky_state.save_state(state, domains="social")
+    bot_state.save_state(state, domains="social")
     if social_summary["failed"]:
         raise RuntimeError(
             f"Social run completed with {social_summary['failed']} failed action(s)."

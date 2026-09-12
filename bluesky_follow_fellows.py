@@ -3,17 +3,17 @@ import time
 import requests
 
 import atproto_client.exceptions
-import bluesky_config
-import bluesky_state
-from bluesky_common import (
+from thejokebot import config as runtime_config
+from thejokebot import state as bot_state
+from thejokebot.runtime import (
     get_runtime_controls,
     login_client,
     mask_sensitive,
     retry_network_call,
 )
-from bluesky_follower_utils import fetch_paginated_data
+from thejokebot.followers import fetch_paginated_data
 
-_FOLLOW_FELLOWS_CONFIG = bluesky_config.get_follow_fellows_config()
+_FOLLOW_FELLOWS_CONFIG = runtime_config.get_follow_fellows_config()
 
 # Limits
 soft_tag_limit = _FOLLOW_FELLOWS_CONFIG["per_tag_limit"]
@@ -151,14 +151,14 @@ def _successful_tag_counts(selected_users, followed_dids, tags):
 def _persist_follow_fellows_state(followed_dids, rotation_step, total_tags):
     def apply_follow_fellows_state_updates(latest_state):
         for did in followed_dids:
-            bluesky_state.record_follow_grace(latest_state, did)
-            bluesky_state.record_acquisition(latest_state, did, "discovery")
-        bluesky_state.advance_follow_fellows_tag_offset(
+            bot_state.record_follow_grace(latest_state, did)
+            bot_state.record_acquisition(latest_state, did, "discovery")
+        bot_state.advance_follow_fellows_tag_offset(
             latest_state, rotation_step, total_tags
         )
-        bluesky_state.prune_follow_grace(latest_state)
+        bot_state.prune_follow_grace(latest_state)
 
-    bluesky_state.update_state(
+    bot_state.update_state(
         apply_follow_fellows_state_updates,
         domains="social",
     )
@@ -178,9 +178,9 @@ def main():
         print(f"Action delay enabled: {action_delay_seconds:.2f}s between actions.")
 
     already_following = get_following(client)
-    state = bluesky_state.load_state()
-    unfollowed_dids = bluesky_state.get_unfollowed_dids(state)
-    tag_offset = bluesky_state.get_follow_fellows_tag_offset(state)
+    state = bot_state.load_state()
+    unfollowed_dids = bot_state.get_unfollowed_dids(state)
+    tag_offset = bot_state.get_follow_fellows_tag_offset(state)
     rotated_hashtags = hashtags[tag_offset:] + hashtags[:tag_offset]
     if unfollowed_dids:
         print(

@@ -3,14 +3,14 @@ import time
 import json
 import requests
 import atproto_client.exceptions
-import bluesky_config
+from thejokebot import config as runtime_config
 from colorama import Fore, Style
-from bluesky_follower_utils import (
+from thejokebot.followers import (
     extract_list_member_did,
     fetch_list_member_dids,
     fetch_paginated_data,
 )
-from bluesky_common import (
+from thejokebot.runtime import (
     login_client,
     get_runtime_controls,
     retry_network_call,
@@ -18,10 +18,10 @@ from bluesky_common import (
     get_float_env,
     mask_sensitive,
 )
-import bluesky_state as _state
+from thejokebot import state as _state
 from thejokebot.paths import RESOURCES_DIR
 
-_UNFOLLOW_CONFIG = bluesky_config.get_unfollow_config()
+_UNFOLLOW_CONFIG = runtime_config.get_unfollow_config()
 DEFAULT_UNFOLLOW_MAX_ACTIONS = _UNFOLLOW_CONFIG["max_actions"]
 DEFAULT_UNFOLLOW_BATCH_SIZE = _UNFOLLOW_CONFIG["batch_size"]
 DEFAULT_UNFOLLOW_BATCH_PAUSE_SECONDS = _UNFOLLOW_CONFIG["batch_pause_seconds"]

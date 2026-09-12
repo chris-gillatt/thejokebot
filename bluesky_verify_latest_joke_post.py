@@ -4,10 +4,10 @@ import re
 import sys
 from typing import Optional
 
-import bluesky_config
-from bluesky_common import login_client
+from thejokebot import config as runtime_config
+from thejokebot.runtime import login_client
 
-_POSTING_TAG_RUNTIME = bluesky_config.get_posting_tag_runtime_config()
+_POSTING_TAG_RUNTIME = runtime_config.get_posting_tag_runtime_config()
 _HASHTAG_PATTERN = re.compile(r"(?:^|\s)(#[\w]+)\b")
 
 # A valid post should include at least one configured posting tag.

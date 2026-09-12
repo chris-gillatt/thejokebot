@@ -17,7 +17,7 @@ import secrets
 from collections.abc import Callable
 
 import requests
-import bluesky_state
+from thejokebot import state as bot_state
 from thejokebot.paths import RESOURCES_DIR
 
 JOKE_TIMEOUT_SECONDS = 15
@@ -41,9 +41,9 @@ _GROANDECK_URL = "https://groandeck.com/api/v1/random"
 #
 # PRIMARY PROVIDERS (normal rotation):
 # Single source of truth for primary-provider rotation order lives in
-# bluesky_state.PROVIDER_ROTATION_ORDER. These providers form the
+# bot_state.PROVIDER_ROTATION_ORDER. These providers form the
 # active rotation and should all be called equally often.
-PRIMARY_PROVIDERS = list(bluesky_state.PROVIDER_ROTATION_ORDER)
+PRIMARY_PROVIDERS = list(bot_state.PROVIDER_ROTATION_ORDER)
 
 # BACKUP PROVIDERS (emergency fallback):
 # Only tried after all primaries fail. Used when providers are temporarily
