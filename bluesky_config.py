@@ -161,6 +161,7 @@ _DEFAULT_CONFIG = {
         "batch_pause_seconds": 60.0,
         "default_ignorable_handles": [
             "theonion.bsky.social",
+            "wholesomememe.bsky.social",
             "groandeck.bsky.social",
             "nocontextbritss.bsky.social",
             "dehler55.bsky.social",
