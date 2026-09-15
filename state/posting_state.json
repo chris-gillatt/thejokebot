@@ -1,7 +1,7 @@
 {
   "provider": {
-    "last_used": "icanhazdadjoke",
-    "last_used_at": 1789431959,
+    "last_used": "groandeck",
+    "last_used_at": 1789445463,
     "rotation_order": [
       "icanhazdadjoke",
       "jokeapi",
@@ -10,22 +10,22 @@
     ],
     "failures": {
       "icanhazdadjoke": {
-        "count": 62,
-        "last_failure_at": 1789157333,
+        "count": 63,
+        "last_failure_at": 1789445463,
         "last_error": "All 5 jokes from 'icanhazdadjoke' were rejected (5 duplicates, 0 too long)",
         "reason_counts": {
-          "duplicate": 115,
+          "duplicate": 120,
           "too_long": 0,
           "network_error": 0,
           "provider_error": 0
         }
       },
       "jokeapi": {
-        "count": 238,
-        "last_failure_at": 1789402175,
-        "last_error": "All 5 jokes from 'jokeapi' were rejected (4 duplicates, 1 too long)",
+        "count": 239,
+        "last_failure_at": 1789445463,
+        "last_error": "All 5 jokes from 'jokeapi' were rejected (5 duplicates, 0 too long)",
         "reason_counts": {
-          "duplicate": 291,
+          "duplicate": 296,
           "too_long": 4,
           "network_error": 1,
           "provider_error": 0
@@ -54,11 +54,11 @@
         }
       }
     },
-    "last_started_primary": "syrsly",
-    "last_started_primary_at": 1789431959
+    "last_started_primary": "icanhazdadjoke",
+    "last_started_primary_at": 1789445463
   },
   "posting": {
-    "tag_offset": 16
+    "tag_offset": 0
   },
   "posted_jokes": [
     {
@@ -7667,6 +7667,18 @@
       "hashtags": [
         "dadjoke",
         "humour",
+        "mumjokes"
+      ]
+    },
+    {
+      "ts": 1789445463,
+      "b64": "V2h5IGRvbid0IGZpc2ggZG8gd2VsbCBvbiBzY2hvb2wgdGVzdHM/CgpCZWNhdXNlIHRoZXkncmUgYWx3YXlzIHN3aW1taW5nIGJlbG93IEMgbGV2ZWwh",
+      "provider": "groandeck",
+      "post_uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mvjqyndxsz2b",
+      "post_cid": "bafyreihuk2h3wp6kanschxcwdvhneuzirooilhperytvgm3v3rnf4hnuii",
+      "hashtags": [
+        "dadjoke",
+        "funny",
         "mumjokes"
       ]
     }
