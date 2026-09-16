@@ -961,6 +961,22 @@
         "bookmarks": 40
       },
       "engagement_total": 5069
+    },
+    {
+      "period_start": "2026-09-16T00:00:00+00:00",
+      "collected_at": "2026-09-16T01:06:50.812435+00:00",
+      "followers": 6693,
+      "following": 10403,
+      "profile_posts": 2477,
+      "joke_posts": 828,
+      "engagement": {
+        "likes": 4343,
+        "replies": 311,
+        "reposts": 342,
+        "quotes": 36,
+        "bookmarks": 40
+      },
+      "engagement_total": 5072
     }
   ],
   "activity_runs": [
@@ -7087,6 +7103,101 @@
       "starter_pack_follows": 0,
       "starter_pack_scan_complete": 1,
       "protected": 12
+    },
+    {
+      "id": 35017885614,
+      "attempt": 1,
+      "workflow": "bluesky_post_joke",
+      "created_at": "2026-09-15T20:09:19Z",
+      "follows": 0,
+      "unfollows": 0,
+      "provider_attempts": 3,
+      "starting_provider": "icanhazdadjoke",
+      "successful_source": "groandeck",
+      "fallthrough": true,
+      "static_fallback": false,
+      "duplicate": 9,
+      "too_long": 1,
+      "network_error": 0,
+      "provider_error": 0,
+      "posted": true
+    },
+    {
+      "id": 35019745000,
+      "attempt": 1,
+      "workflow": "bluesky_follows_and_likes",
+      "created_at": "2026-09-15T20:27:30Z",
+      "follows": 0,
+      "unfollows": 0,
+      "failed": 0,
+      "social_summary_observed": true,
+      "follow_back_candidates": 0,
+      "follow_back_added": 0,
+      "interaction_candidates": 11,
+      "interaction_eligible": 0,
+      "interaction_added": 0,
+      "interactions_liked": 0,
+      "starter_pack_follows": 0,
+      "starter_pack_scan_complete": 1,
+      "protected": 11
+    },
+    {
+      "id": 35021368034,
+      "attempt": 1,
+      "workflow": "bluesky_process_reports",
+      "created_at": "2026-09-15T20:43:25Z",
+      "follows": 0,
+      "unfollows": 0,
+      "proposals": 0,
+      "acknowledgements": 0,
+      "approved_removals": 0,
+      "unresolved": 0
+    },
+    {
+      "id": 35030996411,
+      "attempt": 1,
+      "workflow": "bluesky_follows_and_likes",
+      "created_at": "2026-09-15T22:26:44Z",
+      "follows": 0,
+      "unfollows": 0,
+      "social_summary_observed": false
+    },
+    {
+      "id": 35039832268,
+      "attempt": 1,
+      "workflow": "bluesky_post_joke",
+      "created_at": "2026-09-16T00:24:00Z",
+      "follows": 0,
+      "unfollows": 0,
+      "provider_attempts": 2,
+      "starting_provider": "jokeapi",
+      "successful_source": "groandeck",
+      "fallthrough": true,
+      "static_fallback": false,
+      "duplicate": 5,
+      "too_long": 0,
+      "network_error": 0,
+      "provider_error": 0,
+      "posted": true
+    },
+    {
+      "id": 35042474999,
+      "attempt": 1,
+      "workflow": "bluesky_follows_and_likes",
+      "created_at": "2026-09-16T01:02:23Z",
+      "follows": 0,
+      "unfollows": 0,
+      "failed": 0,
+      "social_summary_observed": true,
+      "follow_back_candidates": 0,
+      "follow_back_added": 0,
+      "interaction_candidates": 9,
+      "interaction_eligible": 0,
+      "interaction_added": 0,
+      "interactions_liked": 0,
+      "starter_pack_follows": 0,
+      "starter_pack_scan_complete": 1,
+      "protected": 9
     }
   ],
   "automation_runs": [
@@ -12657,7 +12768,70 @@
       "attempt": 1,
       "workflow": "bluesky_dashboard",
       "created_at": "2026-09-15T18:37:49Z",
-      "updated_at": "2026-09-15T18:37:54Z",
+      "updated_at": "2026-09-15T18:39:22Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 35017885614,
+      "attempt": 1,
+      "workflow": "bluesky_post_joke",
+      "created_at": "2026-09-15T20:09:19Z",
+      "updated_at": "2026-09-15T20:09:44Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 35019745000,
+      "attempt": 1,
+      "workflow": "bluesky_follows_and_likes",
+      "created_at": "2026-09-15T20:27:30Z",
+      "updated_at": "2026-09-15T20:31:02Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 35021368034,
+      "attempt": 1,
+      "workflow": "bluesky_process_reports",
+      "created_at": "2026-09-15T20:43:25Z",
+      "updated_at": "2026-09-15T20:44:00Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 35030996411,
+      "attempt": 1,
+      "workflow": "bluesky_follows_and_likes",
+      "created_at": "2026-09-15T22:26:44Z",
+      "updated_at": "2026-09-15T22:27:43Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 35039832268,
+      "attempt": 1,
+      "workflow": "bluesky_post_joke",
+      "created_at": "2026-09-16T00:24:00Z",
+      "updated_at": "2026-09-16T00:24:32Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 35042474999,
+      "attempt": 1,
+      "workflow": "bluesky_follows_and_likes",
+      "created_at": "2026-09-16T01:02:23Z",
+      "updated_at": "2026-09-16T01:03:43Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 35042756022,
+      "attempt": 1,
+      "workflow": "bluesky_dashboard",
+      "created_at": "2026-09-16T01:06:26Z",
+      "updated_at": "2026-09-16T01:06:30Z",
       "status": "in_progress",
       "conclusion": null
     }
@@ -12749,8 +12923,14 @@
     },
     {
       "date": "2026-09-15",
-      "joke_posts": 5,
+      "joke_posts": 6,
       "follows": 2,
+      "unfollows": 0
+    },
+    {
+      "date": "2026-09-16",
+      "joke_posts": 1,
+      "follows": 0,
       "unfollows": 0
     }
   ],
@@ -27047,6 +27227,291 @@
         "window_days": 30,
         "coverage_started_at": "2026-08-01T14:31:28.650280Z",
         "last_checked_at": "2026-09-15T18:32:32.220396Z",
+        "total_follows": 94,
+        "windows": {
+          "7": 0,
+          "30": 94
+        },
+        "packs": [
+          {
+            "name": "Tricia the Welsh Daffodil starter pack #274",
+            "creator_handle": "thewelshtaffy24.bsky.social",
+            "url": "https://bsky.app/starter-pack/did:plc:ylslnx2g5q3wvnvywksuxx7g/3mucse7m74g2y",
+            "follows": 89,
+            "windows": {
+              "7": 0,
+              "30": 89
+            },
+            "share_30_day": 94.7
+          },
+          {
+            "name": "Tricia the Welsh Daffodil starter pack #217",
+            "creator_handle": "thewelshtaffy24.bsky.social",
+            "url": "https://bsky.app/starter-pack/did:plc:ylslnx2g5q3wvnvywksuxx7g/3mqd6ku64bb22",
+            "follows": 3,
+            "windows": {
+              "7": 0,
+              "30": 3
+            },
+            "share_30_day": 3.2
+          },
+          {
+            "name": "The Welsh Daffodil starter pack #152",
+            "creator_handle": "thewelshtaffy24.bsky.social",
+            "url": "https://bsky.app/starter-pack/did:plc:ylslnx2g5q3wvnvywksuxx7g/3mlr7hz6jyl2z",
+            "follows": 1,
+            "windows": {
+              "7": 0,
+              "30": 1
+            },
+            "share_30_day": 1.1
+          },
+          {
+            "name": "Tricia The Welsh Daffodil starter pack #5",
+            "creator_handle": "thewelshtaffy24.bsky.social",
+            "url": "https://bsky.app/starter-pack/did:plc:ylslnx2g5q3wvnvywksuxx7g/3mfd4vfyezw2h",
+            "follows": 1,
+            "windows": {
+              "7": 0,
+              "30": 1
+            },
+            "share_30_day": 1.1
+          }
+        ]
+      }
+    },
+    {
+      "period_start": "2026-09-16T00:00:00+00:00",
+      "collected_at": "2026-09-16T01:06:50.812435+00:00",
+      "providers": [
+        {
+          "name": "icanhazdadjoke",
+          "published": 605,
+          "visible_posts": 369,
+          "average_interactions": 6.6,
+          "fallthroughs": 64,
+          "rejection_counts": {
+            "duplicate": 125,
+            "too_long": 0,
+            "network_error": 0,
+            "provider_error": 0
+          },
+          "healthy": true,
+          "configured": true,
+          "last_health_check_at": 1789460375,
+          "consecutive_health_failures": 0
+        },
+        {
+          "name": "groandeck",
+          "published": 271,
+          "visible_posts": 270,
+          "average_interactions": 5.29,
+          "fallthroughs": 0,
+          "rejection_counts": {
+            "duplicate": 0,
+            "too_long": 0,
+            "network_error": 0,
+            "provider_error": 0
+          },
+          "healthy": true,
+          "configured": true,
+          "last_health_check_at": 1789460376,
+          "consecutive_health_failures": 0
+        },
+        {
+          "name": "jokeapi",
+          "published": 175,
+          "visible_posts": 171,
+          "average_interactions": 6.57,
+          "fallthroughs": 242,
+          "rejection_counts": {
+            "duplicate": 310,
+            "too_long": 5,
+            "network_error": 1,
+            "provider_error": 0
+          },
+          "healthy": true,
+          "configured": true,
+          "last_health_check_at": 1789460375,
+          "consecutive_health_failures": 0
+        },
+        {
+          "name": "syrsly",
+          "published": 18,
+          "visible_posts": 18,
+          "average_interactions": null,
+          "fallthroughs": 14,
+          "rejection_counts": {
+            "duplicate": 70,
+            "too_long": 0,
+            "network_error": 0,
+            "provider_error": 0
+          },
+          "healthy": true,
+          "configured": true,
+          "last_health_check_at": 1789460376,
+          "consecutive_health_failures": 0
+        },
+        {
+          "name": "api_ninjas",
+          "published": 0,
+          "visible_posts": 0,
+          "average_interactions": null,
+          "fallthroughs": 0,
+          "rejection_counts": {
+            "duplicate": 0,
+            "too_long": 0,
+            "network_error": 0,
+            "provider_error": 0
+          },
+          "healthy": true,
+          "configured": true,
+          "last_health_check_at": 1789460377,
+          "consecutive_health_failures": 0
+        }
+      ],
+      "posting_delivery": {
+        "current_streak": 110,
+        "windows": {
+          "7": {
+            "expected": 42,
+            "delivered": 42,
+            "missed": 0,
+            "delayed": 1,
+            "delivery_rate": 100.0
+          },
+          "30": {
+            "expected": 180,
+            "delivered": 171,
+            "missed": 9,
+            "delayed": 6,
+            "delivery_rate": 95.0
+          }
+        }
+      },
+      "network_maintenance": {
+        "window_days": 30,
+        "response_window": {
+          "days": 90,
+          "active": 1910,
+          "by_source": {
+            "discovery": 891,
+            "interaction": 32,
+            "other": 987
+          }
+        },
+        "unfollow": {
+          "completed_runs": 1,
+          "eligible": 2627,
+          "processed": 1200,
+          "unfollowed": 1200,
+          "failed": 0,
+          "missing_records": 0,
+          "cap_remaining": 1427,
+          "stopped_early_runs": 0
+        }
+      },
+      "audience_growth": {
+        "window_days": 30,
+        "net_followers": {
+          "7": 32,
+          "30": null
+        },
+        "sources": {
+          "followback": {
+            "denominator": "candidates",
+            "considered": 1857,
+            "acquired": 1620,
+            "success_rate": 87.2
+          },
+          "interaction": {
+            "denominator": "eligible",
+            "considered": 20,
+            "acquired": 20,
+            "success_rate": 100.0
+          },
+          "discovery": {
+            "denominator": "selected",
+            "considered": 549,
+            "acquired": 549,
+            "success_rate": 100.0
+          }
+        },
+        "cohorts": {
+          "checkpoint_days": [
+            30,
+            90
+          ],
+          "coverage_started_at": "2026-09-05T18:29:22+00:00",
+          "periods": [
+            {
+              "month": "2026-09",
+              "source": "followback",
+              "acquired": 50,
+              "checkpoints": {
+                "30": {
+                  "observed": 0,
+                  "still_following": 0,
+                  "rate": null,
+                  "pending_due": 0
+                },
+                "90": {
+                  "observed": 0,
+                  "still_following": 0,
+                  "rate": null,
+                  "pending_due": 0
+                }
+              }
+            },
+            {
+              "month": "2026-09",
+              "source": "interaction",
+              "acquired": 7,
+              "checkpoints": {
+                "30": {
+                  "observed": 0,
+                  "still_following": 0,
+                  "rate": null,
+                  "pending_due": 0
+                },
+                "90": {
+                  "observed": 0,
+                  "still_following": 0,
+                  "rate": null,
+                  "pending_due": 0
+                }
+              }
+            },
+            {
+              "month": "2026-09",
+              "source": "discovery",
+              "acquired": 112,
+              "checkpoints": {
+                "30": {
+                  "observed": 0,
+                  "still_following": 0,
+                  "rate": null,
+                  "pending_due": 0
+                },
+                "90": {
+                  "observed": 0,
+                  "still_following": 0,
+                  "rate": null,
+                  "pending_due": 0
+                }
+              }
+            }
+          ]
+        },
+        "coverage": {
+          "social_started_at": "2026-08-24T14:32:56Z",
+          "discovery_started_at": "2026-08-19T01:43:45Z"
+        }
+      },
+      "starter_pack_attribution": {
+        "window_days": 30,
+        "coverage_started_at": "2026-08-01T14:31:28.650280Z",
+        "last_checked_at": "2026-09-16T01:03:37.739560Z",
         "total_follows": 94,
         "windows": {
           "7": 0,
