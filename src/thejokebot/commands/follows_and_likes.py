@@ -15,6 +15,7 @@ from thejokebot import blocks as blocks
 from thejokebot import config as runtime_config
 from thejokebot import state as bot_state
 from thejokebot.runtime import (
+    get_nested_value,
     get_runtime_controls,
     login_client,
     mask_sensitive,
@@ -121,7 +122,6 @@ def _follow_back_candidates(
 
 def follow_back(
     client,
-    username: str,
     dry_run: bool,
     action_delay_seconds: float,
     summary: dict | None = None,
@@ -220,7 +220,7 @@ def follow_back(
 
 def _parse_notification_epoch(notification):
     """Parse the indexed_at field of a notification into a Unix timestamp, or None."""
-    indexed_at = _get_value(notification, "indexed_at") or _get_value(
+    indexed_at = get_nested_value(notification, "indexed_at") or get_nested_value(
         notification, "indexedAt"
     )
     if not indexed_at:
@@ -236,7 +236,7 @@ def _collect_page_interactor_dids(
     notifications, user_did, cutoff_epoch, interactor_dids
 ):
     for notification in notifications:
-        reason = _get_value(notification, "reason")
+        reason = get_nested_value(notification, "reason")
         if reason not in _INTERACTION_FOLLOW_REASONS:
             continue
 
@@ -244,7 +244,7 @@ def _collect_page_interactor_dids(
         if notification_epoch is not None and notification_epoch < cutoff_epoch:
             return True
 
-        author_did = _get_value(notification, "author", "did")
+        author_did = get_nested_value(notification, "author", "did")
         if author_did and author_did != user_did:
             interactor_dids.add(author_did)
     return False
@@ -277,13 +277,13 @@ def _collect_interactor_dids(client, user_did, cutoff_epoch):
             )
             break
 
-        notifications = _get_value(response, "notifications") or []
+        notifications = get_nested_value(response, "notifications") or []
         if _collect_page_interactor_dids(
             notifications, user_did, cutoff_epoch, interactor_dids
         ):
             break
 
-        cursor = _get_value(response, "cursor")
+        cursor = get_nested_value(response, "cursor")
         if not cursor:
             break
 
@@ -405,18 +405,6 @@ def follow_interactors(
 # ---------------------------------------------------------------------------
 
 
-def _get_value(obj, *path):
-    cur = obj
-    for key in path:
-        if cur is None:
-            return None
-        if isinstance(cur, dict):
-            cur = cur.get(key)
-        else:
-            cur = getattr(cur, key, None)
-    return cur
-
-
 # ---------------------------------------------------------------------------
 # Starter-pack attribution
 # ---------------------------------------------------------------------------
@@ -424,15 +412,15 @@ def _get_value(obj, *path):
 
 def _starter_pack_observation(notification) -> dict | None:
     """Return public pack metadata for an attributed follow notification."""
-    if _get_value(notification, "reason") != "follow":
+    if get_nested_value(notification, "reason") != "follow":
         return None
-    starter_pack = _get_value(notification, "starter_pack") or _get_value(
+    starter_pack = get_nested_value(notification, "starter_pack") or get_nested_value(
         notification, "starterPack"
     )
-    pack_uri = str(_get_value(starter_pack, "uri") or "").strip()
+    pack_uri = str(get_nested_value(starter_pack, "uri") or "").strip()
     if not _STARTER_PACK_URI_PATTERN.fullmatch(pack_uri):
         return None
-    indexed_at = _get_value(notification, "indexed_at") or _get_value(
+    indexed_at = get_nested_value(notification, "indexed_at") or get_nested_value(
         notification, "indexedAt"
     )
     try:
@@ -443,22 +431,24 @@ def _starter_pack_observation(notification) -> dict | None:
         return None
     return {
         "pack_uri": pack_uri,
-        "name": str(_get_value(starter_pack, "record", "name") or "Starter pack"),
-        "creator_handle": str(_get_value(starter_pack, "creator", "handle") or ""),
+        "name": str(get_nested_value(starter_pack, "record", "name") or "Starter pack"),
+        "creator_handle": str(
+            get_nested_value(starter_pack, "creator", "handle") or ""
+        ),
         "observed_at": observed_at.isoformat().replace(_UTC_OFFSET, "Z"),
         "date": observed_at.date().isoformat(),
     }
 
 
 def _notification_hash(notification) -> str:
-    uri = str(_get_value(notification, "uri") or "")
+    uri = str(get_nested_value(notification, "uri") or "")
     return hashlib.sha256(uri.encode("utf-8")).hexdigest() if uri else ""
 
 
 def _update_starter_pack_page_boundary(
     notification, notification_epoch, notification_hash, page_state
 ):
-    indexed_at = _get_value(notification, "indexed_at") or _get_value(
+    indexed_at = get_nested_value(notification, "indexed_at") or get_nested_value(
         notification, "indexedAt"
     )
     if (
@@ -572,7 +562,7 @@ def _collect_starter_pack_attribution(
             return None
 
         complete = _process_starter_pack_page(
-            _get_value(response, "notifications") or [],
+            get_nested_value(response, "notifications") or [],
             stop_epoch,
             previous_boundary_hashes,
             page_state,
@@ -580,7 +570,7 @@ def _collect_starter_pack_attribution(
 
         if complete:
             break
-        next_cursor = _get_value(response, "cursor")
+        next_cursor = get_nested_value(response, "cursor")
         if not next_cursor:
             complete = True
             break
@@ -627,17 +617,17 @@ def track_starter_pack_follows(
 
 
 def _like_candidate(notification, cutoff_epoch, already_liked):
-    reason = _get_value(notification, "reason")
+    reason = get_nested_value(notification, "reason")
     if reason not in _LIKE_REASONS:
         return None, False
     notification_epoch = _parse_notification_epoch(notification)
     if notification_epoch is not None and notification_epoch < cutoff_epoch:
         return None, True
-    uri = _get_value(notification, "uri")
-    cid = _get_value(notification, "cid")
+    uri = get_nested_value(notification, "uri")
+    cid = get_nested_value(notification, "cid")
     if not uri or not cid:
         return None, False
-    reply_text = _get_value(notification, "record", "text") or ""
+    reply_text = get_nested_value(notification, "record", "text") or ""
     if re.search(r"(?:^|\s)#report\b", reply_text, re.IGNORECASE):
         return None, False
     if uri in already_liked:
@@ -752,7 +742,7 @@ def like_replies(
             )
             break
 
-        notifications = _get_value(response, "notifications") or []
+        notifications = get_nested_value(response, "notifications") or []
         page_new_likes, stop_paging = _process_like_page(
             client,
             state,
@@ -773,7 +763,7 @@ def like_replies(
         if stop_paging:
             break
 
-        cursor = _get_value(response, "cursor")
+        cursor = get_nested_value(response, "cursor")
         if not cursor:
             break
 
@@ -803,7 +793,7 @@ def main() -> None:
 
     try:
         print(f"{Fore.YELLOW}Logging in to Bluesky...{Style.RESET_ALL}")
-        client, username = login_client()
+        client, _username = login_client()
         print(f"{Fore.GREEN}Successfully logged in.{Style.RESET_ALL}")
     except (
         ValueError,
@@ -843,7 +833,6 @@ def main() -> None:
     try:
         follow_back(
             client,
-            username,
             dry_run,
             action_delay_seconds,
             social_summary,

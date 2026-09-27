@@ -432,9 +432,11 @@ def main():
             requests.RequestException,
             TimeoutError,
             atproto_client.exceptions.NetworkError,
-        ) as e:
-            print(f"Provider '{provider_name}' failed: {e}")
-            provider_failures.append((provider_name, str(e), _failure_reason_counts(e)))
+        ) as exc:
+            print(f"Provider '{provider_name}' failed: {exc}")
+            provider_failures.append(
+                (provider_name, str(exc), _failure_reason_counts(exc))
+            )
 
     if not joke:
         joke = get_fallback_joke()
@@ -475,8 +477,8 @@ def main():
         requests.RequestException,
         TimeoutError,
         atproto_client.exceptions.NetworkError,
-    ) as e:
-        print(f"Failed to post joke: {e}")
+    ) as exc:
+        print(f"Failed to post joke: {exc}")
     finally:
         print(
             _provider_summary_line(

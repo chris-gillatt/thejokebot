@@ -419,7 +419,7 @@ def _handle_pull_mode(cfg, dry_run):
 def _handle_setup_sync_mode(cfg, source_list_uri, args, dry_run, action_delay_seconds):
     """Login, fetch list members, upsert/follow as configured. Returns exit code."""
     try:
-        client, username = login_client()
+        client, _username = login_client()
         print("Authenticated successfully.")
 
         list_member_dids = fetch_list_member_dids(client, source_list_uri)

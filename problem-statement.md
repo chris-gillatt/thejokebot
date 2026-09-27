@@ -1067,30 +1067,6 @@ Conducted 1 May 2026 against HEAD (`19f0c1c`). All findings have since been addr
 **File:** `bluesky_state.py`, line 28.
 
 **Status:** Fixed in v1.23. `STATE_FILE` now uses `Path(__file__).resolve().parent` for deterministic path resolution.
-```python
-def _build_starter_pack_record(starter_cfg, source_list_uri, created_at=None):
-    return {
-        ...
-        "createdAt": created_at or dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00", "Z"),
-    }
-```
-
-#### CS-6 — `bluesky_create_report_prs.py`: stderr suppressed on git/gh command failures
-**File:** `bluesky_create_report_prs.py`, `run_command()`.
-
-**Problem:** `subprocess.run(..., capture_output=True)` captures both stdout and stderr but neither is printed on failure. When `git checkout -b`, `git push`, or `gh pr create` fails, the raised `CalledProcessError` carries no human-readable diagnostic. Debugging CI failures requires digging into raw exception tracebacks.
-
-**Fix:**
-```python
-#### CS-6 — `bluesky_create_report_prs.py`: stderr suppressed on git/gh command failures ✓ Fixed
-**File:** `bluesky_create_report_prs.py`, lines 21–26.
-
-**Status:** Fixed in v1.23. `run_command()` now prints stderr on failure for better debugging.
-
-#### CS-7 — `bluesky_state.py`: `STATE_FILE` is CWD-relative ✓ Fixed
-**File:** `bluesky_state.py`, line 28.
-
-**Status:** Fixed in v1.23. `STATE_FILE` now uses `Path(__file__).resolve().parent` for deterministic path resolution.
 
 #### CS-8 — Loop lambda closures: inconsistent late-binding pattern ✓ Complete
 **File:** `bluesky_follows_and_likes.py` (`follow_back`), `bluesky_follow_fellows.py` (`follow`).
@@ -1136,3 +1112,34 @@ All items now have unit test coverage. Suite remains at 140 passing tests.
 - **Dependabot auto-merge** gated behind a full test run and restricted to patch/minor semver updates only.
 - **Single source of truth** for provider rotation in `bluesky_state.PROVIDER_ROTATION_ORDER`; `bluesky_joke_providers.PRIMARY_PROVIDERS` is derived from it, backed by a test guard.
 - **Report pipeline idempotency**: processed/acknowledged/deleted URIs are tracked in state to prevent duplicate actions across runs.
+
+## 10. Code Review: September 2026 (Issue #117)
+
+Conducted 27 September 2026 after the package-layout, dashboard, state-domain,
+and SonarQube changes. The review covered first-party Python, tests, workflows,
+shell helpers, dashboard assets, documentation, naming, comments, and path
+ownership.
+
+### Resolved findings
+
+- Consolidated duplicate nested dictionary/model traversal into
+  `runtime.get_nested_value()` and added direct regression coverage.
+- Removed unused function parameters and local assignments that implied state
+  or account-handle dependencies which did not exist.
+- Standardised deliberately unused login return values as `_username`, exception
+  variables as `exc`, and product spelling as `Bluesky` in touched code.
+- Removed a duplicated, malformed historical review block that left an open
+  Markdown code fence in this document.
+
+### Reviewed and retained
+
+- Broad exception boundaries around third-party SDK session serialisation and
+  response decoding remain intentional: these boundaries convert SDK-specific
+  failures into safe fallback behaviour, while network mutation paths retain
+  their narrower exception handling.
+- The larger collector, state, social-automation, and test modules should be
+  split only along stable domain boundaries during related feature work. A
+  repository-wide mechanical split would add substantial regression risk
+  without changing behaviour.
+- Existing workflow names remain stable because they are operational identifiers
+  referenced by dashboard history, badges, schedules, and branch protections.

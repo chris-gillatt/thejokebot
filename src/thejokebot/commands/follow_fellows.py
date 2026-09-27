@@ -43,8 +43,8 @@ def fetch_users_for_tag(client, tag: str):
         requests.RequestException,
         TimeoutError,
         atproto_client.exceptions.NetworkError,
-    ) as e:
-        print(f"Exception during search for #{tag}: {e}")
+    ) as exc:
+        print(f"Exception during search for #{tag}: {exc}")
         return []
 
 
@@ -56,8 +56,10 @@ def get_following(client):
         requests.RequestException,
         TimeoutError,
         atproto_client.exceptions.NetworkError,
-    ) as e:
-        print(f"Could not fetch following list, proceeding without deduplication: {e}")
+    ) as exc:
+        print(
+            f"Could not fetch following list, proceeding without deduplication: {exc}"
+        )
         return set()
 
 
@@ -73,8 +75,8 @@ def follow(client, did: str):
         requests.RequestException,
         TimeoutError,
         atproto_client.exceptions.NetworkError,
-    ) as e:
-        print(f"Unexpected error trying to follow {masked_did}: {e}")
+    ) as exc:
+        print(f"Unexpected error trying to follow {masked_did}: {exc}")
         return False
 
 
@@ -122,7 +124,7 @@ def _build_eligible_tag_users(client, hashtags, already_following, unfollowed_di
     }
 
 
-def _execute_follow_loop(client, selected_users, dry_run, action_delay_seconds, state):
+def _execute_follow_loop(client, selected_users, dry_run, action_delay_seconds):
     """Follow selected_users; return the DIDs that need follow-grace records."""
     followed_dids = []
     for i, (tag, did) in enumerate(selected_users, start=1):
@@ -166,7 +168,7 @@ def _persist_follow_fellows_state(followed_dids, rotation_step, total_tags):
 
 def main():
     print("Starting fellow-follow discovery script...")
-    client, username = login_client()
+    client, _username = login_client()
     print("Authenticated successfully.")
     controls = get_runtime_controls()
     dry_run = controls["dry_run"]
@@ -212,7 +214,7 @@ def main():
     print(f"Total users to follow: {len(selected_users)}\n")
 
     followed_dids = _execute_follow_loop(
-        client, selected_users, dry_run, action_delay_seconds, state
+        client, selected_users, dry_run, action_delay_seconds
     )
 
     if followed_dids:

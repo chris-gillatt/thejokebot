@@ -88,7 +88,7 @@ def main() -> int:
     handles = parse_ignore_handles(raw_handles)
     print(f"Validating {len(handles)} ignore handle(s)...")
 
-    client, username = login_client()
+    client, _username = login_client()
     print("Logged in successfully.")
 
     valid, stale, transient = resolve_handles(client, handles)

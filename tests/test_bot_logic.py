@@ -55,6 +55,19 @@ class RuntimeControlTests(unittest.TestCase):
         self.assertTrue(controls["dry_run"])
         self.assertEqual(controls["action_delay_seconds"], 1.5)
 
+    def test_get_nested_value_supports_mixed_dict_and_object_paths(self):
+        value = {"record": SimpleNamespace(author={"did": "did:plc:test"})}
+
+        self.assertEqual(
+            runtime.get_nested_value(value, "record", "author", "did"),
+            "did:plc:test",
+        )
+
+    def test_get_nested_value_returns_none_for_missing_path(self):
+        value = {"record": None}
+
+        self.assertIsNone(runtime.get_nested_value(value, "record", "author", "did"))
+
 
 class RuntimeConfigTests(unittest.TestCase):
     def tearDown(self):
@@ -2878,7 +2891,6 @@ class FollowBackTests(unittest.TestCase):
         ) as fetch_paginated_data:
             bluesky_follows_and_likes.follow_back(
                 client,
-                "jokebot.bsky.social",
                 dry_run=False,
                 action_delay_seconds=0,
             )
@@ -2936,7 +2948,6 @@ class FollowBackTests(unittest.TestCase):
             with mock.patch("thejokebot.commands.follows_and_likes.time.sleep"):
                 bluesky_follows_and_likes.follow_back(
                     client,
-                    "jokebot.bsky.social",
                     dry_run=False,
                     action_delay_seconds=0,
                     summary=summary,
@@ -2987,7 +2998,6 @@ class FollowBackTests(unittest.TestCase):
             with mock.patch("thejokebot.commands.follows_and_likes.time.sleep"):
                 bluesky_follows_and_likes.follow_back(
                     client,
-                    "jokebot.bsky.social",
                     dry_run=False,
                     action_delay_seconds=0,
                     summary=summary,
@@ -3021,7 +3031,6 @@ class FollowBackTests(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, "did not converge"):
                     bluesky_follows_and_likes.follow_back(
                         client,
-                        "jokebot.bsky.social",
                         dry_run=False,
                         action_delay_seconds=0,
                         summary=summary,
@@ -3050,7 +3059,6 @@ class FollowBackTests(unittest.TestCase):
             with self.assertRaises(atproto_client.exceptions.RequestException):
                 bluesky_follows_and_likes.follow_back(
                     client,
-                    "jokebot.bsky.social",
                     dry_run=False,
                     action_delay_seconds=0,
                     state=state,
@@ -3078,7 +3086,6 @@ class FollowBackTests(unittest.TestCase):
         ):
             bluesky_follows_and_likes.follow_back(
                 client,
-                "jokebot.bsky.social",
                 dry_run=True,
                 action_delay_seconds=0,
                 state=state,

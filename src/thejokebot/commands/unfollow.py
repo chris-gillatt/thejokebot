@@ -137,9 +137,9 @@ def _resolve_ignorable_dids(client, ignorable_usernames):
             TimeoutError,
             atproto_client.exceptions.NetworkError,
             atproto_client.exceptions.BadRequestError,
-        ) as e:
+        ) as exc:
             print(
-                f"{Fore.RED}Failed to resolve username {masked_handle}: {e}{Style.RESET_ALL}"
+                f"{Fore.RED}Failed to resolve username {masked_handle}: {exc}{Style.RESET_ALL}"
             )
     return ignorable_dids
 
@@ -310,8 +310,6 @@ def unfollow_users():
         u.strip() for u in env_ignorable.split(",") if u.strip()
     ]
     ignorable_usernames = list(set(ignorable_usernames))  # Deduplicate
-    client = None
-    username = None
     controls = get_runtime_controls()
     dry_run = controls["dry_run"]
     action_delay_seconds = controls["action_delay_seconds"]
@@ -335,17 +333,17 @@ def unfollow_users():
     )
 
     try:
-        print(f"{Fore.YELLOW}Logging in to BlueSky...{Style.RESET_ALL}")
-        client, username = login_client()
-        print(f"{Fore.GREEN}Successfully logged in to BlueSky.{Style.RESET_ALL}")
+        print(f"{Fore.YELLOW}Logging in to Bluesky...{Style.RESET_ALL}")
+        client, _username = login_client()
+        print(f"{Fore.GREEN}Successfully logged in to Bluesky.{Style.RESET_ALL}")
     except (
         ValueError,
         requests.RequestException,
         TimeoutError,
         atproto_client.exceptions.NetworkError,
         atproto_client.exceptions.BadRequestError,
-    ) as e:
-        print(f"{Fore.RED}Login failed: {e}{Style.RESET_ALL}")
+    ) as exc:
+        print(f"{Fore.RED}Login failed: {exc}{Style.RESET_ALL}")
         return
 
     try:
@@ -381,9 +379,9 @@ def unfollow_users():
                 TimeoutError,
                 atproto_client.exceptions.NetworkError,
                 atproto_client.exceptions.BadRequestError,
-            ) as e:
+            ) as exc:
                 print(
-                    f"{Fore.RED}Failed to load protected list members from starter-pack config: {e}. "
+                    f"{Fore.RED}Failed to load protected list members from starter-pack config: {exc}. "
                     f"Continuing with env-based ignores only.{Style.RESET_ALL}"
                 )
 
@@ -437,8 +435,8 @@ def unfollow_users():
         TimeoutError,
         atproto_client.exceptions.NetworkError,
         atproto_client.exceptions.BadRequestError,
-    ) as e:
-        print(f"{Fore.RED}An unexpected error occurred: {e}{Style.RESET_ALL}")
+    ) as exc:
+        print(f"{Fore.RED}An unexpected error occurred: {exc}{Style.RESET_ALL}")
 
 
 def main() -> None:

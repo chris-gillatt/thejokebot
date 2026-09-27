@@ -17,6 +17,7 @@ from thejokebot import state as bot_state
 from atproto import models
 from thejokebot.runtime import (
     get_int_env,
+    get_nested_value,
     login_client,
     mask_sensitive,
     retry_network_call,
@@ -52,21 +53,8 @@ def _exc_name(exc: Exception) -> str:
     return type(exc).__name__
 
 
-def _get_value(data, *path):
-    """Safely read nested values from dict or model-like objects."""
-    cur = data
-    for key in path:
-        if cur is None:
-            return None
-        if isinstance(cur, dict):
-            cur = cur.get(key)
-        else:
-            cur = getattr(cur, key, None)
-    return cur
-
-
 def _normalise_text(record) -> str:
-    text = _get_value(record, "text")
+    text = get_nested_value(record, "text")
     if isinstance(text, str):
         return text
     return ""
@@ -78,14 +66,14 @@ def has_report_tag(text: str) -> bool:
 
 
 def _extract_parent_uri(notification) -> str | None:
-    reason_subject = _get_value(notification, "reason_subject")
+    reason_subject = get_nested_value(notification, "reason_subject")
     if not reason_subject:
-        reason_subject = _get_value(notification, "reasonSubject")
+        reason_subject = get_nested_value(notification, "reasonSubject")
     if reason_subject:
         return reason_subject
 
-    record = _get_value(notification, "record")
-    return _get_value(record, "reply", "parent", "uri")
+    record = get_nested_value(notification, "record")
+    return get_nested_value(record, "reply", "parent", "uri")
 
 
 def _extract_notification(notification) -> dict:
@@ -96,19 +84,19 @@ def _extract_notification(notification) -> dict:
     normalises naming variants (snake_case vs camelCase) used by different
     response wrappers.
     """
-    record = _get_value(notification, "record")
+    record = get_nested_value(notification, "record")
     return {
-        "reason": _get_value(notification, "reason"),
-        "notification_uri": _get_value(notification, "uri"),
-        "author_did": _get_value(notification, "author", "did") or "unknown",
-        "reply_uri": _get_value(notification, "uri"),
-        "reply_cid": _get_value(notification, "cid"),
+        "reason": get_nested_value(notification, "reason"),
+        "notification_uri": get_nested_value(notification, "uri"),
+        "author_did": get_nested_value(notification, "author", "did") or "unknown",
+        "reply_uri": get_nested_value(notification, "uri"),
+        "reply_cid": get_nested_value(notification, "cid"),
         "reply_text": _normalise_text(record),
         "source_post_uri": _extract_parent_uri(notification),
-        "root_uri": _get_value(notification, "record", "reply", "root", "uri"),
-        "root_cid": _get_value(notification, "record", "reply", "root", "cid"),
-        "indexed_at": _get_value(notification, "indexed_at")
-        or _get_value(notification, "indexedAt"),
+        "root_uri": get_nested_value(notification, "record", "reply", "root", "uri"),
+        "root_cid": get_nested_value(notification, "record", "reply", "root", "cid"),
+        "indexed_at": get_nested_value(notification, "indexed_at")
+        or get_nested_value(notification, "indexedAt"),
     }
 
 
@@ -129,9 +117,9 @@ def _extract_thread_post_text(client, post_uri: str) -> str | None:
     except Exception:
         return None
 
-    thread = _get_value(response, "thread")
-    post = _get_value(thread, "post")
-    record = _get_value(post, "record")
+    thread = get_nested_value(response, "thread")
+    post = get_nested_value(thread, "post")
+    record = get_nested_value(post, "record")
     text = _normalise_text(record)
     if not text:
         return None
@@ -426,7 +414,7 @@ def collect_report_proposals(
             break
         pages_fetched += 1
 
-        notifications = _get_value(response, "notifications") or []
+        notifications = get_nested_value(response, "notifications") or []
         for notification in notifications:
             proposal = _process_report_notification(
                 notification,
@@ -438,7 +426,7 @@ def collect_report_proposals(
                 proposals.append(proposal)
                 seen_b64s.add(proposal["b64"])
 
-        cursor = _get_value(response, "cursor")
+        cursor = get_nested_value(response, "cursor")
         if not cursor:
             break
 

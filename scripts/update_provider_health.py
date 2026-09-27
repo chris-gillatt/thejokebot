@@ -59,10 +59,10 @@ def check_provider_health(provider_name: str) -> dict:
             "error": None,
             "check_at": check_at,
         }
-    except Exception as e:
+    except Exception as exc:
         return {
             "success": False,
-            "error": f"{type(e).__name__}: {str(e)[:100]}",
+            "error": f"{type(exc).__name__}: {str(exc)[:100]}",
             "check_at": check_at,
         }
 

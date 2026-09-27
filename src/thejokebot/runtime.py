@@ -530,3 +530,16 @@ def mask_sensitive(value, prefix=4, suffix=4):
     if len(text) <= prefix + suffix:
         return "<redacted>"
     return f"{text[:prefix]}...{text[-suffix:]}"
+
+
+def get_nested_value(value, *path):
+    """Safely read a nested field from dictionaries or model-like objects."""
+    current = value
+    for key in path:
+        if current is None:
+            return None
+        if isinstance(current, dict):
+            current = current.get(key)
+        else:
+            current = getattr(current, key, None)
+    return current
