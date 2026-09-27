@@ -8,6 +8,7 @@ from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 from thejokebot.commands import collect_dashboard_metrics as dashboard
+from thejokebot.commands import dashboard_history
 from thejokebot.commands import follows_and_likes as bluesky_follows_and_likes
 from thejokebot.commands import post_joke as bluesky_post_joke
 from thejokebot.commands import process_reports as bluesky_process_reports
@@ -361,7 +362,7 @@ class DashboardCollectorTests(unittest.TestCase):
             ],
         }
 
-        partitions = dashboard._migrate_existing_history(existing)
+        partitions = dashboard_history._migrate_existing_history(existing)
 
         self.assertEqual(list(partitions), ["2026-08", "2026-09"])
         self.assertEqual(
@@ -383,8 +384,8 @@ class DashboardCollectorTests(unittest.TestCase):
         self.assertNotIn("log_text", serialised)
 
     def test_history_merge_replaces_same_identity_and_sorts(self):
-        partition = dashboard._empty_history_partition("2026-08")
-        dashboard._merge_history_records(
+        partition = dashboard_history._empty_history_partition("2026-08")
+        dashboard_history._merge_history_records(
             partition,
             "account_observations",
             [
@@ -392,7 +393,7 @@ class DashboardCollectorTests(unittest.TestCase):
                 {"period_start": "2026-08-31T12:00:00+00:00", "followers": 2},
             ],
         )
-        dashboard._merge_history_records(
+        dashboard_history._merge_history_records(
             partition,
             "account_observations",
             [{"period_start": "2026-08-31T18:00:00+00:00", "followers": 3}],
@@ -404,8 +405,8 @@ class DashboardCollectorTests(unittest.TestCase):
         )
 
     def test_history_merge_replaces_legacy_activity_with_attributed_run(self):
-        partition = dashboard._empty_history_partition("2026-08")
-        dashboard._merge_history_records(
+        partition = dashboard_history._empty_history_partition("2026-08")
+        dashboard_history._merge_history_records(
             partition,
             "activity_runs",
             [
@@ -417,7 +418,7 @@ class DashboardCollectorTests(unittest.TestCase):
                 }
             ],
         )
-        dashboard._merge_history_records(
+        dashboard_history._merge_history_records(
             partition,
             "activity_runs",
             [
@@ -438,7 +439,7 @@ class DashboardCollectorTests(unittest.TestCase):
 
     def test_history_rejects_non_utc_timestamp(self):
         with self.assertRaisesRegex(ValueError, "UTC"):
-            dashboard._utc_month("2026-08-31T18:00:00+01:00")
+            dashboard_history._utc_month("2026-08-31T18:00:00+01:00")
 
     def test_writes_and_loads_monthly_history_with_manifest(self):
         existing = {
@@ -464,13 +465,13 @@ class DashboardCollectorTests(unittest.TestCase):
                 {"date": "2026-07-31", "joke_posts": 4, "follows": 5, "unfollows": 6}
             ],
         }
-        partitions = dashboard._migrate_existing_history(existing)
+        partitions = dashboard_history._migrate_existing_history(existing)
         now = datetime(2026, 9, 1, tzinfo=timezone.utc)
 
         with TemporaryDirectory() as temporary_directory:
             history_dir = Path(temporary_directory)
-            dashboard._write_history(partitions, now, history_dir=history_dir)
-            loaded = dashboard._load_history_partitions(history_dir)
+            dashboard_history._write_history(partitions, now, history_dir=history_dir)
+            loaded = dashboard_history._load_history_partitions(history_dir)
             manifest = json.loads((history_dir / "index.json").read_text())
             daily = json.loads((history_dir / "daily.json").read_text())
 
@@ -484,7 +485,7 @@ class DashboardCollectorTests(unittest.TestCase):
         self.assertEqual(daily["daily_activity"][0]["joke_posts"], 4)
 
     def test_history_partition_rejects_record_in_wrong_month(self):
-        partition = dashboard._empty_history_partition("2026-08")
+        partition = dashboard_history._empty_history_partition("2026-08")
         partition["account_observations"] = [
             {
                 "period_start": "2026-09-01T00:00:00+00:00",
@@ -493,17 +494,88 @@ class DashboardCollectorTests(unittest.TestCase):
         ]
 
         with self.assertRaisesRegex(ValueError, "wrong month"):
-            dashboard._validate_history_partition(partition, "2026-08")
+            dashboard_history._validate_history_partition(partition, "2026-08")
 
     def test_history_partition_rejects_unsorted_records(self):
-        partition = dashboard._empty_history_partition("2026-08")
+        partition = dashboard_history._empty_history_partition("2026-08")
         partition["daily_activity"] = [
             {"date": "2026-08-02"},
             {"date": "2026-08-01"},
         ]
 
         with self.assertRaisesRegex(ValueError, "not sorted"):
-            dashboard._validate_history_partition(partition, "2026-08")
+            dashboard_history._validate_history_partition(partition, "2026-08")
+
+    def test_history_partition_rejects_invalid_shape_and_identity(self):
+        partition = dashboard_history._empty_history_partition("2026-08")
+        partition["schema_version"] = 0
+        with self.assertRaisesRegex(ValueError, "schema version"):
+            dashboard_history._validate_history_partition(partition, "2026-08")
+
+        partition = dashboard_history._empty_history_partition("2026-09")
+        with self.assertRaisesRegex(ValueError, "month"):
+            dashboard_history._validate_history_partition(partition, "2026-08")
+
+        partition = dashboard_history._empty_history_partition("2026-08")
+        partition["daily_activity"] = {}
+        with self.assertRaisesRegex(ValueError, "must be a list"):
+            dashboard_history._validate_history_partition(partition, "2026-08")
+
+        duplicate = {"date": "2026-08-01"}
+        partition["daily_activity"] = [duplicate, duplicate]
+        with self.assertRaisesRegex(ValueError, "duplicates"):
+            dashboard_history._validate_history_partition(partition, "2026-08")
+
+    def test_history_storage_handles_missing_merge_and_unchanged_write(self):
+        incoming = dashboard_history._empty_history_partition("2026-08")
+        incoming["daily_activity"] = [
+            {"date": "2026-08-01", "joke_posts": 1, "follows": 0, "unfollows": 0}
+        ]
+
+        merged = dashboard_history._merge_history_partitions({}, {"2026-08": incoming})
+
+        with TemporaryDirectory() as temporary_directory:
+            history_dir = Path(temporary_directory) / "missing"
+            self.assertEqual(
+                dashboard_history._load_history_partitions(history_dir), {}
+            )
+            output = history_dir / "item.json"
+            dashboard_history._write_json(output, {"value": 1})
+            modified_at = output.stat().st_mtime_ns
+            dashboard_history._write_json(output, {"value": 1})
+            self.assertEqual(output.stat().st_mtime_ns, modified_at)
+
+        self.assertEqual(
+            merged["2026-08"]["daily_activity"], incoming["daily_activity"]
+        )
+
+    def test_collector_existing_reads_and_validates_stored_metadata(self):
+        now = datetime(2026, 9, 1, tzinfo=timezone.utc)
+        with TemporaryDirectory() as temporary_directory:
+            history_dir = Path(temporary_directory)
+            collector_path = history_dir / "collector.json"
+            collector_path.write_text(
+                json.dumps(
+                    {
+                        "schema_version": dashboard_history.HISTORY_SCHEMA_VERSION,
+                        "coverage_start": "2026-08-01T00:00:00+00:00",
+                        "expired_before": "2026-08-02T00:00:00+00:00",
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            rebuilt = dashboard_history._collector_existing(None, {}, now, history_dir)
+            self.assertEqual(
+                rebuilt["workflow_activity"]["coverage_start"],
+                "2026-08-01T00:00:00+00:00",
+            )
+
+            collector_path.write_text(
+                json.dumps({"schema_version": 0}), encoding="utf-8"
+            )
+            with self.assertRaisesRegex(ValueError, "collector schema"):
+                dashboard_history._collector_existing(None, {}, now, history_dir)
 
     def test_archives_allowlisted_automation_and_operational_telemetry(self):
         generated_at = "2026-08-31T18:15:00+00:00"
@@ -588,7 +660,7 @@ class DashboardCollectorTests(unittest.TestCase):
             },
         ]
 
-        partitions = dashboard._history_from_collection(metrics, workflow_runs)
+        partitions = dashboard_history._history_from_collection(metrics, workflow_runs)
 
         partition = partitions["2026-08"]
         self.assertEqual(partition["automation_runs"][0]["attempt"], 2)
@@ -630,7 +702,7 @@ class DashboardCollectorTests(unittest.TestCase):
                 "expired_before": "2026-07-15T00:00:00+00:00",
             }
         }
-        partitions = dashboard._migrate_existing_history(
+        partitions = dashboard_history._migrate_existing_history(
             {
                 "snapshots": [
                     {
@@ -659,7 +731,7 @@ class DashboardCollectorTests(unittest.TestCase):
         now = datetime(2026, 9, 1, tzinfo=timezone.utc)
 
         with TemporaryDirectory() as temporary_directory:
-            rebuilt = dashboard._collector_existing(
+            rebuilt = dashboard_history._collector_existing(
                 existing, partitions, now, Path(temporary_directory)
             )
 
@@ -685,7 +757,7 @@ class DashboardCollectorTests(unittest.TestCase):
             "workflow_activity": {"runs": [{"id": 1}]},
         }
 
-        compact = dashboard._compact_metrics(metrics, now)
+        compact = dashboard_history._compact_metrics(metrics, now)
 
         self.assertEqual(compact["snapshots"], [metrics["snapshots"][1]])
         self.assertEqual(compact["daily_activity"], [metrics["daily_activity"][1]])
