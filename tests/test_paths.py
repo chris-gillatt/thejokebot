@@ -87,6 +87,7 @@ class RepositoryPathTests(unittest.TestCase):
         self.assertEqual(paths.ENV_FILE, repository_root / ".env")
         self.assertEqual(paths.RESOURCES_DIR, repository_root / "resources")
         self.assertEqual(paths.STATE_DIR, repository_root / "state")
+        self.assertEqual(paths.LOCKS_DIR, repository_root / ".locks")
         self.assertEqual(paths.DASHBOARD_DIR, repository_root / "dashboard")
         self.assertEqual(paths.AGENT_TMP_DIR, repository_root / ".agent-tmp")
         self.assertEqual(

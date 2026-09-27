@@ -4928,6 +4928,24 @@ class ApprovedReportDeletionTests(unittest.TestCase):
 class StateRoundTripTests(unittest.TestCase):
     """Tests for load_state/save_state round-trip (CS-9 coverage gap)."""
 
+    @unittest.skipIf(bot_state.fcntl is None, "fcntl locks are Unix-only")
+    def test_state_locks_are_created_in_dedicated_directory(self):
+        import tempfile
+
+        state = bot_state._default_state()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_path = str(pathlib.Path(tmpdir) / "bot_state.json")
+            with mock.patch("thejokebot.state.STATE_FILE", tmp_path):
+                bot_state.save_state(state, domains="posting")
+
+            self.assertTrue(
+                (pathlib.Path(tmpdir) / ".locks" / "posting_state.json.lock").is_file()
+            )
+            self.assertFalse(
+                (pathlib.Path(tmpdir) / "state" / "posting_state.json.lock").exists()
+            )
+
     def test_save_and_load_round_trips_posted_jokes(self):
         import tempfile
 

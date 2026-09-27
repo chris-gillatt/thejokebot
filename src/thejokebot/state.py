@@ -11,7 +11,7 @@ from contextlib import ExitStack, contextmanager
 from pathlib import Path
 from typing import Callable, Generator, Optional, TypeVar
 
-from thejokebot.paths import LEGACY_STATE_FILE
+from thejokebot.paths import LEGACY_STATE_FILE, LOCKS_DIR
 
 # File locking support (Unix-like systems)
 if sys.platform != "win32":
@@ -62,6 +62,14 @@ def _state_files() -> dict[str, str]:
     state_directory = Path(STATE_FILE).resolve().parent / "state"
     return {
         domain: str(state_directory / filename)
+        for domain, filename in STATE_FILENAMES.items()
+    }
+
+
+def _lock_files() -> dict[str, str]:
+    lock_directory = Path(STATE_FILE).resolve().parent / LOCKS_DIR.name
+    return {
+        domain: str(lock_directory / f"{filename}.lock")
         for domain, filename in STATE_FILENAMES.items()
     }
 
@@ -245,13 +253,12 @@ def _state_locks(
         return
 
     lock_mode = fcntl.LOCK_EX if exclusive else fcntl.LOCK_SH
+    lock_files = _lock_files()
     with ExitStack() as stack:
         for domain in sorted(domains):
-            state_file = _state_files()[domain]
-            Path(state_file).parent.mkdir(parents=True, exist_ok=True)
-            lock_file = stack.enter_context(
-                open(state_file + ".lock", "w", encoding="utf-8")
-            )
+            lock_path = lock_files[domain]
+            Path(lock_path).parent.mkdir(parents=True, exist_ok=True)
+            lock_file = stack.enter_context(open(lock_path, "w", encoding="utf-8"))
             fcntl.flock(lock_file.fileno(), lock_mode)
             stack.callback(fcntl.flock, lock_file.fileno(), fcntl.LOCK_UN)
         yield

@@ -8,7 +8,8 @@ __pycache__/
 *.pyc
 .agent-tmp/*
 !.agent-tmp/.gitkeep
-*_state.json.lock
+.locks/*
+!.locks/.gitkeep
 diag1.txt
 diag2.txt
 diag3.txt
