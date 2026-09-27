@@ -9,6 +9,7 @@ from unittest.mock import patch
 
 from thejokebot.commands import collect_dashboard_metrics as dashboard
 from thejokebot.commands import dashboard_history
+from thejokebot.commands import dashboard_workflows
 from thejokebot.commands import follows_and_likes as bluesky_follows_and_likes
 from thejokebot.commands import post_joke as bluesky_post_joke
 from thejokebot.commands import process_reports as bluesky_process_reports
@@ -766,7 +767,9 @@ class DashboardCollectorTests(unittest.TestCase):
     def test_parses_and_summarises_moderation_without_identifiers(self):
         line = bluesky_process_reports._moderation_summary_line(3, 2, 1, 4)
 
-        counts = dashboard._workflow_activity_counts("bluesky_process_reports", line)
+        counts = dashboard_workflows._workflow_activity_counts(
+            "bluesky_process_reports", line
+        )
         assert counts is not None
         activity = {
             "runs": [
@@ -792,7 +795,9 @@ class DashboardCollectorTests(unittest.TestCase):
             "groandeck",
             True,
         )
-        counts = dashboard._workflow_activity_counts("bluesky_post_joke", line)
+        counts = dashboard_workflows._workflow_activity_counts(
+            "bluesky_post_joke", line
+        )
         assert counts is not None
         activity = {
             "runs": [
@@ -826,7 +831,7 @@ class DashboardCollectorTests(unittest.TestCase):
         )
 
     def test_parses_provider_summary_from_before_starting_provider_telemetry(self):
-        counts = dashboard._provider_activity_counts(
+        counts = dashboard_workflows._provider_activity_counts(
             "Provider summary: attempts=1, successful_source=jokeapi, "
             "fallthrough=false, static_fallback=false, duplicate=0, "
             "too_long=0, network_error=0, provider_error=0, posted=true."
@@ -896,7 +901,7 @@ class DashboardCollectorTests(unittest.TestCase):
         )
 
         self.assertEqual(
-            dashboard._workflow_activity_counts(
+            dashboard_workflows._workflow_activity_counts(
                 "bluesky_follows_and_likes", follows_and_likes
             ),
             {
@@ -906,7 +911,7 @@ class DashboardCollectorTests(unittest.TestCase):
             },
         )
         self.assertEqual(
-            dashboard._workflow_activity_counts(
+            dashboard_workflows._workflow_activity_counts(
                 "bluesky_follows_and_likes", social_summary
             ),
             {
@@ -928,17 +933,19 @@ class DashboardCollectorTests(unittest.TestCase):
         )
 
         self.assertEqual(
-            dashboard._workflow_activity_counts("bluesky_follow_fellows", discovery),
+            dashboard_workflows._workflow_activity_counts(
+                "bluesky_follow_fellows", discovery
+            ),
             {"follows": 7, "unfollows": 0, "selected": 8, "failed": 1},
         )
         self.assertEqual(
-            dashboard._workflow_activity_counts(
+            dashboard_workflows._workflow_activity_counts(
                 "bluesky_follow_fellows", discovery_summary
             ),
             {"follows": 6, "unfollows": 0, "selected": 8, "failed": 2},
         )
         self.assertEqual(
-            dashboard._workflow_activity_counts(
+            dashboard_workflows._workflow_activity_counts(
                 "bluesky_unfollow",
                 "Found 9 users to unfollow (excluding ignorable accounts).\n"
                 "Run stopped early after throttle detection.\n"
@@ -955,7 +962,7 @@ class DashboardCollectorTests(unittest.TestCase):
             },
         )
         self.assertEqual(
-            dashboard._workflow_activity_counts(
+            dashboard_workflows._workflow_activity_counts(
                 "bluesky_follow_fellows",
                 "Dry-run mode enabled.\nTotal users to follow: 8",
             ),
@@ -968,10 +975,29 @@ class DashboardCollectorTests(unittest.TestCase):
             "follow_back_added=5, dry_run=false."
         )
 
-        self.assertEqual(dashboard._social_summary_counts(plain_text), {})
+        self.assertEqual(dashboard_workflows._social_summary_counts(plain_text), {})
+
+    def test_activity_parsers_reject_unrecognised_summaries(self):
+        self.assertIsNone(dashboard_workflows._moderation_activity_counts("missing"))
+        self.assertIsNone(dashboard_workflows._unfollow_activity_counts("missing"))
+        self.assertIsNone(dashboard_workflows._provider_activity_counts("missing"))
+        self.assertIsNone(
+            dashboard_workflows._workflow_activity_counts(
+                "bluesky_follow_fellows", "missing"
+            )
+        )
+        self.assertEqual(
+            dashboard_workflows._workflow_activity_counts(
+                "bluesky_manage_starter_pack", "Followed list member did:...one"
+            ),
+            {"follows": 1, "unfollows": 0},
+        )
+        self.assertIsNone(
+            dashboard_workflows._workflow_activity_counts("unknown", "missing")
+        )
 
     def test_fetch_workflow_run_logs_reads_zip_archive(self):
-        logs = dashboard.fetch_workflow_run_logs(
+        logs = dashboard_workflows.fetch_workflow_run_logs(
             _LogSession(_log_archive("Followed did:...safe")),
             "owner/repository",
             123,
@@ -979,6 +1005,104 @@ class DashboardCollectorTests(unittest.TestCase):
         )
 
         self.assertEqual(logs, "Followed did:...safe")
+
+    def test_collector_workflow_wrappers_preserve_injected_seams(self):
+        session = object()
+        now = datetime(2026, 8, 22, 6, tzinfo=timezone.utc)
+        with (
+            patch.object(
+                dashboard_workflows, "fetch_workflow_runs", return_value=[]
+            ) as fetch_runs,
+            patch.object(
+                dashboard_workflows, "fetch_workflow_run_logs", return_value="logs"
+            ) as fetch_logs,
+            patch.object(
+                dashboard_workflows, "collect_workflow_activity", return_value={}
+            ) as collect_activity,
+        ):
+            self.assertEqual(
+                dashboard.fetch_workflow_runs(
+                    session, "owner/repository", "token", now, max_pages=3
+                ),
+                [],
+            )
+            self.assertEqual(
+                dashboard.fetch_workflow_run_logs(
+                    session, "owner/repository", 123, "token"
+                ),
+                "logs",
+            )
+            self.assertEqual(
+                dashboard.collect_workflow_activity(
+                    session, "owner/repository", "token", [], None, now
+                ),
+                {},
+            )
+
+        fetch_runs.assert_called_once_with(
+            session,
+            "owner/repository",
+            "token",
+            now,
+            max_pages=3,
+            retry_call=dashboard.retry_network_call,
+        )
+        fetch_logs.assert_called_once_with(
+            session,
+            "owner/repository",
+            123,
+            "token",
+            retry_call=dashboard.retry_network_call,
+        )
+        collect_activity.assert_called_once_with(
+            session,
+            "owner/repository",
+            "token",
+            [],
+            None,
+            now,
+            fetch_logs=dashboard.fetch_workflow_run_logs,
+        )
+
+    def test_fetch_workflow_runs_rejects_invalid_and_unbounded_pages(self):
+        invalid_session = _WorkflowSession({1: None})
+        with self.assertRaisesRegex(ValueError, "workflow_runs"):
+            dashboard_workflows.fetch_workflow_runs(
+                invalid_session,
+                "owner/repository",
+                None,
+                datetime(2026, 8, 22, 6, tzinfo=timezone.utc),
+            )
+
+        full_page = [{} for _ in range(100)]
+        with self.assertRaisesRegex(RuntimeError, "safety limit"):
+            dashboard_workflows.fetch_workflow_runs(
+                _WorkflowSession({1: full_page}),
+                "owner/repository",
+                None,
+                datetime(2026, 8, 22, 6, tzinfo=timezone.utc),
+                max_pages=1,
+            )
+
+    def test_fetch_workflow_logs_rejects_oversized_archives(self):
+        with (
+            patch.object(dashboard_workflows, "MAX_WORKFLOW_LOG_BYTES", 1),
+            self.assertRaisesRegex(ValueError, "archive.*too large"),
+        ):
+            dashboard_workflows.fetch_workflow_run_logs(
+                _LogSession(b"too large"), "owner/repository", 123, None
+            )
+
+        with (
+            patch.object(dashboard_workflows, "MAX_WORKFLOW_LOG_UNCOMPRESSED_BYTES", 1),
+            self.assertRaisesRegex(ValueError, "logs.*too large"),
+        ):
+            dashboard_workflows.fetch_workflow_run_logs(
+                _LogSession(_log_archive("too large")),
+                "owner/repository",
+                123,
+                None,
+            )
 
     def test_collect_workflow_activity_does_not_retry_expired_or_cached_runs(self):
         existing = {
@@ -1015,8 +1139,8 @@ class DashboardCollectorTests(unittest.TestCase):
             },
         ]
 
-        with patch.object(dashboard, "fetch_workflow_run_logs") as fetch_logs:
-            activity = dashboard.collect_workflow_activity(
+        with patch.object(dashboard_workflows, "fetch_workflow_run_logs") as fetch_logs:
+            activity = dashboard_workflows.collect_workflow_activity(
                 object(),
                 "owner/repository",
                 "token",
@@ -1055,11 +1179,11 @@ class DashboardCollectorTests(unittest.TestCase):
         ]
 
         with patch.object(
-            dashboard,
+            dashboard_workflows,
             "fetch_workflow_run_logs",
             return_value="Followed did:plc:example",
         ) as fetch_logs:
-            activity = dashboard.collect_workflow_activity(
+            activity = dashboard_workflows.collect_workflow_activity(
                 object(),
                 "owner/repository",
                 "token",
@@ -1070,8 +1194,8 @@ class DashboardCollectorTests(unittest.TestCase):
 
         fetch_logs.assert_called_once()
         self.assertFalse(activity["runs"][0]["social_summary_observed"])
-        with patch.object(dashboard, "fetch_workflow_run_logs") as fetch_logs:
-            dashboard.collect_workflow_activity(
+        with patch.object(dashboard_workflows, "fetch_workflow_run_logs") as fetch_logs:
+            dashboard_workflows.collect_workflow_activity(
                 object(),
                 "owner/repository",
                 "token",
@@ -1113,9 +1237,9 @@ class DashboardCollectorTests(unittest.TestCase):
         )
 
         with patch.object(
-            dashboard, "fetch_workflow_run_logs", return_value=log_text
+            dashboard_workflows, "fetch_workflow_run_logs", return_value=log_text
         ) as fetch_logs:
-            activity = dashboard.collect_workflow_activity(
+            activity = dashboard_workflows.collect_workflow_activity(
                 object(),
                 "owner/repository",
                 "token",
@@ -1128,8 +1252,8 @@ class DashboardCollectorTests(unittest.TestCase):
         self.assertTrue(activity["runs"][0]["social_summary_observed"])
         self.assertEqual(activity["runs"][0]["follow_back_candidates"], 5)
         self.assertEqual(activity["runs"][0]["interaction_eligible"], 3)
-        with patch.object(dashboard, "fetch_workflow_run_logs") as fetch_logs:
-            dashboard.collect_workflow_activity(
+        with patch.object(dashboard_workflows, "fetch_workflow_run_logs") as fetch_logs:
+            dashboard_workflows.collect_workflow_activity(
                 object(),
                 "owner/repository",
                 "token",
@@ -1164,13 +1288,13 @@ class DashboardCollectorTests(unittest.TestCase):
         ]
 
         with patch.object(
-            dashboard,
+            dashboard_workflows,
             "fetch_workflow_run_logs",
             return_value=(
                 "Discovery summary: selected=5, followed=3, failed=2, dry_run=false."
             ),
         ) as fetch_logs:
-            activity = dashboard.collect_workflow_activity(
+            activity = dashboard_workflows.collect_workflow_activity(
                 object(),
                 "owner/repository",
                 "token",
@@ -1197,8 +1321,8 @@ class DashboardCollectorTests(unittest.TestCase):
         )
 
         complete_existing = {"workflow_activity": activity}
-        with patch.object(dashboard, "fetch_workflow_run_logs") as fetch_logs:
-            dashboard.collect_workflow_activity(
+        with patch.object(dashboard_workflows, "fetch_workflow_run_logs") as fetch_logs:
+            dashboard_workflows.collect_workflow_activity(
                 object(),
                 "owner/repository",
                 "token",
@@ -1232,14 +1356,14 @@ class DashboardCollectorTests(unittest.TestCase):
                 "created_at": "2026-08-21T00:00:00Z",
             }
         ]
-        response = dashboard.requests.Response()
+        response = dashboard_workflows.requests.Response()
         response.status_code = 410
-        expired = dashboard.requests.HTTPError(response=response)
+        expired = dashboard_workflows.requests.HTTPError(response=response)
 
         with patch.object(
-            dashboard, "fetch_workflow_run_logs", side_effect=expired
+            dashboard_workflows, "fetch_workflow_run_logs", side_effect=expired
         ) as fetch_logs:
-            activity = dashboard.collect_workflow_activity(
+            activity = dashboard_workflows.collect_workflow_activity(
                 object(),
                 "owner/repository",
                 "token",
@@ -1284,9 +1408,9 @@ class DashboardCollectorTests(unittest.TestCase):
         )
 
         with patch.object(
-            dashboard, "fetch_workflow_run_logs", return_value=log_text
+            dashboard_workflows, "fetch_workflow_run_logs", return_value=log_text
         ) as fetch_logs:
-            activity = dashboard.collect_workflow_activity(
+            activity = dashboard_workflows.collect_workflow_activity(
                 object(),
                 "owner/repository",
                 "token",
@@ -1298,8 +1422,8 @@ class DashboardCollectorTests(unittest.TestCase):
         fetch_logs.assert_called_once()
         self.assertEqual(activity["runs"][0]["eligible"], 9)
         self.assertEqual(activity["runs"][0]["processed"], 5)
-        with patch.object(dashboard, "fetch_workflow_run_logs") as fetch_logs:
-            dashboard.collect_workflow_activity(
+        with patch.object(dashboard_workflows, "fetch_workflow_run_logs") as fetch_logs:
+            dashboard_workflows.collect_workflow_activity(
                 object(),
                 "owner/repository",
                 "token",
@@ -1338,9 +1462,9 @@ class DashboardCollectorTests(unittest.TestCase):
         )
 
         with patch.object(
-            dashboard, "fetch_workflow_run_logs", return_value=log_text
+            dashboard_workflows, "fetch_workflow_run_logs", return_value=log_text
         ) as fetch_logs:
-            activity = dashboard.collect_workflow_activity(
+            activity = dashboard_workflows.collect_workflow_activity(
                 object(),
                 "owner/repository",
                 "token",
@@ -1353,8 +1477,8 @@ class DashboardCollectorTests(unittest.TestCase):
         self.assertEqual(activity["runs"][0]["provider_attempts"], 1)
         self.assertEqual(activity["runs"][0]["starting_provider"], "jokeapi")
         self.assertEqual(activity["runs"][0]["successful_source"], "jokeapi")
-        with patch.object(dashboard, "fetch_workflow_run_logs") as fetch_logs:
-            dashboard.collect_workflow_activity(
+        with patch.object(dashboard_workflows, "fetch_workflow_run_logs") as fetch_logs:
+            dashboard_workflows.collect_workflow_activity(
                 object(),
                 "owner/repository",
                 "token",
@@ -1640,7 +1764,7 @@ class DashboardCollectorTests(unittest.TestCase):
             },
         ]
 
-        summary = dashboard._workflow_metrics(runs, now)
+        summary = dashboard_workflows._workflow_metrics(runs, now)
 
         self.assertEqual(summary["runs"], 4)
         self.assertEqual(summary["successful"], 2)
@@ -1727,7 +1851,9 @@ class DashboardCollectorTests(unittest.TestCase):
         }
         delivery = {"windows": {"7": {"missed": 2}}}
 
-        alerts = dashboard._operational_alerts(automation, providers, delivery, now)
+        alerts = dashboard_workflows._operational_alerts(
+            automation, providers, delivery, now
+        )
 
         self.assertEqual(
             alerts,
@@ -1776,7 +1902,7 @@ class DashboardCollectorTests(unittest.TestCase):
         ]
         activity = {"runs": [{"id": 42, "follows": 1}]}
 
-        alerts = dashboard._operational_alerts(
+        alerts = dashboard_workflows._operational_alerts(
             automation,
             {"providers": []},
             {"windows": {"7": {"missed": 0}}},
@@ -1827,7 +1953,7 @@ class DashboardCollectorTests(unittest.TestCase):
             )
         ]
 
-        metrics = dashboard._workflow_metrics(runs, now)
+        metrics = dashboard_workflows._workflow_metrics(runs, now)
         posting = next(
             item for item in metrics["workflows"] if item["name"] == "bluesky_post_joke"
         )
@@ -1845,7 +1971,7 @@ class DashboardCollectorTests(unittest.TestCase):
         ]
         session = _WorkflowSession({1: runs[:100], 2: runs[100:]})
 
-        collected = dashboard.fetch_workflow_runs(
+        collected = dashboard_workflows.fetch_workflow_runs(
             session,
             "owner/repository",
             "token",
