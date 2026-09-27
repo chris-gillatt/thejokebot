@@ -1700,7 +1700,7 @@
     },
     {
       "period_start": "2026-09-27T12:00:00+00:00",
-      "collected_at": "2026-09-27T14:52:06.594702+00:00",
+      "collected_at": "2026-09-27T15:00:59.387140+00:00",
       "followers": 6784,
       "following": 10791,
       "profile_posts": 2553,
@@ -22193,27 +22193,27 @@
       "attempt": 1,
       "workflow": "bluesky_dashboard",
       "created_at": "2026-09-27T14:51:42Z",
-      "updated_at": "2026-09-27T14:51:46Z",
-      "status": "in_progress",
-      "conclusion": null
+      "updated_at": "2026-09-27T14:52:52Z",
+      "status": "completed",
+      "conclusion": "success"
     },
     {
       "id": 36327445703,
       "attempt": 1,
       "workflow": "codeql",
       "created_at": "2026-09-27T14:51:42Z",
-      "updated_at": "2026-09-27T14:51:46Z",
-      "status": "in_progress",
-      "conclusion": null
+      "updated_at": "2026-09-27T14:53:06Z",
+      "status": "completed",
+      "conclusion": "success"
     },
     {
       "id": 36327445675,
       "attempt": 1,
       "workflow": "python_tests",
       "created_at": "2026-09-27T14:51:42Z",
-      "updated_at": "2026-09-27T14:51:45Z",
-      "status": "in_progress",
-      "conclusion": null
+      "updated_at": "2026-09-27T14:53:31Z",
+      "status": "completed",
+      "conclusion": "success"
     },
     {
       "id": 36327445744,
@@ -22230,6 +22230,51 @@
       "workflow": "validate_runtime_config",
       "created_at": "2026-09-27T14:51:42Z",
       "updated_at": "2026-09-27T14:52:01Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36327967463,
+      "attempt": 1,
+      "workflow": "bluesky_dashboard",
+      "created_at": "2026-09-27T15:00:37Z",
+      "updated_at": "2026-09-27T15:00:41Z",
+      "status": "in_progress",
+      "conclusion": null
+    },
+    {
+      "id": 36327967467,
+      "attempt": 1,
+      "workflow": "codeql",
+      "created_at": "2026-09-27T15:00:37Z",
+      "updated_at": "2026-09-27T15:00:41Z",
+      "status": "in_progress",
+      "conclusion": null
+    },
+    {
+      "id": 36327967462,
+      "attempt": 1,
+      "workflow": "python_tests",
+      "created_at": "2026-09-27T15:00:37Z",
+      "updated_at": "2026-09-27T15:00:41Z",
+      "status": "in_progress",
+      "conclusion": null
+    },
+    {
+      "id": 36327967442,
+      "attempt": 1,
+      "workflow": "ruff_quality",
+      "created_at": "2026-09-27T15:00:37Z",
+      "updated_at": "2026-09-27T15:00:54Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36327967415,
+      "attempt": 1,
+      "workflow": "validate_runtime_config",
+      "created_at": "2026-09-27T15:00:37Z",
+      "updated_at": "2026-09-27T15:00:54Z",
       "status": "completed",
       "conclusion": "success"
     }
@@ -50054,7 +50099,7 @@
     },
     {
       "period_start": "2026-09-27T12:00:00+00:00",
-      "collected_at": "2026-09-27T14:52:06.594702+00:00",
+      "collected_at": "2026-09-27T15:00:59.387140+00:00",
       "providers": [
         {
           "name": "icanhazdadjoke",
