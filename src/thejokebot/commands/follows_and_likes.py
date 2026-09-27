@@ -14,6 +14,7 @@ from colorama import Fore, Style
 from thejokebot import blocks as blocks
 from thejokebot import config as runtime_config
 from thejokebot import state as bot_state
+from thejokebot.commands import follow_back as follow_back_processing
 from thejokebot.commands import joke_requests
 from thejokebot.runtime import (
     get_nested_value,
@@ -50,11 +51,9 @@ _INTERACTION_FOLLOW_MAX_PAGES = _FOLLOWS_AND_LIKES_CONFIG[
 _INTERACTION_FOLLOW_PAGE_LIMIT = _FOLLOWS_AND_LIKES_CONFIG[
     "interaction_follow_page_limit"
 ]
-_FOLLOW_BACK_PAGE_LIMIT = 100
-_FOLLOW_BACK_MAX_PAGES = 1000
-_FOLLOW_BACK_MAX_RUNTIME_SECONDS = 180
-_FOLLOW_BACK_MAX_RECONCILIATION_PASSES = 3
-_FOLLOW_BACK_SETTLE_SECONDS = 5
+_FOLLOW_BACK_PAGE_LIMIT = follow_back_processing.PAGE_LIMIT
+_FOLLOW_BACK_MAX_PAGES = follow_back_processing.MAX_PAGES
+_FOLLOW_BACK_MAX_RUNTIME_SECONDS = follow_back_processing.MAX_RUNTIME_SECONDS
 _STARTER_PACK_WINDOW_DAYS = 30
 _STARTER_PACK_MAX_PAGES = 20
 _STARTER_PACK_PAGE_LIMIT = 100
@@ -93,53 +92,6 @@ def reply_to_joke_requests(client, username, state, dry_run, summary=None):
     )
 
 
-def _follow_back_candidates(
-    client,
-    state,
-    to_follow_back,
-    dry_run,
-    action_delay_seconds,
-    attempted_dids,
-    summary,
-):
-    for index, did in enumerate(to_follow_back, start=1):
-        attempted_dids.add(did)
-        masked_did = mask_sensitive(did)
-        print(
-            f"{Fore.YELLOW}({index}/{len(to_follow_back)}) Following {masked_did}...{Style.RESET_ALL}"
-        )
-        if dry_run:
-            print(f"{Fore.YELLOW}[DRY-RUN] Would follow {masked_did}{Style.RESET_ALL}")
-            summary["follow_back_added"] += 1
-        else:
-            try:
-                retry_network_call(
-                    lambda current_did=did: client.follow(current_did),
-                    description=f"following back {masked_did}",
-                )
-                print(f"{Fore.GREEN}Followed {masked_did}{Style.RESET_ALL}")
-                if state is not None:
-                    bot_state.record_acquisition(state, did, "followback")
-                summary["follow_back_added"] += 1
-            except (
-                requests.RequestException,
-                TimeoutError,
-                atproto_client.exceptions.NetworkError,
-            ) as exc:
-                print(
-                    f"{Fore.RED}Failed to follow {masked_did}: {exc}{Style.RESET_ALL}"
-                )
-                summary["failed"] += 1
-
-        if action_delay_seconds > 0 and index < len(to_follow_back):
-            time.sleep(action_delay_seconds)
-
-
-# ---------------------------------------------------------------------------
-# Follow-back
-# ---------------------------------------------------------------------------
-
-
 def follow_back(
     client,
     dry_run: bool,
@@ -147,90 +99,14 @@ def follow_back(
     summary: dict | None = None,
     state: dict | None = None,
 ) -> None:
-    """Follow back any followers the bot is not yet following.
-
-    Every current follower is followed back unconditionally.  The unfollow
-    history is intentionally NOT consulted here: if someone has re-followed
-    the bot they have shown fresh intent to engage and deserve a follow-back
-    regardless of prior churn.  Unfollow-history protection applies only to
-    proactive follows (see ``follow_interactors``).
-    """
-    if summary is None:
-        summary = {}
-    user_did = client.me.did
-    print(
-        f"{Fore.YELLOW}Fetching followers and following for account.{Style.RESET_ALL}"
+    """Delegate follower reconciliation to its domain module."""
+    return follow_back_processing.follow_back(
+        client,
+        dry_run,
+        action_delay_seconds,
+        summary,
+        state,
     )
-
-    attempted_dids: set[str] = set()
-    observed_candidate_dids: set[str] = set()
-    cohorts_reconciled = False
-    summary["follow_back_candidates"] = 0
-    summary["follow_back_added"] = 0
-    summary["failed"] = 0
-
-    for pass_number in range(1, _FOLLOW_BACK_MAX_RECONCILIATION_PASSES + 2):
-        followers = fetch_paginated_data(
-            client.get_followers,
-            actor=user_did,
-            limit=_FOLLOW_BACK_PAGE_LIMIT,
-            max_pages=_FOLLOW_BACK_MAX_PAGES,
-            max_runtime_seconds=_FOLLOW_BACK_MAX_RUNTIME_SECONDS,
-            require_complete=True,
-        )
-        following = fetch_paginated_data(
-            client.get_follows,
-            actor=user_did,
-            limit=_FOLLOW_BACK_PAGE_LIMIT,
-            max_pages=_FOLLOW_BACK_MAX_PAGES,
-            max_runtime_seconds=_FOLLOW_BACK_MAX_RUNTIME_SECONDS,
-            require_complete=True,
-        )
-        follower_dids = {f.did for f in followers}
-        following_dids = {f.did for f in following}
-        if state is not None and not dry_run and not cohorts_reconciled:
-            bot_state.reconcile_acquisition_cohorts(state, follower_dids)
-            cohorts_reconciled = True
-        remaining_dids = follower_dids - following_dids
-        observed_candidate_dids |= remaining_dids
-        summary["follow_back_candidates"] = len(observed_candidate_dids)
-
-        if not remaining_dids:
-            print(
-                f"{Fore.GREEN}Verified that all actionable followers are followed back.{Style.RESET_ALL}"
-            )
-            print(f"{Fore.GREEN}Follow-back completed.{Style.RESET_ALL}")
-            return
-
-        if pass_number > _FOLLOW_BACK_MAX_RECONCILIATION_PASSES:
-            summary["failed"] += len(remaining_dids)
-            raise RuntimeError(
-                "Follow-back did not converge after "
-                f"{_FOLLOW_BACK_MAX_RECONCILIATION_PASSES} reconciliation passes; "
-                f"{len(remaining_dids)} actionable follower(s) remain."
-            )
-
-        to_follow_back = sorted(remaining_dids - attempted_dids)
-        print(
-            f"{Fore.GREEN}Follow-back pass {pass_number}: found "
-            f"{len(remaining_dids)} actionable follower(s), "
-            f"{len(to_follow_back)} not yet attempted.{Style.RESET_ALL}"
-        )
-        _follow_back_candidates(
-            client,
-            state,
-            to_follow_back,
-            dry_run,
-            action_delay_seconds,
-            attempted_dids,
-            summary,
-        )
-
-        if dry_run:
-            print(f"{Fore.GREEN}Follow-back dry run completed.{Style.RESET_ALL}")
-            return
-
-        time.sleep(_FOLLOW_BACK_SETTLE_SECONDS)
 
 
 # ---------------------------------------------------------------------------

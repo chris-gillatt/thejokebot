@@ -20,6 +20,7 @@ from thejokebot import config as runtime_config
 from thejokebot.commands import create_report_prs as bluesky_create_report_prs
 from thejokebot import denylist as joke_denylist
 from thejokebot import followers as followers
+from thejokebot.commands import follow_back as follow_back_processing
 from thejokebot.commands import follow_fellows as bluesky_follow_fellows
 from thejokebot.commands import follows_and_likes as bluesky_follows_and_likes
 from thejokebot import providers as joke_providers
@@ -3315,15 +3316,60 @@ class BlockReconciliationTests(unittest.TestCase):
 
 
 class FollowBackTests(unittest.TestCase):
+    def test_follow_candidates_counts_failures_and_applies_delay(self):
+        client = mock.Mock()
+        summary = {"follow_back_added": 0, "failed": 0}
+        attempted_dids = set()
+
+        with (
+            mock.patch.object(
+                follow_back_processing,
+                "retry_network_call",
+                side_effect=[requests.RequestException("offline"), None],
+            ),
+            mock.patch.object(follow_back_processing.time, "sleep") as sleep,
+        ):
+            follow_back_processing._follow_candidates(
+                client,
+                None,
+                ["did:plc:first", "did:plc:second"],
+                dry_run=False,
+                action_delay_seconds=1,
+                attempted_dids=attempted_dids,
+                summary=summary,
+            )
+
+        self.assertEqual(attempted_dids, {"did:plc:first", "did:plc:second"})
+        self.assertEqual(summary, {"follow_back_added": 1, "failed": 1})
+        sleep.assert_called_once_with(1)
+
+    def test_social_command_delegates_follow_back(self):
+        client = mock.Mock()
+        state = {}
+        summary = {}
+
+        with mock.patch.object(
+            bluesky_follows_and_likes.follow_back_processing, "follow_back"
+        ) as delegate:
+            bluesky_follows_and_likes.follow_back(
+                client,
+                dry_run=True,
+                action_delay_seconds=2,
+                summary=summary,
+                state=state,
+            )
+
+        delegate.assert_called_once_with(client, True, 2, summary, state)
+
     def test_follow_back_uses_extended_graph_pagination_limits(self):
         client = mock.Mock()
         client.me.did = "did:plc:bot"
 
         with mock.patch(
-            "thejokebot.commands.follows_and_likes.fetch_paginated_data",
+            "thejokebot.commands.follow_back.fetch_paginated_data",
             side_effect=[[], []],
         ) as fetch_paginated_data:
-            bluesky_follows_and_likes.follow_back(
+            follow_back_processing.follow_back(
                 client,
                 dry_run=False,
                 action_delay_seconds=0,
@@ -3336,9 +3382,9 @@ class FollowBackTests(unittest.TestCase):
             follower_call.kwargs,
             {
                 "actor": "did:plc:bot",
-                "limit": bluesky_follows_and_likes._FOLLOW_BACK_PAGE_LIMIT,
-                "max_pages": bluesky_follows_and_likes._FOLLOW_BACK_MAX_PAGES,
-                "max_runtime_seconds": bluesky_follows_and_likes._FOLLOW_BACK_MAX_RUNTIME_SECONDS,
+                "limit": follow_back_processing.PAGE_LIMIT,
+                "max_pages": follow_back_processing.MAX_PAGES,
+                "max_runtime_seconds": follow_back_processing.MAX_RUNTIME_SECONDS,
                 "require_complete": True,
             },
         )
@@ -3347,9 +3393,9 @@ class FollowBackTests(unittest.TestCase):
             following_call.kwargs,
             {
                 "actor": "did:plc:bot",
-                "limit": bluesky_follows_and_likes._FOLLOW_BACK_PAGE_LIMIT,
-                "max_pages": bluesky_follows_and_likes._FOLLOW_BACK_MAX_PAGES,
-                "max_runtime_seconds": bluesky_follows_and_likes._FOLLOW_BACK_MAX_RUNTIME_SECONDS,
+                "limit": follow_back_processing.PAGE_LIMIT,
+                "max_pages": follow_back_processing.MAX_PAGES,
+                "max_runtime_seconds": follow_back_processing.MAX_RUNTIME_SECONDS,
                 "require_complete": True,
             },
         )
@@ -3371,7 +3417,7 @@ class FollowBackTests(unittest.TestCase):
         state = bot_state._default_state()
 
         with mock.patch(
-            "thejokebot.commands.follows_and_likes.fetch_paginated_data",
+            "thejokebot.commands.follow_back.fetch_paginated_data",
             side_effect=[
                 [follower_profile, new_follower],
                 [],
@@ -3379,8 +3425,8 @@ class FollowBackTests(unittest.TestCase):
                 [follower_profile, new_follower],
             ],
         ):
-            with mock.patch("thejokebot.commands.follows_and_likes.time.sleep"):
-                bluesky_follows_and_likes.follow_back(
+            with mock.patch("thejokebot.commands.follow_back.time.sleep"):
+                follow_back_processing.follow_back(
                     client,
                     dry_run=False,
                     action_delay_seconds=0,
@@ -3419,7 +3465,7 @@ class FollowBackTests(unittest.TestCase):
         summary = {}
 
         with mock.patch(
-            "thejokebot.commands.follows_and_likes.fetch_paginated_data",
+            "thejokebot.commands.follow_back.fetch_paginated_data",
             side_effect=[
                 [first],
                 [],
@@ -3429,8 +3475,8 @@ class FollowBackTests(unittest.TestCase):
                 [first, second],
             ],
         ):
-            with mock.patch("thejokebot.commands.follows_and_likes.time.sleep"):
-                bluesky_follows_and_likes.follow_back(
+            with mock.patch("thejokebot.commands.follow_back.time.sleep"):
+                follow_back_processing.follow_back(
                     client,
                     dry_run=False,
                     action_delay_seconds=0,
@@ -3458,12 +3504,12 @@ class FollowBackTests(unittest.TestCase):
             return []
 
         with mock.patch(
-            "thejokebot.commands.follows_and_likes.fetch_paginated_data",
+            "thejokebot.commands.follow_back.fetch_paginated_data",
             side_effect=fetch_graph,
         ):
-            with mock.patch("thejokebot.commands.follows_and_likes.time.sleep"):
+            with mock.patch("thejokebot.commands.follow_back.time.sleep"):
                 with self.assertRaisesRegex(RuntimeError, "did not converge"):
-                    bluesky_follows_and_likes.follow_back(
+                    follow_back_processing.follow_back(
                         client,
                         dry_run=False,
                         action_delay_seconds=0,
@@ -3484,14 +3530,14 @@ class FollowBackTests(unittest.TestCase):
         )
 
         with mock.patch(
-            "thejokebot.commands.follows_and_likes.fetch_paginated_data",
+            "thejokebot.commands.follow_back.fetch_paginated_data",
             side_effect=[
                 [SimpleNamespace(did="did:plc:follower")],
                 snapshot_error,
             ],
         ):
             with self.assertRaises(atproto_client.exceptions.RequestException):
-                bluesky_follows_and_likes.follow_back(
+                follow_back_processing.follow_back(
                     client,
                     dry_run=False,
                     action_delay_seconds=0,
@@ -3515,10 +3561,10 @@ class FollowBackTests(unittest.TestCase):
         client.me.did = "did:plc:bot"
 
         with mock.patch(
-            "thejokebot.commands.follows_and_likes.fetch_paginated_data",
+            "thejokebot.commands.follow_back.fetch_paginated_data",
             side_effect=[[follower], []],
         ):
-            bluesky_follows_and_likes.follow_back(
+            follow_back_processing.follow_back(
                 client,
                 dry_run=True,
                 action_delay_seconds=0,
