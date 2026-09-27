@@ -55,7 +55,7 @@ echo "==> Unit tests"
   --cov=. \
   --cov-report=term \
   --cov-report=xml:coverage.xml \
-  --cov-fail-under=75
+  --cov-fail-under=90
 
 if command -v codeql >/dev/null 2>&1; then
   CODEQL_TMP="$REPO_ROOT/.agent-tmp/codeql-local"

@@ -67,7 +67,7 @@ jobs:
 
       - name: Run unit tests
         if: github.event_name == 'workflow_dispatch' || steps.changed_files.outputs.non_docs == 'true'
-        run: python -m pytest tests/ -v --tb=short --cov=. --cov-report=term --cov-report=xml:coverage.xml --cov-fail-under=75
+        run: python -m pytest tests/ -v --tb=short --cov=. --cov-report=term --cov-report=xml:coverage.xml --cov-fail-under=90
 
       - name: Run SonarQube Cloud analysis
         if: >

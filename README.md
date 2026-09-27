@@ -29,7 +29,7 @@ Posts dad jokes to a configured Bluesky account, plus account housekeeping autom
 - Posts regular jokes by a schedule.
 - Avoids duplicating jokes within a rolling 730-day window.
 - Rotates across multiple live joke APIs with a bundled offline fallback.
-- Supports follow-back, reply liking, unfollow, and fellow-follow discovery scripts.
+- Supports follow-back, tagged joke replies, reply liking, unfollow, and fellow-follow discovery scripts.
 - Uses a rotating set of configured humour/follow-back hashtags for fellow-follow discovery, with a conservative per-run cap and state-backed tag rotation so the same tags do not always get first priority.
 - Rotates hashtags appended to joke posts using the posting runtime-config tag pool, with deterministic per-post progression and grapheme-aware length fitting.
 - Gives newly followed accounts a 90-day grace period before they become eligible for unfollow if they still do not follow back.
@@ -118,11 +118,14 @@ This runs:
 - Ruff format check (`ruff format --check .`)
 - Pyright checks for changed Python files and the full first-party project (`./scripts/check-python-types.sh`)
 - Workflow lint (`./scripts/lint-workflows.sh`, powered by actionlint)
-- Unit tests with application coverage (`pytest-cov`, minimum 75%)
+- Unit tests with application coverage (`pytest-cov`, minimum 90%)
 - Local CodeQL analysis (required by default)
 
 Linting, formatting, type checks, and tests are a single validation gate in this
 repository; running only tests is not considered sufficient before commit/push.
+New or changed executable Python requires at least 95% coverage, with focused
+tests for material branches such as failure paths, state transitions, safety
+limits, and idempotency.
 Run the gate as a separate command before pushing; the repository deliberately
 does not use a pre-push hook. Because scheduled workflows can update `main` while
 the checks run, use this order:
@@ -156,7 +159,7 @@ If you only want to run the unit test suite locally (without Ruff/CodeQL), run:
 - `./scripts/test-local.sh`
 
 Equivalent GitHub Actions workflow: `python_tests`. It generates `coverage.xml`,
-submits the analysis to SonarQube Cloud, and fails when either the 75% application
+submits the analysis to SonarQube Cloud, and fails when either the 90% application
 coverage floor or the Sonar quality gate is not met. Sonar analysis runs for
 `main`, manual dispatches, and trusted pull-request branches; fork pull requests
 do not receive the repository token.
@@ -182,7 +185,7 @@ Actions variables for CI.
 
 Generate the same application-only coverage report used by CI:
 
-- `PYTHONPATH=. .venv/bin/python -m pytest tests/ -q --cov=. --cov-report=xml:coverage.xml --cov-fail-under=75`
+- `PYTHONPATH=. .venv/bin/python -m pytest tests/ -q --cov=. --cov-report=xml:coverage.xml --cov-fail-under=90`
 
 Then load the local environment and run the scanner from the repository root:
 
@@ -374,7 +377,7 @@ The report triggers an automated PR adding the joke to the denylist. Once a main
 | Command | Purpose |
 |---|---|
 | `thejokebot-post-joke` | Fetch a joke, append a rotated hashtag window, post to Bluesky, and maintain posting state. |
-| `thejokebot-follows-and-likes` | Follow back new followers, follow users who interact with the bot's posts (replies, reposts, likes from the last 24 hours), and like replies to the bot's posts. |
+| `thejokebot-follows-and-likes` | Reply to recent tagged joke requests, follow back new followers, follow users who interact with the bot's posts (replies, reposts, likes from the last 24 hours), and like replies to the bot's posts. |
 | `thejokebot-unfollow` | Unfollow accounts that do not follow back, while respecting protected handles, starter-pack protections, and the 90-day follow grace window. |
 | `thejokebot-follow-fellows` | Search a rotating set of humour/follow-back hashtags and follow up to the configured per-run cap. |
 | `thejokebot-verify-latest-joke-post` | Read-only check that a recent joke post exists on the account. |
@@ -384,6 +387,11 @@ The report triggers an automated PR adding the joke to the denylist. Once a main
 | `thejokebot-create-report-prs` | Open one denylist PR per new report proposal. |
 | `thejokebot-validate-runtime-config` | Validate runtime configuration and workflow schedule metadata. |
 | `thejokebot-validate-unfollow-ignore` | Validate protected unfollow accounts against the current Bluesky account. |
+
+Tagged requests such as `@thejokebot.bsky.social tell me a joke` receive a
+fresh joke on the next follows-and-likes run. The bot processes no more than
+three requests per run, ignores `#report` replies, and records replied-to post
+URIs so repeated notifications cannot produce duplicate replies.
 
 ## Starter pack workflow
 

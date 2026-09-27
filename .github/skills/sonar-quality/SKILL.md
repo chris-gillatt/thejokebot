@@ -30,7 +30,7 @@ Use this workflow for SonarQube Cloud analysis and remediation in The Joke Bot.
    PYTHONPATH=. .venv/bin/python -m pytest tests/ -q \
      --cov=. \
      --cov-report=xml:coverage.xml \
-     --cov-fail-under=75
+     --cov-fail-under=90
    ```
 
 4. Verify `/coverage/sources/source` in `coverage.xml` is non-empty. An empty source causes Sonar to report Python coverage as 0% even when pytest reports coverage.
@@ -82,7 +82,7 @@ Use this workflow for SonarQube Cloud analysis and remediation in The Joke Bot.
 
 - install `requirements.lock` with hash checking and binary wheels;
 - generate `coverage.xml` with `--cov=.`;
-- enforce the 75% pytest coverage floor;
+- enforce the 90% pytest coverage floor;
 - invoke the SHA-pinned SonarQube scan action;
 - wait for the quality gate;
 - run `scripts/check_sonar_issues.py` for the analysed branch or pull request and require zero unresolved issues;

@@ -16,6 +16,7 @@ changelog in this file is intentionally brief.
 - Before push, run local quality checks as a separate command, then sync with remote (`git pull --rebase`), then push. Scheduled workflows can update `main` while checks run, so validation must not be implemented as a pre-push hook.
 - The local quality gate includes `ruff check`, `ruff format --check`, Pyright, unit tests, and local CodeQL when available; fix issues proactively.
 - Treat lint, type checks, and tests as a combined gate for all code changes: do not consider a change validated if only tests ran without lint/format/type checks.
+- Require at least 90% overall first-party Python coverage and at least 95% coverage for new or changed executable Python. Coverage percentages do not replace focused tests for safety limits, failure paths, state transitions, idempotency, and other material branches.
 - Before completing each issue, sprint, or coherent work batch, check first-party Python, npm, and GitHub Actions dependencies against authoritative upstream sources or current Dependabot results. Reference submodules are upstream-owned, read-only resources: do not automate or proactively maintain their pinned revisions, and refresh one only when explicitly requested. Apply first-party upgrades separately; document any deliberate pin below with its current version, latest stable version, reason, and review trigger.
 - Require Sonar analysis to report both a passing quality gate and zero unresolved issues; either condition failing blocks delivery.
 
@@ -1143,3 +1144,16 @@ ownership.
   without changing behaviour.
 - Existing workflow names remain stable because they are operational identifiers
   referenced by dashboard history, badges, schedules, and branch protections.
+
+## 11. Tagged Joke Requests (Issue #53)
+
+Bluesky users can request a joke by tagging the bot with a short phrase such as
+`@thejokebot.bsky.social tell me a joke`. The scheduled follows-and-likes job
+recognises recent mention notifications and explicitly tagged replies, then
+posts a fresh joke as a correctly threaded reply.
+
+The implementation is deliberately conservative: it processes no more than
+three requests per run, excludes report replies, uses the normal provider
+rotation and permanent denylist, and persists replied-to notification URIs for
+idempotency. Successful replies also enter the posted-joke history so they are
+covered by the standard duplicate-avoidance window.
