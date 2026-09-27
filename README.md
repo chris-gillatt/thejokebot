@@ -273,7 +273,7 @@ Current config sections:
 
 - `posting` defaults (history window, provider retry attempts, post character budget, and hashtag controls including `tag_pool`).
 - `follow_fellows` defaults (per-tag/global follow limits, search page limit, hashtag set).
-- `follows_and_likes` defaults (like and interaction-follow page/pagination limits).
+- `follows_and_likes` defaults (like and interaction-follow pagination, plus joke-request reply controls).
 - `unfollow` defaults (per-run cap, batching controls, baseline protected handles).
 - `reports` defaults (page and pagination limits).
 - `workflow_schedules` metadata for cadence visibility.
@@ -298,6 +298,21 @@ Validation guard rail:
 - **Network retries:** set `BLUESKY_NETWORK_RETRY_ATTEMPTS`, `BLUESKY_NETWORK_RETRY_DELAY_SECONDS`, and `BLUESKY_NETWORK_RETRY_BACKOFF_FACTOR` to tune bounded retries for transient network/API failures.
 - **Unfollow capacity and batching:** the default monthly cap matches four weeks of configured follow-fellows capacity. At the current `150` follows per run and twice-weekly cadence, that is `1,200` unfollows; `BLUESKY_UNFOLLOW_MAX_ACTIONS` can override it. Actions remain batched in groups of `50` with `60`-second pauses and stop early on throttling.
 - **Follow-fellows cadence:** `thejokebot-follow-fellows` runs twice weekly, rotates tag priority between runs, and uses the configured per-run cap and hashtag set from `resources/jokebot_runtime_config.json`.
+
+### Requesting a joke
+
+The bot replies when a mention contains the configured phrase `tell me a joke`. A
+reply notification must also explicitly mention the bot. Matching is
+case-insensitive and permits normal surrounding punctuation, but incidental uses
+of the word “joke” do not trigger a reply.
+
+The social workflow scans requests received since its last successfully persisted
+scan checkpoint. On first deployment it uses a three-hour bootstrap window, which
+covers the two-hour schedule plus a safety overlap without answering historical
+requests. The `follows_and_likes.joke_requests` runtime-config section controls
+whether replies are enabled, accepted phrases, per-run reply cap, pagination, and
+bootstrap lookback. Live thread inspection and persisted request URIs provide
+additional duplicate protection after interrupted runs.
 - **Post hashtag rotation:** `thejokebot-post-joke` rotates hashtags on each successful post using runtime precedence (`posting.tag_pool` → `follow_fellows.hashtags` → `posting.hashtags`) and calculates per-post length budget from selected tags before accepting a joke candidate.
 - **Report retry bound:** `thejokebot-process-reports` retries unresolved report notifications up to `BLUESKY_REPORT_MAX_UNRESOLVED_ATTEMPTS` before marking them processed to avoid infinite retry churn.
 - **Starter-pack/list protection:** if `resources/jokebot_starter_pack.json` is enabled and points to a valid source list URI, all members of that list are automatically protected from unfollowing (unioned with `BLUESKY_UNFOLLOW_IGNORE`).

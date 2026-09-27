@@ -175,6 +175,14 @@ _DEFAULT_CONFIG = {
         "like_page_limit": 100,
         "interaction_follow_max_pages": 5,
         "interaction_follow_page_limit": 100,
+        "joke_requests": {
+            "enabled": True,
+            "phrases": ["tell me a joke"],
+            "max_replies": 3,
+            "max_pages": 5,
+            "page_limit": 100,
+            "bootstrap_lookback_seconds": 10800,
+        },
     },
     "reports": {
         "max_pages": 3,
@@ -218,6 +226,12 @@ def _ensure_number(value, minimum, field_name):
     if value < minimum:
         raise ValueError(f"{field_name} must be >= {minimum}.")
     return float(value)
+
+
+def _ensure_bool(value, field_name):
+    if not isinstance(value, bool):
+        raise ValueError(f"{field_name} must be a boolean.")
+    return value
 
 
 def _ensure_string_list(value, field_name):
@@ -308,6 +322,30 @@ def _validate_optional_posting_tag_pool(posting: dict) -> None:
         normalised_pool.append(normalised)
 
     posting["tag_pool"] = normalised_pool
+
+
+def _validate_joke_request_config(raw: object) -> dict:
+    if not isinstance(raw, dict):
+        raise ValueError("follows_and_likes.joke_requests must be an object.")
+    prefix = "follows_and_likes.joke_requests"
+    raw["enabled"] = _ensure_bool(raw.get("enabled", True), f"{prefix}.enabled")
+    raw["phrases"] = _ensure_string_list(
+        raw.get("phrases", ["tell me a joke"]), f"{prefix}.phrases"
+    )
+    for field, default, minimum in (
+        ("max_replies", 3, 0),
+        ("max_pages", 5, 1),
+        ("page_limit", 100, 1),
+        ("bootstrap_lookback_seconds", 10800, 1),
+    ):
+        raw[field] = _ensure_int(
+            raw.get(field, default),
+            minimum=minimum,
+            field_name=f"{prefix}.{field}",
+        )
+    if raw["page_limit"] > 100:
+        raise ValueError(f"{prefix}.page_limit must be <= 100.")
+    return raw
 
 
 def _validate_config(payload):
@@ -416,6 +454,9 @@ def _validate_config(payload):
         raise ValueError(
             "follows_and_likes.interaction_follow_page_limit must be <= 100."
         )
+    follows_and_likes["joke_requests"] = _validate_joke_request_config(
+        follows_and_likes.get("joke_requests", {})
+    )
     cfg["follows_and_likes"] = follows_and_likes
 
     reports = cfg.get("reports", {})

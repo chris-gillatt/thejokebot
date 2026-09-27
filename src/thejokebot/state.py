@@ -116,7 +116,11 @@ def _default_state() -> dict:
             "liked_uris": [],
             "last_checked_at": None,
         },
-        "joke_requests": {"replied_uris": []},
+        "joke_requests": {
+            "replied_uris": [],
+            "last_checked_at": None,
+            "boundary_notification_uris": [],
+        },
         "unfollow_history": {
             "entries": [],
         },
@@ -209,6 +213,8 @@ def _normalise_state(state: dict) -> dict:
 
     joke_requests = state.setdefault("joke_requests", {})
     joke_requests.setdefault("replied_uris", [])
+    joke_requests.setdefault("last_checked_at", None)
+    joke_requests.setdefault("boundary_notification_uris", [])
 
     unfollow_history = state.setdefault("unfollow_history", {})
     unfollow_history.setdefault("entries", [])
@@ -672,6 +678,23 @@ def prune_replied_joke_request_uris(state: dict, max_entries: int = 5000) -> Non
     uris = joke_requests.setdefault("replied_uris", [])
     if len(uris) > max_entries:
         joke_requests["replied_uris"] = uris[-max_entries:]
+
+
+def get_joke_request_checkpoint(state: dict) -> tuple[Optional[float], set[str]]:
+    joke_requests = state.setdefault("joke_requests", {})
+    checked_at = joke_requests.setdefault("last_checked_at", None)
+    boundary_uris = joke_requests.setdefault("boundary_notification_uris", [])
+    return checked_at, set(boundary_uris)
+
+
+def set_joke_request_checkpoint(
+    state: dict, checked_at: float, boundary_notification_uris: set[str]
+) -> None:
+    joke_requests = state.setdefault("joke_requests", {})
+    joke_requests["last_checked_at"] = checked_at
+    joke_requests["boundary_notification_uris"] = sorted(
+        uri for uri in boundary_notification_uris if uri
+    )
 
 
 # ---------------------------------------------------------------------------

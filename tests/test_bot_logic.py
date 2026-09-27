@@ -2791,6 +2791,27 @@ class JokeRequestReplyTests(unittest.TestCase):
 
         self.assertIsNone(candidate)
 
+    def test_candidate_matches_only_configured_request_phrase(self):
+        accepted = self._notification(text="Please, tell me a joke!")
+        rejected = (
+            self._notification(text="give me a joke"),
+            self._notification(text="joke please"),
+            self._notification(text="that joke was funny"),
+        )
+
+        self.assertIsNotNone(
+            bluesky_follows_and_likes._joke_request_candidate(
+                accepted, "thejokebot.bsky.social", set(), 0
+            )
+        )
+        for notification in rejected:
+            with self.subTest(text=notification.record.text):
+                self.assertIsNone(
+                    bluesky_follows_and_likes._joke_request_candidate(
+                        notification, "thejokebot.bsky.social", set(), 0
+                    )
+                )
+
     def test_replies_once_to_tagged_joke_request(self):
         root = SimpleNamespace(
             uri="at://did:plc:root/app.bsky.feed.post/root", cid="root-cid"
@@ -2852,9 +2873,12 @@ class JokeRequestReplyTests(unittest.TestCase):
         )
 
         client.send_post.reset_mock()
-        with mock.patch(
-            "thejokebot.commands.follows_and_likes.retry_network_call",
-            side_effect=lambda fn, description: fn(),
+        with (
+            mock.patch(
+                "thejokebot.commands.follows_and_likes.retry_network_call",
+                side_effect=lambda fn, description: fn(),
+            ),
+            mock.patch("thejokebot.state.save_state") as second_save_state,
         ):
             second_count = bluesky_follows_and_likes.reply_to_joke_requests(
                 client,
@@ -2865,6 +2889,7 @@ class JokeRequestReplyTests(unittest.TestCase):
 
         self.assertEqual(second_count, 0)
         client.send_post.assert_not_called()
+        second_save_state.assert_called_once_with(state, domains="social")
 
     def test_report_request_is_not_answered(self):
         notification = self._notification(text="tell me a joke #report")
@@ -3038,6 +3063,7 @@ class JokeRequestReplyTests(unittest.TestCase):
 
         self.assertEqual(bot_state.get_replied_joke_request_uris(state), set())
         self.assertEqual(state["posted_jokes"], [])
+        self.assertEqual(bot_state.get_joke_request_checkpoint(state), (None, set()))
 
     def test_existing_live_reply_recovers_lost_idempotency_state(self):
         notification = self._notification()
@@ -3068,7 +3094,94 @@ class JokeRequestReplyTests(unittest.TestCase):
         self.assertEqual(count, 0)
         client.send_post.assert_not_called()
         self.assertIn(notification.uri, bot_state.get_replied_joke_request_uris(state))
+        self.assertIsNotNone(bot_state.get_joke_request_checkpoint(state)[0])
+        self.assertEqual(
+            save_state.call_args_list,
+            [
+                mock.call(state, domains="social"),
+                mock.call(state, domains="social"),
+            ],
+        )
+
+    def test_successful_empty_scan_advances_checkpoint(self):
+        client = mock.Mock()
+        client.app.bsky.notification.list_notifications.return_value = SimpleNamespace(
+            notifications=[]
+        )
+        state = bot_state._default_state()
+
+        with (
+            mock.patch(
+                "thejokebot.commands.follows_and_likes.retry_network_call",
+                side_effect=lambda fn, description: fn(),
+            ),
+            mock.patch("thejokebot.state.save_state") as save_state,
+            mock.patch(
+                "thejokebot.commands.follows_and_likes.time.time", return_value=1234.5
+            ),
+        ):
+            count = bluesky_follows_and_likes.reply_to_joke_requests(
+                client, "thejokebot.bsky.social", state, dry_run=False
+            )
+
+        self.assertEqual(count, 0)
+        self.assertEqual(bot_state.get_joke_request_checkpoint(state), (1234.5, set()))
         save_state.assert_called_once_with(state, domains="social")
+
+    def test_checkpoint_filters_requests_seen_before_last_successful_scan(self):
+        old = self._notification(indexed_at="2026-01-01T00:00:00Z")
+        new = self._notification(
+            uri="at://did:plc:user/app.bsky.feed.post/new",
+            indexed_at="2026-01-01T02:00:01Z",
+        )
+        client = mock.Mock()
+        client.app.bsky.notification.list_notifications.return_value = SimpleNamespace(
+            notifications=[new, old]
+        )
+        state = bot_state._default_state()
+        checkpoint = dt.datetime(2026, 1, 1, 2, tzinfo=dt.timezone.utc).timestamp()
+        bot_state.set_joke_request_checkpoint(state, checkpoint, set())
+
+        with (
+            mock.patch(
+                "thejokebot.commands.follows_and_likes.retry_network_call",
+                side_effect=lambda fn, description: fn(),
+            ),
+            mock.patch(
+                "thejokebot.commands.follows_and_likes.time.time",
+                return_value=checkpoint + 3600,
+            ),
+            mock.patch("thejokebot.state.save_state"),
+        ):
+            count = bluesky_follows_and_likes.reply_to_joke_requests(
+                client, "thejokebot.bsky.social", state, dry_run=True
+            )
+
+        self.assertEqual(count, 1)
+
+    def test_incomplete_paginated_scan_fails_without_advancing_checkpoint(self):
+        response = SimpleNamespace(notifications=[], cursor="more")
+        client = mock.Mock()
+        client.app.bsky.notification.list_notifications.return_value = response
+        state = bot_state._default_state()
+
+        with (
+            mock.patch(
+                "thejokebot.commands.follows_and_likes.retry_network_call",
+                side_effect=lambda fn, description: fn(),
+            ),
+            mock.patch(
+                "thejokebot.commands.follows_and_likes._JOKE_REQUEST_MAX_PAGES", 2
+            ),
+            mock.patch("thejokebot.state.save_state") as save_state,
+            self.assertRaisesRegex(ValueError, "page limit"),
+        ):
+            bluesky_follows_and_likes.reply_to_joke_requests(
+                client, "thejokebot.bsky.social", state, dry_run=False
+            )
+
+        self.assertEqual(bot_state.get_joke_request_checkpoint(state), (None, set()))
+        save_state.assert_not_called()
 
 
 class BlockReconciliationTests(unittest.TestCase):

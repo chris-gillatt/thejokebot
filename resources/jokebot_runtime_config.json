@@ -84,7 +84,17 @@
     "like_max_pages": 5,
     "like_page_limit": 100,
     "interaction_follow_max_pages": 5,
-    "interaction_follow_page_limit": 100
+    "interaction_follow_page_limit": 100,
+    "joke_requests": {
+      "enabled": true,
+      "phrases": [
+        "tell me a joke"
+      ],
+      "max_replies": 3,
+      "max_pages": 5,
+      "page_limit": 100,
+      "bootstrap_lookback_seconds": 10800
+    }
   },
   "reports": {
     "max_pages": 3,

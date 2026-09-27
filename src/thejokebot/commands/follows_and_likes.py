@@ -35,11 +35,15 @@ _DEFAULT_LIKE_PAGE_LIMIT = _FOLLOWS_AND_LIKES_CONFIG["like_page_limit"]
 _LIKE_WINDOW_SECONDS = 24 * 60 * 60  # only like replies from the last 24 hours
 _LIKE_REASONS = ("reply", "repost")
 _JOKE_REQUEST_REASONS = ("mention", "reply")
-_JOKE_REQUEST_MAX_REPLIES = 3
-_JOKE_REQUEST_PATTERN = re.compile(
-    r"\b(?:tell|give|send)\b.*\bjoke\b|\b(?:another|a)\s+joke\b|\bjoke\s+please\b",
-    re.IGNORECASE,
-)
+_JOKE_REQUEST_CONFIG = _FOLLOWS_AND_LIKES_CONFIG["joke_requests"]
+_JOKE_REQUEST_ENABLED = _JOKE_REQUEST_CONFIG["enabled"]
+_JOKE_REQUEST_PHRASES = tuple(_JOKE_REQUEST_CONFIG["phrases"])
+_JOKE_REQUEST_MAX_REPLIES = _JOKE_REQUEST_CONFIG["max_replies"]
+_JOKE_REQUEST_MAX_PAGES = _JOKE_REQUEST_CONFIG["max_pages"]
+_JOKE_REQUEST_PAGE_LIMIT = _JOKE_REQUEST_CONFIG["page_limit"]
+_JOKE_REQUEST_BOOTSTRAP_LOOKBACK_SECONDS = _JOKE_REQUEST_CONFIG[
+    "bootstrap_lookback_seconds"
+]
 _UTC_OFFSET = "+00:00"
 
 _INTERACTION_FOLLOW_REASONS = ("reply", "repost", "like")
@@ -784,7 +788,27 @@ def like_replies(
     return liked_count
 
 
-def _joke_request_candidate(notification, username, replied_uris, cutoff_epoch):
+def _matches_joke_request(text: str, phrases: tuple[str, ...]) -> bool:
+    return any(
+        re.search(
+            rf"(?<!\w){re.escape(phrase).replace(r'\ ', r'\s+')}(?!\w)",
+            text,
+            re.IGNORECASE,
+        )
+        for phrase in phrases
+    )
+
+
+def _joke_request_candidate(
+    notification,
+    username,
+    replied_uris,
+    cutoff_epoch,
+    *,
+    upper_epoch=float("inf"),
+    boundary_uris: set[str] | frozenset[str] = frozenset(),
+    phrases: tuple[str, ...] = _JOKE_REQUEST_PHRASES,
+):
     reason = get_nested_value(notification, "reason")
     uri = get_nested_value(notification, "uri")
     cid = get_nested_value(notification, "cid")
@@ -794,9 +818,13 @@ def _joke_request_candidate(notification, username, replied_uris, cutoff_epoch):
     if uri in replied_uris or re.search(r"(?:^|\s)#report\b", text, re.IGNORECASE):
         return None
     notification_epoch = _parse_notification_epoch(notification)
-    if notification_epoch is not None and notification_epoch < cutoff_epoch:
+    if notification_epoch is None or notification_epoch > upper_epoch:
         return None
-    if not _JOKE_REQUEST_PATTERN.search(text):
+    if notification_epoch < cutoff_epoch:
+        return None
+    if notification_epoch == cutoff_epoch and uri in boundary_uris:
+        return None
+    if not _matches_joke_request(text, phrases):
         return None
     if reason == "reply" and f"@{username.lower()}" not in text.lower():
         return None
@@ -845,24 +873,64 @@ def _request_has_bot_reply(client, request_uri):
     )
 
 
+def _collect_joke_request_notifications(client, cutoff_epoch, upper_epoch):
+    notifications = []
+    cursor = None
+    for _ in range(_JOKE_REQUEST_MAX_PAGES):
+        params = {
+            "limit": _JOKE_REQUEST_PAGE_LIMIT,
+            "reasons": list(_JOKE_REQUEST_REASONS),
+        }
+        if cursor:
+            params["cursor"] = cursor
+        response = retry_network_call(
+            lambda params=params: client.app.bsky.notification.list_notifications(
+                params=params
+            ),
+            description="listing tagged joke requests",
+        )
+        page = get_nested_value(response, "notifications") or []
+        notifications.extend(page)
+        reached_checkpoint = any(
+            (epoch := _parse_notification_epoch(notification)) is not None
+            and epoch < cutoff_epoch
+            for notification in page
+        )
+        cursor = get_nested_value(response, "cursor")
+        if reached_checkpoint or not cursor:
+            return notifications
+    raise ValueError(
+        "Joke-request notification scan reached the configured page limit before "
+        "the previous checkpoint."
+    )
+
+
 def reply_to_joke_requests(client, username, state, dry_run, summary=None):
     if summary is None:
         summary = {}
+    if not _JOKE_REQUEST_ENABLED:
+        summary["joke_replies"] = 0
+        return 0
     replied_uris = bot_state.get_replied_joke_request_uris(state)
-    cutoff_epoch = time.time() - _LIKE_WINDOW_SECONDS
-    response = retry_network_call(
-        lambda: client.app.bsky.notification.list_notifications(
-            params={
-                "limit": _DEFAULT_LIKE_PAGE_LIMIT,
-                "reasons": list(_JOKE_REQUEST_REASONS),
-            }
-        ),
-        description="listing tagged joke requests",
+    upper_epoch = time.time()
+    checkpoint, boundary_uris = bot_state.get_joke_request_checkpoint(state)
+    cutoff_epoch = (
+        checkpoint
+        if checkpoint is not None
+        else upper_epoch - _JOKE_REQUEST_BOOTSTRAP_LOOKBACK_SECONDS
+    )
+    notifications = _collect_joke_request_notifications(
+        client, cutoff_epoch, upper_epoch
     )
     replied_count = 0
-    for notification in get_nested_value(response, "notifications") or []:
+    for notification in notifications:
         candidate = _joke_request_candidate(
-            notification, username, replied_uris, cutoff_epoch
+            notification,
+            username,
+            replied_uris,
+            cutoff_epoch,
+            upper_epoch=upper_epoch,
+            boundary_uris=boundary_uris,
         )
         if candidate is None or replied_count >= _JOKE_REQUEST_MAX_REPLIES:
             continue
@@ -912,6 +980,14 @@ def reply_to_joke_requests(client, username, state, dry_run, summary=None):
         replied_count += 1
         bot_state.prune_replied_joke_request_uris(state)
         bot_state.save_state(state, domains=("posting", "social"))
+    if not dry_run:
+        upper_boundary_uris = {
+            str(get_nested_value(notification, "uri") or "")
+            for notification in notifications
+            if _parse_notification_epoch(notification) == upper_epoch
+        }
+        bot_state.set_joke_request_checkpoint(state, upper_epoch, upper_boundary_uris)
+        bot_state.save_state(state, domains="social")
     summary["joke_replies"] = replied_count
     return replied_count
 
