@@ -72,28 +72,8 @@ jobs:
 
       - name: Persist posting state
         run: |
-          # Use the GitHub Bot user for Git and GitHub IAM.
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          # Persist updated provider rotation and joke history.
-          git add state/posting_state.json
-
-          # Commit and push only when the file changed.
-          if git diff --cached --quiet; then
-            echo "No posting state changes to commit."
-            exit 0
-          fi
-
-          git commit -m "chore(posting): update state; GH run: ${GITHUB_RUN_NUMBER}"
-          for attempt in 1 2 3; do
-            git pull --rebase origin main
-            if git push; then
-              break
-            fi
-            if [ "$attempt" -eq 3 ]; then
-              echo "Push failed after 3 attempts."
-              exit 1
-            fi
-            echo "Push rejected, retrying (${attempt}/3)..."
-          done
+          python scripts/persist_workflow_state.py \
+            --commit-message "chore(posting): update state; GH run: ${GITHUB_RUN_NUMBER}" \
+            state/posting_state.json

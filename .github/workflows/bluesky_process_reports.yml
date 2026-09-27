@@ -75,26 +75,9 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          git add state/moderation_state.json
-
-          if git diff --cached --quiet; then
-            echo "No moderation state changes to commit."
-            exit 0
-          fi
-
-          git commit -m "chore(reports): update report checkpoint state; GH run: ${GITHUB_RUN_NUMBER}"
-          for attempt in 1 2 3; do
-            git pull --rebase origin main
-            if git push; then
-              break
-            fi
-            if [ "$attempt" -eq 3 ]; then
-              echo "Push failed after 3 attempts."
-              exit 1
-            fi
-            echo "Push rejected, retrying (${attempt}/3)..."
-          done
+          python scripts/persist_workflow_state.py \
+            --commit-message "chore(reports): update report checkpoint state; GH run: ${GITHUB_RUN_NUMBER}" \
+            state/moderation_state.json
 
       - name: Create denylist PRs for new reports
         env:
