@@ -1680,6 +1680,88 @@ class DashboardCollectorTests(unittest.TestCase):
             ],
         )
 
+    def test_operational_alerts_flag_failure_streak_stale_checkpoint_and_mutation(self):
+        now = datetime(2026, 8, 22, 12, tzinfo=timezone.utc)
+        automation = {
+            "workflows": [
+                {
+                    "name": "bluesky_follows_and_likes",
+                    "last_conclusion": "failure",
+                    "last_run_at": "2026-08-22T11:00:00Z",
+                    "expected_interval_hours": 2.0,
+                    "consecutive_failures": 2,
+                }
+            ]
+        }
+        workflow_runs = [
+            {
+                "id": 42,
+                "name": "bluesky_follows_and_likes",
+                "status": "completed",
+                "conclusion": "failure",
+                "created_at": "2026-08-22T11:00:00Z",
+            }
+        ]
+        activity = {"runs": [{"id": 42, "follows": 1}]}
+
+        alerts = dashboard._operational_alerts(
+            automation,
+            {"providers": []},
+            {"windows": {"7": {"missed": 0}}},
+            now,
+            state={"joke_requests": {"last_checked_at": now.timestamp() - 18000}},
+            workflow_runs=workflow_runs,
+            workflow_activity=activity,
+        )
+
+        self.assertIn(
+            {
+                "level": "urgent",
+                "kind": "workflow_failure_streak",
+                "workflow": "bluesky_follows_and_likes",
+                "count": 2,
+            },
+            alerts,
+        )
+        self.assertIn(
+            {
+                "level": "urgent",
+                "kind": "mutation_persistence_uncertain",
+                "workflow": "bluesky_follows_and_likes",
+                "run_id": 42,
+            },
+            alerts,
+        )
+        self.assertIn(
+            {"level": "attention", "kind": "joke_request_checkpoint_stale"},
+            alerts,
+        )
+
+    def test_workflow_metrics_counts_only_latest_failure_streak(self):
+        now = datetime(2026, 8, 22, 12, tzinfo=timezone.utc)
+        runs = [
+            {
+                "name": "bluesky_post_joke",
+                "status": "completed",
+                "conclusion": conclusion,
+                "created_at": f"2026-08-22T{hour:02d}:00:00Z",
+                "updated_at": f"2026-08-22T{hour:02d}:01:00Z",
+            }
+            for hour, conclusion in (
+                (11, "failure"),
+                (10, "failure"),
+                (9, "success"),
+                (8, "failure"),
+            )
+        ]
+
+        metrics = dashboard._workflow_metrics(runs, now)
+        posting = next(
+            item for item in metrics["workflows"] if item["name"] == "bluesky_post_joke"
+        )
+
+        self.assertEqual(posting["consecutive_failures"], 2)
+
     def test_fetch_workflow_runs_collects_multiple_pages(self):
         runs = [
             {

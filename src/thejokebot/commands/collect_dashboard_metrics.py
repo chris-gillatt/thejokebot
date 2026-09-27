@@ -2038,6 +2038,20 @@ def _workflow_metrics(workflow_runs: list[dict], now: datetime) -> dict:
     for name, values in durations.items():
         if values:
             grouped[name]["median_duration_seconds"] = int(median(values))
+        completed_runs = sorted(
+            (
+                run
+                for run in workflow_runs
+                if run.get("name") == name and run.get("status") == "completed"
+            ),
+            key=lambda run: str(run.get("created_at") or ""),
+            reverse=True,
+        )
+        grouped[name]["consecutive_failures"] = 0
+        for run in completed_runs:
+            if run.get("conclusion") != "failure":
+                break
+            grouped[name]["consecutive_failures"] += 1
 
     workflows = sorted(grouped.values(), key=lambda item: item["name"])
     completed = sum(item["successful"] + item["failed"] for item in workflows)
@@ -2054,8 +2068,56 @@ def _workflow_metrics(workflow_runs: list[dict], now: datetime) -> dict:
     }
 
 
+def _mutation_persistence_alerts(
+    workflow_runs: list[dict], workflow_activity: dict | None, now: datetime
+) -> list[dict]:
+    activity_by_id = {
+        int(item["id"]): item
+        for item in (workflow_activity or {}).get("runs", [])
+        if item.get("id") is not None
+    }
+    mutation_fields = (
+        "posted",
+        "follows",
+        "unfollows",
+        "deleted",
+        "acknowledged",
+        "interactions_liked",
+        "joke_replies",
+    )
+    alerts = []
+    cutoff = now - timedelta(hours=24)
+    for run in workflow_runs:
+        created_at = run.get("created_at")
+        if (
+            run.get("conclusion") != "failure"
+            or run.get("id") is None
+            or not created_at
+            or datetime.fromisoformat(created_at.replace("Z", _UTC_OFFSET)) < cutoff
+        ):
+            continue
+        activity = activity_by_id.get(int(run["id"]), {})
+        if any(int(activity.get(field) or 0) > 0 for field in mutation_fields):
+            alerts.append(
+                {
+                    "level": "urgent",
+                    "kind": "mutation_persistence_uncertain",
+                    "workflow": run.get("name"),
+                    "run_id": int(run["id"]),
+                }
+            )
+    return alerts
+
+
 def _operational_alerts(
-    automation: dict, providers: dict, posting_delivery: dict, now: datetime
+    automation: dict,
+    providers: dict,
+    posting_delivery: dict,
+    now: datetime,
+    *,
+    state: dict | None = None,
+    workflow_runs: list[dict] | None = None,
+    workflow_activity: dict | None = None,
 ) -> list[dict]:
     alerts = []
     recent_cutoff = now - timedelta(hours=24)
@@ -2092,6 +2154,38 @@ def _operational_alerts(
                     "workflow": workflow["name"],
                 }
             )
+        if workflow.get("consecutive_failures", 0) >= 2:
+            alerts.append(
+                {
+                    "level": "urgent",
+                    "kind": "workflow_failure_streak",
+                    "workflow": workflow["name"],
+                    "count": workflow["consecutive_failures"],
+                }
+            )
+    alerts.extend(
+        _mutation_persistence_alerts(workflow_runs or [], workflow_activity, now)
+    )
+    checkpoint = (state or {}).get("joke_requests", {}).get("last_checked_at")
+    joke_schedule = next(
+        (
+            item.get("expected_interval_hours")
+            for item in automation["workflows"]
+            if item["name"] == "bluesky_follows_and_likes"
+        ),
+        None,
+    )
+    if joke_schedule and (
+        checkpoint is None
+        or datetime.fromtimestamp(float(checkpoint), timezone.utc)
+        < now - timedelta(hours=float(joke_schedule) + 2)
+    ):
+        alerts.append(
+            {
+                "level": "attention",
+                "kind": "joke_request_checkpoint_stale",
+            }
+        )
     unhealthy = sum(
         provider.get("configured") is not False and provider.get("healthy") is False
         for provider in providers["providers"]
@@ -2194,7 +2288,13 @@ def collect_metrics(
         now,
     )
     automation["alerts"] = _operational_alerts(
-        automation, providers, posting_delivery, now
+        automation,
+        providers,
+        posting_delivery,
+        now,
+        state=state,
+        workflow_runs=workflow_runs,
+        workflow_activity=workflow_activity,
     )
     discovery_activity = _discovery_metrics(workflow_activity)
     social_activity = _social_activity_metrics(workflow_activity)
