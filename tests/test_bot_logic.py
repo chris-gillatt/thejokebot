@@ -21,6 +21,7 @@ from thejokebot.commands import create_report_prs as bluesky_create_report_prs
 from thejokebot import denylist as joke_denylist
 from thejokebot import followers as followers
 from thejokebot.commands import follow_back as follow_back_processing
+from thejokebot.commands import follow_interactors as follow_interactor_processing
 from thejokebot.commands import follow_fellows as bluesky_follow_fellows
 from thejokebot.commands import follows_and_likes as bluesky_follows_and_likes
 from thejokebot import providers as joke_providers
@@ -3597,6 +3598,80 @@ class FollowInteractorsTests(unittest.TestCase):
             author=author,
         )
 
+    def test_social_command_delegates_interaction_follow_processing(self):
+        client = mock.Mock()
+        state = bot_state._default_state()
+        summary = {}
+
+        with mock.patch(
+            "thejokebot.commands.follows_and_likes."
+            "follow_interactor_processing.follow_interactors",
+            return_value=2,
+        ) as extracted_follow_interactors:
+            result = bluesky_follows_and_likes.follow_interactors(
+                client,
+                state,
+                dry_run=True,
+                action_delay_seconds=1.5,
+                summary=summary,
+            )
+
+        self.assertEqual(result, 2)
+        extracted_follow_interactors.assert_called_once_with(
+            client, state, True, 1.5, summary
+        )
+
+    def test_notification_helpers_ignore_irrelevant_and_invalid_entries(self):
+        interactor_dids = set()
+        notifications = [
+            self._make_notification("mention", "did:plc:ignored"),
+            self._make_notification("reply", "did:plc:invalid", "not-a-date"),
+            SimpleNamespace(reason="like", author=SimpleNamespace(did="did:plc:new")),
+        ]
+
+        should_stop = follow_interactor_processing._collect_page_interactor_dids(
+            notifications, "did:plc:bot", 0, interactor_dids
+        )
+
+        self.assertFalse(should_stop)
+        self.assertEqual(interactor_dids, {"did:plc:invalid", "did:plc:new"})
+
+    def test_notification_collection_returns_partial_result_on_network_error(self):
+        client = mock.Mock()
+
+        with mock.patch(
+            "thejokebot.commands.follow_interactors.retry_network_call",
+            side_effect=requests.RequestException("unavailable"),
+        ):
+            result = follow_interactor_processing._collect_interactor_dids(
+                client, "did:plc:bot", 0
+            )
+
+        self.assertEqual(result, set())
+
+    def test_follow_list_continues_after_failure_and_applies_delay(self):
+        client = mock.Mock()
+        client.follow.side_effect = [requests.RequestException("failed"), None, None]
+        state = bot_state._default_state()
+
+        with mock.patch(
+            "thejokebot.commands.follow_interactors.retry_network_call",
+            side_effect=lambda fn, description: fn(),
+        ):
+            with mock.patch(
+                "thejokebot.commands.follow_interactors.time.sleep"
+            ) as sleep:
+                count = follow_interactor_processing._follow_did_list(
+                    client,
+                    state,
+                    ["did:plc:failed", "did:plc:followed", "did:plc:last"],
+                    dry_run=False,
+                    action_delay_seconds=1.5,
+                )
+
+        self.assertEqual(count, 2)
+        sleep.assert_called_once_with(1.5)
+
     def test_follow_interactors_follows_new_reply_author(self):
         """A reply author not yet followed should be followed."""
         interactor_did = "did:plc:interactor1"
@@ -3610,15 +3685,15 @@ class FollowInteractorsTests(unittest.TestCase):
         client.app.bsky.notification.list_notifications.return_value = response
 
         with mock.patch(
-            "thejokebot.commands.follows_and_likes.fetch_paginated_data",
+            "thejokebot.commands.follow_interactors.fetch_paginated_data",
             return_value=[],
         ):
             with mock.patch(
-                "thejokebot.commands.follows_and_likes.retry_network_call",
+                "thejokebot.commands.follow_interactors.retry_network_call",
                 side_effect=lambda fn, description: fn(),
             ):
                 with mock.patch("thejokebot.state.save_state"):
-                    count = bluesky_follows_and_likes.follow_interactors(
+                    count = follow_interactor_processing.follow_interactors(
                         client, state, dry_run=False, action_delay_seconds=0
                     )
 
@@ -3650,15 +3725,15 @@ class FollowInteractorsTests(unittest.TestCase):
         client.app.bsky.notification.list_notifications.return_value = response
 
         with mock.patch(
-            "thejokebot.commands.follows_and_likes.fetch_paginated_data",
+            "thejokebot.commands.follow_interactors.fetch_paginated_data",
             return_value=[],
         ):
             with mock.patch(
-                "thejokebot.commands.follows_and_likes.retry_network_call",
+                "thejokebot.commands.follow_interactors.retry_network_call",
                 side_effect=lambda fn, description: fn(),
             ):
                 with mock.patch("thejokebot.state.save_state"):
-                    count = bluesky_follows_and_likes.follow_interactors(
+                    count = follow_interactor_processing.follow_interactors(
                         client, state, dry_run=False, action_delay_seconds=0
                     )
 
@@ -3681,14 +3756,14 @@ class FollowInteractorsTests(unittest.TestCase):
         summary = {}
 
         with mock.patch(
-            "thejokebot.commands.follows_and_likes.fetch_paginated_data",
+            "thejokebot.commands.follow_interactors.fetch_paginated_data",
             return_value=[already_following_profile],
         ):
             with mock.patch(
-                "thejokebot.commands.follows_and_likes.retry_network_call",
+                "thejokebot.commands.follow_interactors.retry_network_call",
                 side_effect=lambda fn, description: fn(),
             ):
-                count = bluesky_follows_and_likes.follow_interactors(
+                count = follow_interactor_processing.follow_interactors(
                     client,
                     state,
                     dry_run=False,
@@ -3717,14 +3792,14 @@ class FollowInteractorsTests(unittest.TestCase):
         client.app.bsky.notification.list_notifications.return_value = response
 
         with mock.patch(
-            "thejokebot.commands.follows_and_likes.fetch_paginated_data",
+            "thejokebot.commands.follow_interactors.fetch_paginated_data",
             return_value=[],
         ):
             with mock.patch(
-                "thejokebot.commands.follows_and_likes.retry_network_call",
+                "thejokebot.commands.follow_interactors.retry_network_call",
                 side_effect=lambda fn, description: fn(),
             ):
-                count = bluesky_follows_and_likes.follow_interactors(
+                count = follow_interactor_processing.follow_interactors(
                     client, state, dry_run=False, action_delay_seconds=0
                 )
 
@@ -3744,14 +3819,14 @@ class FollowInteractorsTests(unittest.TestCase):
         client.app.bsky.notification.list_notifications.return_value = response
 
         with mock.patch(
-            "thejokebot.commands.follows_and_likes.fetch_paginated_data",
+            "thejokebot.commands.follow_interactors.fetch_paginated_data",
             return_value=[],
         ):
             with mock.patch(
-                "thejokebot.commands.follows_and_likes.retry_network_call",
+                "thejokebot.commands.follow_interactors.retry_network_call",
                 side_effect=lambda fn, description: fn(),
             ):
-                count = bluesky_follows_and_likes.follow_interactors(
+                count = follow_interactor_processing.follow_interactors(
                     client, state, dry_run=False, action_delay_seconds=0
                 )
 
@@ -3774,14 +3849,14 @@ class FollowInteractorsTests(unittest.TestCase):
         client.app.bsky.notification.list_notifications.return_value = response
 
         with mock.patch(
-            "thejokebot.commands.follows_and_likes.fetch_paginated_data",
+            "thejokebot.commands.follow_interactors.fetch_paginated_data",
             return_value=[],
         ):
             with mock.patch(
-                "thejokebot.commands.follows_and_likes.retry_network_call",
+                "thejokebot.commands.follow_interactors.retry_network_call",
                 side_effect=lambda fn, description: fn(),
             ):
-                count = bluesky_follows_and_likes.follow_interactors(
+                count = follow_interactor_processing.follow_interactors(
                     client, state, dry_run=False, action_delay_seconds=0
                 )
 
@@ -3800,14 +3875,14 @@ class FollowInteractorsTests(unittest.TestCase):
         client.app.bsky.notification.list_notifications.return_value = response
 
         with mock.patch(
-            "thejokebot.commands.follows_and_likes.fetch_paginated_data",
+            "thejokebot.commands.follow_interactors.fetch_paginated_data",
             return_value=[],
         ):
             with mock.patch(
-                "thejokebot.commands.follows_and_likes.retry_network_call",
+                "thejokebot.commands.follow_interactors.retry_network_call",
                 side_effect=lambda fn, description: fn(),
             ):
-                count = bluesky_follows_and_likes.follow_interactors(
+                count = follow_interactor_processing.follow_interactors(
                     client, state, dry_run=False, action_delay_seconds=0
                 )
 
@@ -3826,14 +3901,14 @@ class FollowInteractorsTests(unittest.TestCase):
         client.app.bsky.notification.list_notifications.return_value = response
 
         with mock.patch(
-            "thejokebot.commands.follows_and_likes.fetch_paginated_data",
+            "thejokebot.commands.follow_interactors.fetch_paginated_data",
             return_value=[],
         ):
             with mock.patch(
-                "thejokebot.commands.follows_and_likes.retry_network_call",
+                "thejokebot.commands.follow_interactors.retry_network_call",
                 side_effect=lambda fn, description: fn(),
             ):
-                count = bluesky_follows_and_likes.follow_interactors(
+                count = follow_interactor_processing.follow_interactors(
                     client, state, dry_run=True, action_delay_seconds=0
                 )
 
@@ -3858,15 +3933,15 @@ class FollowInteractorsTests(unittest.TestCase):
         client.app.bsky.notification.list_notifications.return_value = response
 
         with mock.patch(
-            "thejokebot.commands.follows_and_likes.fetch_paginated_data",
+            "thejokebot.commands.follow_interactors.fetch_paginated_data",
             return_value=[],
         ):
             with mock.patch(
-                "thejokebot.commands.follows_and_likes.retry_network_call",
+                "thejokebot.commands.follow_interactors.retry_network_call",
                 side_effect=lambda fn, description: fn(),
             ):
                 with mock.patch("thejokebot.state.save_state"):
-                    count = bluesky_follows_and_likes.follow_interactors(
+                    count = follow_interactor_processing.follow_interactors(
                         client, state, dry_run=False, action_delay_seconds=0
                     )
 
