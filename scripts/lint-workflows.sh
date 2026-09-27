@@ -6,6 +6,8 @@ cd "$REPO_ROOT"
 
 echo "==> Workflow lint (actionlint)"
 
+python3 scripts/check_action_pins.py
+
 if command -v actionlint >/dev/null 2>&1; then
   actionlint -color
   exit 0
