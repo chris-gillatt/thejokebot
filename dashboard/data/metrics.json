@@ -1,6 +1,6 @@
 {
   "schema_version": 11,
-  "generated_at": "2026-09-27T12:59:08.801266+00:00",
+  "generated_at": "2026-09-27T13:41:33.965312+00:00",
   "account": {
     "handle": "thejokebot.bsky.social",
     "display_name": "The Joke Bot",
@@ -13,7 +13,7 @@
     "text": "Why are pirates called pirates?\n\nBecause they arrr!\n\n#dadjoke #punny #humour",
     "created_at": "2026-09-27T12:13:16.424341+00:00",
     "engagement": {
-      "likes": 1,
+      "likes": 2,
       "replies": 0,
       "reposts": 1,
       "quotes": 0,
@@ -26,13 +26,13 @@
     "profile_posts": 2553,
     "joke_posts": 897,
     "engagement": {
-      "likes": 4587,
+      "likes": 4589,
       "replies": 334,
       "reposts": 375,
       "quotes": 40,
       "bookmarks": 50
     },
-    "engagement_per_joke": 6.0
+    "engagement_per_joke": 6.01
   },
   "snapshots": [
     {
@@ -1981,19 +1981,19 @@
     },
     {
       "period_start": "2026-09-27T12:00:00+00:00",
-      "collected_at": "2026-09-27T12:59:08.801266+00:00",
+      "collected_at": "2026-09-27T13:41:33.965312+00:00",
       "followers": 6784,
       "following": 10791,
       "profile_posts": 2553,
       "joke_posts": 897,
       "engagement": {
-        "likes": 4587,
+        "likes": 4589,
         "replies": 334,
         "reposts": 375,
         "quotes": 40,
         "bookmarks": 50
       },
-      "engagement_total": 5386,
+      "engagement_total": 5388,
       "source": "bluesky_snapshot"
     }
   ],
@@ -8713,8 +8713,8 @@
   "engagement_momentum": {
     "basis": "visible_joke_snapshot_total",
     "deltas": {
-      "7": 186,
-      "30": 864
+      "7": 188,
+      "30": 866
     }
   },
   "provider_pressure": {
@@ -11634,12 +11634,12 @@
   },
   "automation": {
     "window_days": 30,
-    "collected_at": "2026-09-27T12:59:08.801266+00:00",
-    "runs": 972,
-    "successful": 941,
-    "failed": 22,
+    "collected_at": "2026-09-27T13:41:33.965312+00:00",
+    "runs": 973,
+    "successful": 953,
+    "failed": 13,
     "cancelled": 0,
-    "success_rate": 97.7,
+    "success_rate": 98.7,
     "workflows": [
       {
         "name": "bluesky_dashboard",
@@ -11647,11 +11647,11 @@
         "successful": 116,
         "failed": 1,
         "cancelled": 0,
-        "last_run_at": "2026-09-27T12:58:41Z",
+        "last_run_at": "2026-09-27T13:41:08Z",
         "last_status": "in_progress",
         "last_conclusion": null,
         "latest_duration_seconds": null,
-        "median_duration_seconds": 91,
+        "median_duration_seconds": 90,
         "expected_interval_hours": 6.0
       },
       {
@@ -11669,9 +11669,9 @@
       },
       {
         "name": "bluesky_follows_and_likes",
-        "runs": 317,
+        "runs": 316,
         "successful": 315,
-        "failed": 2,
+        "failed": 1,
         "cancelled": 0,
         "last_run_at": "2026-09-27T12:38:46Z",
         "last_status": "completed",
@@ -11695,8 +11695,8 @@
       },
       {
         "name": "bluesky_post_joke",
-        "runs": 158,
-        "successful": 158,
+        "runs": 157,
+        "successful": 157,
         "failed": 0,
         "cancelled": 0,
         "last_run_at": "2026-09-27T12:12:59Z",
@@ -11747,11 +11747,11 @@
       },
       {
         "name": "codeql",
-        "runs": 44,
-        "successful": 40,
-        "failed": 3,
+        "runs": 46,
+        "successful": 44,
+        "failed": 1,
         "cancelled": 0,
-        "last_run_at": "2026-09-27T12:58:41Z",
+        "last_run_at": "2026-09-27T13:41:08Z",
         "last_status": "in_progress",
         "last_conclusion": null,
         "latest_duration_seconds": null,
@@ -11760,9 +11760,9 @@
       },
       {
         "name": "pr_auto_merge",
-        "runs": 17,
+        "runs": 13,
         "successful": 8,
-        "failed": 3,
+        "failed": 1,
         "cancelled": 0,
         "last_run_at": "2026-09-21T05:11:00Z",
         "last_status": "completed",
@@ -11773,8 +11773,8 @@
       },
       {
         "name": "provider_health_check",
-        "runs": 27,
-        "successful": 27,
+        "runs": 26,
+        "successful": 26,
         "failed": 0,
         "cancelled": 0,
         "last_run_at": "2026-09-27T08:17:39Z",
@@ -11786,11 +11786,11 @@
       },
       {
         "name": "python_tests",
-        "runs": 41,
-        "successful": 34,
+        "runs": 43,
+        "successful": 36,
         "failed": 6,
         "cancelled": 0,
-        "last_run_at": "2026-09-27T12:58:41Z",
+        "last_run_at": "2026-09-27T13:41:08Z",
         "last_status": "in_progress",
         "last_conclusion": null,
         "latest_duration_seconds": null,
@@ -11799,27 +11799,27 @@
       },
       {
         "name": "ruff_quality",
-        "runs": 41,
-        "successful": 38,
-        "failed": 3,
+        "runs": 43,
+        "successful": 42,
+        "failed": 1,
         "cancelled": 0,
-        "last_run_at": "2026-09-27T12:58:41Z",
+        "last_run_at": "2026-09-27T13:41:08Z",
         "last_status": "completed",
         "last_conclusion": "success",
-        "latest_duration_seconds": 17,
+        "latest_duration_seconds": 23,
         "median_duration_seconds": 18,
         "expected_interval_hours": null
       },
       {
         "name": "validate_runtime_config",
-        "runs": 41,
-        "successful": 37,
-        "failed": 4,
+        "runs": 43,
+        "successful": 41,
+        "failed": 2,
         "cancelled": 0,
-        "last_run_at": "2026-09-27T12:58:41Z",
+        "last_run_at": "2026-09-27T13:41:08Z",
         "last_status": "completed",
         "last_conclusion": "success",
-        "latest_duration_seconds": 17,
+        "latest_duration_seconds": 22,
         "median_duration_seconds": 19,
         "expected_interval_hours": null
       }
