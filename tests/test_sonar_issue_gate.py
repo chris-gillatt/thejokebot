@@ -9,11 +9,16 @@ from scripts import check_sonar_issues
 
 
 class SonarIssueGateTests(unittest.TestCase):
+    _sonar_env = {
+        "SONAR_PROJECT_KEY": "example_project",
+        "SONAR_TOKEN": "secret",
+    }
+
     def _response(self, total):
         return io.BytesIO(json.dumps({"total": total}).encode())
 
     def test_passes_when_branch_has_no_unresolved_issues(self):
-        with mock.patch.dict(os.environ, {"SONAR_TOKEN": "secret"}, clear=True):
+        with mock.patch.dict(os.environ, self._sonar_env, clear=True):
             with mock.patch.object(
                 check_sonar_issues.urllib.request,
                 "urlopen",
@@ -29,7 +34,7 @@ class SonarIssueGateTests(unittest.TestCase):
         self.assertTrue(request.get_header("Authorization").startswith("Basic "))
 
     def test_scopes_pull_request_query(self):
-        with mock.patch.dict(os.environ, {"SONAR_TOKEN": "secret"}, clear=True):
+        with mock.patch.dict(os.environ, self._sonar_env, clear=True):
             with mock.patch.object(
                 check_sonar_issues.urllib.request,
                 "urlopen",
@@ -43,7 +48,7 @@ class SonarIssueGateTests(unittest.TestCase):
         self.assertNotIn("branch", query)
 
     def test_fails_when_unresolved_issues_remain(self):
-        with mock.patch.dict(os.environ, {"SONAR_TOKEN": "secret"}, clear=True):
+        with mock.patch.dict(os.environ, self._sonar_env, clear=True):
             with mock.patch.object(
                 check_sonar_issues.urllib.request,
                 "urlopen",
@@ -54,7 +59,13 @@ class SonarIssueGateTests(unittest.TestCase):
         self.assertEqual(result, 1)
 
     def test_requires_token(self):
-        with mock.patch.dict(os.environ, {}, clear=True):
+        with mock.patch.dict(
+            os.environ, {"SONAR_PROJECT_KEY": "example_project"}, clear=True
+        ):
+            self.assertEqual(check_sonar_issues.main([]), 2)
+
+    def test_requires_project_key(self):
+        with mock.patch.dict(os.environ, {"SONAR_TOKEN": "secret"}, clear=True):
             self.assertEqual(check_sonar_issues.main([]), 2)
 
     def test_rejects_conflicting_analysis_scopes(self):
@@ -62,7 +73,7 @@ class SonarIssueGateTests(unittest.TestCase):
             check_sonar_issues.main(["--branch", "main", "--pull-request", "42"])
 
     def test_fails_when_response_total_is_invalid(self):
-        with mock.patch.dict(os.environ, {"SONAR_TOKEN": "secret"}, clear=True):
+        with mock.patch.dict(os.environ, self._sonar_env, clear=True):
             with mock.patch.object(
                 check_sonar_issues.urllib.request,
                 "urlopen",

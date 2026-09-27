@@ -22,7 +22,8 @@ Use this workflow for SonarQube Cloud analysis and remediation in The Joke Bot.
 ## Local Analysis
 
 1. Confirm `sonar-scanner` is installed. On macOS, use `brew install sonar-scanner` if needed.
-2. Ensure the ignored `.env` contains `SONAR_TOKEN` without revealing its value.
+2. Ensure the ignored `.env` contains the Sonar project identity values from
+   `.env.example` and `SONAR_TOKEN` without revealing its value.
 3. Generate a fresh Cobertura report from the repository root:
 
    ```shell
@@ -39,7 +40,11 @@ Use this workflow for SonarQube Cloud analysis and remediation in The Joke Bot.
    set -a
    source .env
    set +a
-   SONAR_HOST_URL=https://sonarcloud.io sonar-scanner \
+   sonar-scanner \
+     -Dsonar.organization="$SONAR_ORGANIZATION" \
+     -Dsonar.projectKey="$SONAR_PROJECT_KEY" \
+     -Dsonar.projectName="$SONAR_PROJECT_NAME" \
+     -Dsonar.host.url="$SONAR_HOST_URL" \
      -Dsonar.qualitygate.wait=true \
      -Dsonar.qualitygate.timeout=300
    unset SONAR_TOKEN

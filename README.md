@@ -173,9 +173,12 @@ Install the local scanner on macOS:
 
 - `brew install sonar-scanner`
 
-Add `SONAR_TOKEN='your-token'` to the ignored `.env` file. Do not commit the
-token or pass it as a command-line property, where it may be retained in shell
-history or process output.
+Add the Sonar project identity values shown in `.env.example` and
+`SONAR_TOKEN='your-token'` to the ignored `.env` file. Do not commit the token
+or pass it as a command-line property, where it may be retained in shell history
+or process output. Configure the matching non-secret `SONAR_ORGANIZATION`,
+`SONAR_PROJECT_KEY`, `SONAR_PROJECT_NAME`, and `SONAR_HOST_URL` repository
+Actions variables for CI.
 
 Generate the same application-only coverage report used by CI:
 
@@ -187,7 +190,11 @@ Then load the local environment and run the scanner from the repository root:
 set -a
 source .env
 set +a
-SONAR_HOST_URL=https://sonarcloud.io sonar-scanner \
+sonar-scanner \
+	-Dsonar.organization="$SONAR_ORGANIZATION" \
+	-Dsonar.projectKey="$SONAR_PROJECT_KEY" \
+	-Dsonar.projectName="$SONAR_PROJECT_NAME" \
+	-Dsonar.host.url="$SONAR_HOST_URL" \
 	-Dsonar.qualitygate.wait=true \
 	-Dsonar.qualitygate.timeout=300
 unset SONAR_TOKEN

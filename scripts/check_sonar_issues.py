@@ -19,7 +19,7 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--project-key",
-        default=os.getenv("SONAR_PROJECT_KEY", "chris-gillatt_thejokebot"),
+        default=os.getenv("SONAR_PROJECT_KEY"),
     )
     parser.add_argument(
         "--host-url", default=os.getenv("SONAR_HOST_URL", DEFAULT_HOST_URL)
@@ -58,6 +58,9 @@ def _unresolved_issue_total(args: argparse.Namespace, token: str) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
+    if not args.project_key:
+        print("ERROR: SONAR_PROJECT_KEY is required", file=sys.stderr)
+        return 2
     token = os.getenv("SONAR_TOKEN")
     if not token:
         print("ERROR: SONAR_TOKEN is required", file=sys.stderr)
