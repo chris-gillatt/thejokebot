@@ -70,7 +70,7 @@ jobs:
           path: .agent-tmp/bluesky_session.txt.enc
           key: bluesky-session-v2-${{ github.ref_name }}-${{ github.run_id }}-${{ github.run_attempt }}
 
-      - name: Persist liked-reply state
+      - name: Persist social state
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -82,7 +82,7 @@ jobs:
             exit 0
           fi
 
-          git commit -m "chore(likes): update liked-reply state; GH run: ${GITHUB_RUN_NUMBER}"
+          git commit -m "chore(social): update social state; GH run: ${GITHUB_RUN_NUMBER}"
           for attempt in 1 2 3; do
             git pull --rebase origin main
             if git push; then

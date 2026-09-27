@@ -1724,6 +1724,14 @@ class StateJokeHistoryTests(unittest.TestCase):
         attempts = bot_state.get_unresolved_notification_attempts(state)
         self.assertEqual(set(attempts.keys()), {"at://notif/2", "at://notif/3"})
 
+    def test_prune_replied_joke_request_uris_keeps_latest_entries(self):
+        state = bot_state._default_state()
+        state["joke_requests"]["replied_uris"] = ["one", "two", "three"]
+
+        bot_state.prune_replied_joke_request_uris(state, max_entries=2)
+
+        self.assertEqual(state["joke_requests"]["replied_uris"], ["two", "three"])
+
     def test_get_acknowledged_report_uris_returns_empty_set_initially(self):
         state = bot_state._default_state()
         result = bot_state.get_acknowledged_report_uris(state)
@@ -2748,6 +2756,280 @@ class LikeRepliesTests(unittest.TestCase):
         cutoff = time.time() - (24 * 60 * 60)
 
         self.assertGreater(recent_time, cutoff)
+
+
+class JokeRequestReplyTests(unittest.TestCase):
+    def _notification(
+        self,
+        *,
+        reason="mention",
+        text="tell me a joke",
+        uri="at://did:plc:user/app.bsky.feed.post/request",
+        indexed_at=None,
+        reply=None,
+    ):
+        indexed_at = indexed_at or (
+            dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00", "Z")
+        )
+        return SimpleNamespace(
+            reason=reason,
+            indexed_at=indexed_at,
+            uri=uri,
+            cid="request-cid",
+            record=SimpleNamespace(text=text, reply=reply),
+        )
+
+    def test_candidate_requires_explicit_tag_for_reply_notification(self):
+        notification = self._notification(reason="reply", text="tell me a joke")
+
+        candidate = bluesky_follows_and_likes._joke_request_candidate(
+            notification,
+            "thejokebot.bsky.social",
+            set(),
+            time.time() - 3600,
+        )
+
+        self.assertIsNone(candidate)
+
+    def test_replies_once_to_tagged_joke_request(self):
+        root = SimpleNamespace(
+            uri="at://did:plc:root/app.bsky.feed.post/root", cid="root-cid"
+        )
+        notification = self._notification(reply=SimpleNamespace(root=root))
+        response = SimpleNamespace(notifications=[notification])
+        posted = SimpleNamespace(
+            uri="at://did:plc:bot/app.bsky.feed.post/reply",
+            cid="reply-cid",
+        )
+        client = mock.Mock()
+        client.app.bsky.notification.list_notifications.return_value = response
+        client.send_post.return_value = posted
+        state = bot_state._default_state()
+        selection = (
+            "Fresh joke",
+            "RnJlc2ggam9rZQ==",
+            "jokeapi",
+            "icanhazdadjoke",
+            [("icanhazdadjoke", "timed out", {"network_error": 1})],
+            0,
+        )
+
+        with mock.patch(
+            "thejokebot.commands.follows_and_likes.retry_network_call",
+            side_effect=lambda fn, description: fn(),
+        ):
+            with mock.patch(
+                "thejokebot.commands.follows_and_likes._select_reply_joke",
+                return_value=selection,
+            ):
+                with mock.patch("thejokebot.state.save_state"):
+                    count = bluesky_follows_and_likes.reply_to_joke_requests(
+                        client,
+                        "thejokebot.bsky.social",
+                        state,
+                        dry_run=False,
+                    )
+
+        self.assertEqual(count, 1)
+        client.send_post.assert_called_once()
+        self.assertEqual(client.send_post.call_args.kwargs["text"], "Fresh joke")
+        reply_ref = client.send_post.call_args.kwargs["reply_to"]
+        self.assertEqual(reply_ref.parent.uri, notification.uri)
+        self.assertEqual(reply_ref.parent.cid, notification.cid)
+        self.assertEqual(reply_ref.root.uri, root.uri)
+        self.assertEqual(reply_ref.root.cid, root.cid)
+        self.assertIn(notification.uri, bot_state.get_replied_joke_request_uris(state))
+        self.assertEqual(len(state["posted_jokes"]), 1)
+        self.assertEqual(
+            state["provider"]["failures"]["icanhazdadjoke"]["reason_counts"][
+                "network_error"
+            ],
+            1,
+        )
+
+        client.send_post.reset_mock()
+        with mock.patch(
+            "thejokebot.commands.follows_and_likes.retry_network_call",
+            side_effect=lambda fn, description: fn(),
+        ):
+            second_count = bluesky_follows_and_likes.reply_to_joke_requests(
+                client,
+                "thejokebot.bsky.social",
+                state,
+                dry_run=False,
+            )
+
+        self.assertEqual(second_count, 0)
+        client.send_post.assert_not_called()
+
+    def test_report_request_is_not_answered(self):
+        notification = self._notification(text="tell me a joke #report")
+
+        candidate = bluesky_follows_and_likes._joke_request_candidate(
+            notification,
+            "thejokebot.bsky.social",
+            set(),
+            time.time() - 3600,
+        )
+
+        self.assertIsNone(candidate)
+
+    def test_candidate_rejects_stale_malformed_and_non_request_notifications(self):
+        stale = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=2)).isoformat()
+        cases = (
+            self._notification(indexed_at=stale),
+            self._notification(reason="like"),
+            self._notification(text="hello there"),
+            SimpleNamespace(reason="mention", uri=None, cid=None, record=None),
+        )
+
+        for notification in cases:
+            with self.subTest(notification=notification):
+                self.assertIsNone(
+                    bluesky_follows_and_likes._joke_request_candidate(
+                        notification,
+                        "thejokebot.bsky.social",
+                        set(),
+                        time.time() - 3600,
+                    )
+                )
+
+    def test_select_reply_joke_records_provider_failures_before_success(self):
+        state = bot_state._default_state()
+        state["posted_jokes"] = [
+            {"ts": time.time(), "b64": "recent", "provider": "jokeapi"}
+        ]
+
+        with (
+            mock.patch.object(
+                bluesky_follows_and_likes.joke_denylist,
+                "load_denylist",
+                return_value={},
+            ),
+            mock.patch.object(
+                bluesky_follows_and_likes.joke_denylist,
+                "get_denylisted_b64s",
+                return_value={"blocked"},
+            ),
+            mock.patch.object(
+                bluesky_follows_and_likes.joke_posting,
+                "_provider_order_for_run",
+                return_value=(["first", "second"], "first"),
+            ),
+            mock.patch.object(
+                bluesky_follows_and_likes.joke_posting,
+                "pick_joke",
+                side_effect=[ValueError("duplicate"), ("Fresh joke", "encoded")],
+            ) as pick_joke,
+        ):
+            result = bluesky_follows_and_likes._select_reply_joke(state)
+
+        self.assertEqual(
+            result[:5],
+            (
+                "Fresh joke",
+                "encoded",
+                "second",
+                "first",
+                [("first", "duplicate", {"provider_error": 1})],
+            ),
+        )
+        self.assertEqual(pick_joke.call_args_list[0].args[0], {"recent", "blocked"})
+
+    def test_select_reply_joke_uses_static_fallback_after_provider_exhaustion(self):
+        state = bot_state._default_state()
+
+        with (
+            mock.patch.object(
+                bluesky_follows_and_likes.joke_denylist,
+                "load_denylist",
+                return_value={},
+            ),
+            mock.patch.object(
+                bluesky_follows_and_likes.joke_denylist,
+                "get_denylisted_b64s",
+                return_value=set(),
+            ),
+            mock.patch.object(
+                bluesky_follows_and_likes.joke_posting,
+                "_provider_order_for_run",
+                return_value=(["only"], "only"),
+            ),
+            mock.patch.object(
+                bluesky_follows_and_likes.joke_posting,
+                "pick_joke",
+                side_effect=TimeoutError("timed out"),
+            ),
+            mock.patch.object(
+                bluesky_follows_and_likes.joke_posting,
+                "get_fallback_joke",
+                return_value="Fallback joke",
+            ),
+        ):
+            joke, encoded, provider, starting_provider, failures, _cutoff = (
+                bluesky_follows_and_likes._select_reply_joke(state)
+            )
+
+        self.assertEqual(joke, "Fallback joke")
+        self.assertEqual(base64.b64decode(encoded).decode(), joke)
+        self.assertEqual((provider, starting_provider), ("fallback", "only"))
+        self.assertEqual(failures[0][0:2], ("only", "timed out"))
+
+    def test_dry_run_obeys_reply_cap_without_mutating_state(self):
+        notifications = [
+            self._notification(uri=f"at://did:plc:user/app.bsky.feed.post/{index}")
+            for index in range(5)
+        ]
+        client = mock.Mock()
+        client.app.bsky.notification.list_notifications.return_value = SimpleNamespace(
+            notifications=notifications
+        )
+        state = bot_state._default_state()
+        original_state = copy.deepcopy(state)
+
+        with (
+            mock.patch(
+                "thejokebot.commands.follows_and_likes.retry_network_call",
+                side_effect=lambda fn, description: fn(),
+            ),
+            mock.patch("thejokebot.state.save_state") as save_state,
+        ):
+            count = bluesky_follows_and_likes.reply_to_joke_requests(
+                client, "thejokebot.bsky.social", state, dry_run=True
+            )
+
+        self.assertEqual(count, 3)
+        self.assertEqual(state, original_state)
+        client.send_post.assert_not_called()
+        save_state.assert_not_called()
+
+    def test_post_failure_does_not_mark_request_as_replied(self):
+        notification = self._notification()
+        client = mock.Mock()
+        client.app.bsky.notification.list_notifications.return_value = SimpleNamespace(
+            notifications=[notification]
+        )
+        client.send_post.side_effect = requests.RequestException("failed")
+        state = bot_state._default_state()
+        selection = ("Fresh joke", "encoded", "jokeapi", "jokeapi", [], 0)
+
+        with (
+            mock.patch(
+                "thejokebot.commands.follows_and_likes.retry_network_call",
+                side_effect=lambda fn, description: fn(),
+            ),
+            mock.patch(
+                "thejokebot.commands.follows_and_likes._select_reply_joke",
+                return_value=selection,
+            ),
+            self.assertRaises(requests.RequestException),
+        ):
+            bluesky_follows_and_likes.reply_to_joke_requests(
+                client, "thejokebot.bsky.social", state, dry_run=False
+            )
+
+        self.assertEqual(bot_state.get_replied_joke_request_uris(state), set())
+        self.assertEqual(state["posted_jokes"], [])
 
 
 class BlockReconciliationTests(unittest.TestCase):

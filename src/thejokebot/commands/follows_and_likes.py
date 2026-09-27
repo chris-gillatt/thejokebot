@@ -2,18 +2,23 @@
 
 from __future__ import annotations
 
+import base64
 import hashlib
+import os
 import re
 import time
 from datetime import datetime, timedelta, timezone
 
 import requests
 import atproto_client.exceptions
+from atproto import models
 from colorama import Fore, Style
 
 from thejokebot import blocks as blocks
 from thejokebot import config as runtime_config
+from thejokebot import denylist as joke_denylist
 from thejokebot import state as bot_state
+from thejokebot.commands import post_joke as joke_posting
 from thejokebot.runtime import (
     get_nested_value,
     get_runtime_controls,
@@ -29,6 +34,12 @@ _DEFAULT_LIKE_MAX_PAGES = _FOLLOWS_AND_LIKES_CONFIG["like_max_pages"]
 _DEFAULT_LIKE_PAGE_LIMIT = _FOLLOWS_AND_LIKES_CONFIG["like_page_limit"]
 _LIKE_WINDOW_SECONDS = 24 * 60 * 60  # only like replies from the last 24 hours
 _LIKE_REASONS = ("reply", "repost")
+_JOKE_REQUEST_REASONS = ("mention", "reply")
+_JOKE_REQUEST_MAX_REPLIES = 3
+_JOKE_REQUEST_PATTERN = re.compile(
+    r"\b(?:tell|give|send)\b.*\bjoke\b|\b(?:another|a)\s+joke\b|\bjoke\s+please\b",
+    re.IGNORECASE,
+)
 _UTC_OFFSET = "+00:00"
 
 _INTERACTION_FOLLOW_REASONS = ("reply", "repost", "like")
@@ -60,6 +71,7 @@ _SOCIAL_SUMMARY_FIELDS = (
     "interaction_eligible",
     "interaction_added",
     "interactions_liked",
+    "joke_replies",
     "starter_pack_follows",
     "starter_pack_scan_complete",
     "failed",
@@ -772,6 +784,116 @@ def like_replies(
     return liked_count
 
 
+def _joke_request_candidate(notification, username, replied_uris, cutoff_epoch):
+    reason = get_nested_value(notification, "reason")
+    uri = get_nested_value(notification, "uri")
+    cid = get_nested_value(notification, "cid")
+    text = str(get_nested_value(notification, "record", "text") or "")
+    if reason not in _JOKE_REQUEST_REASONS or not uri or not cid:
+        return None
+    if uri in replied_uris or re.search(r"(?:^|\s)#report\b", text, re.IGNORECASE):
+        return None
+    notification_epoch = _parse_notification_epoch(notification)
+    if notification_epoch is not None and notification_epoch < cutoff_epoch:
+        return None
+    if not _JOKE_REQUEST_PATTERN.search(text):
+        return None
+    if reason == "reply" and f"@{username.lower()}" not in text.lower():
+        return None
+    reply = get_nested_value(notification, "record", "reply")
+    root_uri = get_nested_value(reply, "root", "uri") or uri
+    root_cid = get_nested_value(reply, "root", "cid") or cid
+    return uri, cid, root_uri, root_cid
+
+
+def _select_reply_joke(state):
+    cutoff = joke_posting.get_current_epoch() - (joke_posting.DAYS_LIMIT * 86400)
+    recent_b64s = bot_state.get_recent_b64s(state, cutoff)
+    recent_b64s |= joke_denylist.get_denylisted_b64s(joke_denylist.load_denylist())
+    override = os.getenv("BLUESKY_JOKE_PROVIDER", "").strip().lower() or None
+    providers, starting_provider = joke_posting._provider_order_for_run(state, override)
+    failures = []
+    for provider_name in providers:
+        try:
+            joke, encoded = joke_posting.pick_joke(
+                recent_b64s, provider_name, hashtags=["#joke"]
+            )
+            return joke, encoded, provider_name, starting_provider, failures, cutoff
+        except (
+            ValueError,
+            requests.RequestException,
+            TimeoutError,
+            atproto_client.exceptions.NetworkError,
+        ) as exc:
+            failures.append(
+                (provider_name, str(exc), joke_posting._failure_reason_counts(exc))
+            )
+    joke = joke_posting.get_fallback_joke()
+    encoded = base64.b64encode(joke.encode("utf-8")).decode()
+    return joke, encoded, "fallback", starting_provider, failures, cutoff
+
+
+def reply_to_joke_requests(client, username, state, dry_run, summary=None):
+    if summary is None:
+        summary = {}
+    replied_uris = bot_state.get_replied_joke_request_uris(state)
+    cutoff_epoch = time.time() - _LIKE_WINDOW_SECONDS
+    response = retry_network_call(
+        lambda: client.app.bsky.notification.list_notifications(
+            params={
+                "limit": _DEFAULT_LIKE_PAGE_LIMIT,
+                "reasons": list(_JOKE_REQUEST_REASONS),
+            }
+        ),
+        description="listing tagged joke requests",
+    )
+    replied_count = 0
+    for notification in get_nested_value(response, "notifications") or []:
+        candidate = _joke_request_candidate(
+            notification, username, replied_uris, cutoff_epoch
+        )
+        if candidate is None or replied_count >= _JOKE_REQUEST_MAX_REPLIES:
+            continue
+        uri, cid, root_uri, root_cid = candidate
+        if dry_run:
+            print(f"[DRY-RUN] Would reply with a joke to {mask_sensitive(uri)}")
+            replied_count += 1
+            continue
+        joke, encoded, provider, starting_provider, failures, cutoff = (
+            _select_reply_joke(state)
+        )
+        reply_ref = models.AppBskyFeedPost.ReplyRef(
+            parent=models.ComAtprotoRepoStrongRef.Main(uri=uri, cid=cid),
+            root=models.ComAtprotoRepoStrongRef.Main(uri=root_uri, cid=root_cid),
+        )
+        post = retry_network_call(
+            lambda: client.send_post(text=joke, reply_to=reply_ref),
+            description=f"replying to joke request {mask_sensitive(uri)}",
+        )
+        for failed_provider, error, reason_counts in failures:
+            bot_state.record_failure(
+                state, failed_provider, error, reason_counts=reason_counts
+            )
+        bot_state.record_provider_started(state, starting_provider)
+        if provider != "fallback":
+            bot_state.record_provider_used(state, provider)
+        bot_state.add_posted_joke(
+            state,
+            encoded,
+            provider,
+            post_uri=get_nested_value(post, "uri"),
+            post_cid=get_nested_value(post, "cid"),
+        )
+        bot_state.prune_old_jokes(state, cutoff)
+        bot_state.record_replied_joke_request_uri(state, uri)
+        replied_uris.add(uri)
+        replied_count += 1
+        bot_state.prune_replied_joke_request_uris(state)
+        bot_state.save_state(state, domains=("posting", "social"))
+    summary["joke_replies"] = replied_count
+    return replied_count
+
+
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
@@ -793,7 +915,7 @@ def main() -> None:
 
     try:
         print(f"{Fore.YELLOW}Logging in to Bluesky...{Style.RESET_ALL}")
-        client, _username = login_client()
+        client, username = login_client()
         print(f"{Fore.GREEN}Successfully logged in.{Style.RESET_ALL}")
     except (
         ValueError,
@@ -825,6 +947,7 @@ def main() -> None:
         "interaction_eligible": 0,
         "interaction_added": 0,
         "interactions_liked": 0,
+        "joke_replies": 0,
         "starter_pack_follows": 0,
         "starter_pack_scan_complete": 0,
         "failed": 0,
@@ -867,6 +990,20 @@ def main() -> None:
     attributed_follows = track_starter_pack_follows(
         client, state, dry_run, social_summary
     )
+
+    try:
+        replied = reply_to_joke_requests(
+            client, username, state, dry_run, social_summary
+        )
+        print(f"{Fore.GREEN}Replied to {replied} joke request(s).{Style.RESET_ALL}")
+    except (
+        ValueError,
+        requests.RequestException,
+        TimeoutError,
+        atproto_client.exceptions.NetworkError,
+    ) as exc:
+        social_summary["failed"] += 1
+        print(f"{Fore.RED}Joke-request replies failed: {exc}{Style.RESET_ALL}")
     print(
         f"{Fore.GREEN}Observed {attributed_follows} new starter-pack follow"
         f"{'s' if attributed_follows != 1 else ''}.{Style.RESET_ALL}"

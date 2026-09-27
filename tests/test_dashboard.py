@@ -815,6 +815,7 @@ class DashboardCollectorTests(unittest.TestCase):
                 "interaction_eligible": 4,
                 "interaction_added": 3,
                 "interactions_liked": 7,
+                "joke_replies": 2,
                 "starter_pack_follows": 0,
                 "starter_pack_scan_complete": 0,
                 "failed": 2,
@@ -847,6 +848,7 @@ class DashboardCollectorTests(unittest.TestCase):
                 "interaction_eligible": 4,
                 "interaction_added": 3,
                 "interactions_liked": 7,
+                "joke_replies": 2,
                 "starter_pack_follows": 0,
                 "starter_pack_scan_complete": 0,
                 "failed": 2,
@@ -1034,7 +1036,8 @@ class DashboardCollectorTests(unittest.TestCase):
         log_text = (
             "Social summary: follow_back_candidates=5, follow_back_added=2, "
             "protected=1, interaction_candidates=4, interaction_eligible=3, "
-            "interaction_added=1, interactions_liked=2, failed=0, dry_run=false."
+            "interaction_added=1, interactions_liked=2, joke_replies=1, "
+            "failed=0, dry_run=false."
         )
 
         with patch.object(
@@ -1341,6 +1344,7 @@ class DashboardCollectorTests(unittest.TestCase):
                     "interaction_eligible": 4,
                     "interaction_added": 3,
                     "interactions_liked": 7,
+                    "joke_replies": 2,
                     "failed": 2,
                 },
                 {
@@ -1378,6 +1382,7 @@ class DashboardCollectorTests(unittest.TestCase):
         self.assertEqual(social["follow_back_added"], 5)
         self.assertEqual(social["interaction_added"], 3)
         self.assertEqual(social["interactions_liked"], 7)
+        self.assertEqual(social["joke_replies"], 2)
         self.assertEqual(network["response_window"]["active"], 2)
         self.assertEqual(network["response_window"]["by_source"]["discovery"], 1)
         self.assertEqual(network["unfollow"]["cap_remaining"], 4)

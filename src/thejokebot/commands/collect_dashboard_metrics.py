@@ -59,6 +59,7 @@ HISTORY_RECORD_FIELDS = {
         "interaction_eligible",
         "interaction_added",
         "interactions_liked",
+        "joke_replies",
         "starter_pack_follows",
         "starter_pack_scan_complete",
         "protected",
@@ -809,6 +810,7 @@ def _social_activity_metrics(workflow_activity: dict | None) -> dict:
                 ),
                 "interaction_added": max(0, int(run.get("interaction_added") or 0)),
                 "interactions_liked": max(0, int(run.get("interactions_liked") or 0)),
+                "joke_replies": max(0, int(run.get("joke_replies") or 0)),
                 "starter_pack_follows": max(
                     0, int(run.get("starter_pack_follows") or 0)
                 ),
@@ -826,6 +828,7 @@ def _social_activity_metrics(workflow_activity: dict | None) -> dict:
         "interaction_eligible",
         "interaction_added",
         "interactions_liked",
+        "joke_replies",
         "starter_pack_follows",
         "starter_pack_scan_complete",
         "failed",

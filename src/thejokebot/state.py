@@ -116,6 +116,7 @@ def _default_state() -> dict:
             "liked_uris": [],
             "last_checked_at": None,
         },
+        "joke_requests": {"replied_uris": []},
         "unfollow_history": {
             "entries": [],
         },
@@ -205,6 +206,9 @@ def _normalise_state(state: dict) -> dict:
     liked_replies = state.setdefault("liked_replies", {})
     liked_replies.setdefault("liked_uris", [])
     liked_replies.setdefault("last_checked_at", None)
+
+    joke_requests = state.setdefault("joke_requests", {})
+    joke_requests.setdefault("replied_uris", [])
 
     unfollow_history = state.setdefault("unfollow_history", {})
     unfollow_history.setdefault("entries", [])
@@ -360,6 +364,7 @@ def _domain_payload(state: dict, domain: str) -> dict:
             key: state[key]
             for key in (
                 "liked_replies",
+                "joke_requests",
                 "unfollow_history",
                 "follow_grace",
                 "follow_tracking",
@@ -648,6 +653,25 @@ def set_likes_checked_now(state: dict) -> None:
     """Set the reply-like polling timestamp to current epoch."""
     liked_replies = state.setdefault("liked_replies", {})
     liked_replies["last_checked_at"] = int(time.time())
+
+
+def get_replied_joke_request_uris(state: dict) -> set[str]:
+    joke_requests = state.setdefault("joke_requests", {})
+    return set(joke_requests.setdefault("replied_uris", []))
+
+
+def record_replied_joke_request_uri(state: dict, uri: str) -> None:
+    joke_requests = state.setdefault("joke_requests", {})
+    uris = joke_requests.setdefault("replied_uris", [])
+    if uri and uri not in uris:
+        uris.append(uri)
+
+
+def prune_replied_joke_request_uris(state: dict, max_entries: int = 5000) -> None:
+    joke_requests = state.setdefault("joke_requests", {})
+    uris = joke_requests.setdefault("replied_uris", [])
+    if len(uris) > max_entries:
+        joke_requests["replied_uris"] = uris[-max_entries:]
 
 
 # ---------------------------------------------------------------------------
