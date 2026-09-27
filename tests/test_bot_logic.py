@@ -24,6 +24,7 @@ from thejokebot.commands import follow_back as follow_back_processing
 from thejokebot.commands import follow_interactors as follow_interactor_processing
 from thejokebot.commands import follow_fellows as bluesky_follow_fellows
 from thejokebot.commands import follows_and_likes as bluesky_follows_and_likes
+from thejokebot.commands import interaction_likes
 from thejokebot import providers as joke_providers
 from thejokebot.commands import manage_starter_pack as bluesky_manage_starter_pack
 from thejokebot.commands import post_joke as bluesky_post_joke
@@ -2681,6 +2682,20 @@ class StarterPackAttributionTests(unittest.TestCase):
 
 
 class LikeRepliesTests(unittest.TestCase):
+    @staticmethod
+    def _notification(**overrides):
+        values = {
+            "reason": "reply",
+            "indexed_at": dt.datetime.now(dt.timezone.utc)
+            .isoformat()
+            .replace("+00:00", "Z"),
+            "uri": "at://did:plc:abc/app.bsky.feed.post/reply",
+            "cid": "cid-reply",
+            "record": SimpleNamespace(text="A reply"),
+        }
+        values.update(overrides)
+        return SimpleNamespace(**values)
+
     def test_like_replies_likes_fresh_repost(self):
         now = dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00", "Z")
         notification = SimpleNamespace(
@@ -2696,12 +2711,13 @@ class LikeRepliesTests(unittest.TestCase):
         client = mock.Mock()
         client.app.bsky.notification.list_notifications.return_value = response
 
-        with mock.patch(
-            "thejokebot.commands.follows_and_likes.retry_network_call",
+        with mock.patch.object(
+            interaction_likes,
+            "retry_network_call",
             side_effect=lambda fn, description: fn(),
         ):
             with mock.patch("thejokebot.state.save_state"):
-                liked_count = bluesky_follows_and_likes.like_replies(
+                liked_count = interaction_likes.like_replies(
                     client,
                     state,
                     dry_run=True,
@@ -2735,12 +2751,13 @@ class LikeRepliesTests(unittest.TestCase):
         client = mock.Mock()
         client.app.bsky.notification.list_notifications.return_value = response
 
-        with mock.patch(
-            "thejokebot.commands.follows_and_likes.retry_network_call",
+        with mock.patch.object(
+            interaction_likes,
+            "retry_network_call",
             side_effect=lambda fn, description: fn(),
         ):
             with mock.patch("thejokebot.state.save_state"):
-                liked_count = bluesky_follows_and_likes.like_replies(
+                liked_count = interaction_likes.like_replies(
                     client,
                     state,
                     dry_run=True,
@@ -2769,12 +2786,13 @@ class LikeRepliesTests(unittest.TestCase):
         client = mock.Mock()
         client.app.bsky.notification.list_notifications.return_value = response
 
-        with mock.patch(
-            "thejokebot.commands.follows_and_likes.retry_network_call",
+        with mock.patch.object(
+            interaction_likes,
+            "retry_network_call",
             side_effect=lambda fn, description: fn(),
         ):
             with mock.patch("thejokebot.state.save_state"):
-                liked_count = bluesky_follows_and_likes.like_replies(
+                liked_count = interaction_likes.like_replies(
                     client,
                     state,
                     dry_run=True,
@@ -2799,12 +2817,13 @@ class LikeRepliesTests(unittest.TestCase):
         client = mock.Mock()
         client.app.bsky.notification.list_notifications.return_value = response
 
-        with mock.patch(
-            "thejokebot.commands.follows_and_likes.retry_network_call",
+        with mock.patch.object(
+            interaction_likes,
+            "retry_network_call",
             side_effect=lambda fn, description: fn(),
         ):
             with mock.patch("thejokebot.state.save_state"):
-                liked_count = bluesky_follows_and_likes.like_replies(
+                liked_count = interaction_likes.like_replies(
                     client,
                     state,
                     dry_run=True,
@@ -2813,6 +2832,104 @@ class LikeRepliesTests(unittest.TestCase):
 
         self.assertEqual(liked_count, 0)
         self.assertEqual(len(bot_state.get_liked_reply_uris(state)), 0)
+
+    def test_orchestrator_delegates_interaction_likes(self):
+        client = mock.Mock()
+        state = bot_state._default_state()
+        summary = {}
+
+        with mock.patch.object(
+            interaction_likes,
+            "like_replies",
+            return_value=2,
+        ) as like:
+            count = bluesky_follows_and_likes.like_replies(
+                client,
+                state,
+                dry_run=True,
+                action_delay_seconds=1.5,
+                summary=summary,
+            )
+
+        self.assertEqual(count, 2)
+        like.assert_called_once_with(client, state, True, 1.5, summary)
+
+    def test_live_like_is_persisted_and_delayed(self):
+        state = bot_state._default_state()
+        client = mock.Mock()
+        client.app.bsky.notification.list_notifications.return_value = SimpleNamespace(
+            notifications=[self._notification()], cursor=None
+        )
+
+        with (
+            mock.patch.object(
+                interaction_likes,
+                "retry_network_call",
+                side_effect=lambda fn, description: fn(),
+            ),
+            mock.patch.object(interaction_likes.time, "sleep") as sleep,
+            mock.patch("thejokebot.state.save_state") as save_state,
+        ):
+            count = interaction_likes.like_replies(
+                client, state, dry_run=False, action_delay_seconds=0.5
+            )
+
+        self.assertEqual(count, 1)
+        client.like.assert_called_once()
+        sleep.assert_called_once_with(0.5)
+        save_state.assert_called_once_with(state, domains="social")
+
+    def test_failed_like_increments_failure_summary(self):
+        state = bot_state._default_state()
+        summary = {}
+        response = SimpleNamespace(notifications=[self._notification()], cursor=None)
+
+        with mock.patch.object(
+            interaction_likes,
+            "retry_network_call",
+            side_effect=[response, requests.RequestException("unavailable")],
+        ):
+            count = interaction_likes.like_replies(
+                mock.Mock(), state, False, 0, summary
+            )
+
+        self.assertEqual(count, 0)
+        self.assertEqual(summary["failed"], 1)
+        self.assertEqual(summary["interactions_liked"], 0)
+
+    def test_notification_fetch_failure_ends_scan(self):
+        state = bot_state._default_state()
+        summary = {}
+
+        with mock.patch.object(
+            interaction_likes,
+            "retry_network_call",
+            side_effect=requests.RequestException("unavailable"),
+        ):
+            count = interaction_likes.like_replies(
+                mock.Mock(), state, False, 0, summary
+            )
+
+        self.assertEqual(count, 0)
+        self.assertEqual(summary["interactions_liked"], 0)
+
+    def test_candidate_rejects_invalid_notifications(self):
+        cutoff = time.time() - 60
+
+        for notification in (
+            self._notification(reason="mention"),
+            self._notification(uri=None),
+        ):
+            with self.subTest(notification=notification):
+                self.assertEqual(
+                    interaction_likes._like_candidate(notification, cutoff, set()),
+                    (None, False),
+                )
+
+        malformed = self._notification(indexed_at="not-a-timestamp")
+        candidate, stop = interaction_likes._like_candidate(malformed, cutoff, set())
+        self.assertEqual(candidate, (malformed.reason, malformed.uri, malformed.cid))
+        self.assertFalse(stop)
 
     def test_reply_with_report_tag_is_skipped(self):
         """Ensure #report replies are not liked."""
@@ -3208,7 +3325,7 @@ class JokeRequestReplyTests(unittest.TestCase):
             ),
             mock.patch("thejokebot.state.save_state") as save_state,
             mock.patch(
-                "thejokebot.commands.follows_and_likes.time.time", return_value=1234.5
+                "thejokebot.commands.joke_requests.time.time", return_value=1234.5
             ),
         ):
             count = bluesky_follows_and_likes.reply_to_joke_requests(
@@ -3239,7 +3356,7 @@ class JokeRequestReplyTests(unittest.TestCase):
                 side_effect=lambda fn, description: fn(),
             ),
             mock.patch(
-                "thejokebot.commands.follows_and_likes.time.time",
+                "thejokebot.commands.joke_requests.time.time",
                 return_value=checkpoint + 3600,
             ),
             mock.patch("thejokebot.state.save_state"),
