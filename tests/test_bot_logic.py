@@ -25,6 +25,7 @@ from thejokebot.commands import follow_interactors as follow_interactor_processi
 from thejokebot.commands import follow_fellows as bluesky_follow_fellows
 from thejokebot.commands import follows_and_likes as bluesky_follows_and_likes
 from thejokebot.commands import interaction_likes
+from thejokebot import moderation_state
 from thejokebot import providers as joke_providers
 from thejokebot.commands import manage_starter_pack as bluesky_manage_starter_pack
 from thejokebot.commands import post_joke as bluesky_post_joke
@@ -1818,6 +1819,61 @@ class StateJokeHistoryTests(unittest.TestCase):
         self.assertIsInstance(checked_at, int)
         assert checked_at is not None
         self.assertGreater(checked_at, 0)
+
+
+class ModerationStateTests(unittest.TestCase):
+    def test_unresolved_attempts_recover_from_malformed_counts(self):
+        state = bot_state._default_state()
+        state["reports"]["unresolved_notification_attempts"] = []
+
+        self.assertEqual(
+            moderation_state.get_unresolved_notification_attempts(state), {}
+        )
+        state["reports"]["unresolved_notification_attempts"]["at://notif/1"] = -1
+
+        self.assertEqual(
+            moderation_state.increment_unresolved_notification_attempt(
+                state, "at://notif/1"
+            ),
+            1,
+        )
+
+    def test_empty_notification_identifiers_are_ignored(self):
+        state = bot_state._default_state()
+
+        self.assertEqual(
+            moderation_state.increment_unresolved_notification_attempt(state, ""),
+            0,
+        )
+        moderation_state.clear_unresolved_notification_attempt(state, "")
+
+        self.assertEqual(state["reports"]["unresolved_notification_attempts"], {})
+
+    def test_processed_notifications_are_pruned_to_latest_entries(self):
+        state = bot_state._default_state()
+        state["reports"]["processed_notification_uris"] = ["one", "two", "three"]
+
+        moderation_state.prune_processed_notifications(state, max_entries=2)
+
+        self.assertEqual(
+            state["reports"]["processed_notification_uris"], ["two", "three"]
+        )
+
+    def test_report_timestamps_use_current_epoch(self):
+        state = bot_state._default_state()
+
+        with mock.patch.object(moderation_state.time, "time", return_value=123):
+            moderation_state.set_reports_checked_now(state)
+            moderation_state.record_moderation_activity(
+                state,
+                proposals=1,
+                acknowledgements=0,
+                approved_removals=0,
+                unresolved=0,
+            )
+
+        self.assertEqual(state["reports"]["last_checked_at"], 123)
+        self.assertEqual(state["reports"]["activity_events"][0]["recorded_at"], 123)
 
 
 class DenylistTests(unittest.TestCase):
