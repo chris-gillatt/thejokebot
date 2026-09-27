@@ -20,7 +20,7 @@ def _run_git(
     *,
     capture_output: bool = False,
 ) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
+    return subprocess.run(  # NOSONAR -- argv list, shell disabled; callers validate inputs.
         ["git", *arguments],
         check=True,
         text=True,
@@ -85,6 +85,10 @@ def persist(
         raise PersistenceError("The commit message must not be empty.")
     if not branch.strip() or not remote.strip():
         raise PersistenceError("The branch and remote must not be empty.")
+    if branch != "main" or remote != "origin":
+        raise PersistenceError(
+            "Workflow state persistence is restricted to origin/main."
+        )
     if max_attempts < 1:
         raise PersistenceError("max_attempts must be at least 1.")
 
@@ -99,7 +103,7 @@ def persist(
     _run_git(["commit", "-m", commit_message])
     for attempt in range(1, max_attempts + 1):
         _run_git(["pull", "--rebase", remote, branch])
-        result = subprocess.run(
+        result = subprocess.run(  # NOSONAR -- fixed remote/branch, shell disabled.
             ["git", "push", remote, f"HEAD:{branch}"],
             check=False,
             text=True,

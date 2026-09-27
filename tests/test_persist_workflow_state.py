@@ -157,6 +157,8 @@ def test_persist_fails_after_bounded_push_attempts():
         ({"commit_message": ""}, "commit message"),
         ({"branch": ""}, "branch and remote"),
         ({"remote": ""}, "branch and remote"),
+        ({"branch": "feature"}, "restricted to origin/main"),
+        ({"remote": "upstream"}, "restricted to origin/main"),
         ({"max_attempts": 0}, "max_attempts"),
     ],
 )
