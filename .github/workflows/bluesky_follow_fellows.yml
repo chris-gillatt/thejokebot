@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: social_state_writer
+  group: joke_and_social_state_writer
   cancel-in-progress: false
 
 permissions:

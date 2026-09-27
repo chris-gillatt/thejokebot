@@ -2802,7 +2802,11 @@ class JokeRequestReplyTests(unittest.TestCase):
             cid="reply-cid",
         )
         client = mock.Mock()
+        client.me.did = "did:plc:bot"
         client.app.bsky.notification.list_notifications.return_value = response
+        client.get_post_thread.return_value = SimpleNamespace(
+            thread=SimpleNamespace(replies=[])
+        )
         client.send_post.return_value = posted
         state = bot_state._default_state()
         selection = (
@@ -3006,8 +3010,12 @@ class JokeRequestReplyTests(unittest.TestCase):
     def test_post_failure_does_not_mark_request_as_replied(self):
         notification = self._notification()
         client = mock.Mock()
+        client.me.did = "did:plc:bot"
         client.app.bsky.notification.list_notifications.return_value = SimpleNamespace(
             notifications=[notification]
+        )
+        client.get_post_thread.return_value = SimpleNamespace(
+            thread=SimpleNamespace(replies=[])
         )
         client.send_post.side_effect = requests.RequestException("failed")
         state = bot_state._default_state()
@@ -3030,6 +3038,37 @@ class JokeRequestReplyTests(unittest.TestCase):
 
         self.assertEqual(bot_state.get_replied_joke_request_uris(state), set())
         self.assertEqual(state["posted_jokes"], [])
+
+    def test_existing_live_reply_recovers_lost_idempotency_state(self):
+        notification = self._notification()
+        existing_reply = SimpleNamespace(
+            post=SimpleNamespace(author=SimpleNamespace(did="did:plc:bot"))
+        )
+        client = mock.Mock()
+        client.me.did = "did:plc:bot"
+        client.app.bsky.notification.list_notifications.return_value = SimpleNamespace(
+            notifications=[notification]
+        )
+        client.get_post_thread.return_value = SimpleNamespace(
+            thread=SimpleNamespace(replies=[existing_reply])
+        )
+        state = bot_state._default_state()
+
+        with (
+            mock.patch(
+                "thejokebot.commands.follows_and_likes.retry_network_call",
+                side_effect=lambda fn, description: fn(),
+            ),
+            mock.patch("thejokebot.state.save_state") as save_state,
+        ):
+            count = bluesky_follows_and_likes.reply_to_joke_requests(
+                client, "thejokebot.bsky.social", state, dry_run=False
+            )
+
+        self.assertEqual(count, 0)
+        client.send_post.assert_not_called()
+        self.assertIn(notification.uri, bot_state.get_replied_joke_request_uris(state))
+        save_state.assert_called_once_with(state, domains="social")
 
 
 class BlockReconciliationTests(unittest.TestCase):

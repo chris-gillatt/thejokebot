@@ -30,6 +30,29 @@ class RepositoryPathTests(unittest.TestCase):
         self.assertIn('    - cron: "30 0,6,12,18 * * *"', dashboard_workflow)
         self.assertNotIn("  workflow_run:\n", dashboard_workflow)
 
+    def test_joke_and_social_state_writers_share_concurrency_and_persist_domains(self):
+        repository_root = Path(__file__).resolve().parents[1]
+        workflow_dir = repository_root / ".github" / "workflows"
+        workflow_names = (
+            "bluesky_post_joke.yml",
+            "bluesky_follows_and_likes.yml",
+            "bluesky_follow_fellows.yml",
+            "bluesky_unfollow.yml",
+        )
+
+        workflows = {
+            name: (workflow_dir / name).read_text(encoding="utf-8")
+            for name in workflow_names
+        }
+
+        for name, workflow in workflows.items():
+            with self.subTest(workflow=name):
+                self.assertIn("  group: joke_and_social_state_writer", workflow)
+        self.assertIn(
+            "git add state/posting_state.json state/social_state.json",
+            workflows["bluesky_follows_and_likes.yml"],
+        )
+
     def test_first_party_code_does_not_import_deleted_root_modules(self):
         repository_root = Path(__file__).resolve().parents[1]
         deleted_modules = {

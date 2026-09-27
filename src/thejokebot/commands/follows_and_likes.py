@@ -833,6 +833,18 @@ def _select_reply_joke(state):
     return joke, encoded, "fallback", starting_provider, failures, cutoff
 
 
+def _request_has_bot_reply(client, request_uri):
+    response = retry_network_call(
+        lambda: client.get_post_thread(uri=request_uri, depth=1),
+        description=f"checking existing replies to {mask_sensitive(request_uri)}",
+    )
+    bot_did = get_nested_value(client, "me", "did")
+    replies = get_nested_value(response, "thread", "replies") or []
+    return any(
+        get_nested_value(reply, "post", "author", "did") == bot_did for reply in replies
+    )
+
+
 def reply_to_joke_requests(client, username, state, dry_run, summary=None):
     if summary is None:
         summary = {}
@@ -858,6 +870,16 @@ def reply_to_joke_requests(client, username, state, dry_run, summary=None):
         if dry_run:
             print(f"[DRY-RUN] Would reply with a joke to {mask_sensitive(uri)}")
             replied_count += 1
+            continue
+        if _request_has_bot_reply(client, uri):
+            print(
+                "Skipping joke request because the bot has already replied: "
+                f"{mask_sensitive(uri)}"
+            )
+            bot_state.record_replied_joke_request_uri(state, uri)
+            replied_uris.add(uri)
+            bot_state.prune_replied_joke_request_uris(state)
+            bot_state.save_state(state, domains="social")
             continue
         joke, encoded, provider, starting_provider, failures, cutoff = (
             _select_reply_joke(state)
