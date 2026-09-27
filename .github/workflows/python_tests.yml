@@ -69,6 +69,12 @@ jobs:
         if: github.event_name == 'workflow_dispatch' || steps.changed_files.outputs.non_docs == 'true'
         run: python -m pytest tests/ -v --tb=short --cov=. --cov-report=term --cov-report=xml:coverage.xml --cov-fail-under=90
 
+      - name: Enforce changed executable Python coverage
+        if: github.event_name == 'workflow_dispatch' || steps.changed_files.outputs.non_docs == 'true'
+        env:
+          COVERAGE_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event_name == 'push' && github.event.before || 'HEAD^' }}
+        run: python scripts/check_changed_coverage.py --base "$COVERAGE_BASE_SHA" --minimum 95
+
       - name: Run SonarQube Cloud analysis
         if: >
           (github.event_name == 'workflow_dispatch' || steps.changed_files.outputs.non_docs == 'true') &&

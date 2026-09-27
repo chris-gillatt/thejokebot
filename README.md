@@ -118,7 +118,7 @@ This runs:
 - Ruff format check (`ruff format --check .`)
 - Pyright checks for changed Python files and the full first-party project (`./scripts/check-python-types.sh`)
 - Workflow lint (`./scripts/lint-workflows.sh`, powered by actionlint)
-- Unit tests with application coverage (`pytest-cov`, minimum 90%)
+- Unit tests with application coverage (`pytest-cov`, minimum 90% overall and 95% of changed executable Python lines)
 - Local CodeQL analysis (required by default)
 
 Linting, formatting, type checks, and tests are a single validation gate in this
@@ -126,6 +126,11 @@ repository; running only tests is not considered sufficient before commit/push.
 New or changed executable Python requires at least 95% coverage, with focused
 tests for material branches such as failure paths, state transitions, safety
 limits, and idempotency.
+The changed-line gate compares the working tree with `HEAD` by default. To check
+a committed branch or another comparison point locally, set
+`BLUESKY_COVERAGE_BASE` (for example, `BLUESKY_COVERAGE_BASE=HEAD^`). CI uses the
+pull-request base SHA or the pre-push SHA automatically. Diffs with no changed
+executable Python lines pass without inventing a denominator.
 Run the gate as a separate command before pushing; the repository deliberately
 does not use a pre-push hook. Because scheduled workflows can update `main` while
 the checks run, use this order:
@@ -160,7 +165,7 @@ If you only want to run the unit test suite locally (without Ruff/CodeQL), run:
 
 Equivalent GitHub Actions workflow: `python_tests`. It generates `coverage.xml`,
 submits the analysis to SonarQube Cloud, and fails when either the 90% application
-coverage floor or the Sonar quality gate is not met. Sonar analysis runs for
+overall/changed coverage floors or the Sonar quality gate is not met. Sonar analysis runs for
 `main`, manual dispatches, and trusted pull-request branches; fork pull requests
 do not receive the repository token.
 

@@ -57,6 +57,11 @@ echo "==> Unit tests"
   --cov-report=xml:coverage.xml \
   --cov-fail-under=90
 
+echo "==> Changed executable Python coverage"
+"${PYTHON[@]}" scripts/check_changed_coverage.py \
+  --base "${BLUESKY_COVERAGE_BASE:-HEAD}" \
+  --minimum 95
+
 if command -v codeql >/dev/null 2>&1; then
   CODEQL_TMP="$REPO_ROOT/.agent-tmp/codeql-local"
   CODEQL_SUITE="codeql/python-queries:codeql-suites/python-security-and-quality.qls"
