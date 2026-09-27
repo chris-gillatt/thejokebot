@@ -5,9 +5,10 @@ import zipfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
-from thejokebot.commands import collect_dashboard_metrics as dashboard
+from thejokebot.commands import collect_dashboard_metrics as dashboard_collector
+from thejokebot.commands import dashboard_metrics as dashboard
 from thejokebot.commands import dashboard_history
 from thejokebot.commands import dashboard_workflows
 from thejokebot.commands import follows_and_likes as bluesky_follows_and_likes
@@ -147,6 +148,83 @@ class DashboardCollectorTests(unittest.TestCase):
                 "entries": [{"did": "did:audience", "unfollowed_at": 1787357000}]
             },
         }
+
+    def test_bluesky_fetchers_reject_malformed_payloads(self):
+        response = _Response([])
+        session = Mock()
+        session.get.return_value = response
+        with self.assertRaisesRegex(ValueError, "response format"):
+            dashboard._request_json(session, "method", {})
+
+        with self.assertRaisesRegex(ValueError, "required counters"):
+            dashboard.fetch_profile(
+                object(), "actor", request_json=lambda *_: {"did": "did:bot"}
+            )
+
+        with self.assertRaisesRegex(ValueError, "could not be hydrated"):
+            dashboard.fetch_post(
+                object(), "at://post", request_json=lambda *_: {"posts": []}
+            )
+
+        with self.assertRaisesRegex(ValueError, "feed list"):
+            dashboard.fetch_original_posts(
+                object(),
+                "did:bot",
+                request_json=lambda *_: {"feed": None},
+            )
+
+    def test_collector_metric_wrappers_preserve_injected_seams(self):
+        session = object()
+        state = {"posted_jokes": []}
+        now = datetime(2026, 8, 22, 6, tzinfo=timezone.utc)
+        with (
+            patch.object(dashboard, "fetch_profile", return_value={}) as fetch_profile,
+            patch.object(dashboard, "fetch_post", return_value={}) as fetch_post,
+            patch.object(
+                dashboard, "fetch_original_posts", return_value=[]
+            ) as fetch_posts,
+            patch.object(dashboard, "collect_metrics", return_value={}) as collect,
+        ):
+            self.assertEqual(dashboard_collector.fetch_profile(session, "actor"), {})
+            self.assertEqual(dashboard_collector.fetch_post(session, "uri"), {})
+            self.assertEqual(
+                dashboard_collector.fetch_original_posts(
+                    session, "did:bot", max_pages=2, max_runtime_seconds=3
+                ),
+                [],
+            )
+            self.assertEqual(
+                dashboard_collector.collect_metrics(
+                    "actor", state, session=session, now=now
+                ),
+                {},
+            )
+
+        fetch_profile.assert_called_once_with(
+            session, "actor", request_json=dashboard_collector._request_json
+        )
+        fetch_post.assert_called_once_with(
+            session, "uri", request_json=dashboard_collector._request_json
+        )
+        fetch_posts.assert_called_once_with(
+            session,
+            "did:bot",
+            max_pages=2,
+            max_runtime_seconds=3,
+            request_json=dashboard_collector._request_json,
+        )
+        collect.assert_called_once_with(
+            "actor",
+            state,
+            existing=None,
+            session=session,
+            now=now,
+            workflow_runs=None,
+            workflow_activity=None,
+            fetch_profile_call=dashboard_collector.fetch_profile,
+            fetch_post_call=dashboard_collector.fetch_post,
+            fetch_original_posts_call=dashboard_collector.fetch_original_posts,
+        )
 
     def test_collects_aggregates_without_audience_identifiers(self):
         first_post = _post(self.first_uri, likeCount=2, replyCount=1)
@@ -1021,19 +1099,19 @@ class DashboardCollectorTests(unittest.TestCase):
             ) as collect_activity,
         ):
             self.assertEqual(
-                dashboard.fetch_workflow_runs(
+                dashboard_collector.fetch_workflow_runs(
                     session, "owner/repository", "token", now, max_pages=3
                 ),
                 [],
             )
             self.assertEqual(
-                dashboard.fetch_workflow_run_logs(
+                dashboard_collector.fetch_workflow_run_logs(
                     session, "owner/repository", 123, "token"
                 ),
                 "logs",
             )
             self.assertEqual(
-                dashboard.collect_workflow_activity(
+                dashboard_collector.collect_workflow_activity(
                     session, "owner/repository", "token", [], None, now
                 ),
                 {},
@@ -1045,14 +1123,14 @@ class DashboardCollectorTests(unittest.TestCase):
             "token",
             now,
             max_pages=3,
-            retry_call=dashboard.retry_network_call,
+            retry_call=dashboard_collector.retry_network_call,
         )
         fetch_logs.assert_called_once_with(
             session,
             "owner/repository",
             123,
             "token",
-            retry_call=dashboard.retry_network_call,
+            retry_call=dashboard_collector.retry_network_call,
         )
         collect_activity.assert_called_once_with(
             session,
@@ -1061,48 +1139,70 @@ class DashboardCollectorTests(unittest.TestCase):
             [],
             None,
             now,
-            fetch_logs=dashboard.fetch_workflow_run_logs,
+            fetch_logs=dashboard_collector.fetch_workflow_run_logs,
         )
 
     def test_fetch_workflow_runs_rejects_invalid_and_unbounded_pages(self):
         invalid_session = _WorkflowSession({1: None})
-        with self.assertRaisesRegex(ValueError, "workflow_runs"):
+        collected_at = datetime(2026, 8, 22, 6, tzinfo=timezone.utc)
+
+        def fetch_invalid_runs():
             dashboard_workflows.fetch_workflow_runs(
                 invalid_session,
                 "owner/repository",
                 None,
-                datetime(2026, 8, 22, 6, tzinfo=timezone.utc),
+                collected_at,
             )
 
+        with self.assertRaisesRegex(ValueError, "workflow_runs"):
+            fetch_invalid_runs()
+
         full_page = [{} for _ in range(100)]
-        with self.assertRaisesRegex(RuntimeError, "safety limit"):
+        bounded_session = _WorkflowSession({1: full_page})
+
+        def fetch_bounded_runs():
             dashboard_workflows.fetch_workflow_runs(
-                _WorkflowSession({1: full_page}),
+                bounded_session,
                 "owner/repository",
                 None,
-                datetime(2026, 8, 22, 6, tzinfo=timezone.utc),
+                collected_at,
                 max_pages=1,
             )
 
+        with self.assertRaisesRegex(RuntimeError, "safety limit"):
+            fetch_bounded_runs()
+
     def test_fetch_workflow_logs_rejects_oversized_archives(self):
+        oversized_archive_session = _LogSession(b"too large")
+        oversized_logs_session = _LogSession(_log_archive("too large"))
+
+        def fetch_oversized_archive():
+            dashboard_workflows.fetch_workflow_run_logs(
+                oversized_archive_session,
+                "owner/repository",
+                123,
+                None,
+            )
+
         with (
             patch.object(dashboard_workflows, "MAX_WORKFLOW_LOG_BYTES", 1),
             self.assertRaisesRegex(ValueError, "archive.*too large"),
         ):
+            fetch_oversized_archive()
+
+        def fetch_oversized_logs():
             dashboard_workflows.fetch_workflow_run_logs(
-                _LogSession(b"too large"), "owner/repository", 123, None
+                oversized_logs_session,
+                "owner/repository",
+                123,
+                None,
             )
 
         with (
             patch.object(dashboard_workflows, "MAX_WORKFLOW_LOG_UNCOMPRESSED_BYTES", 1),
             self.assertRaisesRegex(ValueError, "logs.*too large"),
         ):
-            dashboard_workflows.fetch_workflow_run_logs(
-                _LogSession(_log_archive("too large")),
-                "owner/repository",
-                123,
-                None,
-            )
+            fetch_oversized_logs()
 
     def test_collect_workflow_activity_does_not_retry_expired_or_cached_runs(self):
         existing = {
