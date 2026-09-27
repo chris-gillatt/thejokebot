@@ -66,7 +66,11 @@ def test_changed_python_lines_includes_untracked_python(tmp_path, monkeypatch):
     with mock.patch.object(
         check_changed_coverage,
         "_run_git",
-        side_effect=["+++ b/tracked.py\n@@ -0,0 +4 @@", "new.py\n"],
+        side_effect=[
+            "a" * 40 + "\n",
+            "+++ b/tracked.py\n@@ -0,0 +4 @@",
+            "new.py\n",
+        ],
     ):
         assert check_changed_coverage.changed_python_lines("HEAD") == {
             "tracked.py": {4},
@@ -80,11 +84,25 @@ def test_changed_python_lines_reports_unreadable_untracked_file(tmp_path, monkey
         mock.patch.object(
             check_changed_coverage,
             "_run_git",
-            side_effect=["", "missing.py\n"],
+            side_effect=["a" * 40 + "\n", "", "missing.py\n"],
         ),
         pytest.raises(check_changed_coverage.ChangedCoverageError, match="missing.py"),
     ):
         check_changed_coverage.changed_python_lines("HEAD")
+
+
+@pytest.mark.parametrize("base", ["", "--output=/tmp/result", "bad\x00revision"])
+def test_resolve_base_rejects_unsafe_revision(base):
+    with pytest.raises(check_changed_coverage.ChangedCoverageError, match="Invalid"):
+        check_changed_coverage._resolve_base(base)
+
+
+def test_resolve_base_requires_full_commit_sha():
+    with mock.patch.object(check_changed_coverage, "_run_git", return_value="HEAD\n"):
+        with pytest.raises(
+            check_changed_coverage.ChangedCoverageError, match="commit SHA"
+        ):
+            check_changed_coverage._resolve_base("HEAD")
 
 
 def test_run_git_wraps_failure():

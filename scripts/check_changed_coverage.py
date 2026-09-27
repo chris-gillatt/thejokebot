@@ -18,15 +18,32 @@ class ChangedCoverageError(RuntimeError):
 
 def _run_git(arguments: Sequence[str]) -> str:
     try:
-        return subprocess.run(
+        # Every caller supplies a fixed command shape. User-selected revisions are
+        # resolved to a full commit SHA by _resolve_base before reaching `git diff`.
+        return subprocess.run(  # NOSONAR - argv list, shell disabled, revision verified
             ["git", *arguments],
             check=True,
             capture_output=True,
+            shell=False,
             text=True,
         ).stdout
     except subprocess.CalledProcessError as error:
         detail = error.stderr.strip() or str(error)
         raise ChangedCoverageError(detail) from error
+
+
+def _resolve_base(base: str) -> str:
+    if not base or base.startswith("-") or "\x00" in base:
+        raise ChangedCoverageError(f"Invalid Git base revision: {base!r}")
+    resolved = _run_git(
+        ["rev-parse", "--verify", "--end-of-options", f"{base}^{{commit}}"]
+    )
+    commit = resolved.strip()
+    if len(commit) != 40 or any(
+        character not in "0123456789abcdef" for character in commit
+    ):
+        raise ChangedCoverageError(f"Git returned an invalid commit SHA for {base!r}")
+    return commit
 
 
 def _parse_changed_lines(diff: str) -> dict[str, set[int]]:
@@ -50,13 +67,14 @@ def _parse_changed_lines(diff: str) -> dict[str, set[int]]:
 
 
 def changed_python_lines(base: str) -> dict[str, set[int]]:
+    resolved_base = _resolve_base(base)
     diff = _run_git(
         [
             "diff",
             "--unified=0",
             "--no-ext-diff",
             "--diff-filter=AMCR",
-            base,
+            resolved_base,
             "--",
             "*.py",
         ]
