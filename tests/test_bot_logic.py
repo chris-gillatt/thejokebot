@@ -31,6 +31,7 @@ from thejokebot.commands import post_joke as bluesky_post_joke
 from thejokebot.commands import process_reports as bluesky_process_reports
 from thejokebot.commands import starter_pack_attribution
 from thejokebot import state as bot_state
+from thejokebot import state_store
 from thejokebot.commands import unfollow as bluesky_unfollow
 from thejokebot.commands import (
     validate_unfollow_ignore as bluesky_validate_unfollow_ignore,
@@ -5691,6 +5692,55 @@ class ApprovedReportDeletionTests(unittest.TestCase):
         self.assertEqual(count, 0)
         self.assertIn(bad_uri, bot_state.get_deleted_post_uris(state))
         client.app.bsky.feed.post.delete.assert_not_called()
+
+
+class StateStoreTests(unittest.TestCase):
+    def test_rejects_unknown_domains(self):
+        with self.assertRaisesRegex(ValueError, "Unknown state domain.*unknown"):
+            state_store._normalise_domains("unknown", bot_state.STATE_FILENAMES)
+
+    def test_state_locks_are_optional_without_fcntl(self):
+        with state_store._state_locks(("posting",), False, {}, None):
+            pass
+
+    def test_invalid_legacy_state_marks_missing_domains_failed(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            legacy_path = pathlib.Path(tmpdir) / "bot_state.json"
+            legacy_path.write_text("{broken", encoding="utf-8")
+            domain_files = {
+                "posting": str(pathlib.Path(tmpdir) / "state" / "posting.json"),
+                "social": str(pathlib.Path(tmpdir) / "state" / "social.json"),
+            }
+
+            state, failures = state_store._load_state_unlocked(
+                state_file=str(legacy_path),
+                state_files=domain_files,
+                normalise_state=lambda value: value,
+                merge_domain_payload=lambda state, domain, payload: state.update(
+                    payload
+                ),
+            )
+
+        self.assertEqual(state, {})
+        self.assertEqual(set(failures), {"posting", "social"})
+        self.assertEqual(
+            {path for path, _error in failures.values()},
+            {str(legacy_path)},
+        )
+
+    def test_load_state_returns_default_when_locking_fails(self):
+        with mock.patch.object(
+            state_store,
+            "_state_locks",
+            side_effect=OSError("lock failed"),
+        ):
+            with mock.patch("builtins.print") as print_warning:
+                loaded = bot_state.load_state()
+
+        self.assertEqual(loaded, bot_state._default_state())
+        print_warning.assert_called_once_with(
+            "Warning: could not read bot state; starting with empty state: lock failed"
+        )
 
 
 class StateRoundTripTests(unittest.TestCase):

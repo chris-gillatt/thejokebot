@@ -3,15 +3,12 @@
 from __future__ import annotations
 
 import hashlib
-import json
-import os
 import sys
 import time
-from contextlib import ExitStack, contextmanager
-from pathlib import Path
-from typing import Callable, Generator, Optional, TypeVar
+from typing import Callable, Optional, TypeVar
 
 from thejokebot.paths import LEGACY_STATE_FILE, LOCKS_DIR
+from thejokebot import state_store
 
 # File locking support (Unix-like systems)
 if sys.platform != "win32":
@@ -43,35 +40,8 @@ PROVIDER_FAILURE_REASONS = (
     "provider_error",
 )
 T = TypeVar("T")
-StateReadFailures = dict[str, tuple[str, Exception]]
-
-
-class StateReadError(RuntimeError):
-    """Raised when an update cannot safely read a selected state domain."""
-
-    def __init__(self, failures: StateReadFailures) -> None:
-        self.domains = tuple(sorted(failures))
-        details = "; ".join(
-            f"{domain} ({path}): {error}"
-            for domain, (path, error) in sorted(failures.items())
-        )
-        super().__init__(f"Could not read selected state domain(s): {details}")
-
-
-def _state_files() -> dict[str, str]:
-    state_directory = Path(STATE_FILE).resolve().parent / "state"
-    return {
-        domain: str(state_directory / filename)
-        for domain, filename in STATE_FILENAMES.items()
-    }
-
-
-def _lock_files() -> dict[str, str]:
-    lock_directory = Path(STATE_FILE).resolve().parent / LOCKS_DIR.name
-    return {
-        domain: str(lock_directory / f"{filename}.lock")
-        for domain, filename in STATE_FILENAMES.items()
-    }
+StateReadFailures = state_store.StateReadFailures
+StateReadError = state_store.StateReadError
 
 
 def _default_provider_failure() -> dict:
@@ -246,53 +216,38 @@ def _normalise_state(state: dict) -> dict:
     return state
 
 
-def _normalise_domains(domains: str | tuple[str, ...]) -> tuple[str, ...]:
-    selected = domains if isinstance(domains, tuple) else (domains,)
-    unknown = set(selected) - set(STATE_FILENAMES)
-    if unknown:
-        raise ValueError(f"Unknown state domain(s): {', '.join(sorted(unknown))}")
-    return selected
-
-
-@contextmanager
-def _state_locks(
-    domains: tuple[str, ...], exclusive: bool
-) -> Generator[None, None, None]:
-    if fcntl is None:
-        yield
-        return
-
-    lock_mode = fcntl.LOCK_EX if exclusive else fcntl.LOCK_SH
-    lock_files = _lock_files()
-    with ExitStack() as stack:
-        for domain in sorted(domains):
-            lock_path = lock_files[domain]
-            Path(lock_path).parent.mkdir(parents=True, exist_ok=True)
-            lock_file = stack.enter_context(open(lock_path, "w", encoding="utf-8"))
-            fcntl.flock(lock_file.fileno(), lock_mode)
-            stack.callback(fcntl.flock, lock_file.fileno(), fcntl.LOCK_UN)
-        yield
+def _merge_domain_payload(state: dict, domain: str, payload: dict) -> None:
+    if domain == "provider_health":
+        state["provider"]["health_checks"] = payload.get("health_checks", {})
+    else:
+        state.update(payload)
 
 
 def load_state() -> dict:
     """Load and assemble all state domains, with legacy-file fallback."""
-    domains = tuple(STATE_FILENAMES)
-    try:
-        with _state_locks(domains, exclusive=False):
-            state, failures = _load_state_unlocked()
-    except OSError as exc:
-        print(f"Warning: could not read bot state; starting with empty state: {exc}")
-        return _default_state()
-    _warn_state_read_failures(failures)
-    return state
+    return state_store.load_state(
+        state_file=STATE_FILE,
+        state_filenames=STATE_FILENAMES,
+        lock_dir_name=LOCKS_DIR.name,
+        fcntl_module=fcntl,
+        default_state=_default_state,
+        normalise_state=_normalise_state,
+        merge_domain_payload=_merge_domain_payload,
+    )
 
 
 def save_state(state: dict, *, domains: str | tuple[str, ...]) -> None:
     """Atomically persist only the selected state domains."""
-    selected = _normalise_domains(domains)
-    with _state_locks(selected, exclusive=True):
-        for domain in selected:
-            _save_domain_unlocked(state, domain)
+    state_store.save_state(
+        state,
+        domains=domains,
+        state_file=STATE_FILE,
+        state_filenames=STATE_FILENAMES,
+        lock_dir_name=LOCKS_DIR.name,
+        fcntl_module=fcntl,
+        normalise_state=_normalise_state,
+        domain_payload=_domain_payload,
+    )
 
 
 def update_state(
@@ -306,54 +261,17 @@ def update_state(
     Prefer this for new state writers. It prevents a stale in-memory snapshot from
     overwriting changes written by another run between load_state() and save_state().
     """
-    selected = _normalise_domains(domains)
-    with _state_locks(selected, exclusive=True):
-        state, failures = _load_state_unlocked()
-        selected_failures = {
-            domain: failures[domain] for domain in selected if domain in failures
-        }
-        if selected_failures:
-            raise StateReadError(selected_failures)
-        _warn_state_read_failures(failures)
-        result = mutator(state)
-        for domain in selected:
-            _save_domain_unlocked(state, domain)
-        return result
-
-
-def _load_state_unlocked() -> tuple[dict, StateReadFailures]:
-    legacy_state = {}
-    legacy_failure = None
-    if os.path.exists(STATE_FILE):
-        try:
-            with open(STATE_FILE, encoding="utf-8") as state_file:
-                legacy_state = json.load(state_file)
-        except (json.JSONDecodeError, OSError) as exc:
-            legacy_failure = (STATE_FILE, exc)
-    state = _normalise_state(legacy_state)
-    failures: StateReadFailures = {}
-
-    for domain, state_file_path in _state_files().items():
-        if not os.path.exists(state_file_path):
-            if legacy_failure is not None:
-                failures[domain] = legacy_failure
-            continue
-        try:
-            with open(state_file_path, encoding="utf-8") as state_file:
-                payload = json.load(state_file)
-        except (json.JSONDecodeError, OSError) as exc:
-            failures[domain] = (state_file_path, exc)
-            continue
-        if domain == "provider_health":
-            state["provider"]["health_checks"] = payload.get("health_checks", {})
-        else:
-            state.update(payload)
-    return _normalise_state(state), failures
-
-
-def _warn_state_read_failures(failures: StateReadFailures) -> None:
-    for domain, (path, error) in sorted(failures.items()):
-        print(f"Warning: could not read {domain} state from {path}: {error}")
+    return state_store.update_state(
+        mutator,
+        domains=domains,
+        state_file=STATE_FILE,
+        state_filenames=STATE_FILENAMES,
+        lock_dir_name=LOCKS_DIR.name,
+        fcntl_module=fcntl,
+        normalise_state=_normalise_state,
+        merge_domain_payload=_merge_domain_payload,
+        domain_payload=_domain_payload,
+    )
 
 
 def _domain_payload(state: dict, domain: str) -> dict:
@@ -380,18 +298,6 @@ def _domain_payload(state: dict, domain: str) -> dict:
     if domain == "moderation":
         return {"reports": state["reports"]}
     return {"health_checks": state["provider"]["health_checks"]}
-
-
-def _save_domain_unlocked(state: dict, domain: str) -> None:
-    state_file_path = _state_files()[domain]
-    Path(state_file_path).parent.mkdir(parents=True, exist_ok=True)
-    temporary_path = state_file_path + ".tmp"
-    with open(temporary_path, "w", encoding="utf-8") as state_file:
-        json.dump(
-            _domain_payload(_normalise_state(state), domain), state_file, indent=2
-        )
-        state_file.write("\n")
-    os.replace(temporary_path, state_file_path)
 
 
 def get_next_provider(state: dict, override: str | None = None) -> str:
