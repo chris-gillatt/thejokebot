@@ -28,6 +28,7 @@ from thejokebot import providers as joke_providers
 from thejokebot.commands import manage_starter_pack as bluesky_manage_starter_pack
 from thejokebot.commands import post_joke as bluesky_post_joke
 from thejokebot.commands import process_reports as bluesky_process_reports
+from thejokebot.commands import starter_pack_attribution
 from thejokebot import state as bot_state
 from thejokebot.commands import unfollow as bluesky_unfollow
 from thejokebot.commands import (
@@ -2484,11 +2485,12 @@ class StarterPackAttributionTests(unittest.TestCase):
         client = mock.Mock()
         client.app.bsky.notification.list_notifications.return_value = response
 
-        with mock.patch(
-            "thejokebot.commands.follows_and_likes.retry_network_call",
+        with mock.patch.object(
+            starter_pack_attribution,
+            "retry_network_call",
             side_effect=lambda fn, description: fn(),
         ):
-            count = bluesky_follows_and_likes.track_starter_pack_follows(
+            count = starter_pack_attribution.track_starter_pack_follows(
                 client, state, dry_run=False
             )
 
@@ -2515,11 +2517,12 @@ class StarterPackAttributionTests(unittest.TestCase):
             notifications=[old_notification], cursor=None
         )
 
-        with mock.patch(
-            "thejokebot.commands.follows_and_likes.retry_network_call",
+        with mock.patch.object(
+            starter_pack_attribution,
+            "retry_network_call",
             side_effect=lambda fn, description: fn(),
         ):
-            bluesky_follows_and_likes.track_starter_pack_follows(
+            starter_pack_attribution.track_starter_pack_follows(
                 client, state, dry_run=False
             )
             new_notification = self._notification(
@@ -2532,7 +2535,7 @@ class StarterPackAttributionTests(unittest.TestCase):
                     notifications=[new_notification, old_notification], cursor=None
                 )
             )
-            count = bluesky_follows_and_likes.track_starter_pack_follows(
+            count = starter_pack_attribution.track_starter_pack_follows(
                 client, state, dry_run=False
             )
 
@@ -2559,11 +2562,12 @@ class StarterPackAttributionTests(unittest.TestCase):
         client = mock.Mock()
         client.app.bsky.notification.list_notifications.return_value = response
 
-        with mock.patch(
-            "thejokebot.commands.follows_and_likes.retry_network_call",
+        with mock.patch.object(
+            starter_pack_attribution,
+            "retry_network_call",
             side_effect=lambda fn, description: fn(),
         ):
-            count = bluesky_follows_and_likes.track_starter_pack_follows(
+            count = starter_pack_attribution.track_starter_pack_follows(
                 client, state, dry_run=False, summary=summary
             )
 
@@ -2578,17 +2582,102 @@ class StarterPackAttributionTests(unittest.TestCase):
             notifications=[], cursor=None
         )
 
-        with mock.patch(
-            "thejokebot.commands.follows_and_likes.retry_network_call",
+        with mock.patch.object(
+            starter_pack_attribution,
+            "retry_network_call",
             side_effect=lambda fn, description: fn(),
         ):
-            bluesky_follows_and_likes.track_starter_pack_follows(
+            starter_pack_attribution.track_starter_pack_follows(
                 client, state, dry_run=False
             )
 
         attribution = bot_state.get_starter_pack_attribution(state)
         self.assertIsNone(attribution["high_water_indexed_at"])
         self.assertIsNotNone(attribution["coverage_started_at"])
+
+    def test_malformed_notification_timestamp_is_ignored(self):
+        response = SimpleNamespace(
+            notifications=[
+                self._notification(
+                    "at://did:plc:follower/app.bsky.graph.follow/invalid",
+                    "not-a-timestamp",
+                    starter_pack=self._starter_pack(),
+                )
+            ],
+            cursor=None,
+        )
+        state = bot_state._default_state()
+        client = mock.Mock()
+        client.app.bsky.notification.list_notifications.return_value = response
+
+        with mock.patch.object(
+            starter_pack_attribution,
+            "retry_network_call",
+            side_effect=lambda fn, description: fn(),
+        ):
+            count = starter_pack_attribution.track_starter_pack_follows(
+                client, state, dry_run=False
+            )
+
+        self.assertEqual(count, 0)
+
+    def test_fetch_failure_does_not_commit_partial_scan(self):
+        state = bot_state._default_state()
+        before = copy.deepcopy(state)
+        summary = {}
+
+        with mock.patch.object(
+            starter_pack_attribution,
+            "retry_network_call",
+            side_effect=requests.RequestException("unavailable"),
+        ):
+            count = starter_pack_attribution.track_starter_pack_follows(
+                mock.Mock(), state, dry_run=False, summary=summary
+            )
+
+        self.assertEqual(count, 0)
+        self.assertEqual(summary["starter_pack_scan_complete"], 0)
+        self.assertEqual(state, before)
+
+    def test_page_limit_exhaustion_does_not_commit_partial_scan(self):
+        state = bot_state._default_state()
+        before = copy.deepcopy(state)
+        client = mock.Mock()
+        client.app.bsky.notification.list_notifications.return_value = SimpleNamespace(
+            notifications=[], cursor="more"
+        )
+
+        with (
+            mock.patch.object(starter_pack_attribution, "_MAX_PAGES", 1),
+            mock.patch.object(
+                starter_pack_attribution,
+                "retry_network_call",
+                side_effect=lambda fn, description: fn(),
+            ),
+        ):
+            count = starter_pack_attribution.track_starter_pack_follows(
+                client, state, dry_run=False
+            )
+
+        self.assertEqual(count, 0)
+        self.assertEqual(state, before)
+
+    def test_orchestrator_delegates_starter_pack_attribution(self):
+        client = mock.Mock()
+        state = bot_state._default_state()
+        summary = {}
+
+        with mock.patch.object(
+            starter_pack_attribution,
+            "track_starter_pack_follows",
+            return_value=3,
+        ) as track:
+            count = bluesky_follows_and_likes.track_starter_pack_follows(
+                client, state, dry_run=True, summary=summary
+            )
+
+        self.assertEqual(count, 3)
+        track.assert_called_once_with(client, state, True, summary)
 
 
 class LikeRepliesTests(unittest.TestCase):
