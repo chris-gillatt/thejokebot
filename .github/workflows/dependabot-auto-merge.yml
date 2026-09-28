@@ -1,11 +1,8 @@
 name: pr_auto_merge
 
 on:
-  workflow_run:
-    workflows: [python_tests, ruff_quality, codeql, validate_runtime_config]
-    types: [completed]
   schedule:
-    - cron: "17,47 * * * *"
+    - cron: "*/5 * * * *"
   workflow_dispatch:
 
 permissions:
