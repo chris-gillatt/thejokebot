@@ -1,8 +1,11 @@
 name: pr_auto_merge
 
 on:
+  workflow_run:
+    workflows: [python_tests, codeql]
+    types: [completed]
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "43 7 * * *"
   workflow_dispatch:
 
 permissions:
@@ -15,16 +18,19 @@ concurrency:
 
 jobs:
   merge_verified_updates:
+    if: >
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.event == 'pull_request' &&
+       startsWith(github.event.workflow_run.head_branch, 'dependabot/'))
     runs-on: ubuntu-latest
     steps:
-      - name: Check out trusted default branch
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          ref: main
-          persist-credentials: false
-
       - name: Merge verified Dependabot updates
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DEPENDABOT_WORKFLOW_TOKEN: ${{ secrets.DEPENDABOT_WORKFLOW_TOKEN }}
-        run: python3 scripts/merge_dependabot.py
+        run: |
+          script_path="$(mktemp "${RUNNER_TEMP}/merge-dependabot.XXXXXX.py")"
+          trap 'rm -f "$script_path"' EXIT
+          gh api "repos/${GITHUB_REPOSITORY}/contents/scripts/merge_dependabot.py?ref=main" --jq .content |
+            base64 --decode > "$script_path"
+          python3 "$script_path"
