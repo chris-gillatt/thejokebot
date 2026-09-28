@@ -119,6 +119,11 @@ def _request_has_bot_reply(client, request_uri):
         description=f"checking existing replies to {mask_sensitive(request_uri)}",
     )
     bot_did = get_nested_value(client, "me", "did")
+    if (
+        not bot_did
+        or get_nested_value(response, "thread", "post", "uri") != request_uri
+    ):
+        raise ValueError("Could not verify the joke request thread before replying.")
     replies = get_nested_value(response, "thread", "replies") or []
     return any(
         get_nested_value(reply, "post", "author", "did") == bot_did for reply in replies
@@ -206,6 +211,9 @@ def reply_to_joke_requests(client, username, state, dry_run, summary=None):
         post = retry_network_call(
             lambda: client.send_post(text=joke, reply_to=reply_ref),
             description=f"replying to joke request {mask_sensitive(uri)}",
+            # A timeout can occur after Bluesky accepts the post. A second write
+            # would create another reply; the next run can inspect the thread.
+            max_attempts=1,
         )
         for failed_provider, error, reason_counts in failures:
             bot_state.record_failure(

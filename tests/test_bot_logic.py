@@ -3122,7 +3122,9 @@ class JokeRequestReplyTests(unittest.TestCase):
         client.me.did = "did:plc:bot"
         client.app.bsky.notification.list_notifications.return_value = response
         client.get_post_thread.return_value = SimpleNamespace(
-            thread=SimpleNamespace(replies=[])
+            thread=SimpleNamespace(
+                post=SimpleNamespace(uri=notification.uri), replies=[]
+            )
         )
         client.send_post.return_value = posted
         state = bot_state._default_state()
@@ -3137,7 +3139,7 @@ class JokeRequestReplyTests(unittest.TestCase):
 
         with mock.patch(
             "thejokebot.commands.follows_and_likes.retry_network_call",
-            side_effect=lambda fn, description: fn(),
+            side_effect=lambda fn, description, **kwargs: fn(),
         ):
             with mock.patch(
                 "thejokebot.commands.follows_and_likes._select_reply_joke",
@@ -3172,7 +3174,7 @@ class JokeRequestReplyTests(unittest.TestCase):
         with (
             mock.patch(
                 "thejokebot.commands.follows_and_likes.retry_network_call",
-                side_effect=lambda fn, description: fn(),
+                side_effect=lambda fn, description, **kwargs: fn(),
             ),
             mock.patch("thejokebot.state.save_state") as second_save_state,
         ):
@@ -3315,7 +3317,7 @@ class JokeRequestReplyTests(unittest.TestCase):
         with (
             mock.patch(
                 "thejokebot.commands.follows_and_likes.retry_network_call",
-                side_effect=lambda fn, description: fn(),
+                side_effect=lambda fn, description, **kwargs: fn(),
             ),
             mock.patch("thejokebot.state.save_state") as save_state,
         ):
@@ -3336,7 +3338,9 @@ class JokeRequestReplyTests(unittest.TestCase):
             notifications=[notification]
         )
         client.get_post_thread.return_value = SimpleNamespace(
-            thread=SimpleNamespace(replies=[])
+            thread=SimpleNamespace(
+                post=SimpleNamespace(uri=notification.uri), replies=[]
+            )
         )
         client.send_post.side_effect = requests.RequestException("failed")
         state = bot_state._default_state()
@@ -3345,7 +3349,7 @@ class JokeRequestReplyTests(unittest.TestCase):
         with (
             mock.patch(
                 "thejokebot.commands.follows_and_likes.retry_network_call",
-                side_effect=lambda fn, description: fn(),
+                side_effect=lambda fn, description, **kwargs: fn(),
             ),
             mock.patch(
                 "thejokebot.commands.follows_and_likes._select_reply_joke",
@@ -3361,6 +3365,66 @@ class JokeRequestReplyTests(unittest.TestCase):
         self.assertEqual(state["posted_jokes"], [])
         self.assertEqual(bot_state.get_joke_request_checkpoint(state), (None, set()))
 
+    def test_ambiguous_post_failure_is_not_retried_and_next_run_recovers(self):
+        notification = self._notification()
+        client = mock.Mock()
+        client.me.did = "did:plc:bot"
+        client.app.bsky.notification.list_notifications.return_value = SimpleNamespace(
+            notifications=[notification]
+        )
+        client.get_post_thread.return_value = SimpleNamespace(
+            thread=SimpleNamespace(
+                post=SimpleNamespace(uri=notification.uri), replies=[]
+            )
+        )
+        client.send_post.side_effect = requests.RequestException("response lost")
+        state = bot_state._default_state()
+        selection = ("Fresh joke", "encoded", "jokeapi", "jokeapi", [], 0)
+
+        with (
+            mock.patch(
+                "thejokebot.commands.follows_and_likes._select_reply_joke",
+                return_value=selection,
+            ),
+            mock.patch("thejokebot.state.save_state"),
+            self.assertRaises(requests.RequestException),
+        ):
+            bluesky_follows_and_likes.reply_to_joke_requests(
+                client, "thejokebot.bsky.social", state, dry_run=False
+            )
+
+        client.send_post.assert_called_once()
+        self.assertEqual(bot_state.get_joke_request_checkpoint(state), (None, set()))
+        client.get_post_thread.return_value.thread.replies = [
+            SimpleNamespace(
+                post=SimpleNamespace(author=SimpleNamespace(did="did:plc:bot"))
+            )
+        ]
+        with mock.patch("thejokebot.state.save_state"):
+            count = bluesky_follows_and_likes.reply_to_joke_requests(
+                client, "thejokebot.bsky.social", state, dry_run=False
+            )
+        self.assertEqual(count, 0)
+        client.send_post.assert_called_once()
+        self.assertIn(notification.uri, bot_state.get_replied_joke_request_uris(state))
+
+    def test_unverified_thread_does_not_post(self):
+        notification = self._notification()
+        client = mock.Mock()
+        client.me.did = "did:plc:bot"
+        client.app.bsky.notification.list_notifications.return_value = SimpleNamespace(
+            notifications=[notification]
+        )
+        client.get_post_thread.return_value = SimpleNamespace(
+            thread=SimpleNamespace(post=SimpleNamespace(uri="at://wrong"), replies=[])
+        )
+        state = bot_state._default_state()
+        with self.assertRaisesRegex(ValueError, "Could not verify"):
+            bluesky_follows_and_likes.reply_to_joke_requests(
+                client, "thejokebot.bsky.social", state, dry_run=False
+            )
+        client.send_post.assert_not_called()
+
     def test_existing_live_reply_recovers_lost_idempotency_state(self):
         notification = self._notification()
         existing_reply = SimpleNamespace(
@@ -3372,14 +3436,16 @@ class JokeRequestReplyTests(unittest.TestCase):
             notifications=[notification]
         )
         client.get_post_thread.return_value = SimpleNamespace(
-            thread=SimpleNamespace(replies=[existing_reply])
+            thread=SimpleNamespace(
+                post=SimpleNamespace(uri=notification.uri), replies=[existing_reply]
+            )
         )
         state = bot_state._default_state()
 
         with (
             mock.patch(
                 "thejokebot.commands.follows_and_likes.retry_network_call",
-                side_effect=lambda fn, description: fn(),
+                side_effect=lambda fn, description, **kwargs: fn(),
             ),
             mock.patch("thejokebot.state.save_state") as save_state,
         ):
@@ -3409,7 +3475,7 @@ class JokeRequestReplyTests(unittest.TestCase):
         with (
             mock.patch(
                 "thejokebot.commands.follows_and_likes.retry_network_call",
-                side_effect=lambda fn, description: fn(),
+                side_effect=lambda fn, description, **kwargs: fn(),
             ),
             mock.patch("thejokebot.state.save_state") as save_state,
             mock.patch(
@@ -3441,7 +3507,7 @@ class JokeRequestReplyTests(unittest.TestCase):
         with (
             mock.patch(
                 "thejokebot.commands.follows_and_likes.retry_network_call",
-                side_effect=lambda fn, description: fn(),
+                side_effect=lambda fn, description, **kwargs: fn(),
             ),
             mock.patch(
                 "thejokebot.commands.joke_requests.time.time",
@@ -3464,7 +3530,7 @@ class JokeRequestReplyTests(unittest.TestCase):
         with (
             mock.patch(
                 "thejokebot.commands.follows_and_likes.retry_network_call",
-                side_effect=lambda fn, description: fn(),
+                side_effect=lambda fn, description, **kwargs: fn(),
             ),
             mock.patch(
                 "thejokebot.commands.follows_and_likes._JOKE_REQUEST_MAX_PAGES", 2
