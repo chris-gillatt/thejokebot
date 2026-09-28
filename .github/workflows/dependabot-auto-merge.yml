@@ -4,6 +4,7 @@ on:
   workflow_run:
     workflows: [python_tests, codeql]
     types: [completed]
+    branches: ["dependabot/**"]
   schedule:
     - cron: "43 7 * * *"
   workflow_dispatch:
