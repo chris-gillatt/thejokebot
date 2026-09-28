@@ -26,6 +26,7 @@ from thejokebot.commands import follow_fellows as bluesky_follow_fellows
 from thejokebot.commands import follows_and_likes as bluesky_follows_and_likes
 from thejokebot.commands import interaction_likes
 from thejokebot import moderation_state
+from thejokebot import social_state
 from thejokebot import providers as joke_providers
 from thejokebot.commands import manage_starter_pack as bluesky_manage_starter_pack
 from thejokebot.commands import post_joke as bluesky_post_joke
@@ -1695,6 +1696,17 @@ class StateJokeHistoryTests(unittest.TestCase):
         uris = state["reports"]["processed_notification_uris"]
         self.assertEqual(uris, ["at://notif/1"])
 
+    def test_record_processed_notification_bounds_deduplication_history(self):
+        state = bot_state._default_state()
+        with mock.patch.object(moderation_state, "MAX_DEDUPE_ENTRIES", 2):
+            for suffix in ("one", "two", "three"):
+                bot_state.record_processed_notification(state, f"at://notif/{suffix}")
+
+        self.assertEqual(
+            state["reports"]["processed_notification_uris"],
+            ["at://notif/two", "at://notif/three"],
+        )
+
     def test_unresolved_notification_attempts_can_increment_and_clear(self):
         state = bot_state._default_state()
         first = bot_state.increment_unresolved_notification_attempt(
@@ -1737,6 +1749,17 @@ class StateJokeHistoryTests(unittest.TestCase):
         bot_state.prune_liked_reply_uris(state, max_entries=2)
 
         self.assertEqual(state["liked_replies"]["liked_uris"], ["two", "three"])
+
+    def test_record_liked_reply_bounds_deduplication_history(self):
+        state = bot_state._default_state()
+        with mock.patch.object(social_state, "MAX_DEDUPE_ENTRIES", 2):
+            for suffix in ("one", "two", "three"):
+                bot_state.record_liked_reply_uri(state, f"at://reply/{suffix}")
+
+        self.assertEqual(
+            state["liked_replies"]["liked_uris"],
+            ["at://reply/two", "at://reply/three"],
+        )
 
     def test_prune_replied_joke_request_uris_keeps_latest_entries(self):
         state = bot_state._default_state()

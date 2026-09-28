@@ -90,6 +90,18 @@ The preview is served at <http://localhost:8765/>. Set
 5. Run a command:
 	- `.venv/bin/thejokebot-post-joke`
 
+`pyproject.toml` is the authoritative source for package metadata, the application
+version, direct runtime dependencies, and development dependencies.
+`requirements.lock` is generated from `pyproject.toml` and pins the complete
+deployment/test environment with hashes. Regenerate it with:
+
+```bash
+pip-compile --allow-unsafe --extra=dev --generate-hashes --output-file=requirements.lock --strip-extras pyproject.toml
+```
+
+The editable install deliberately uses `--no-deps`: dependencies must come from
+the reviewed lock file rather than being resolved independently.
+
 ## Syncing repo and submodules
 
 To keep your working copy up to date with the remote (including read-only reference submodules), run:
@@ -148,7 +160,7 @@ and Git submodules through current Dependabot results. Apply dependency upgrades
 as separate focused changes. Record any deliberate pin in `problem-statement.md`
 with its current version, latest stable version, reason, and review trigger.
 
-The type check uses pinned Pyright `1.1.413`, the command-line analysis engine
+The type check uses pinned Pyright `1.1.414`, the command-line analysis engine
 used by Pylance. Run `npm ci --ignore-scripts` once to install the locked quality
 tool without package lifecycle scripts. `pyrightconfig.json` excludes the
 read-only `references/` directory.

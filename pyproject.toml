@@ -4,10 +4,24 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "thejokebot"
-version = "0.0.0"
+version = "1.0.0"
 description = "Automation for The Joke Bot on Bluesky"
 readme = "README.md"
 requires-python = ">=3.12"
+dependencies = [
+    "atproto>=0.0.72,<1",
+    "colorama>=0.4.6,<1",
+    "python-dotenv>=1.2.3,<2",
+    "regex>=2026.9.10,<2027",
+    "requests>=2.34.2,<3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.1.1,<10",
+    "pytest-cov>=7.1,<8",
+    "setuptools==84.0.0",
+]
 
 [project.scripts]
 thejokebot-collect-dashboard-metrics = "thejokebot.commands.collect_dashboard_metrics:main"

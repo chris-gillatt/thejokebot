@@ -4,6 +4,15 @@ from __future__ import annotations
 
 import time
 
+MAX_DEDUPE_ENTRIES = 5000
+
+
+def _append_bounded_unique(values: list[str], value: str) -> None:
+    if value and value not in values:
+        values.append(value)
+        if len(values) > MAX_DEDUPE_ENTRIES:
+            del values[:-MAX_DEDUPE_ENTRIES]
+
 
 def get_liked_reply_uris(state: dict) -> set[str]:
     """Return the set of reply post URIs the bot has already liked."""
@@ -16,8 +25,7 @@ def record_liked_reply_uri(state: dict, uri: str) -> None:
     """Record a reply URI as liked so it is not liked again."""
     liked_replies = state.setdefault("liked_replies", {})
     uris = liked_replies.setdefault("liked_uris", [])
-    if uri and uri not in uris:
-        uris.append(uri)
+    _append_bounded_unique(uris, uri)
 
 
 def prune_liked_reply_uris(state: dict, max_entries: int = 5000) -> None:
@@ -48,8 +56,7 @@ def get_replied_joke_request_uris(state: dict) -> set[str]:
 def record_replied_joke_request_uri(state: dict, uri: str) -> None:
     joke_requests = state.setdefault("joke_requests", {})
     uris = joke_requests.setdefault("replied_uris", [])
-    if uri and uri not in uris:
-        uris.append(uri)
+    _append_bounded_unique(uris, uri)
 
 
 def prune_replied_joke_request_uris(state: dict, max_entries: int = 5000) -> None:

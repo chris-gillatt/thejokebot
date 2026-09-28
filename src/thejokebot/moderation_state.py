@@ -4,6 +4,15 @@ from __future__ import annotations
 
 import time
 
+MAX_DEDUPE_ENTRIES = 5000
+
+
+def _append_bounded_unique(values: list[str], value: str) -> None:
+    if value and value not in values:
+        values.append(value)
+        if len(values) > MAX_DEDUPE_ENTRIES:
+            del values[:-MAX_DEDUPE_ENTRIES]
+
 
 def get_processed_notification_uris(state: dict) -> set[str]:
     """Return processed notification URIs for idempotent report ingestion."""
@@ -16,8 +25,7 @@ def record_processed_notification(state: dict, notification_uri: str) -> None:
     """Record a processed notification URI if it has not been seen before."""
     reports = state.setdefault("reports", {})
     uris = reports.setdefault("processed_notification_uris", [])
-    if notification_uri and notification_uri not in uris:
-        uris.append(notification_uri)
+    _append_bounded_unique(uris, notification_uri)
 
 
 def get_unresolved_notification_attempts(state: dict) -> dict[str, int]:
@@ -116,8 +124,7 @@ def record_deleted_post_uri(state: dict, post_uri: str) -> None:
     """Record that a Bluesky post has been deleted so it is not retried."""
     reports = state.setdefault("reports", {})
     uris = reports.setdefault("deleted_post_uris", [])
-    if post_uri and post_uri not in uris:
-        uris.append(post_uri)
+    _append_bounded_unique(uris, post_uri)
 
 
 def get_acknowledged_report_uris(state: dict) -> set[str]:
@@ -131,5 +138,4 @@ def record_acknowledged_report_uri(state: dict, reply_uri: str) -> None:
     """Record a #report reply URI as acknowledged so it is not re-acknowledged."""
     reports = state.setdefault("reports", {})
     uris = reports.setdefault("acknowledged_report_uris", [])
-    if reply_uri and reply_uri not in uris:
-        uris.append(reply_uri)
+    _append_bounded_unique(uris, reply_uri)
