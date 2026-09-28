@@ -5,6 +5,8 @@ import sys
 import subprocess
 from unittest import mock
 
+import pytest
+
 from scripts import merge_dependabot
 
 
@@ -194,3 +196,12 @@ def test_cli_passes_dry_run_and_gh_uses_argv(capsys):
     run.assert_called_once_with(
         ["gh", "pr", "list"], check=True, text=True, capture_output=True
     )
+
+    failure = subprocess.CalledProcessError(
+        1, ["gh", "pr", "merge"], stderr="merge declined"
+    )
+    with (
+        mock.patch.object(subprocess, "run", side_effect=failure),
+        pytest.raises(RuntimeError, match="merge declined"),
+    ):
+        merge_dependabot._gh("pr", "merge")

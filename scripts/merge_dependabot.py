@@ -26,9 +26,12 @@ DEPENDENCY_FILES = frozenset(
 
 
 def _gh(*arguments: str) -> str:
-    return subprocess.run(
-        ["gh", *arguments], check=True, text=True, capture_output=True
-    ).stdout
+    try:
+        return subprocess.run(
+            ["gh", *arguments], check=True, text=True, capture_output=True
+        ).stdout
+    except subprocess.CalledProcessError as exc:
+        raise RuntimeError(f"GitHub CLI failed: {exc.stderr.strip()}") from exc
 
 
 def _allowed_path(path: str) -> bool:
@@ -143,7 +146,7 @@ def main() -> int:
         ValueError,
         KeyError,
         json.JSONDecodeError,
-        subprocess.CalledProcessError,
+        RuntimeError,
     ) as exc:
         print(f"Dependabot merge gate failed: {exc}", file=sys.stderr)
         return 1
