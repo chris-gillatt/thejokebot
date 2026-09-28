@@ -5,9 +5,10 @@ from __future__ import annotations
 import hashlib
 import sys
 import time
-from typing import Callable, Optional, TypeVar
+from typing import Callable, TypeVar
 
 from thejokebot import moderation_state, posting_state
+from thejokebot import social_state
 from thejokebot.paths import LEGACY_STATE_FILE, LOCKS_DIR
 from thejokebot import state_store
 
@@ -65,6 +66,16 @@ get_deleted_post_uris = moderation_state.get_deleted_post_uris
 record_deleted_post_uri = moderation_state.record_deleted_post_uri
 get_acknowledged_report_uris = moderation_state.get_acknowledged_report_uris
 record_acknowledged_report_uri = moderation_state.record_acknowledged_report_uri
+get_liked_reply_uris = social_state.get_liked_reply_uris
+record_liked_reply_uri = social_state.record_liked_reply_uri
+prune_liked_reply_uris = social_state.prune_liked_reply_uris
+get_likes_last_checked_at = social_state.get_likes_last_checked_at
+set_likes_checked_now = social_state.set_likes_checked_now
+get_replied_joke_request_uris = social_state.get_replied_joke_request_uris
+record_replied_joke_request_uri = social_state.record_replied_joke_request_uri
+prune_replied_joke_request_uris = social_state.prune_replied_joke_request_uris
+get_joke_request_checkpoint = social_state.get_joke_request_checkpoint
+set_joke_request_checkpoint = social_state.set_joke_request_checkpoint
 T = TypeVar("T")
 StateReadFailures = state_store.StateReadFailures
 StateReadError = state_store.StateReadError
@@ -315,77 +326,6 @@ def _domain_payload(state: dict, domain: str) -> dict:
     if domain == "moderation":
         return {"reports": state["reports"]}
     return {"health_checks": state["provider"]["health_checks"]}
-
-
-def get_liked_reply_uris(state: dict) -> set[str]:
-    """Return the set of reply post URIs the bot has already liked."""
-    liked_replies = state.setdefault("liked_replies", {})
-    uris = liked_replies.setdefault("liked_uris", [])
-    return set(uris)
-
-
-def record_liked_reply_uri(state: dict, uri: str) -> None:
-    """Record a reply URI as liked so it is not liked again."""
-    liked_replies = state.setdefault("liked_replies", {})
-    uris = liked_replies.setdefault("liked_uris", [])
-    if uri and uri not in uris:
-        uris.append(uri)
-
-
-def prune_liked_reply_uris(state: dict, max_entries: int = 5000) -> None:
-    """Keep only the most recent liked reply URIs."""
-    liked_replies = state.setdefault("liked_replies", {})
-    uris = liked_replies.setdefault("liked_uris", [])
-    if len(uris) > max_entries:
-        liked_replies["liked_uris"] = uris[-max_entries:]
-
-
-def get_likes_last_checked_at(state: dict) -> Optional[int]:
-    """Return the epoch timestamp of the last reply-like run, or None."""
-    liked_replies = state.setdefault("liked_replies", {})
-    return liked_replies.get("last_checked_at")
-
-
-def set_likes_checked_now(state: dict) -> None:
-    """Set the reply-like polling timestamp to current epoch."""
-    liked_replies = state.setdefault("liked_replies", {})
-    liked_replies["last_checked_at"] = int(time.time())
-
-
-def get_replied_joke_request_uris(state: dict) -> set[str]:
-    joke_requests = state.setdefault("joke_requests", {})
-    return set(joke_requests.setdefault("replied_uris", []))
-
-
-def record_replied_joke_request_uri(state: dict, uri: str) -> None:
-    joke_requests = state.setdefault("joke_requests", {})
-    uris = joke_requests.setdefault("replied_uris", [])
-    if uri and uri not in uris:
-        uris.append(uri)
-
-
-def prune_replied_joke_request_uris(state: dict, max_entries: int = 5000) -> None:
-    joke_requests = state.setdefault("joke_requests", {})
-    uris = joke_requests.setdefault("replied_uris", [])
-    if len(uris) > max_entries:
-        joke_requests["replied_uris"] = uris[-max_entries:]
-
-
-def get_joke_request_checkpoint(state: dict) -> tuple[Optional[float], set[str]]:
-    joke_requests = state.setdefault("joke_requests", {})
-    checked_at = joke_requests.setdefault("last_checked_at", None)
-    boundary_uris = joke_requests.setdefault("boundary_notification_uris", [])
-    return checked_at, set(boundary_uris)
-
-
-def set_joke_request_checkpoint(
-    state: dict, checked_at: float, boundary_notification_uris: set[str]
-) -> None:
-    joke_requests = state.setdefault("joke_requests", {})
-    joke_requests["last_checked_at"] = checked_at
-    joke_requests["boundary_notification_uris"] = sorted(
-        uri for uri in boundary_notification_uris if uri
-    )
 
 
 # ---------------------------------------------------------------------------

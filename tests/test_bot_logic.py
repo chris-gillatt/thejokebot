@@ -1730,6 +1730,14 @@ class StateJokeHistoryTests(unittest.TestCase):
         attempts = bot_state.get_unresolved_notification_attempts(state)
         self.assertEqual(set(attempts.keys()), {"at://notif/2", "at://notif/3"})
 
+    def test_prune_liked_reply_uris_keeps_latest_entries(self):
+        state = bot_state._default_state()
+        state["liked_replies"]["liked_uris"] = ["one", "two", "three"]
+
+        bot_state.prune_liked_reply_uris(state, max_entries=2)
+
+        self.assertEqual(state["liked_replies"]["liked_uris"], ["two", "three"])
+
     def test_prune_replied_joke_request_uris_keeps_latest_entries(self):
         state = bot_state._default_state()
         state["joke_requests"]["replied_uris"] = ["one", "two", "three"]
