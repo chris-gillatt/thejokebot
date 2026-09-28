@@ -59,16 +59,19 @@ def test_merges_only_the_checked_head():
         "mergeStateStatus": "CLEAN",
         "statusCheckRollup": _checks(),
     }
-    with mock.patch.object(
-        merge_dependabot,
-        "_gh",
-        side_effect=[
-            json.dumps([_pr()]),
-            json.dumps([[{"filename": ".github/workflows/codeql.yml"}]]),
-            json.dumps(detail),
-            "merged",
-        ],
-    ) as gh:
+    with (
+        mock.patch.dict("os.environ", {"DEPENDABOT_WORKFLOW_TOKEN": "scoped-token"}),
+        mock.patch.object(
+            merge_dependabot,
+            "_gh",
+            side_effect=[
+                json.dumps([_pr()]),
+                json.dumps([[{"filename": ".github/workflows/codeql.yml"}]]),
+                json.dumps(detail),
+                "merged",
+            ],
+        ) as gh,
+    ):
         assert merge_dependabot.merge_ready_prs("owner/repo") == 1
     assert gh.call_args.args == (
         "pr",
@@ -80,6 +83,7 @@ def test_merges_only_the_checked_head():
         "--match-head-commit",
         "current-head",
     )
+    assert gh.call_args.kwargs == {"token": "scoped-token"}
 
 
 def test_dry_run_never_merges_and_changed_head_is_skipped():
@@ -158,6 +162,28 @@ def test_dry_run_reports_ready_without_merging():
         assert gh.call_count == 3
 
 
+def test_workflow_update_waits_for_separate_token():
+    detail = {
+        "headRefOid": "current-head",
+        "mergeStateStatus": "CLEAN",
+        "statusCheckRollup": _checks(),
+    }
+    with (
+        mock.patch.dict("os.environ", {}, clear=True),
+        mock.patch.object(
+            merge_dependabot,
+            "_gh",
+            side_effect=[
+                json.dumps([_pr()]),
+                json.dumps([[{"filename": ".github/workflows/codeql.yml"}]]),
+                json.dumps(detail),
+            ],
+        ) as gh,
+    ):
+        assert merge_dependabot.merge_ready_prs("owner/repo") == 0
+        assert gh.call_count == 3
+
+
 def test_invalid_repository_and_cli_error_are_visible(capsys):
     with mock.patch.object(merge_dependabot, "_gh") as gh:
         try:
@@ -194,8 +220,14 @@ def test_cli_passes_dry_run_and_gh_uses_argv(capsys):
     ) as run:
         assert merge_dependabot._gh("pr", "list") == "ok"
     run.assert_called_once_with(
-        ["gh", "pr", "list"], check=True, text=True, capture_output=True
+        ["gh", "pr", "list"], check=True, text=True, capture_output=True, env=None
     )
+
+    with mock.patch.object(
+        subprocess, "run", return_value=subprocess.CompletedProcess([], 0, "ok")
+    ) as run:
+        assert merge_dependabot._gh("pr", "merge", token="scoped-token") == "ok"
+    assert run.call_args.kwargs["env"]["GH_TOKEN"] == "scoped-token"
 
     failure = subprocess.CalledProcessError(
         1, ["gh", "pr", "merge"], stderr="merge declined"

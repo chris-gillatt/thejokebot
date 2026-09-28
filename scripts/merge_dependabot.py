@@ -25,10 +25,14 @@ DEPENDENCY_FILES = frozenset(
 )
 
 
-def _gh(*arguments: str) -> str:
+def _gh(*arguments: str, token: str | None = None) -> str:
     try:
         return subprocess.run(
-            ["gh", *arguments], check=True, text=True, capture_output=True
+            ["gh", *arguments],
+            check=True,
+            text=True,
+            capture_output=True,
+            env={**os.environ, "GH_TOKEN": token} if token else None,
         ).stdout
     except subprocess.CalledProcessError as exc:
         raise RuntimeError(f"GitHub CLI failed: {exc.stderr.strip()}") from exc
@@ -97,6 +101,9 @@ def merge_ready_prs(repository: str, *, dry_run: bool = False) -> int:
         if not files or any(not _allowed_path(file["filename"]) for file in files):
             print(f"PR #{number}: unexpected changed files; awaiting review.")
             continue
+        changes_workflow = any(
+            file["filename"].startswith(".github/workflows/") for file in files
+        )
         detail = json.loads(
             _gh(
                 "pr",
@@ -119,6 +126,12 @@ def merge_ready_prs(repository: str, *, dry_run: bool = False) -> int:
         if dry_run:
             print(f"PR #{number}: ready to merge (dry run).")
         else:
+            workflow_token = (
+                os.getenv("DEPENDABOT_WORKFLOW_TOKEN") if changes_workflow else None
+            )
+            if changes_workflow and not workflow_token:
+                print(f"PR #{number}: waiting for DEPENDABOT_WORKFLOW_TOKEN.")
+                continue
             _gh(
                 "pr",
                 "merge",
@@ -128,6 +141,7 @@ def merge_ready_prs(repository: str, *, dry_run: bool = False) -> int:
                 "--squash",
                 "--match-head-commit",
                 detail["headRefOid"],
+                token=workflow_token,
             )
             print(f"PR #{number}: merged verified Dependabot update.")
         merged += 1

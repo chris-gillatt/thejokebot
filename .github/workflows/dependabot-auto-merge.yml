@@ -31,4 +31,5 @@ jobs:
       - name: Merge verified Dependabot updates
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEPENDABOT_WORKFLOW_TOKEN: ${{ secrets.DEPENDABOT_WORKFLOW_TOKEN }}
         run: python3 scripts/merge_dependabot.py
