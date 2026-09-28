@@ -1761,6 +1761,22 @@
         "bookmarks": 50
       },
       "engagement_total": 5401
+    },
+    {
+      "period_start": "2026-09-28T12:00:00+00:00",
+      "collected_at": "2026-09-28T12:51:26.405483+00:00",
+      "followers": 6790,
+      "following": 10798,
+      "profile_posts": 2560,
+      "joke_posts": 903,
+      "engagement": {
+        "likes": 4605,
+        "replies": 335,
+        "reposts": 377,
+        "quotes": 40,
+        "bookmarks": 50
+      },
+      "engagement_total": 5407
     }
   ],
   "activity_runs": [
@@ -13027,6 +13043,134 @@
       "starter_pack_follows": 0,
       "starter_pack_scan_complete": 1,
       "protected": 12
+    },
+    {
+      "id": 36396665893,
+      "attempt": 1,
+      "workflow": "bluesky_post_joke",
+      "created_at": "2026-09-28T08:19:20Z",
+      "follows": 0,
+      "unfollows": 0,
+      "provider_attempts": 4,
+      "starting_provider": "syrsly",
+      "successful_source": "groandeck",
+      "fallthrough": true,
+      "static_fallback": false,
+      "duplicate": 15,
+      "too_long": 0,
+      "network_error": 0,
+      "provider_error": 0,
+      "posted": true
+    },
+    {
+      "id": 36399474672,
+      "attempt": 1,
+      "workflow": "bluesky_follows_and_likes",
+      "created_at": "2026-09-28T08:47:28Z",
+      "follows": 0,
+      "unfollows": 0,
+      "failed": 0,
+      "social_summary_observed": true,
+      "follow_back_candidates": 0,
+      "follow_back_added": 0,
+      "interaction_candidates": 14,
+      "interaction_eligible": 0,
+      "interaction_added": 0,
+      "interactions_liked": 1,
+      "joke_replies": 0,
+      "starter_pack_follows": 0,
+      "starter_pack_scan_complete": 1,
+      "protected": 14
+    },
+    {
+      "id": 36400283857,
+      "attempt": 1,
+      "workflow": "bluesky_process_reports",
+      "created_at": "2026-09-28T08:55:31Z",
+      "follows": 0,
+      "unfollows": 0,
+      "proposals": 0,
+      "acknowledgements": 0,
+      "approved_removals": 0,
+      "unresolved": 0
+    },
+    {
+      "id": 36410589656,
+      "attempt": 1,
+      "workflow": "bluesky_follows_and_likes",
+      "created_at": "2026-09-28T10:35:17Z",
+      "follows": 0,
+      "unfollows": 0,
+      "failed": 0,
+      "social_summary_observed": true,
+      "follow_back_candidates": 0,
+      "follow_back_added": 0,
+      "interaction_candidates": 14,
+      "interaction_eligible": 0,
+      "interaction_added": 0,
+      "interactions_liked": 0,
+      "joke_replies": 0,
+      "starter_pack_follows": 0,
+      "starter_pack_scan_complete": 1,
+      "protected": 14
+    },
+    {
+      "id": 36411085542,
+      "attempt": 2,
+      "workflow": "bluesky_follows_and_likes",
+      "created_at": "2026-09-28T10:40:20Z",
+      "follows": 0,
+      "unfollows": 0,
+      "failed": 0,
+      "social_summary_observed": true,
+      "follow_back_candidates": 0,
+      "follow_back_added": 0,
+      "interaction_candidates": 15,
+      "interaction_eligible": 0,
+      "interaction_added": 0,
+      "interactions_liked": 0,
+      "joke_replies": 0,
+      "starter_pack_follows": 0,
+      "starter_pack_scan_complete": 1,
+      "protected": 15
+    },
+    {
+      "id": 36420704428,
+      "attempt": 1,
+      "workflow": "bluesky_post_joke",
+      "created_at": "2026-09-28T12:15:45Z",
+      "follows": 0,
+      "unfollows": 0,
+      "provider_attempts": 2,
+      "starting_provider": "jokeapi",
+      "successful_source": "groandeck",
+      "fallthrough": true,
+      "static_fallback": false,
+      "duplicate": 5,
+      "too_long": 0,
+      "network_error": 0,
+      "provider_error": 0,
+      "posted": true
+    },
+    {
+      "id": 36423986653,
+      "attempt": 1,
+      "workflow": "bluesky_follows_and_likes",
+      "created_at": "2026-09-28T12:46:23Z",
+      "follows": 0,
+      "unfollows": 0,
+      "failed": 0,
+      "social_summary_observed": true,
+      "follow_back_candidates": 0,
+      "follow_back_added": 0,
+      "interaction_candidates": 12,
+      "interaction_eligible": 0,
+      "interaction_added": 0,
+      "interactions_liked": 0,
+      "joke_replies": 0,
+      "starter_pack_follows": 0,
+      "starter_pack_scan_complete": 1,
+      "protected": 12
     }
   ],
   "automation_runs": [
@@ -23070,7 +23214,898 @@
       "attempt": 1,
       "workflow": "bluesky_dashboard",
       "created_at": "2026-09-28T07:07:25Z",
-      "updated_at": "2026-09-28T07:07:30Z",
+      "updated_at": "2026-09-28T07:08:53Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36396665893,
+      "attempt": 1,
+      "workflow": "bluesky_post_joke",
+      "created_at": "2026-09-28T08:19:20Z",
+      "updated_at": "2026-09-28T08:20:00Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36397344452,
+      "attempt": 1,
+      "workflow": "provider_health_check",
+      "created_at": "2026-09-28T08:26:11Z",
+      "updated_at": "2026-09-28T08:26:42Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36399474672,
+      "attempt": 1,
+      "workflow": "bluesky_follows_and_likes",
+      "created_at": "2026-09-28T08:47:28Z",
+      "updated_at": "2026-09-28T08:48:46Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36400283857,
+      "attempt": 1,
+      "workflow": "bluesky_process_reports",
+      "created_at": "2026-09-28T08:55:31Z",
+      "updated_at": "2026-09-28T08:55:54Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36407441688,
+      "attempt": 1,
+      "workflow": "codeql",
+      "created_at": "2026-09-28T10:04:14Z",
+      "updated_at": "2026-09-28T10:05:38Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36407441618,
+      "attempt": 1,
+      "workflow": "python_tests",
+      "created_at": "2026-09-28T10:04:14Z",
+      "updated_at": "2026-09-28T10:06:18Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36407441670,
+      "attempt": 1,
+      "workflow": "ruff_quality",
+      "created_at": "2026-09-28T10:04:14Z",
+      "updated_at": "2026-09-28T10:04:33Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36407441609,
+      "attempt": 1,
+      "workflow": "validate_runtime_config",
+      "created_at": "2026-09-28T10:04:14Z",
+      "updated_at": "2026-09-28T10:04:39Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36408329667,
+      "attempt": 1,
+      "workflow": "codeql",
+      "created_at": "2026-09-28T10:12:43Z",
+      "updated_at": "2026-09-28T10:14:10Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36408329605,
+      "attempt": 1,
+      "workflow": "python_tests",
+      "created_at": "2026-09-28T10:12:43Z",
+      "updated_at": "2026-09-28T10:14:52Z",
+      "status": "completed",
+      "conclusion": "failure"
+    },
+    {
+      "id": 36408329624,
+      "attempt": 1,
+      "workflow": "ruff_quality",
+      "created_at": "2026-09-28T10:12:43Z",
+      "updated_at": "2026-09-28T10:13:03Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36408329691,
+      "attempt": 1,
+      "workflow": "validate_runtime_config",
+      "created_at": "2026-09-28T10:12:43Z",
+      "updated_at": "2026-09-28T10:13:02Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36408848690,
+      "attempt": 1,
+      "workflow": "codeql",
+      "created_at": "2026-09-28T10:17:39Z",
+      "updated_at": "2026-09-28T10:19:06Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36408848723,
+      "attempt": 1,
+      "workflow": "python_tests",
+      "created_at": "2026-09-28T10:17:39Z",
+      "updated_at": "2026-09-28T10:19:33Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36408848669,
+      "attempt": 1,
+      "workflow": "ruff_quality",
+      "created_at": "2026-09-28T10:17:39Z",
+      "updated_at": "2026-09-28T10:17:59Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36408849502,
+      "attempt": 1,
+      "workflow": "validate_runtime_config",
+      "created_at": "2026-09-28T10:17:40Z",
+      "updated_at": "2026-09-28T10:17:57Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36410311598,
+      "attempt": 1,
+      "workflow": "codeql",
+      "created_at": "2026-09-28T10:32:27Z",
+      "updated_at": "2026-09-28T10:33:34Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36410311642,
+      "attempt": 1,
+      "workflow": "python_tests",
+      "created_at": "2026-09-28T10:32:27Z",
+      "updated_at": "2026-09-28T10:34:18Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36410311650,
+      "attempt": 1,
+      "workflow": "ruff_quality",
+      "created_at": "2026-09-28T10:32:27Z",
+      "updated_at": "2026-09-28T10:32:45Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36410311612,
+      "attempt": 1,
+      "workflow": "validate_runtime_config",
+      "created_at": "2026-09-28T10:32:27Z",
+      "updated_at": "2026-09-28T10:32:44Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36410394108,
+      "attempt": 2,
+      "workflow": "bluesky_follows_and_likes",
+      "created_at": "2026-09-28T10:33:17Z",
+      "updated_at": "2026-09-28T10:38:48Z",
+      "status": "completed",
+      "conclusion": "failure"
+    },
+    {
+      "id": 36410589656,
+      "attempt": 1,
+      "workflow": "bluesky_follows_and_likes",
+      "created_at": "2026-09-28T10:35:17Z",
+      "updated_at": "2026-09-28T10:36:46Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36411071358,
+      "attempt": 1,
+      "workflow": "codeql",
+      "created_at": "2026-09-28T10:40:11Z",
+      "updated_at": "2026-09-28T10:41:44Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36411071330,
+      "attempt": 1,
+      "workflow": "python_tests",
+      "created_at": "2026-09-28T10:40:11Z",
+      "updated_at": "2026-09-28T10:42:11Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36411071336,
+      "attempt": 1,
+      "workflow": "ruff_quality",
+      "created_at": "2026-09-28T10:40:11Z",
+      "updated_at": "2026-09-28T10:40:30Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36411071316,
+      "attempt": 1,
+      "workflow": "validate_runtime_config",
+      "created_at": "2026-09-28T10:40:11Z",
+      "updated_at": "2026-09-28T10:40:33Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36411085542,
+      "attempt": 2,
+      "workflow": "bluesky_follows_and_likes",
+      "created_at": "2026-09-28T10:40:20Z",
+      "updated_at": "2026-09-28T10:43:11Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36412188247,
+      "attempt": 1,
+      "workflow": "codeql",
+      "created_at": "2026-09-28T10:51:41Z",
+      "updated_at": "2026-09-28T10:53:16Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36412188245,
+      "attempt": 1,
+      "workflow": "python_tests",
+      "created_at": "2026-09-28T10:51:41Z",
+      "updated_at": "2026-09-28T10:53:34Z",
+      "status": "completed",
+      "conclusion": "failure"
+    },
+    {
+      "id": 36412188222,
+      "attempt": 1,
+      "workflow": "ruff_quality",
+      "created_at": "2026-09-28T10:51:41Z",
+      "updated_at": "2026-09-28T10:52:00Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36412188335,
+      "attempt": 1,
+      "workflow": "validate_runtime_config",
+      "created_at": "2026-09-28T10:51:42Z",
+      "updated_at": "2026-09-28T10:52:06Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36412204968,
+      "attempt": 1,
+      "workflow": "pr_auto_merge",
+      "created_at": "2026-09-28T10:51:52Z",
+      "updated_at": "2026-09-28T10:52:09Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36412221066,
+      "attempt": 1,
+      "workflow": "pr_auto_merge",
+      "created_at": "2026-09-28T10:52:02Z",
+      "updated_at": "2026-09-28T10:52:09Z",
+      "status": "completed",
+      "conclusion": "cancelled"
+    },
+    {
+      "id": 36412230591,
+      "attempt": 1,
+      "workflow": "pr_auto_merge",
+      "created_at": "2026-09-28T10:52:08Z",
+      "updated_at": "2026-09-28T10:52:27Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36412324618,
+      "attempt": 1,
+      "workflow": "pr_auto_merge",
+      "created_at": "2026-09-28T10:53:05Z",
+      "updated_at": "2026-09-28T10:53:21Z",
+      "status": "completed",
+      "conclusion": "failure"
+    },
+    {
+      "id": 36412345624,
+      "attempt": 1,
+      "workflow": "pr_auto_merge",
+      "created_at": "2026-09-28T10:53:18Z",
+      "updated_at": "2026-09-28T10:53:34Z",
+      "status": "completed",
+      "conclusion": "failure"
+    },
+    {
+      "id": 36412373172,
+      "attempt": 1,
+      "workflow": "pr_auto_merge",
+      "created_at": "2026-09-28T10:53:36Z",
+      "updated_at": "2026-09-28T10:53:50Z",
+      "status": "completed",
+      "conclusion": "failure"
+    },
+    {
+      "id": 36412484717,
+      "attempt": 1,
+      "workflow": "codeql",
+      "created_at": "2026-09-28T10:54:42Z",
+      "updated_at": "2026-09-28T10:56:12Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36412484731,
+      "attempt": 1,
+      "workflow": "python_tests",
+      "created_at": "2026-09-28T10:54:42Z",
+      "updated_at": "2026-09-28T10:56:34Z",
+      "status": "completed",
+      "conclusion": "failure"
+    },
+    {
+      "id": 36412484955,
+      "attempt": 1,
+      "workflow": "ruff_quality",
+      "created_at": "2026-09-28T10:54:42Z",
+      "updated_at": "2026-09-28T10:55:01Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36412485022,
+      "attempt": 1,
+      "workflow": "validate_runtime_config",
+      "created_at": "2026-09-28T10:54:42Z",
+      "updated_at": "2026-09-28T10:55:04Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36412495151,
+      "attempt": 1,
+      "workflow": "pr_auto_merge",
+      "created_at": "2026-09-28T10:54:48Z",
+      "updated_at": "2026-09-28T10:55:01Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36412524339,
+      "attempt": 1,
+      "workflow": "pr_auto_merge",
+      "created_at": "2026-09-28T10:55:04Z",
+      "updated_at": "2026-09-28T10:55:21Z",
+      "status": "completed",
+      "conclusion": "failure"
+    },
+    {
+      "id": 36412527449,
+      "attempt": 1,
+      "workflow": "pr_auto_merge",
+      "created_at": "2026-09-28T10:55:06Z",
+      "updated_at": "2026-09-28T10:55:33Z",
+      "status": "completed",
+      "conclusion": "failure"
+    },
+    {
+      "id": 36412615437,
+      "attempt": 1,
+      "workflow": "pr_auto_merge",
+      "created_at": "2026-09-28T10:55:59Z",
+      "updated_at": "2026-09-28T10:56:17Z",
+      "status": "completed",
+      "conclusion": "failure"
+    },
+    {
+      "id": 36412639415,
+      "attempt": 1,
+      "workflow": "pr_auto_merge",
+      "created_at": "2026-09-28T10:56:14Z",
+      "updated_at": "2026-09-28T10:56:31Z",
+      "status": "completed",
+      "conclusion": "failure"
+    },
+    {
+      "id": 36412675379,
+      "attempt": 1,
+      "workflow": "pr_auto_merge",
+      "created_at": "2026-09-28T10:56:36Z",
+      "updated_at": "2026-09-28T10:56:48Z",
+      "status": "completed",
+      "conclusion": "failure"
+    },
+    {
+      "id": 36412866832,
+      "attempt": 1,
+      "workflow": "codeql",
+      "created_at": "2026-09-28T10:58:36Z",
+      "updated_at": "2026-09-28T10:59:57Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36412866821,
+      "attempt": 1,
+      "workflow": "python_tests",
+      "created_at": "2026-09-28T10:58:36Z",
+      "updated_at": "2026-09-28T11:00:32Z",
+      "status": "completed",
+      "conclusion": "failure"
+    },
+    {
+      "id": 36412866877,
+      "attempt": 1,
+      "workflow": "ruff_quality",
+      "created_at": "2026-09-28T10:58:36Z",
+      "updated_at": "2026-09-28T10:58:56Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36412866852,
+      "attempt": 1,
+      "workflow": "validate_runtime_config",
+      "created_at": "2026-09-28T10:58:36Z",
+      "updated_at": "2026-09-28T10:58:52Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36412894814,
+      "attempt": 1,
+      "workflow": "pr_auto_merge",
+      "created_at": "2026-09-28T10:58:54Z",
+      "updated_at": "2026-09-28T10:59:13Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36412901523,
+      "attempt": 1,
+      "workflow": "pr_auto_merge",
+      "created_at": "2026-09-28T10:58:58Z",
+      "updated_at": "2026-09-28T10:59:26Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36412996975,
+      "attempt": 1,
+      "workflow": "pr_auto_merge",
+      "created_at": "2026-09-28T11:00:00Z",
+      "updated_at": "2026-09-28T11:00:10Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36413060130,
+      "attempt": 1,
+      "workflow": "pr_auto_merge",
+      "created_at": "2026-09-28T11:00:35Z",
+      "updated_at": "2026-09-28T11:00:48Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36413286657,
+      "attempt": 1,
+      "workflow": "pr_auto_merge",
+      "created_at": "2026-09-28T11:02:51Z",
+      "updated_at": "2026-09-28T11:03:08Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36413312431,
+      "attempt": 1,
+      "workflow": "codeql",
+      "created_at": "2026-09-28T11:03:06Z",
+      "updated_at": "2026-09-28T11:04:33Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36413312438,
+      "attempt": 1,
+      "workflow": "python_tests",
+      "created_at": "2026-09-28T11:03:06Z",
+      "updated_at": "2026-09-28T11:04:38Z",
+      "status": "completed",
+      "conclusion": "failure"
+    },
+    {
+      "id": 36413312308,
+      "attempt": 1,
+      "workflow": "ruff_quality",
+      "created_at": "2026-09-28T11:03:06Z",
+      "updated_at": "2026-09-28T11:03:23Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36413312305,
+      "attempt": 1,
+      "workflow": "validate_runtime_config",
+      "created_at": "2026-09-28T11:03:06Z",
+      "updated_at": "2026-09-28T11:03:29Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36413343526,
+      "attempt": 1,
+      "workflow": "pr_auto_merge",
+      "created_at": "2026-09-28T11:03:25Z",
+      "updated_at": "2026-09-28T11:03:40Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36413352555,
+      "attempt": 1,
+      "workflow": "pr_auto_merge",
+      "created_at": "2026-09-28T11:03:31Z",
+      "updated_at": "2026-09-28T11:03:40Z",
+      "status": "completed",
+      "conclusion": "cancelled"
+    },
+    {
+      "id": 36413365436,
+      "attempt": 1,
+      "workflow": "pr_auto_merge",
+      "created_at": "2026-09-28T11:03:38Z",
+      "updated_at": "2026-09-28T11:03:49Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36413366098,
+      "attempt": 1,
+      "workflow": "codeql",
+      "created_at": "2026-09-28T11:03:39Z",
+      "updated_at": "2026-09-28T11:05:06Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36413365992,
+      "attempt": 1,
+      "workflow": "python_tests",
+      "created_at": "2026-09-28T11:03:39Z",
+      "updated_at": "2026-09-28T11:05:41Z",
+      "status": "completed",
+      "conclusion": "failure"
+    },
+    {
+      "id": 36413366168,
+      "attempt": 1,
+      "workflow": "ruff_quality",
+      "created_at": "2026-09-28T11:03:39Z",
+      "updated_at": "2026-09-28T11:03:56Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36413366048,
+      "attempt": 1,
+      "workflow": "validate_runtime_config",
+      "created_at": "2026-09-28T11:03:39Z",
+      "updated_at": "2026-09-28T11:03:59Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36413399325,
+      "attempt": 1,
+      "workflow": "pr_auto_merge",
+      "created_at": "2026-09-28T11:03:58Z",
+      "updated_at": "2026-09-28T11:04:10Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36413404649,
+      "attempt": 1,
+      "workflow": "pr_auto_merge",
+      "created_at": "2026-09-28T11:04:02Z",
+      "updated_at": "2026-09-28T11:04:19Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36413461116,
+      "attempt": 1,
+      "workflow": "pr_auto_merge",
+      "created_at": "2026-09-28T11:04:36Z",
+      "updated_at": "2026-09-28T11:04:45Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36413468318,
+      "attempt": 1,
+      "workflow": "pr_auto_merge",
+      "created_at": "2026-09-28T11:04:40Z",
+      "updated_at": "2026-09-28T11:04:55Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36413515596,
+      "attempt": 1,
+      "workflow": "pr_auto_merge",
+      "created_at": "2026-09-28T11:05:08Z",
+      "updated_at": "2026-09-28T11:05:18Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36413575619,
+      "attempt": 1,
+      "workflow": "pr_auto_merge",
+      "created_at": "2026-09-28T11:05:43Z",
+      "updated_at": "2026-09-28T11:05:57Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36413789517,
+      "attempt": 1,
+      "workflow": "codeql",
+      "created_at": "2026-09-28T11:07:51Z",
+      "updated_at": "2026-09-28T11:09:11Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36413789498,
+      "attempt": 1,
+      "workflow": "python_tests",
+      "created_at": "2026-09-28T11:07:51Z",
+      "updated_at": "2026-09-28T11:09:59Z",
+      "status": "completed",
+      "conclusion": "failure"
+    },
+    {
+      "id": 36413789556,
+      "attempt": 1,
+      "workflow": "ruff_quality",
+      "created_at": "2026-09-28T11:07:51Z",
+      "updated_at": "2026-09-28T11:08:11Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36413789510,
+      "attempt": 1,
+      "workflow": "validate_runtime_config",
+      "created_at": "2026-09-28T11:07:51Z",
+      "updated_at": "2026-09-28T11:08:13Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36413825837,
+      "attempt": 1,
+      "workflow": "pr_auto_merge",
+      "created_at": "2026-09-28T11:08:13Z",
+      "updated_at": "2026-09-28T11:08:23Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36413829216,
+      "attempt": 1,
+      "workflow": "pr_auto_merge",
+      "created_at": "2026-09-28T11:08:15Z",
+      "updated_at": "2026-09-28T11:08:33Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36413928892,
+      "attempt": 1,
+      "workflow": "pr_auto_merge",
+      "created_at": "2026-09-28T11:09:14Z",
+      "updated_at": "2026-09-28T11:09:25Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36414008309,
+      "attempt": 1,
+      "workflow": "pr_auto_merge",
+      "created_at": "2026-09-28T11:10:01Z",
+      "updated_at": "2026-09-28T11:10:16Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36414175828,
+      "attempt": 1,
+      "workflow": "codeql",
+      "created_at": "2026-09-28T11:11:37Z",
+      "updated_at": "2026-09-28T11:13:08Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36414175797,
+      "attempt": 1,
+      "workflow": "python_tests",
+      "created_at": "2026-09-28T11:11:37Z",
+      "updated_at": "2026-09-28T11:13:16Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36414175932,
+      "attempt": 1,
+      "workflow": "ruff_quality",
+      "created_at": "2026-09-28T11:11:37Z",
+      "updated_at": "2026-09-28T11:11:59Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36414175805,
+      "attempt": 1,
+      "workflow": "validate_runtime_config",
+      "created_at": "2026-09-28T11:11:37Z",
+      "updated_at": "2026-09-28T11:11:55Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36414826836,
+      "attempt": 1,
+      "workflow": "codeql",
+      "created_at": "2026-09-28T11:18:00Z",
+      "updated_at": "2026-09-28T11:19:33Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36414826890,
+      "attempt": 1,
+      "workflow": "python_tests",
+      "created_at": "2026-09-28T11:18:01Z",
+      "updated_at": "2026-09-28T11:19:50Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36414827063,
+      "attempt": 1,
+      "workflow": "ruff_quality",
+      "created_at": "2026-09-28T11:18:01Z",
+      "updated_at": "2026-09-28T11:18:19Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36414827061,
+      "attempt": 1,
+      "workflow": "validate_runtime_config",
+      "created_at": "2026-09-28T11:18:01Z",
+      "updated_at": "2026-09-28T11:18:18Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36414839296,
+      "attempt": 1,
+      "workflow": "pr_auto_merge",
+      "created_at": "2026-09-28T11:18:08Z",
+      "updated_at": "2026-09-28T11:18:18Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36414981457,
+      "attempt": 1,
+      "workflow": "pr_auto_merge",
+      "created_at": "2026-09-28T11:19:35Z",
+      "updated_at": "2026-09-28T11:19:36Z",
+      "status": "completed",
+      "conclusion": "skipped"
+    },
+    {
+      "id": 36415007520,
+      "attempt": 1,
+      "workflow": "pr_auto_merge",
+      "created_at": "2026-09-28T11:19:52Z",
+      "updated_at": "2026-09-28T11:19:58Z",
+      "status": "completed",
+      "conclusion": "skipped"
+    },
+    {
+      "id": 36416450704,
+      "attempt": 1,
+      "workflow": "codeql",
+      "created_at": "2026-09-28T11:34:29Z",
+      "updated_at": "2026-09-28T11:35:54Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36416450480,
+      "attempt": 1,
+      "workflow": "python_tests",
+      "created_at": "2026-09-28T11:34:29Z",
+      "updated_at": "2026-09-28T11:36:27Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36416450455,
+      "attempt": 1,
+      "workflow": "ruff_quality",
+      "created_at": "2026-09-28T11:34:29Z",
+      "updated_at": "2026-09-28T11:34:47Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36416450451,
+      "attempt": 1,
+      "workflow": "validate_runtime_config",
+      "created_at": "2026-09-28T11:34:29Z",
+      "updated_at": "2026-09-28T11:34:47Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36420704428,
+      "attempt": 1,
+      "workflow": "bluesky_post_joke",
+      "created_at": "2026-09-28T12:15:45Z",
+      "updated_at": "2026-09-28T12:16:21Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36423986653,
+      "attempt": 1,
+      "workflow": "bluesky_follows_and_likes",
+      "created_at": "2026-09-28T12:46:23Z",
+      "updated_at": "2026-09-28T12:48:19Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 36424460506,
+      "attempt": 1,
+      "workflow": "bluesky_dashboard",
+      "created_at": "2026-09-28T12:50:45Z",
+      "updated_at": "2026-09-28T12:50:52Z",
       "status": "in_progress",
       "conclusion": null
     }
@@ -23240,7 +24275,7 @@
     },
     {
       "date": "2026-09-28",
-      "joke_posts": 2,
+      "joke_posts": 5,
       "follows": 2,
       "unfollows": 0
     }
@@ -52019,6 +53054,302 @@
         "window_days": 30,
         "coverage_started_at": "2026-08-01T14:31:28.650280Z",
         "last_checked_at": "2026-09-28T07:02:55.303831Z",
+        "total_follows": 98,
+        "windows": {
+          "7": 5,
+          "30": 98
+        },
+        "packs": [
+          {
+            "name": "Tricia the Welsh Daffodil starter pack #274",
+            "creator_handle": "thewelshtaffy24.bsky.social",
+            "url": "https://bsky.app/starter-pack/did:plc:ylslnx2g5q3wvnvywksuxx7g/3mucse7m74g2y",
+            "follows": 90,
+            "windows": {
+              "7": 1,
+              "30": 90
+            },
+            "share_30_day": 91.8
+          },
+          {
+            "name": "Tricia The Welsh Daffodil starter pack #5",
+            "creator_handle": "thewelshtaffy24.bsky.social",
+            "url": "https://bsky.app/starter-pack/did:plc:ylslnx2g5q3wvnvywksuxx7g/3mfd4vfyezw2h",
+            "follows": 4,
+            "windows": {
+              "7": 4,
+              "30": 4
+            },
+            "share_30_day": 4.1
+          },
+          {
+            "name": "Tricia the Welsh Daffodil starter pack #217",
+            "creator_handle": "thewelshtaffy24.bsky.social",
+            "url": "https://bsky.app/starter-pack/did:plc:ylslnx2g5q3wvnvywksuxx7g/3mqd6ku64bb22",
+            "follows": 2,
+            "windows": {
+              "7": 0,
+              "30": 2
+            },
+            "share_30_day": 2.0
+          },
+          {
+            "name": "Democrat Jess Piper For Missouri # 12",
+            "creator_handle": "jesspiperfanpage.bsky.social",
+            "url": "https://bsky.app/starter-pack/did:plc:f6odp2tkcw4tiojcqbukjbr2/3ml2b5x37jw2z",
+            "follows": 1,
+            "windows": {
+              "7": 0,
+              "30": 1
+            },
+            "share_30_day": 1.0
+          },
+          {
+            "name": "The Welsh Daffodil starter pack #152",
+            "creator_handle": "thewelshtaffy24.bsky.social",
+            "url": "https://bsky.app/starter-pack/did:plc:ylslnx2g5q3wvnvywksuxx7g/3mlr7hz6jyl2z",
+            "follows": 1,
+            "windows": {
+              "7": 0,
+              "30": 1
+            },
+            "share_30_day": 1.0
+          }
+        ]
+      }
+    },
+    {
+      "period_start": "2026-09-28T12:00:00+00:00",
+      "collected_at": "2026-09-28T12:51:26.405483+00:00",
+      "providers": [
+        {
+          "name": "icanhazdadjoke",
+          "published": 624,
+          "visible_posts": 387,
+          "average_interactions": 6.56,
+          "fallthroughs": 75,
+          "rejection_counts": {
+            "duplicate": 180,
+            "too_long": 0,
+            "network_error": 0,
+            "provider_error": 0
+          },
+          "healthy": true,
+          "configured": true,
+          "last_health_check_at": 1790583996,
+          "consecutive_health_failures": 0
+        },
+        {
+          "name": "groandeck",
+          "published": 320,
+          "visible_posts": 319,
+          "average_interactions": 5.09,
+          "fallthroughs": 0,
+          "rejection_counts": {
+            "duplicate": 0,
+            "too_long": 0,
+            "network_error": 0,
+            "provider_error": 0
+          },
+          "healthy": true,
+          "configured": true,
+          "last_health_check_at": 1790583996,
+          "consecutive_health_failures": 0
+        },
+        {
+          "name": "jokeapi",
+          "published": 175,
+          "visible_posts": 171,
+          "average_interactions": 6.56,
+          "fallthroughs": 272,
+          "rejection_counts": {
+            "duplicate": 460,
+            "too_long": 5,
+            "network_error": 1,
+            "provider_error": 0
+          },
+          "healthy": true,
+          "configured": true,
+          "last_health_check_at": 1790583996,
+          "consecutive_health_failures": 0
+        },
+        {
+          "name": "syrsly",
+          "published": 26,
+          "visible_posts": 26,
+          "average_interactions": null,
+          "fallthroughs": 25,
+          "rejection_counts": {
+            "duplicate": 125,
+            "too_long": 0,
+            "network_error": 0,
+            "provider_error": 0
+          },
+          "healthy": true,
+          "configured": true,
+          "last_health_check_at": 1790583996,
+          "consecutive_health_failures": 0
+        },
+        {
+          "name": "api_ninjas",
+          "published": 0,
+          "visible_posts": 0,
+          "average_interactions": null,
+          "fallthroughs": 0,
+          "rejection_counts": {
+            "duplicate": 0,
+            "too_long": 0,
+            "network_error": 0,
+            "provider_error": 0
+          },
+          "healthy": true,
+          "configured": true,
+          "last_health_check_at": 1790583997,
+          "consecutive_health_failures": 0
+        }
+      ],
+      "posting_delivery": {
+        "current_streak": 183,
+        "windows": {
+          "7": {
+            "expected": 42,
+            "delivered": 42,
+            "missed": 0,
+            "delayed": 0,
+            "delivery_rate": 100.0
+          },
+          "30": {
+            "expected": 180,
+            "delivered": 180,
+            "missed": 0,
+            "delayed": 3,
+            "delivery_rate": 100.0
+          }
+        }
+      },
+      "network_maintenance": {
+        "window_days": 30,
+        "response_window": {
+          "days": 90,
+          "active": 2182,
+          "by_source": {
+            "discovery": 1154,
+            "interaction": 41,
+            "other": 987
+          }
+        },
+        "unfollow": {
+          "completed_runs": 1,
+          "eligible": 2627,
+          "processed": 1200,
+          "unfollowed": 1200,
+          "failed": 0,
+          "missing_records": 0,
+          "cap_remaining": 1427,
+          "stopped_early_runs": 0
+        }
+      },
+      "audience_growth": {
+        "window_days": 30,
+        "net_followers": {
+          "7": 62,
+          "30": 337
+        },
+        "sources": {
+          "followback": {
+            "denominator": "candidates",
+            "considered": 447,
+            "acquired": 282,
+            "success_rate": 63.1
+          },
+          "interaction": {
+            "denominator": "eligible",
+            "considered": 18,
+            "acquired": 18,
+            "success_rate": 100.0
+          },
+          "discovery": {
+            "denominator": "selected",
+            "considered": 520,
+            "acquired": 520,
+            "success_rate": 100.0
+          }
+        },
+        "cohorts": {
+          "checkpoint_days": [
+            30,
+            90
+          ],
+          "coverage_started_at": "2026-09-05T18:29:22+00:00",
+          "periods": [
+            {
+              "month": "2026-09",
+              "source": "followback",
+              "acquired": 123,
+              "checkpoints": {
+                "30": {
+                  "observed": 0,
+                  "still_following": 0,
+                  "rate": null,
+                  "pending_due": 0
+                },
+                "90": {
+                  "observed": 0,
+                  "still_following": 0,
+                  "rate": null,
+                  "pending_due": 0
+                }
+              }
+            },
+            {
+              "month": "2026-09",
+              "source": "interaction",
+              "acquired": 16,
+              "checkpoints": {
+                "30": {
+                  "observed": 0,
+                  "still_following": 0,
+                  "rate": null,
+                  "pending_due": 0
+                },
+                "90": {
+                  "observed": 0,
+                  "still_following": 0,
+                  "rate": null,
+                  "pending_due": 0
+                }
+              }
+            },
+            {
+              "month": "2026-09",
+              "source": "discovery",
+              "acquired": 375,
+              "checkpoints": {
+                "30": {
+                  "observed": 0,
+                  "still_following": 0,
+                  "rate": null,
+                  "pending_due": 0
+                },
+                "90": {
+                  "observed": 0,
+                  "still_following": 0,
+                  "rate": null,
+                  "pending_due": 0
+                }
+              }
+            }
+          ]
+        },
+        "coverage": {
+          "social_started_at": "2026-08-29T14:24:04Z",
+          "discovery_started_at": "2026-09-02T01:30:49Z"
+        }
+      },
+      "starter_pack_attribution": {
+        "window_days": 30,
+        "coverage_started_at": "2026-08-01T14:31:28.650280Z",
+        "last_checked_at": "2026-09-28T12:48:11.968701Z",
         "total_follows": 98,
         "windows": {
           "7": 5,
