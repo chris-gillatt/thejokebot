@@ -1110,7 +1110,7 @@ All items now have unit test coverage. Suite remains at 140 passing tests.
 - **Shared helpers** in `bluesky_follower_utils` (pagination, list-member DID extraction) eliminate duplication across scripts.
 - **AT URI validation** with DID match and collection enforcement in `bluesky_manage_starter_pack` guards against inadvertent writes to wrong records.
 - **Concurrency guards** (`cancel-in-progress: false`) on all workflow files prevent overlapping runs.
-- **Dependabot auto-merge** gated behind a full test run and restricted to patch/minor semver updates only.
+- **Dependabot merges** require the official bot identity, dependency-only file changes, a clean merge, and successful Python tests, Ruff, runtime validation, CodeQL, and SonarCloud checks on the same PR head. The gate handles major updates because the checks, rather than semver classification, decide eligibility. Failed or incomplete checks leave the PR open; workflow completions and a timed fallback retry the gate.
 - **Single source of truth** for provider rotation in `bluesky_state.PROVIDER_ROTATION_ORDER`; `bluesky_joke_providers.PRIMARY_PROVIDERS` is derived from it, backed by a test guard.
 - **Report pipeline idempotency**: processed/acknowledged/deleted URIs are tracked in state to prevent duplicate actions across runs.
 
