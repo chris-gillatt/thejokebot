@@ -57,7 +57,7 @@ Installed entry points are available under `.venv/bin/`:
 
 ## Account Maintenance
 
-An explicit mention such as `@thejokebot.bsky.social tell me a joke` requests a threaded reply. The social workflow caps replies per run, excludes reports, and checkpoints processed requests. To report an unsuitable posted joke, reply to the joke with standalone `#report`. The report workflow opens a denylist PR for maintainer review; after merge, a later run removes the approved post.
+An explicit mention such as `@thejokebot.bsky.social tell me a joke` requests a threaded reply. The two-hourly social workflow sends at most two replies per requester and six replies overall per run. Requests are handled oldest first; those above either limit are discarded when the run advances its checkpoint. Reply jokes come from the bundled jokebook, carry the normal rotating tags, and do not consume the main posting workflow's 730-day uniqueness pool. The workflow excludes reports and checks for an existing bot reply before posting. To report an unsuitable posted joke, reply to the joke with standalone `#report`. The report workflow opens a denylist PR for maintainer review; after merge, a later run removes the approved post.
 
 Starter-pack settings live in `resources/jokebot_starter_pack.json`. Dispatch `bluesky_manage_starter_pack` with `apply_changes=false` to preview; use `apply_changes=true` only for deliberate live changes. When enabled, members of its source list are protected from unfollowing.
 

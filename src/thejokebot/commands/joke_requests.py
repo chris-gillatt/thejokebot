@@ -2,18 +2,15 @@
 
 from __future__ import annotations
 
-import base64
-import os
 import re
 import time
 from datetime import datetime
 
-import atproto_client.exceptions
-import requests
 from atproto import models
 
 from thejokebot import config as runtime_config
 from thejokebot import denylist as joke_denylist
+from thejokebot import providers as joke_providers
 from thejokebot import state as bot_state
 from thejokebot.commands import post_joke as joke_posting
 from thejokebot.runtime import get_nested_value, mask_sensitive, retry_network_call
@@ -22,6 +19,7 @@ _CONFIG = runtime_config.get_follows_and_likes_config()["joke_requests"]
 _ENABLED = _CONFIG["enabled"]
 _PHRASES = tuple(_CONFIG["phrases"])
 _MAX_REPLIES = _CONFIG["max_replies"]
+_MAX_REPLIES_PER_PERSON = _CONFIG["max_replies_per_person"]
 _MAX_PAGES = _CONFIG["max_pages"]
 _PAGE_LIMIT = _CONFIG["page_limit"]
 _BOOTSTRAP_LOOKBACK_SECONDS = _CONFIG["bootstrap_lookback_seconds"]
@@ -86,31 +84,46 @@ def request_candidate(
     return uri, cid, root_uri, root_cid
 
 
-def select_reply_joke(state):
+def select_reply_joke(state, used_b64s=None):
     cutoff = joke_posting.get_current_epoch() - (joke_posting.DAYS_LIMIT * 86400)
-    recent_b64s = bot_state.get_recent_b64s(state, cutoff)
-    recent_b64s |= joke_denylist.get_denylisted_b64s(joke_denylist.load_denylist())
-    override = os.getenv("BLUESKY_JOKE_PROVIDER", "").strip().lower() or None
-    providers, starting_provider = joke_posting._provider_order_for_run(state, override)
+    excluded_b64s = joke_denylist.get_denylisted_b64s(joke_denylist.load_denylist())
+    excluded_b64s |= used_b64s or set()
     failures = []
-    for provider_name in providers:
-        try:
-            joke, encoded = joke_posting.pick_joke(
-                recent_b64s, provider_name, hashtags=["#joke"]
-            )
-            return joke, encoded, provider_name, starting_provider, failures, cutoff
-        except (
-            ValueError,
-            requests.RequestException,
-            TimeoutError,
-            atproto_client.exceptions.NetworkError,
-        ) as exc:
-            failures.append(
-                (provider_name, str(exc), joke_posting._failure_reason_counts(exc))
-            )
-    joke = joke_posting.get_fallback_joke()
-    encoded = base64.b64encode(joke.encode("utf-8")).decode()
-    return joke, encoded, "fallback", starting_provider, failures, cutoff
+    provider_name = joke_providers.FALLBACK_PROVIDER
+    try:
+        joke, encoded = joke_posting.pick_joke(
+            excluded_b64s, provider_name, hashtags=["#joke"]
+        )
+        return joke, encoded, provider_name, None, failures, cutoff
+    except (ValueError, OSError, UnicodeError, TimeoutError) as exc:
+        failures.append(
+            (provider_name, str(exc), joke_posting._failure_reason_counts(exc))
+        )
+    raise ValueError("No suitable joke is available for a reply.")
+
+
+def _reply_tags(state, joke):
+    tag_config = runtime_config.get_posting_tag_runtime_config()
+    pool = tag_config["tag_pool"]
+    shuffled = joke_posting.shuffle_posting_hashtags(
+        pool,
+        bot_state.get_posting_tag_offset(state),
+        tag_config["tag_similarity_groups"],
+    )
+    tags = joke_posting.fit_hashtags_to_joke(
+        joke,
+        shuffled,
+        tag_config["tag_default"],
+        tag_config["tag_fallback"],
+        tag_config["tag_max_count"],
+        tag_config["tag_similarity_groups"],
+    )
+    if (
+        joke_posting._grapheme_len(joke + "\n\n" + " ".join(tags))
+        > joke_posting.BLUESKY_MAX_POST_CHARS
+    ):
+        raise ValueError("Reply joke exceeds the post length limit with tags.")
+    return tags, len(pool)
 
 
 def _request_has_bot_reply(client, request_uri):
@@ -175,7 +188,15 @@ def reply_to_joke_requests(client, username, state, dry_run, summary=None):
     )
     notifications = _collect_notifications(client, cutoff_epoch)
     replied_count = 0
-    for notification in notifications:
+    replies_by_person = {}
+    used_b64s = set()
+    for notification in sorted(
+        notifications,
+        key=lambda item: (
+            _notification_epoch(item) or 0,
+            str(get_nested_value(item, "uri") or ""),
+        ),
+    ):
         candidate = request_candidate(
             notification,
             username,
@@ -187,9 +208,16 @@ def reply_to_joke_requests(client, username, state, dry_run, summary=None):
         if candidate is None or replied_count >= _MAX_REPLIES:
             continue
         uri, cid, root_uri, root_cid = candidate
+        author_did = get_nested_value(notification, "author", "did")
+        if (
+            not author_did
+            or replies_by_person.get(author_did, 0) >= _MAX_REPLIES_PER_PERSON
+        ):
+            continue
         if dry_run:
             print(f"[DRY-RUN] Would reply with a joke to {mask_sensitive(uri)}")
             replied_count += 1
+            replies_by_person[author_did] = replies_by_person.get(author_did, 0) + 1
             continue
         if _request_has_bot_reply(client, uri):
             print(
@@ -201,15 +229,20 @@ def reply_to_joke_requests(client, username, state, dry_run, summary=None):
             bot_state.prune_replied_joke_request_uris(state)
             bot_state.save_state(state, domains="social")
             continue
-        joke, encoded, provider, starting_provider, failures, cutoff = (
-            select_reply_joke(state)
+        joke, encoded, provider, _starting_provider, failures, _cutoff = (
+            select_reply_joke(state, used_b64s)
         )
+        tags, pool_size = _reply_tags(state, joke)
+        reply_text = f"{joke}\n\n{' '.join(tags)}"
+        facets = joke_posting.build_hashtag_facets(joke, tags)
         reply_ref = models.AppBskyFeedPost.ReplyRef(
             parent=models.ComAtprotoRepoStrongRef.Main(uri=uri, cid=cid),
             root=models.ComAtprotoRepoStrongRef.Main(uri=root_uri, cid=root_cid),
         )
-        post = retry_network_call(
-            lambda: client.send_post(text=joke, reply_to=reply_ref),
+        retry_network_call(
+            lambda: client.send_post(
+                text=reply_text, facets=facets, reply_to=reply_ref
+            ),
             description=f"replying to joke request {mask_sensitive(uri)}",
             # A timeout can occur after Bluesky accepts the post. A second write
             # would create another reply; the next run can inspect the thread.
@@ -219,20 +252,12 @@ def reply_to_joke_requests(client, username, state, dry_run, summary=None):
             bot_state.record_failure(
                 state, failed_provider, error, reason_counts=reason_counts
             )
-        bot_state.record_provider_started(state, starting_provider)
-        if provider != "fallback":
-            bot_state.record_provider_used(state, provider)
-        bot_state.add_posted_joke(
-            state,
-            encoded,
-            provider,
-            post_uri=get_nested_value(post, "uri"),
-            post_cid=get_nested_value(post, "cid"),
-        )
-        bot_state.prune_old_jokes(state, cutoff)
+        bot_state.advance_posting_tag_offset(state, 1, pool_size)
+        used_b64s.add(encoded)
         bot_state.record_replied_joke_request_uri(state, uri)
         replied_uris.add(uri)
         replied_count += 1
+        replies_by_person[author_did] = replies_by_person.get(author_did, 0) + 1
         bot_state.prune_replied_joke_request_uris(state)
         bot_state.save_state(state, domains=("posting", "social"))
     if not dry_run:

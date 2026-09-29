@@ -178,7 +178,8 @@ _DEFAULT_CONFIG = {
         "joke_requests": {
             "enabled": True,
             "phrases": ["tell me a joke"],
-            "max_replies": 3,
+            "max_replies": 6,
+            "max_replies_per_person": 2,
             "max_pages": 5,
             "page_limit": 100,
             "bootstrap_lookback_seconds": 10800,
@@ -333,7 +334,8 @@ def _validate_joke_request_config(raw: object) -> dict:
         raw.get("phrases", ["tell me a joke"]), f"{prefix}.phrases"
     )
     for field, default, minimum in (
-        ("max_replies", 3, 0),
+        ("max_replies", 6, 0),
+        ("max_replies_per_person", 2, 1),
         ("max_pages", 5, 1),
         ("page_limit", 100, 1),
         ("bootstrap_lookback_seconds", 10800, 1),
