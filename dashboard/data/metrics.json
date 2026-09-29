@@ -1,6 +1,6 @@
 {
   "schema_version": 11,
-  "generated_at": "2026-09-29T12:50:23.019691+00:00",
+  "generated_at": "2026-09-29T18:42:56.361508+00:00",
   "account": {
     "handle": "thejokebot.bsky.social",
     "display_name": "The Joke Bot",
@@ -8,42 +8,33 @@
     "profile_url": "https://bsky.app/profile/thejokebot.bsky.social"
   },
   "latest_joke": {
-    "uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mwnsle3ijh2t",
-    "url": "https://bsky.app/profile/thejokebot.bsky.social/post/3mwnsle3ijh2t",
-    "text": "Did you know you should always take an extra pair of pants golfing? Just in case you get a hole in one.\n\n#dadjoke #mumjokes #humor",
-    "created_at": "2026-09-29T12:15:15.762658+00:00",
+    "uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mwo7r47xmg2q",
+    "url": "https://bsky.app/profile/thejokebot.bsky.social/post/3mwo7r47xmg2q",
+    "text": "What do you call a donkey with three legs?\n\nA wonkey.\n\n#dadjoke #pun #humorsky",
+    "created_at": "2026-09-29T16:11:07.489963+00:00",
     "engagement": {
-      "likes": 2,
-      "replies": 1,
+      "likes": 3,
+      "replies": 0,
       "reposts": 0,
       "quotes": 0,
-      "bookmarks": 0
+      "bookmarks": 1
     }
   },
   "current": {
     "followers": 6791,
-    "following": 10803,
-    "profile_posts": 2566,
-    "joke_posts": 909,
+    "following": 10804,
+    "profile_posts": 2567,
+    "joke_posts": 910,
     "engagement": {
-      "likes": 4629,
+      "likes": 4634,
       "replies": 337,
       "reposts": 381,
       "quotes": 40,
-      "bookmarks": 51
+      "bookmarks": 52
     },
     "engagement_per_joke": 5.98
   },
   "snapshots": [
-    {
-      "period_start": "2026-08-30T18:00:00+00:00",
-      "collected_at": "2026-08-30T18:35:25.416852+00:00",
-      "followers": 6495,
-      "following": 11084,
-      "profile_posts": 2373,
-      "engagement_total": 4629,
-      "source": "bluesky_snapshot"
-    },
     {
       "period_start": "2026-08-31T00:00:00+00:00",
       "collected_at": "2026-08-31T01:11:26.274852+00:00",
@@ -2033,13 +2024,30 @@
       },
       "engagement_total": 5438,
       "source": "bluesky_snapshot"
+    },
+    {
+      "period_start": "2026-09-29T18:00:00+00:00",
+      "collected_at": "2026-09-29T18:42:56.361508+00:00",
+      "followers": 6791,
+      "following": 10804,
+      "profile_posts": 2567,
+      "joke_posts": 910,
+      "engagement": {
+        "likes": 4634,
+        "replies": 337,
+        "reposts": 381,
+        "quotes": 40,
+        "bookmarks": 52
+      },
+      "engagement_total": 5444,
+      "source": "bluesky_snapshot"
     }
   ],
   "daily_activity": [
     {
       "date": "2026-08-30",
       "joke_posts": 6,
-      "follows": 50,
+      "follows": 20,
       "unfollows": 0
     },
     {
@@ -2218,8 +2226,8 @@
     },
     {
       "date": "2026-09-29",
-      "joke_posts": 4,
-      "follows": 3,
+      "joke_posts": 5,
+      "follows": 4,
       "unfollows": 0
     }
   ],
@@ -2288,60 +2296,18 @@
   "social_activity": {
     "window_days": 30,
     "completed_runs": 360,
-    "follow_back_candidates": 414,
-    "follow_back_added": 273,
-    "protected": 5841,
-    "interaction_candidates": 5717,
+    "follow_back_candidates": 378,
+    "follow_back_added": 244,
+    "protected": 5826,
+    "interaction_candidates": 5709,
     "interaction_eligible": 17,
     "interaction_added": 17,
-    "interactions_liked": 133,
+    "interactions_liked": 128,
     "joke_replies": 0,
     "starter_pack_follows": 110,
-    "starter_pack_scan_complete": 348,
+    "starter_pack_scan_complete": 351,
     "failed": 0,
     "runs": [
-      {
-        "created_at": "2026-08-30T14:24:26Z",
-        "follow_back_candidates": 5,
-        "follow_back_added": 3,
-        "protected": 23,
-        "interaction_candidates": 21,
-        "interaction_eligible": 0,
-        "interaction_added": 0,
-        "interactions_liked": 0,
-        "joke_replies": 0,
-        "starter_pack_follows": 0,
-        "starter_pack_scan_complete": 0,
-        "failed": 0
-      },
-      {
-        "created_at": "2026-08-30T16:25:59Z",
-        "follow_back_candidates": 6,
-        "follow_back_added": 4,
-        "protected": 25,
-        "interaction_candidates": 23,
-        "interaction_eligible": 0,
-        "interaction_added": 0,
-        "interactions_liked": 5,
-        "joke_replies": 0,
-        "starter_pack_follows": 0,
-        "starter_pack_scan_complete": 0,
-        "failed": 0
-      },
-      {
-        "created_at": "2026-08-30T18:28:52Z",
-        "follow_back_candidates": 26,
-        "follow_back_added": 23,
-        "protected": 28,
-        "interaction_candidates": 25,
-        "interaction_eligible": 0,
-        "interaction_added": 0,
-        "interactions_liked": 0,
-        "joke_replies": 0,
-        "starter_pack_follows": 0,
-        "starter_pack_scan_complete": 0,
-        "failed": 0
-      },
       {
         "created_at": "2026-08-30T20:25:29Z",
         "follow_back_candidates": 17,
@@ -7339,21 +7305,63 @@
         "starter_pack_follows": 0,
         "starter_pack_scan_complete": 1,
         "failed": 0
+      },
+      {
+        "created_at": "2026-09-29T14:32:39Z",
+        "follow_back_candidates": 0,
+        "follow_back_added": 0,
+        "protected": 20,
+        "interaction_candidates": 20,
+        "interaction_eligible": 0,
+        "interaction_added": 0,
+        "interactions_liked": 0,
+        "joke_replies": 0,
+        "starter_pack_follows": 0,
+        "starter_pack_scan_complete": 1,
+        "failed": 0
+      },
+      {
+        "created_at": "2026-09-29T16:35:07Z",
+        "follow_back_candidates": 0,
+        "follow_back_added": 0,
+        "protected": 20,
+        "interaction_candidates": 20,
+        "interaction_eligible": 0,
+        "interaction_added": 0,
+        "interactions_liked": 0,
+        "joke_replies": 0,
+        "starter_pack_follows": 0,
+        "starter_pack_scan_complete": 1,
+        "failed": 0
+      },
+      {
+        "created_at": "2026-09-29T18:38:02Z",
+        "follow_back_candidates": 1,
+        "follow_back_added": 1,
+        "protected": 21,
+        "interaction_candidates": 21,
+        "interaction_eligible": 0,
+        "interaction_added": 0,
+        "interactions_liked": 0,
+        "joke_replies": 0,
+        "starter_pack_follows": 0,
+        "starter_pack_scan_complete": 1,
+        "failed": 0
       }
     ]
   },
   "audience_growth": {
     "window_days": 30,
     "net_followers": {
-      "7": 55,
-      "30": 327
+      "7": 53,
+      "30": 296
     },
     "sources": {
       "followback": {
         "denominator": "candidates",
-        "considered": 414,
-        "acquired": 273,
-        "success_rate": 65.9
+        "considered": 378,
+        "acquired": 244,
+        "success_rate": 64.6
       },
       "interaction": {
         "denominator": "eligible",
@@ -7378,7 +7386,7 @@
         {
           "month": "2026-09",
           "source": "followback",
-          "acquired": 127,
+          "acquired": 128,
           "checkpoints": {
             "30": {
               "observed": 0,
@@ -7435,14 +7443,14 @@
       ]
     },
     "coverage": {
-      "social_started_at": "2026-08-30T14:24:26Z",
+      "social_started_at": "2026-08-30T20:25:29Z",
       "discovery_started_at": "2026-09-02T01:30:49Z"
     }
   },
   "starter_pack_attribution": {
     "window_days": 30,
     "coverage_started_at": "2026-08-01T14:31:28.650280Z",
-    "last_checked_at": "2026-09-29T12:47:12.669689Z",
+    "last_checked_at": "2026-09-29T18:39:41.331860Z",
     "total_follows": 39,
     "windows": {
       "7": 5,
@@ -7508,19 +7516,12 @@
   },
   "moderation_activity": {
     "window_days": 30,
-    "completed_runs": 179,
+    "completed_runs": 180,
     "proposals": 0,
     "acknowledgements": 0,
     "approved_removals": 0,
     "unresolved": 0,
     "runs": [
-      {
-        "created_at": "2026-08-30T16:42:35Z",
-        "proposals": 0,
-        "acknowledgements": 0,
-        "approved_removals": 0,
-        "unresolved": 0
-      },
       {
         "created_at": "2026-08-30T20:42:26Z",
         "proposals": 0,
@@ -8766,14 +8767,28 @@
         "acknowledgements": 0,
         "approved_removals": 0,
         "unresolved": 0
+      },
+      {
+        "created_at": "2026-09-29T12:57:19Z",
+        "proposals": 0,
+        "acknowledgements": 0,
+        "approved_removals": 0,
+        "unresolved": 0
+      },
+      {
+        "created_at": "2026-09-29T16:49:22Z",
+        "proposals": 0,
+        "acknowledgements": 0,
+        "approved_removals": 0,
+        "unresolved": 0
       }
     ]
   },
   "engagement_momentum": {
     "basis": "visible_joke_snapshot_total",
     "deltas": {
-      "7": 189,
-      "30": 829
+      "7": 192,
+      "30": 815
     }
   },
   "provider_pressure": {
@@ -8807,13 +8822,13 @@
       "30": {
         "completed_runs": 181,
         "posted_runs": 181,
-        "provider_attempts": 304,
+        "provider_attempts": 305,
         "average_attempts": 1.7,
-        "fallthroughs": 83,
-        "fallthrough_rate": 45.9,
+        "fallthroughs": 84,
+        "fallthrough_rate": 46.4,
         "static_fallbacks": 0,
         "rejections": {
-          "duplicate": 605,
+          "duplicate": 610,
           "too_long": 5,
           "network_error": 1,
           "provider_error": 0
@@ -8821,33 +8836,18 @@
         "starting_providers": {
           "groandeck": 45,
           "icanhazdadjoke": 45,
-          "jokeapi": 45,
-          "syrsly": 46
+          "jokeapi": 46,
+          "syrsly": 45
         },
         "successful_sources": {
-          "groandeck": 117,
+          "groandeck": 118,
           "icanhazdadjoke": 40,
           "jokeapi": 1,
-          "syrsly": 23
+          "syrsly": 22
         }
       }
     },
     "runs": [
-      {
-        "created_at": "2026-08-30T16:08:23Z",
-        "provider_attempts": 1,
-        "starting_provider": "syrsly",
-        "successful_source": "syrsly",
-        "fallthrough": false,
-        "static_fallback": false,
-        "posted": true,
-        "rejections": {
-          "duplicate": 0,
-          "too_long": 0,
-          "network_error": 0,
-          "provider_error": 0
-        }
-      },
       {
         "created_at": "2026-08-30T20:07:49Z",
         "provider_attempts": 1,
@@ -11547,6 +11547,21 @@
           "network_error": 0,
           "provider_error": 0
         }
+      },
+      {
+        "created_at": "2026-09-29T16:10:44Z",
+        "provider_attempts": 2,
+        "starting_provider": "jokeapi",
+        "successful_source": "groandeck",
+        "fallthrough": true,
+        "static_fallback": false,
+        "posted": true,
+        "rejections": {
+          "duplicate": 5,
+          "too_long": 0,
+          "network_error": 0,
+          "provider_error": 0
+        }
       }
     ]
   },
@@ -11584,7 +11599,7 @@
     }
   },
   "providers": {
-    "retained_publications": 1152,
+    "retained_publications": 1153,
     "minimum_comparison_posts": 30,
     "providers": [
       {
@@ -11608,8 +11623,8 @@
       },
       {
         "name": "groandeck",
-        "published": 323,
-        "visible_posts": 321,
+        "published": 324,
+        "visible_posts": 322,
         "average_interactions": 5.08,
         "fallthroughs": 0,
         "rejection_counts": {
@@ -11630,14 +11645,14 @@
         "published": 175,
         "visible_posts": 171,
         "average_interactions": 6.56,
-        "fallthroughs": 273,
+        "fallthroughs": 274,
         "rejection_counts": {
-          "duplicate": 465,
+          "duplicate": 470,
           "too_long": 5,
           "network_error": 1,
           "provider_error": 0
         },
-        "last_failure_at": 1790641604,
+        "last_failure_at": 1790698267,
         "last_failure_reason": "All 5 jokes from 'jokeapi' were rejected (5 duplicates, 0 too long)",
         "healthy": true,
         "configured": true,
@@ -11688,7 +11703,7 @@
     "schedule": "0 0,4,8,12,16,20 * * *",
     "timezone": "UTC",
     "match_window_hours": 2,
-    "current_streak": 183,
+    "current_streak": 185,
     "windows": {
       "7": {
         "expected": 42,
@@ -11708,7 +11723,7 @@
   },
   "automation": {
     "window_days": 30,
-    "collected_at": "2026-09-29T12:50:23.019691+00:00",
+    "collected_at": "2026-09-29T18:42:56.361508+00:00",
     "runs": 978,
     "successful": 940,
     "failed": 29,
@@ -11717,11 +11732,11 @@
     "workflows": [
       {
         "name": "bluesky_dashboard",
-        "runs": 104,
-        "successful": 101,
+        "runs": 103,
+        "successful": 100,
         "failed": 2,
         "cancelled": 0,
-        "last_run_at": "2026-09-29T12:49:54Z",
+        "last_run_at": "2026-09-29T18:42:21Z",
         "last_status": "in_progress",
         "last_conclusion": null,
         "latest_duration_seconds": null,
@@ -11745,15 +11760,15 @@
       },
       {
         "name": "bluesky_follows_and_likes",
-        "runs": 278,
-        "successful": 275,
+        "runs": 275,
+        "successful": 272,
         "failed": 3,
         "cancelled": 0,
-        "last_run_at": "2026-09-29T12:45:07Z",
+        "last_run_at": "2026-09-29T18:38:02Z",
         "last_status": "completed",
         "last_conclusion": "success",
-        "latest_duration_seconds": 131,
-        "median_duration_seconds": 87,
+        "latest_duration_seconds": 105,
+        "median_duration_seconds": 88,
         "expected_interval_hours": 2.0,
         "consecutive_failures": 0
       },
@@ -11773,28 +11788,28 @@
       },
       {
         "name": "bluesky_post_joke",
-        "runs": 138,
-        "successful": 138,
+        "runs": 136,
+        "successful": 136,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-09-29T12:14:57Z",
+        "last_run_at": "2026-09-29T16:10:44Z",
         "last_status": "completed",
         "last_conclusion": "success",
-        "latest_duration_seconds": 24,
+        "latest_duration_seconds": 29,
         "median_duration_seconds": 26,
         "expected_interval_hours": 4.0,
         "consecutive_failures": 0
       },
       {
         "name": "bluesky_process_reports",
-        "runs": 137,
-        "successful": 137,
+        "runs": 136,
+        "successful": 136,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-09-29T08:53:08Z",
+        "last_run_at": "2026-09-29T16:49:22Z",
         "last_status": "completed",
         "last_conclusion": "success",
-        "latest_duration_seconds": 23,
+        "latest_duration_seconds": 28,
         "median_duration_seconds": 26,
         "expected_interval_hours": 4.0,
         "consecutive_failures": 0
@@ -11829,14 +11844,14 @@
       },
       {
         "name": "codeql",
-        "runs": 64,
-        "successful": 63,
+        "runs": 65,
+        "successful": 64,
         "failed": 1,
         "cancelled": 0,
-        "last_run_at": "2026-09-29T12:36:04Z",
+        "last_run_at": "2026-09-29T13:11:33Z",
         "last_status": "completed",
         "last_conclusion": "success",
-        "latest_duration_seconds": 85,
+        "latest_duration_seconds": 89,
         "median_duration_seconds": 84,
         "expected_interval_hours": null,
         "consecutive_failures": 0
@@ -11871,25 +11886,25 @@
       },
       {
         "name": "python_tests",
-        "runs": 60,
-        "successful": 49,
+        "runs": 62,
+        "successful": 51,
         "failed": 11,
         "cancelled": 0,
-        "last_run_at": "2026-09-29T12:36:04Z",
+        "last_run_at": "2026-09-29T13:11:33Z",
         "last_status": "completed",
         "last_conclusion": "success",
-        "latest_duration_seconds": 121,
+        "latest_duration_seconds": 115,
         "median_duration_seconds": 111,
         "expected_interval_hours": null,
         "consecutive_failures": 0
       },
       {
         "name": "ruff_quality",
-        "runs": 60,
-        "successful": 59,
+        "runs": 62,
+        "successful": 61,
         "failed": 1,
         "cancelled": 0,
-        "last_run_at": "2026-09-29T12:36:04Z",
+        "last_run_at": "2026-09-29T13:11:33Z",
         "last_status": "completed",
         "last_conclusion": "success",
         "latest_duration_seconds": 20,
@@ -11899,14 +11914,14 @@
       },
       {
         "name": "validate_runtime_config",
-        "runs": 60,
-        "successful": 58,
+        "runs": 62,
+        "successful": 60,
         "failed": 2,
         "cancelled": 0,
-        "last_run_at": "2026-09-29T12:36:04Z",
+        "last_run_at": "2026-09-29T13:11:33Z",
         "last_status": "completed",
         "last_conclusion": "success",
-        "latest_duration_seconds": 18,
+        "latest_duration_seconds": 22,
         "median_duration_seconds": 19,
         "expected_interval_hours": null,
         "consecutive_failures": 0
@@ -12082,7 +12097,7 @@
         "text": "Yesterday, I accidentally swallowed some food coloring. The doctor says I'm okay, but I feel like I've dyed a little inside.\n\n#dadjoke #jokesky #mumjokes",
         "created_at": "2026-09-28T20:09:24.237195+00:00",
         "engagement": {
-          "likes": 9,
+          "likes": 10,
           "replies": 1,
           "reposts": 2,
           "quotes": 0,
@@ -12157,6 +12172,19 @@
     ],
     "30": [
       {
+        "uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mwm4mb73ki2k",
+        "url": "https://bsky.app/profile/thejokebot.bsky.social/post/3mwm4mb73ki2k",
+        "text": "Yesterday, I accidentally swallowed some food coloring. The doctor says I'm okay, but I feel like I've dyed a little inside.\n\n#dadjoke #jokesky #mumjokes",
+        "created_at": "2026-09-28T20:09:24.237195+00:00",
+        "engagement": {
+          "likes": 10,
+          "replies": 1,
+          "reposts": 2,
+          "quotes": 0,
+          "bookmarks": 0
+        }
+      },
+      {
         "uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3musqdjikrh2b",
         "url": "https://bsky.app/profile/thejokebot.bsky.social/post/3musqdjikrh2b",
         "text": "I bought shoes from a drug dealer once.\n\nI don't know what he laced them with, but I've been tripping all day.\n\n#dadjoke #humour #pun",
@@ -12165,19 +12193,6 @@
           "likes": 11,
           "replies": 1,
           "reposts": 1,
-          "quotes": 0,
-          "bookmarks": 0
-        }
-      },
-      {
-        "uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mwm4mb73ki2k",
-        "url": "https://bsky.app/profile/thejokebot.bsky.social/post/3mwm4mb73ki2k",
-        "text": "Yesterday, I accidentally swallowed some food coloring. The doctor says I'm okay, but I feel like I've dyed a little inside.\n\n#dadjoke #jokesky #mumjokes",
-        "created_at": "2026-09-28T20:09:24.237195+00:00",
-        "engagement": {
-          "likes": 9,
-          "replies": 1,
-          "reposts": 2,
           "quotes": 0,
           "bookmarks": 0
         }
