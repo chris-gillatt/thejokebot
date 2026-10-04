@@ -1,7 +1,7 @@
 {
   "provider": {
     "last_used": "groandeck",
-    "last_used_at": 1791075979,
+    "last_used_at": 1791091732,
     "rotation_order": [
       "icanhazdadjoke",
       "jokeapi",
@@ -10,22 +10,22 @@
     ],
     "failures": {
       "icanhazdadjoke": {
-        "count": 81,
-        "last_failure_at": 1791075979,
-        "last_error": "All 5 jokes from 'icanhazdadjoke' were rejected (5 duplicates, 0 too long)",
+        "count": 82,
+        "last_failure_at": 1791091732,
+        "last_error": "All 5 jokes from 'icanhazdadjoke' were rejected (4 duplicates, 1 too long)",
         "reason_counts": {
-          "duplicate": 210,
-          "too_long": 0,
+          "duplicate": 214,
+          "too_long": 1,
           "network_error": 0,
           "provider_error": 0
         }
       },
       "jokeapi": {
-        "count": 286,
-        "last_failure_at": 1791075979,
-        "last_error": "All 5 jokes from 'jokeapi' were rejected (4 duplicates, 1 too long)",
+        "count": 287,
+        "last_failure_at": 1791091732,
+        "last_error": "All 5 jokes from 'jokeapi' were rejected (5 duplicates, 0 too long)",
         "reason_counts": {
-          "duplicate": 529,
+          "duplicate": 534,
           "too_long": 6,
           "network_error": 1,
           "provider_error": 0
@@ -54,11 +54,11 @@
         }
       }
     },
-    "last_started_primary": "syrsly",
-    "last_started_primary_at": 1791075979
+    "last_started_primary": "icanhazdadjoke",
+    "last_started_primary_at": 1791091732
   },
   "posting": {
-    "tag_offset": 11
+    "tag_offset": 12
   },
   "posted_jokes": [
     {
@@ -9043,6 +9043,18 @@
         "dadjoke",
         "funny",
         "humor"
+      ]
+    },
+    {
+      "ts": 1791091732,
+      "b64": "V2hhdCBkaWQgdGhlIHRpcmUgc2F5IHRvIHRoZSBvdGhlciB0aXJlIGF0IHJldGlyZW1lbnQ/CgpJJ20gdGlyZWQgb2YgdGhpcyBqb2Ih",
+      "provider": "groandeck",
+      "post_uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mwzo7bpmd32x",
+      "post_cid": "bafyreick5nbibdduinrdsfpjx42f625gkdv6vs2gcarg6i2pekgiy22b4q",
+      "hashtags": [
+        "dadjoke",
+        "humor",
+        "humoursky"
       ]
     }
   ]
