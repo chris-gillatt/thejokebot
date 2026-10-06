@@ -811,14 +811,14 @@
       "at://did:plc:sffd7silgxxxollus75lp5g2/app.bsky.feed.repost/3mx4vr5632cld",
       "at://did:plc:qsufp343aihnz4z2peuva7dv/app.bsky.feed.repost/3mx6rpaaize2a"
     ],
-    "last_checked_at": 1791269422
+    "last_checked_at": 1791276043
   },
   "joke_requests": {
     "replied_uris": [
       "at://did:plc:ea4cyvzxqvubnkpo6g2kkv6i/app.bsky.feed.post/3mwirjfd7qk2o",
       "at://did:plc:ea4cyvzxqvubnkpo6g2kkv6i/app.bsky.feed.post/3mwl4ggasjc2l"
     ],
-    "last_checked_at": 1791269421.824364,
+    "last_checked_at": 1791276042.615975,
     "boundary_notification_uris": []
   },
   "unfollow_history": {
@@ -56607,10 +56607,10 @@
     ],
     "starter_pack_attribution": {
       "coverage_started_at": "2026-08-01T14:31:28.650280Z",
-      "last_checked_at": "2026-10-06T06:50:21.647141Z",
-      "high_water_indexed_at": "2026-10-06T00:44:22.247Z",
+      "last_checked_at": "2026-10-06T08:40:42.448051Z",
+      "high_water_indexed_at": "2026-10-06T07:56:44.491Z",
       "boundary_notification_hashes": [
-        "026928809dfa037770f1e587817f79d795b8ce5db3e638cc5890d83d46e3ed09"
+        "ec554f43d3263aae9b789ff0280163435802bb038dc724a49c989949da441ac9"
       ],
       "packs": {
         "at://did:plc:ylslnx2g5q3wvnvywksuxx7g/app.bsky.graph.starterpack/3mucse7m74g2y": {
@@ -56711,7 +56711,10 @@
           "acquired_at": 1788683564,
           "cohort_month": "2026-09",
           "checkpoints": {
-            "30": null,
+            "30": {
+              "observed_at": 1791276026,
+              "still_following": false
+            },
             "90": null
           }
         },
@@ -56720,7 +56723,10 @@
           "acquired_at": 1788683564,
           "cohort_month": "2026-09",
           "checkpoints": {
-            "30": null,
+            "30": {
+              "observed_at": 1791276026,
+              "still_following": true
+            },
             "90": null
           }
         },
@@ -62869,8 +62875,8 @@
             "acquired": 143,
             "checkpoints": {
               "30": {
-                "observed": 3,
-                "still_following": 1
+                "observed": 5,
+                "still_following": 2
               },
               "90": {
                 "observed": 0,
