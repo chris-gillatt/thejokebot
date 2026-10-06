@@ -1,7 +1,7 @@
 {
   "provider": {
     "last_used": "groandeck",
-    "last_used_at": 1791246428,
+    "last_used_at": 1791259906,
     "rotation_order": [
       "icanhazdadjoke",
       "jokeapi",
@@ -10,23 +10,23 @@
     ],
     "failures": {
       "icanhazdadjoke": {
-        "count": 87,
-        "last_failure_at": 1791246428,
+        "count": 88,
+        "last_failure_at": 1791259906,
         "last_error": "All 5 jokes from 'icanhazdadjoke' were rejected (5 duplicates, 0 too long)",
         "reason_counts": {
-          "duplicate": 239,
+          "duplicate": 244,
           "too_long": 1,
           "network_error": 0,
           "provider_error": 0
         }
       },
       "jokeapi": {
-        "count": 295,
-        "last_failure_at": 1791246428,
-        "last_error": "All 5 jokes from 'jokeapi' were rejected (5 duplicates, 0 too long)",
+        "count": 296,
+        "last_failure_at": 1791259906,
+        "last_error": "All 5 jokes from 'jokeapi' were rejected (4 duplicates, 1 too long)",
         "reason_counts": {
-          "duplicate": 573,
-          "too_long": 7,
+          "duplicate": 577,
+          "too_long": 8,
           "network_error": 1,
           "provider_error": 0
         }
@@ -54,11 +54,11 @@
         }
       }
     },
-    "last_started_primary": "syrsly",
-    "last_started_primary_at": 1791246428
+    "last_started_primary": "icanhazdadjoke",
+    "last_started_primary_at": 1791259906
   },
   "posting": {
-    "tag_offset": 6
+    "tag_offset": 7
   },
   "posted_jokes": [
     {
@@ -9187,6 +9187,18 @@
         "dadjoke",
         "punny",
         "humour"
+      ]
+    },
+    {
+      "ts": 1791259906,
+      "b64": "V2h5IGRpZCB0aGUgZGF0YWJhc2UgZ28gb24gYSBkaWV0PwoKSXQgaGFkIHRvbyBtYW55IHRhYmxlcy4=",
+      "provider": "groandeck",
+      "post_uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mx6ktasapj2u",
+      "post_cid": "bafyreiatxspi3kxijq5me6nftuvmaef3pcorjmetobjsy3hddh2ays6p2a",
+      "hashtags": [
+        "dadjoke",
+        "pun",
+        "jokesky"
       ]
     }
   ]
