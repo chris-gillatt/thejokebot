@@ -1,7 +1,7 @@
 {
   "provider": {
     "last_used": "groandeck",
-    "last_used_at": 1791533689,
+    "last_used_at": 1791548044,
     "rotation_order": [
       "icanhazdadjoke",
       "jokeapi",
@@ -10,22 +10,22 @@
     ],
     "failures": {
       "icanhazdadjoke": {
-        "count": 95,
-        "last_failure_at": 1791533689,
+        "count": 96,
+        "last_failure_at": 1791548044,
         "last_error": "All 5 jokes from 'icanhazdadjoke' were rejected (5 duplicates, 0 too long)",
         "reason_counts": {
-          "duplicate": 279,
+          "duplicate": 284,
           "too_long": 1,
           "network_error": 0,
           "provider_error": 0
         }
       },
       "jokeapi": {
-        "count": 308,
-        "last_failure_at": 1791533689,
-        "last_error": "All 5 jokes from 'jokeapi' were rejected (4 duplicates, 1 too long)",
+        "count": 309,
+        "last_failure_at": 1791548044,
+        "last_error": "All 5 jokes from 'jokeapi' were rejected (5 duplicates, 0 too long)",
         "reason_counts": {
-          "duplicate": 636,
+          "duplicate": 641,
           "too_long": 9,
           "network_error": 1,
           "provider_error": 0
@@ -54,11 +54,11 @@
         }
       }
     },
-    "last_started_primary": "syrsly",
-    "last_started_primary_at": 1791533689
+    "last_started_primary": "icanhazdadjoke",
+    "last_started_primary_at": 1791548044
   },
   "posting": {
-    "tag_offset": 9
+    "tag_offset": 10
   },
   "posted_jokes": [
     {
@@ -9427,6 +9427,18 @@
         "dadjoke",
         "humor",
         "mumjokes"
+      ]
+    },
+    {
+      "ts": 1791548044,
+      "b64": "V2h5IGRpZCB0aGUgaGlraW5nIGJvb3QgZ28gdG8gdGhlcmFweT8KCkl0IGhhZCB0b28gbXVjaCBzb2xlLXNlYXJjaGluZyB0byBkby4=",
+      "provider": "groandeck",
+      "post_uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mxgx6gsjr52u",
+      "post_cid": "bafyreigle67hd7arn5dulbqj4psqttjuw67uspts66ibsnzvqdknap24yu",
+      "hashtags": [
+        "dadjoke",
+        "jokes",
+        "humoursky"
       ]
     }
   ]
