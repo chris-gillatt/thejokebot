@@ -1,7 +1,7 @@
 {
   "provider": {
     "last_used": "groandeck",
-    "last_used_at": 1791519207,
+    "last_used_at": 1791533689,
     "rotation_order": [
       "icanhazdadjoke",
       "jokeapi",
@@ -10,23 +10,23 @@
     ],
     "failures": {
       "icanhazdadjoke": {
-        "count": 94,
-        "last_failure_at": 1791490206,
+        "count": 95,
+        "last_failure_at": 1791533689,
         "last_error": "All 5 jokes from 'icanhazdadjoke' were rejected (5 duplicates, 0 too long)",
         "reason_counts": {
-          "duplicate": 274,
+          "duplicate": 279,
           "too_long": 1,
           "network_error": 0,
           "provider_error": 0
         }
       },
       "jokeapi": {
-        "count": 307,
-        "last_failure_at": 1791505704,
-        "last_error": "All 5 jokes from 'jokeapi' were rejected (5 duplicates, 0 too long)",
+        "count": 308,
+        "last_failure_at": 1791533689,
+        "last_error": "All 5 jokes from 'jokeapi' were rejected (4 duplicates, 1 too long)",
         "reason_counts": {
-          "duplicate": 632,
-          "too_long": 8,
+          "duplicate": 636,
+          "too_long": 9,
           "network_error": 1,
           "provider_error": 0
         }
@@ -43,22 +43,22 @@
         }
       },
       "syrsly": {
-        "count": 38,
-        "last_failure_at": 1791419211,
+        "count": 39,
+        "last_failure_at": 1791533689,
         "last_error": "All 5 jokes from 'syrsly' were rejected (5 duplicates, 0 too long)",
         "reason_counts": {
-          "duplicate": 190,
+          "duplicate": 195,
           "too_long": 0,
           "network_error": 0,
           "provider_error": 0
         }
       }
     },
-    "last_started_primary": "groandeck",
-    "last_started_primary_at": 1791519207
+    "last_started_primary": "syrsly",
+    "last_started_primary_at": 1791533689
   },
   "posting": {
-    "tag_offset": 8
+    "tag_offset": 9
   },
   "posted_jokes": [
     {
@@ -9415,6 +9415,18 @@
         "dadjoke",
         "jokes",
         "pun"
+      ]
+    },
+    {
+      "ts": 1791533689,
+      "b64": "V2h5IGRpZCB0aGUgY2FyIHNpdCBpbiB0aGUgc2hhZGU/CgpJdCBkaWRuJ3Qgd2FudCBpdHMgcGFpbnQgdG8gcGVlbCBvdXQh",
+      "provider": "groandeck",
+      "post_uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mxgjsmlavg2t",
+      "post_cid": "bafyreiclovnh7qvww7zrm2mxnjjn3g3fxy4aag3ax5jpky77wydhy5ejum",
+      "hashtags": [
+        "dadjoke",
+        "humor",
+        "mumjokes"
       ]
     }
   ]
