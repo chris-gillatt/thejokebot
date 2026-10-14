@@ -1,7 +1,7 @@
 {
   "provider": {
     "last_used": "groandeck",
-    "last_used_at": 1791980055,
+    "last_used_at": 1791994219,
     "rotation_order": [
       "icanhazdadjoke",
       "jokeapi",
@@ -10,22 +10,22 @@
     ],
     "failures": {
       "icanhazdadjoke": {
-        "count": 106,
-        "last_failure_at": 1791937372,
+        "count": 107,
+        "last_failure_at": 1791994219,
         "last_error": "All 5 jokes from 'icanhazdadjoke' were rejected (5 duplicates, 0 too long)",
         "reason_counts": {
-          "duplicate": 334,
+          "duplicate": 339,
           "too_long": 1,
           "network_error": 0,
           "provider_error": 0
         }
       },
       "jokeapi": {
-        "count": 327,
-        "last_failure_at": 1791965555,
+        "count": 328,
+        "last_failure_at": 1791994219,
         "last_error": "All 5 jokes from 'jokeapi' were rejected (5 duplicates, 0 too long)",
         "reason_counts": {
-          "duplicate": 731,
+          "duplicate": 736,
           "too_long": 9,
           "network_error": 1,
           "provider_error": 0
@@ -43,22 +43,22 @@
         }
       },
       "syrsly": {
-        "count": 44,
-        "last_failure_at": 1791937372,
+        "count": 45,
+        "last_failure_at": 1791994219,
         "last_error": "All 5 jokes from 'syrsly' were rejected (5 duplicates, 0 too long)",
         "reason_counts": {
-          "duplicate": 220,
+          "duplicate": 225,
           "too_long": 0,
           "network_error": 0,
           "provider_error": 0
         }
       }
     },
-    "last_started_primary": "groandeck",
-    "last_started_primary_at": 1791980055
+    "last_started_primary": "syrsly",
+    "last_started_primary_at": 1791994219
   },
   "posting": {
-    "tag_offset": 6
+    "tag_offset": 7
   },
   "posted_jokes": [
     {
@@ -9799,6 +9799,18 @@
         "dadjoke",
         "punny",
         "humour"
+      ]
+    },
+    {
+      "ts": 1791994219,
+      "b64": "V2h5IHdhcyB0aGUgYmFzZWJhbGwgc3RhZGl1bSBzbyBob3Q/CgpBbGwgdGhlIGZhbnMgbGVmdC4=",
+      "provider": "groandeck",
+      "post_uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mxtwpi6udl2x",
+      "post_cid": "bafyreignbso2uo44bqk5hc4a37dvup6dbryzqqktpbdlzcty7kny234n3a",
+      "hashtags": [
+        "dadjoke",
+        "pun",
+        "jokesky"
       ]
     }
   ]
