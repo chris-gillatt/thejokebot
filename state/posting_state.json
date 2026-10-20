@@ -1,7 +1,7 @@
 {
   "provider": {
     "last_used": "groandeck",
-    "last_used_at": 1792455818,
+    "last_used_at": 1792469423,
     "rotation_order": [
       "icanhazdadjoke",
       "jokeapi",
@@ -10,22 +10,22 @@
     ],
     "failures": {
       "icanhazdadjoke": {
-        "count": 116,
-        "last_failure_at": 1792455818,
+        "count": 117,
+        "last_failure_at": 1792469423,
         "last_error": "All 5 jokes from 'icanhazdadjoke' were rejected (5 duplicates, 0 too long)",
         "reason_counts": {
-          "duplicate": 384,
+          "duplicate": 389,
           "too_long": 1,
           "network_error": 0,
           "provider_error": 0
         }
       },
       "jokeapi": {
-        "count": 345,
-        "last_failure_at": 1792455818,
-        "last_error": "All 5 jokes from 'jokeapi' were rejected (4 duplicates, 1 too long)",
+        "count": 346,
+        "last_failure_at": 1792469423,
+        "last_error": "All 5 jokes from 'jokeapi' were rejected (5 duplicates, 0 too long)",
         "reason_counts": {
-          "duplicate": 820,
+          "duplicate": 825,
           "too_long": 10,
           "network_error": 1,
           "provider_error": 0
@@ -54,11 +54,11 @@
         }
       }
     },
-    "last_started_primary": "syrsly",
-    "last_started_primary_at": 1792455818
+    "last_started_primary": "icanhazdadjoke",
+    "last_started_primary_at": 1792469423
   },
   "posting": {
-    "tag_offset": 5
+    "tag_offset": 6
   },
   "posted_jokes": [
     {
@@ -10195,6 +10195,18 @@
         "dadjoke",
         "humor",
         "jokesky"
+      ]
+    },
+    {
+      "ts": 1792469423,
+      "b64": "V2hhdCBkbyB5b3UgY2FsbCBhIGN5YmVyc2VjdXJpdHkgZXhwZXJ0IGF0IGEgcGFydHk/CgpUaGUgb25lIHdobyBjaGVja3MgZXZlcnlvbmUgYXQgdGhlIGRvb3Iu",
+      "provider": "groandeck",
+      "post_uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mybrbnzdwz2z",
+      "post_cid": "bafyreick6zw75x25sx5qoxwvomo7btq6tgcplkkk663a7w23qarvxnkw3m",
+      "hashtags": [
+        "dadjoke",
+        "punny",
+        "humour"
       ]
     }
   ]
