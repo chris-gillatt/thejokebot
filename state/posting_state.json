@@ -1,7 +1,7 @@
 {
   "provider": {
-    "last_used": "syrsly",
-    "last_used_at": 1792628586,
+    "last_used": "groandeck",
+    "last_used_at": 1792642219,
     "rotation_order": [
       "icanhazdadjoke",
       "jokeapi",
@@ -10,22 +10,22 @@
     ],
     "failures": {
       "icanhazdadjoke": {
-        "count": 120,
-        "last_failure_at": 1792584814,
+        "count": 121,
+        "last_failure_at": 1792642219,
         "last_error": "All 5 jokes from 'icanhazdadjoke' were rejected (5 duplicates, 0 too long)",
         "reason_counts": {
-          "duplicate": 404,
+          "duplicate": 409,
           "too_long": 1,
           "network_error": 0,
           "provider_error": 0
         }
       },
       "jokeapi": {
-        "count": 352,
-        "last_failure_at": 1792598976,
+        "count": 353,
+        "last_failure_at": 1792642219,
         "last_error": "All 5 jokes from 'jokeapi' were rejected (5 duplicates, 0 too long)",
         "reason_counts": {
-          "duplicate": 855,
+          "duplicate": 860,
           "too_long": 10,
           "network_error": 1,
           "provider_error": 0
@@ -54,11 +54,11 @@
         }
       }
     },
-    "last_started_primary": "syrsly",
-    "last_started_primary_at": 1792628586
+    "last_started_primary": "icanhazdadjoke",
+    "last_started_primary_at": 1792642219
   },
   "posting": {
-    "tag_offset": 0
+    "tag_offset": 1
   },
   "posted_jokes": [
     {
@@ -10339,6 +10339,18 @@
         "dadjoke",
         "funny",
         "mumjokes"
+      ]
+    },
+    {
+      "ts": 1792642219,
+      "b64": "V2h5IGRpZCB0aGUgZWxlY3Ryb24gc3RhcnQgYSBwb2RjYXN0PwoKSXQgaGFkIGEgbG90IG9mIGVuZXJneSBhbmQgd2FudGVkIHRvIHNoYXJlIGl0cyBjdXJyZW50IHRob3VnaHRzLg==",
+      "provider": "groandeck",
+      "post_uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mygs7fljzs2b",
+      "post_cid": "bafyreihu72ky2po43aw4e4w7wjx3xloukbmdaf6vtsng7q2naxhujimdze",
+      "hashtags": [
+        "dadjoke",
+        "punny",
+        "funny"
       ]
     }
   ]
