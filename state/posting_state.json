@@ -1,7 +1,7 @@
 {
   "provider": {
     "last_used": "groandeck",
-    "last_used_at": 1792915854,
+    "last_used_at": 1792930314,
     "rotation_order": [
       "icanhazdadjoke",
       "jokeapi",
@@ -10,22 +10,22 @@
     ],
     "failures": {
       "icanhazdadjoke": {
-        "count": 127,
-        "last_failure_at": 1792915854,
+        "count": 128,
+        "last_failure_at": 1792930314,
         "last_error": "All 5 jokes from 'icanhazdadjoke' were rejected (5 duplicates, 0 too long)",
         "reason_counts": {
-          "duplicate": 439,
+          "duplicate": 444,
           "too_long": 1,
           "network_error": 0,
           "provider_error": 0
         }
       },
       "jokeapi": {
-        "count": 364,
-        "last_failure_at": 1792915854,
+        "count": 365,
+        "last_failure_at": 1792930314,
         "last_error": "All 5 jokes from 'jokeapi' were rejected (5 duplicates, 0 too long)",
         "reason_counts": {
-          "duplicate": 915,
+          "duplicate": 920,
           "too_long": 10,
           "network_error": 1,
           "provider_error": 0
@@ -54,11 +54,11 @@
         }
       }
     },
-    "last_started_primary": "syrsly",
-    "last_started_primary_at": 1792915854
+    "last_started_primary": "icanhazdadjoke",
+    "last_started_primary_at": 1792930314
   },
   "posting": {
-    "tag_offset": 3
+    "tag_offset": 4
   },
   "posted_jokes": [
     {
@@ -10579,6 +10579,18 @@
         "dadjoke",
         "pun",
         "humorsky"
+      ]
+    },
+    {
+      "ts": 1792930314,
+      "b64": "V2hhdCBkaWQgdGhlIGhlbGl1bSBhdG9tIGRvIHdoZW4gaXQgd2Fsa2VkIGludG8gYSBiYXI/CgpUaGUgYmFydGVuZGVyIHNhaWQsICJXZSBkb24ndCBzZXJ2ZSBub2JsZSBnYXNlcyBoZXJlLiIgSGVsaXVtIGRpZG4ndCByZWFjdC4=",
+      "provider": "groandeck",
+      "post_uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3myp6jccphk22",
+      "post_cid": "bafyreig7xe2hrxt337unehrhrx4rzj7rmogfbdct3mx3nbpkai2bgij2ji",
+      "hashtags": [
+        "dadjoke",
+        "jokesky",
+        "jokes"
       ]
     }
   ]
