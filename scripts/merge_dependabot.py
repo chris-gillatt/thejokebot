@@ -46,18 +46,28 @@ def _allowed_path(path: str) -> bool:
     )
 
 
-def _checks_passed(checks: list[dict]) -> bool:
+def _check_blockers(checks: list[dict]) -> list[str]:
     seen: set[str] = set()
+    blockers: list[str] = []
     for check in checks:
-        name = check.get("name") or check.get("context")
+        name = check.get("name") or check.get("context") or "unnamed check"
+        seen.add(name)
         if check.get("__typename") == "StatusContext":
-            if check.get("state") != "SUCCESS":
-                return False
-        elif check.get("status") != "COMPLETED" or check.get("conclusion") != "SUCCESS":
-            return False
-        if name in REQUIRED_CHECKS:
-            seen.add(name)
-    return seen == REQUIRED_CHECKS
+            result = check.get("state")
+        else:
+            result = (
+                check.get("conclusion")
+                if check.get("status") == "COMPLETED"
+                else check.get("status")
+            )
+        if result != "SUCCESS":
+            blockers.append(f"{name}: {result or 'UNKNOWN'}")
+    blockers.extend(f"{name}: MISSING" for name in sorted(REQUIRED_CHECKS - seen))
+    return blockers
+
+
+def _checks_passed(checks: list[dict]) -> bool:
+    return not _check_blockers(checks)
 
 
 def _eligible(pr: dict, repository: str) -> bool:
@@ -118,10 +128,11 @@ def merge_ready_prs(repository: str, *, dry_run: bool = False) -> int:
         if detail["headRefOid"] != pr["head"]["sha"]:
             print(f"PR #{number}: head changed while checking; will retry later.")
             continue
-        if detail["mergeStateStatus"] != "CLEAN" or not _checks_passed(
-            detail.get("statusCheckRollup") or []
-        ):
-            print(f"PR #{number}: waiting for a clean merge and all required checks.")
+        blockers = _check_blockers(detail.get("statusCheckRollup") or [])
+        if detail["mergeStateStatus"] != "CLEAN":
+            blockers.insert(0, f"merge state: {detail['mergeStateStatus']}")
+        if blockers:
+            print(f"PR #{number}: waiting; {'; '.join(blockers)}.")
             continue
         if dry_run:
             print(f"PR #{number}: ready to merge (dry run).")

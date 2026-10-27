@@ -2531,6 +2531,14 @@ class VerificationHelperTests(unittest.TestCase):
 
 
 class StarterPackAttributionTests(unittest.TestCase):
+    def setUp(self):
+        clock_patch = mock.patch.object(
+            starter_pack_attribution, "datetime", wraps=dt.datetime
+        )
+        clock = clock_patch.start()
+        self.addCleanup(clock_patch.stop)
+        clock.now.return_value = dt.datetime(2026, 8, 31, 12, tzinfo=dt.timezone.utc)
+
     @staticmethod
     def _notification(uri, indexed_at, *, reason="follow", starter_pack=None):
         return SimpleNamespace(

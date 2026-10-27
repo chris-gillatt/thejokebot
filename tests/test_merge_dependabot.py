@@ -44,6 +44,28 @@ def test_requires_all_successful_checks():
     assert not merge_dependabot._checks_passed(checks)
 
 
+def test_reports_missing_pending_and_failed_checks():
+    checks = [
+        check for check in _checks() if check["name"] != "SonarCloud Code Analysis"
+    ]
+    checks.extend(
+        [
+            {"name": "pending", "status": "IN_PROGRESS"},
+            {"name": "neutral", "status": "COMPLETED", "conclusion": "NEUTRAL"},
+            {"name": "unknown", "status": "COMPLETED"},
+            {"__typename": "StatusContext", "context": "security", "state": "FAILURE"},
+            {"__typename": "StatusContext", "context": "external", "state": "SUCCESS"},
+        ]
+    )
+    assert merge_dependabot._check_blockers(checks) == [
+        "pending: IN_PROGRESS",
+        "neutral: NEUTRAL",
+        "unknown: UNKNOWN",
+        "security: FAILURE",
+        "SonarCloud Code Analysis: MISSING",
+    ]
+
+
 def test_restricts_author_and_changed_files():
     assert merge_dependabot._eligible(_pr(), "owner/repo")
     assert not merge_dependabot._eligible(_pr(bot_id=1), "owner/repo")
@@ -124,7 +146,7 @@ def test_rejects_untrusted_author_and_non_dependency_files():
         assert gh.call_count == 2
 
 
-def test_waits_for_clean_merge_and_checks():
+def test_waits_for_clean_merge_and_checks(capsys):
     detail = {
         "headRefOid": "current-head",
         "mergeStateStatus": "DIRTY",
@@ -141,6 +163,7 @@ def test_waits_for_clean_merge_and_checks():
     ) as gh:
         assert merge_dependabot.merge_ready_prs("owner/repo") == 0
         assert gh.call_count == 3
+    assert "merge state: DIRTY" in capsys.readouterr().out
 
 
 def test_dry_run_reports_ready_without_merging():
