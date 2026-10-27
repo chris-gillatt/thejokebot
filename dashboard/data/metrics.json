@@ -1,6 +1,6 @@
 {
   "schema_version": 11,
-  "generated_at": "2026-10-27T13:48:17.122738+00:00",
+  "generated_at": "2026-10-27T14:20:00.500114+00:00",
   "account": {
     "handle": "thejokebot.bsky.social",
     "display_name": "The Joke Bot",
@@ -13,11 +13,335 @@
     "text": "I threw a boomerang years ago.\n\nI now live in constant fear.\n\n#dadjoke #humour #mumjokes",
     "created_at": "2026-10-27T12:14:25.658262+00:00",
     "engagement": {
-      "likes": 3,
+      "likes": 4,
       "replies": 0,
       "reposts": 1,
       "quotes": 0,
       "bookmarks": 0
+    }
+  },
+  "joke_performance": {
+    "coverage_started_at": "2026-10-27T14:20:00.500114+00:00",
+    "retention_days": 400,
+    "comparison_min_posts": 30,
+    "checkpoints": {
+      "24": {
+        "window_hours": [
+          24,
+          30
+        ],
+        "coverage": {
+          "tracked": 43,
+          "observed": 1,
+          "missed": 0,
+          "pending": 6,
+          "before_coverage": 36,
+          "mean": 1.0,
+          "median": 1,
+          "zero_share": 0.0,
+          "engagement": {
+            "likes": 1,
+            "replies": 0,
+            "reposts": 0,
+            "quotes": 0,
+            "bookmarks": 0
+          }
+        },
+        "periods": {
+          "recent": {
+            "start": "2026-09-26",
+            "end": "2026-10-26",
+            "tracked": 33,
+            "observed": 0,
+            "missed": 0,
+            "pending": 0,
+            "before_coverage": 33,
+            "mean": null,
+            "median": null,
+            "zero_share": null,
+            "engagement": {
+              "likes": 0,
+              "replies": 0,
+              "reposts": 0,
+              "quotes": 0,
+              "bookmarks": 0
+            }
+          },
+          "previous": {
+            "start": "2026-08-27",
+            "end": "2026-09-26",
+            "tracked": 0,
+            "observed": 0,
+            "missed": 0,
+            "pending": 0,
+            "before_coverage": 0,
+            "mean": null,
+            "median": null,
+            "zero_share": null,
+            "engagement": {
+              "likes": 0,
+              "replies": 0,
+              "reposts": 0,
+              "quotes": 0,
+              "bookmarks": 0
+            }
+          }
+        },
+        "months": [
+          {
+            "month": "2026-10",
+            "tracked": 33,
+            "observed": 0,
+            "missed": 0,
+            "pending": 0,
+            "before_coverage": 33,
+            "mean": null,
+            "median": null,
+            "zero_share": null,
+            "engagement": {
+              "likes": 0,
+              "replies": 0,
+              "reposts": 0,
+              "quotes": 0,
+              "bookmarks": 0
+            }
+          }
+        ],
+        "providers": [
+          {
+            "provider": "groandeck",
+            "tracked": 28,
+            "observed": 0,
+            "missed": 0,
+            "pending": 0,
+            "before_coverage": 28,
+            "mean": null,
+            "median": null,
+            "zero_share": null,
+            "engagement": {
+              "likes": 0,
+              "replies": 0,
+              "reposts": 0,
+              "quotes": 0,
+              "bookmarks": 0
+            }
+          },
+          {
+            "provider": "icanhazdadjoke",
+            "tracked": 3,
+            "observed": 0,
+            "missed": 0,
+            "pending": 0,
+            "before_coverage": 3,
+            "mean": null,
+            "median": null,
+            "zero_share": null,
+            "engagement": {
+              "likes": 0,
+              "replies": 0,
+              "reposts": 0,
+              "quotes": 0,
+              "bookmarks": 0
+            }
+          },
+          {
+            "provider": "syrsly",
+            "tracked": 2,
+            "observed": 0,
+            "missed": 0,
+            "pending": 0,
+            "before_coverage": 2,
+            "mean": null,
+            "median": null,
+            "zero_share": null,
+            "engagement": {
+              "likes": 0,
+              "replies": 0,
+              "reposts": 0,
+              "quotes": 0,
+              "bookmarks": 0
+            }
+          }
+        ],
+        "publishing_hours": [
+          {
+            "utc_hour": "00:00",
+            "tracked": 5,
+            "observed": 0,
+            "missed": 0,
+            "pending": 0,
+            "before_coverage": 5,
+            "mean": null,
+            "median": null,
+            "zero_share": null,
+            "engagement": {
+              "likes": 0,
+              "replies": 0,
+              "reposts": 0,
+              "quotes": 0,
+              "bookmarks": 0
+            }
+          },
+          {
+            "utc_hour": "04:00",
+            "tracked": 5,
+            "observed": 0,
+            "missed": 0,
+            "pending": 0,
+            "before_coverage": 5,
+            "mean": null,
+            "median": null,
+            "zero_share": null,
+            "engagement": {
+              "likes": 0,
+              "replies": 0,
+              "reposts": 0,
+              "quotes": 0,
+              "bookmarks": 0
+            }
+          },
+          {
+            "utc_hour": "08:00",
+            "tracked": 5,
+            "observed": 0,
+            "missed": 0,
+            "pending": 0,
+            "before_coverage": 5,
+            "mean": null,
+            "median": null,
+            "zero_share": null,
+            "engagement": {
+              "likes": 0,
+              "replies": 0,
+              "reposts": 0,
+              "quotes": 0,
+              "bookmarks": 0
+            }
+          },
+          {
+            "utc_hour": "12:00",
+            "tracked": 6,
+            "observed": 0,
+            "missed": 0,
+            "pending": 0,
+            "before_coverage": 6,
+            "mean": null,
+            "median": null,
+            "zero_share": null,
+            "engagement": {
+              "likes": 0,
+              "replies": 0,
+              "reposts": 0,
+              "quotes": 0,
+              "bookmarks": 0
+            }
+          },
+          {
+            "utc_hour": "16:00",
+            "tracked": 6,
+            "observed": 0,
+            "missed": 0,
+            "pending": 0,
+            "before_coverage": 6,
+            "mean": null,
+            "median": null,
+            "zero_share": null,
+            "engagement": {
+              "likes": 0,
+              "replies": 0,
+              "reposts": 0,
+              "quotes": 0,
+              "bookmarks": 0
+            }
+          },
+          {
+            "utc_hour": "20:00",
+            "tracked": 6,
+            "observed": 0,
+            "missed": 0,
+            "pending": 0,
+            "before_coverage": 6,
+            "mean": null,
+            "median": null,
+            "zero_share": null,
+            "engagement": {
+              "likes": 0,
+              "replies": 0,
+              "reposts": 0,
+              "quotes": 0,
+              "bookmarks": 0
+            }
+          }
+        ],
+        "top_posts": []
+      },
+      "168": {
+        "window_hours": [
+          168,
+          174
+        ],
+        "coverage": {
+          "tracked": 43,
+          "observed": 1,
+          "missed": 0,
+          "pending": 42,
+          "before_coverage": 0,
+          "mean": 4.0,
+          "median": 4,
+          "zero_share": 0.0,
+          "engagement": {
+            "likes": 3,
+            "replies": 1,
+            "reposts": 0,
+            "quotes": 0,
+            "bookmarks": 0
+          }
+        },
+        "periods": {
+          "recent": {
+            "start": "2026-09-20",
+            "end": "2026-10-20",
+            "tracked": 0,
+            "observed": 0,
+            "missed": 0,
+            "pending": 0,
+            "before_coverage": 0,
+            "mean": null,
+            "median": null,
+            "zero_share": null,
+            "engagement": {
+              "likes": 0,
+              "replies": 0,
+              "reposts": 0,
+              "quotes": 0,
+              "bookmarks": 0
+            }
+          },
+          "previous": {
+            "start": "2026-08-21",
+            "end": "2026-09-20",
+            "tracked": 0,
+            "observed": 0,
+            "missed": 0,
+            "pending": 0,
+            "before_coverage": 0,
+            "mean": null,
+            "median": null,
+            "zero_share": null,
+            "engagement": {
+              "likes": 0,
+              "replies": 0,
+              "reposts": 0,
+              "quotes": 0,
+              "bookmarks": 0
+            }
+          }
+        },
+        "months": [],
+        "providers": [],
+        "publishing_hours": [],
+        "top_posts": []
+      }
     }
   },
   "current": {
@@ -26,7 +350,7 @@
     "profile_posts": 2737,
     "joke_posts": 1076,
     "engagement": {
-      "likes": 5229,
+      "likes": 5230,
       "replies": 383,
       "reposts": 420,
       "quotes": 44,
@@ -2060,19 +2384,19 @@
     },
     {
       "period_start": "2026-10-27T12:00:00+00:00",
-      "collected_at": "2026-10-27T13:48:17.122738+00:00",
+      "collected_at": "2026-10-27T14:20:00.500114+00:00",
       "followers": 6959,
       "following": 10336,
       "profile_posts": 2737,
       "joke_posts": 1076,
       "engagement": {
-        "likes": 5229,
+        "likes": 5230,
         "replies": 383,
         "reposts": 420,
         "quotes": 44,
         "bookmarks": 72
       },
-      "engagement_total": 6148,
+      "engagement_total": 6149,
       "source": "bluesky_snapshot"
     }
   ],
@@ -8828,8 +9152,8 @@
   "engagement_momentum": {
     "basis": "visible_joke_snapshot_total",
     "deltas": {
-      "7": 144,
-      "30": 769
+      "7": 145,
+      "30": 770
     }
   },
   "provider_pressure": {
@@ -11745,7 +12069,7 @@
     "schedule": "0 0,4,8,12,16,20 * * *",
     "timezone": "UTC",
     "match_window_hours": 2,
-    "current_streak": 138,
+    "current_streak": 139,
     "windows": {
       "7": {
         "expected": 42,
@@ -11765,20 +12089,20 @@
   },
   "automation": {
     "window_days": 30,
-    "collected_at": "2026-10-27T13:48:17.122738+00:00",
+    "collected_at": "2026-10-27T14:20:00.500114+00:00",
     "runs": 985,
     "successful": 951,
-    "failed": 27,
+    "failed": 26,
     "cancelled": 2,
-    "success_rate": 97.2,
+    "success_rate": 97.3,
     "workflows": [
       {
         "name": "bluesky_dashboard",
-        "runs": 105,
-        "successful": 103,
+        "runs": 106,
+        "successful": 104,
         "failed": 1,
         "cancelled": 0,
-        "last_run_at": "2026-10-27T13:47:47Z",
+        "last_run_at": "2026-10-27T14:19:38Z",
         "last_status": "in_progress",
         "last_conclusion": null,
         "latest_duration_seconds": null,
@@ -11802,8 +12126,8 @@
       },
       {
         "name": "bluesky_follows_and_likes",
-        "runs": 303,
-        "successful": 301,
+        "runs": 302,
+        "successful": 300,
         "failed": 2,
         "cancelled": 0,
         "last_run_at": "2026-10-27T12:44:20Z",
@@ -11890,7 +12214,7 @@
         "successful": 38,
         "failed": 3,
         "cancelled": 0,
-        "last_run_at": "2026-10-27T13:47:47Z",
+        "last_run_at": "2026-10-27T14:19:38Z",
         "last_status": "in_progress",
         "last_conclusion": null,
         "latest_duration_seconds": null,
@@ -11929,10 +12253,10 @@
       {
         "name": "python_tests",
         "runs": 39,
-        "successful": 25,
-        "failed": 13,
+        "successful": 26,
+        "failed": 12,
         "cancelled": 0,
-        "last_run_at": "2026-10-27T13:47:47Z",
+        "last_run_at": "2026-10-27T14:19:38Z",
         "last_status": "in_progress",
         "last_conclusion": null,
         "latest_duration_seconds": null,
@@ -11946,10 +12270,10 @@
         "successful": 40,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-10-27T13:47:47Z",
+        "last_run_at": "2026-10-27T14:19:38Z",
         "last_status": "completed",
         "last_conclusion": "success",
-        "latest_duration_seconds": 24,
+        "latest_duration_seconds": 20,
         "median_duration_seconds": 20,
         "expected_interval_hours": null,
         "consecutive_failures": 0
@@ -11957,13 +12281,13 @@
       {
         "name": "validate_runtime_config",
         "runs": 40,
-        "successful": 40,
+        "successful": 39,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-10-27T13:47:47Z",
-        "last_status": "completed",
-        "last_conclusion": "success",
-        "latest_duration_seconds": 20,
+        "last_run_at": "2026-10-27T14:19:38Z",
+        "last_status": "in_progress",
+        "last_conclusion": null,
+        "latest_duration_seconds": null,
         "median_duration_seconds": 20,
         "expected_interval_hours": null,
         "consecutive_failures": 0
