@@ -5,6 +5,7 @@ import requests
 import atproto_client.exceptions
 from thejokebot import config as runtime_config
 from thejokebot import state as bot_state
+from thejokebot.discovery_feeds import eligible_author_dids, fetch_saved_feed_users
 from thejokebot.runtime import (
     get_runtime_controls,
     login_client,
@@ -36,7 +37,7 @@ def fetch_users_for_tag(client, tag: str):
             ),
             description=f"searching posts for #{tag}",
         )
-        users = [post.author.did for post in resp.posts]
+        users = eligible_author_dids(post.author for post in resp.posts)
         print(f"Found {len(users)} users for #{tag}")
         return users
     except (
@@ -49,18 +50,10 @@ def fetch_users_for_tag(client, tag: str):
 
 
 def get_following(client):
-    try:
-        following = fetch_paginated_data(client.get_follows, client.me.did)
-        return {follow.did for follow in following}
-    except (
-        requests.RequestException,
-        TimeoutError,
-        atproto_client.exceptions.NetworkError,
-    ) as exc:
-        print(
-            f"Could not fetch following list, proceeding without deduplication: {exc}"
-        )
-        return set()
+    following = fetch_paginated_data(
+        client.get_follows, client.me.did, require_complete=True
+    )
+    return {follow.did for follow in following}
 
 
 def follow(client, did: str):
@@ -82,6 +75,8 @@ def follow(client, did: str):
 
 def _take_unseen_users(tag, users, seen, limit):
     selected = []
+    if limit <= 0:
+        return selected
     for user in users:
         if user in seen:
             continue
@@ -112,15 +107,14 @@ def select_users(tag_users, tag_order, per_tag_limit, overall_limit):
     return selected_users[:overall_limit]
 
 
-def _build_eligible_tag_users(client, hashtags, already_following, unfollowed_dids):
-    """Fetch users per hashtag, excluding already-followed and previously unfollowed DIDs."""
+def _build_eligible_source_users(client, hashtags, already_following, unfollowed_dids):
+    """Combine saved feeds and tags under the same exclusions and selection budget."""
+    sources = fetch_saved_feed_users(client, limit=search_limit)
+    sources.update({tag: fetch_users_for_tag(client, tag) for tag in hashtags})
+    excluded = already_following | unfollowed_dids | {client.me.did}
     return {
-        tag: [
-            u
-            for u in fetch_users_for_tag(client, tag)
-            if u not in already_following and u not in unfollowed_dids
-        ]
-        for tag in hashtags
+        source: [did for did in users if did not in excluded]
+        for source, users in sources.items()
     }
 
 
@@ -130,7 +124,7 @@ def _execute_follow_loop(client, selected_users, dry_run, action_delay_seconds):
     for i, (tag, did) in enumerate(selected_users, start=1):
         masked_did = mask_sensitive(did)
         if dry_run:
-            print(f"[DRY-RUN] Would follow {masked_did} (#{tag})")
+            print(f"[DRY-RUN] Would follow {masked_did} (source={tag})")
         else:
             if follow(client, did):
                 followed_dids.append(did)
@@ -189,27 +183,29 @@ def main():
             f"{len(unfollowed_dids)} DID(s) in unfollow history — excluded from candidates."
         )
 
-    tag_users = _build_eligible_tag_users(
+    tag_users = _build_eligible_source_users(
         client, hashtags, already_following, unfollowed_dids
     )
+    source_order = [source for source in tag_users if source.startswith("feed:")]
+    source_order.extend(rotated_hashtags)
 
     print("\nEligible users before redistribution:")
     for tag, users in tag_users.items():
-        print(f"  #{tag}: {len(users)} users")
+        print(f"  {tag}: {len(users)} users")
 
     selected_users = select_users(
         tag_users,
-        rotated_hashtags,
+        source_order,
         per_tag_limit=soft_tag_limit,
         overall_limit=global_follow_limit,
     )
 
-    print("\nFinal tag breakdown:")
-    tag_counts = {tag: 0 for tag in hashtags}
+    print("\nFinal discovery-source breakdown:")
+    tag_counts = {tag: 0 for tag in source_order}
     for tag, _ in selected_users:
         tag_counts[tag] += 1
-    for tag in hashtags:
-        print(f"  #{tag}: {tag_counts[tag]} users")
+    for tag in source_order:
+        print(f"  {tag}: {tag_counts[tag]} users")
 
     print(f"Total users to follow: {len(selected_users)}\n")
 
@@ -222,12 +218,12 @@ def main():
         _persist_follow_fellows_state(followed_dids, rotation_step, len(hashtags))
 
     followed_tag_counts = _successful_tag_counts(
-        selected_users, followed_dids, hashtags
+        selected_users, followed_dids, source_order
     )
 
-    print("\nFollowed users by tag:")
-    for tag in hashtags:
-        print(f"  #{tag}: {followed_tag_counts[tag]} users")
+    print("\nFollowed users by discovery source:")
+    for tag in source_order:
+        print(f"  {tag}: {followed_tag_counts[tag]} users")
 
     print(
         "Discovery summary: "

@@ -27,7 +27,7 @@ Posts dad jokes to [Bluesky](https://bsky.app/) and looks after the account thro
 | Area | Behaviour |
 |---|---|
 | Jokes | Rotates through live joke providers and a bundled offline jokebook; avoids repeats within 730 days and fits rotated hashtags within Bluesky's post limit. |
-| Community | Follows back, discovers fellow accounts, likes replies and answers explicit tagged joke requests. Unfollow automation respects protected accounts and a 90-day grace period. |
+| Community | Follows back, discovers fellow accounts through saved feeds and hashtags, likes replies and answers explicit tagged joke requests. Unfollow automation respects protected accounts and a 90-day grace period. |
 | Moderation | A `#report` reply proposes a permanent joke denylist change for maintainer review; approved jokes are removed from the account. |
 | Dashboard | Publishes six-hourly public account and engagement trends alongside operational health. Audience identifiers are excluded from published metrics. |
 

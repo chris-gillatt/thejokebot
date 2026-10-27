@@ -6184,6 +6184,13 @@ class StateRoundTripTests(unittest.TestCase):
 class FollowFellowsMainTests(unittest.TestCase):
     """Smoke tests for bluesky_follow_fellows.main() (CS-9 coverage gap)."""
 
+    def setUp(self):
+        feeds = mock.patch.object(
+            bluesky_follow_fellows, "fetch_saved_feed_users", return_value={}
+        )
+        feeds.start()
+        self.addCleanup(feeds.stop)
+
     def test_main_dry_run_does_not_call_follow(self):
         client = mock.Mock()
         client.me.did = "did:plc:bot"

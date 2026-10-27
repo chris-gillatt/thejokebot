@@ -61,6 +61,12 @@ An explicit mention such as `@thejokebot.bsky.social tell me a joke` requests a 
 
 Starter-pack settings live in `resources/jokebot_starter_pack.json`. Dispatch `bluesky_manage_starter_pack` with `apply_changes=false` to preview; use `apply_changes=true` only for deliberate live changes. When enabled, members of its source list are protected from unfollowing.
 
+Fellow discovery reads TJB's saved custom feeds from its Bluesky preferences before searching the configured hashtags. No separate feed list is needed: saving or removing a custom feed in Bluesky changes the discovery sources. Built-in timelines and saved lists are excluded. Current saved-feed preferences take precedence over the legacy format, including when the current list is empty.
+
+Each run samples one page of up to `follow_fellows.search_limit` posts (at most 100) from each of the first 10 saved custom feeds. Candidates are the original post authors, including when a feed entry is a repost; blocked or muted feed authors are excluded. Feeds and hashtags share the existing `global_follow_limit` (currently 150), per-source initial allocation (`per_tag_limit`, currently 12), duplicate filtering, unfollow-history exclusions, follow grace and action pacing. Saved feeds are allocated first; this does not increase the run's total follow allowance or its schedule.
+
+Discovery requires a complete following-list read and successful saved-preference/feed reads before following anyone. A failed or truncated prerequisite read aborts the run without follow actions. No saved custom feeds is a valid result and leaves hashtag discovery active. Dispatch `bluesky_follow_fellows` with `dry_run=true` to preview candidates without following accounts or changing social state; local runs can use `BLUESKY_DRY_RUN=true`.
+
 To enforce account blocks, set private repository variable `BLUESKY_BLOCK_DIDS` to one stable DID per line, optionally followed by a handle comment. The social workflow restores missing blocks but never unblocks anyone. Removing a DID from the variable stops enforcing it; unblock manually on Bluesky if appropriate.
 
 To prevent future automatic follows of an account, use its stable DID in `unfollow_history`, not a handle-based list. Do not edit state during a concurrent scheduled write:
