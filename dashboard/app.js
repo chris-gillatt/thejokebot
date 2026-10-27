@@ -989,4 +989,4 @@ async function initialise() {
   }
 }
 
-initialise();
+void initialise();
