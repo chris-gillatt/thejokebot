@@ -1,7 +1,7 @@
 {
   "provider": {
     "last_used": "groandeck",
-    "last_used_at": 1793088788,
+    "last_used_at": 1793103265,
     "rotation_order": [
       "icanhazdadjoke",
       "jokeapi",
@@ -10,22 +10,22 @@
     ],
     "failures": {
       "icanhazdadjoke": {
-        "count": 132,
-        "last_failure_at": 1793088788,
+        "count": 133,
+        "last_failure_at": 1793103265,
         "last_error": "All 5 jokes from 'icanhazdadjoke' were rejected (5 duplicates, 0 too long)",
         "reason_counts": {
-          "duplicate": 464,
+          "duplicate": 469,
           "too_long": 1,
           "network_error": 0,
           "provider_error": 0
         }
       },
       "jokeapi": {
-        "count": 371,
-        "last_failure_at": 1793088788,
-        "last_error": "All 5 jokes from 'jokeapi' were rejected (4 duplicates, 1 too long)",
+        "count": 372,
+        "last_failure_at": 1793103265,
+        "last_error": "All 5 jokes from 'jokeapi' were rejected (5 duplicates, 0 too long)",
         "reason_counts": {
-          "duplicate": 949,
+          "duplicate": 954,
           "too_long": 11,
           "network_error": 1,
           "provider_error": 0
@@ -54,11 +54,11 @@
         }
       }
     },
-    "last_started_primary": "syrsly",
-    "last_started_primary_at": 1793088788
+    "last_started_primary": "icanhazdadjoke",
+    "last_started_primary_at": 1793103265
   },
   "posting": {
-    "tag_offset": 15
+    "tag_offset": 16
   },
   "posted_jokes": [
     {
@@ -10722,6 +10722,18 @@
       "hashtags": [
         "dadjoke",
         "jokesky",
+        "mumjokes"
+      ]
+    },
+    {
+      "ts": 1793103265,
+      "b64": "SSB0aHJldyBhIGJvb21lcmFuZyB5ZWFycyBhZ28uCgpJIG5vdyBsaXZlIGluIGNvbnN0YW50IGZlYXIu",
+      "provider": "groandeck",
+      "post_uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3myu7ln7di52w",
+      "post_cid": "bafyreichnsaqla7fjadaegolahryjkztczhofm4c6vm5cljfjj37nam2i4",
+      "hashtags": [
+        "dadjoke",
+        "humour",
         "mumjokes"
       ]
     }
