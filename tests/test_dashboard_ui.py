@@ -96,9 +96,14 @@ class DashboardUiTests(unittest.TestCase):
             self.assertEqual(panel.attributes["aria-labelledby"], tab.attributes["id"])
 
     def test_range_controls_have_one_pressed_button_each(self):
-        for attribute in ("data-range", "data-operations-range", "data-top-range"):
+        for attribute, count in (
+            ("data-range", 6),
+            ("data-operations-range", 6),
+            ("data-top-range", 3),
+            ("data-performance-age", 2),
+        ):
             buttons = [node for node in self.nodes if attribute in node.attributes]
-            self.assertEqual(len(buttons), 3 if attribute == "data-top-range" else 6)
+            self.assertEqual(len(buttons), count)
             self.assertEqual(
                 sum(
                     button.attributes.get("aria-pressed") == "true"

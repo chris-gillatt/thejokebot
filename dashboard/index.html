@@ -21,7 +21,7 @@
         [role="tabpanel"][hidden] { display: block; }
       </style>
     </noscript>
-    <link rel="stylesheet" href="styles.css?v=24" />
+    <link rel="stylesheet" href="styles.css?v=25" />
     <script
       src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"
       integrity="sha384-jb8JQMbMoBUzgWatfe6COACi2ljcDdZQ2OxczGA3bGNeWe+6DChMTBJemed7ZnvJ"
@@ -29,7 +29,7 @@
       defer
     ></script>
     <script src="history.js?v=1" defer></script>
-    <script src="app.js?v=19" defer></script>
+    <script src="app.js?v=20" defer></script>
   </head>
   <body>
     <noscript>
@@ -317,11 +317,50 @@
         </div>
       </section>
 
+      <section class="dashboard-section" aria-labelledby="performance-heading">
+        <div class="section-inner">
+          <div class="section-heading">
+            <div><p class="eyebrow">Comparable-age response</p><h2 id="performance-heading">How jokes perform at the same age</h2></div>
+            <div class="range-control" role="group" aria-label="Joke observation age">
+              <button type="button" data-performance-age="24" aria-pressed="true" class="active">24–30 hours</button>
+              <button type="button" data-performance-age="168" aria-pressed="false">168–174 hours</button>
+            </div>
+          </div>
+          <p id="performance-coverage" class="growth-explanation" aria-live="polite">Collecting comparable-age history</p>
+          <p class="growth-explanation">The six-hour collector keeps the first visible count at or after 24 or 168 hours, strictly before 30 or 174 hours. Missed windows stay missing; later totals never replace them. Measures are independent of the historical date controls and cumulative totals below. Deleted or hidden jokes keep their earlier observed aggregate contribution but are omitted from current top-joke links.</p>
+          <div id="performance-content" hidden>
+            <p id="performance-period" class="growth-explanation"></p>
+            <div class="growth-summary">
+              <div class="growth-stat"><span>Observed / eligible checkpoints</span><strong id="performance-samples">--</strong><small id="performance-sample-note"></small></div>
+              <div class="growth-stat"><span>Mean interactions per joke</span><strong id="performance-mean">--</strong><small id="performance-mean-change"></small></div>
+              <div class="growth-stat"><span>Median interactions per joke</span><strong id="performance-median">--</strong><small id="performance-median-change"></small></div>
+              <div class="growth-stat"><span>Zero-interaction share</span><strong id="performance-zero">--</strong><small id="performance-zero-change"></small></div>
+            </div>
+            <p id="performance-empty" class="growth-explanation"></p>
+            <p id="performance-breakdown" class="growth-explanation"></p>
+            <article class="chart-block">
+              <div class="chart-title"><h3>Response by publishing month</h3><span>Observed samples from fully mature publishing days; gaps are not zeroes</span></div>
+              <div class="chart-frame"><canvas id="performance-chart"></canvas></div>
+            </article>
+            <h3>Provider and publishing-hour comparisons</h3>
+            <p id="performance-comparison-note" class="growth-explanation"></p>
+            <div class="table-scroll"><table id="performance-comparison-table">
+              <thead><tr><th>Group</th><th>Sample</th><th>Mean</th><th>Median</th><th>Zero interactions</th></tr></thead>
+              <tbody></tbody>
+            </table></div>
+            <h3>Stand-outs at this age</h3>
+            <p class="growth-explanation">Ranked only within the recent mature publishing cohort. Counts are frozen checkpoint observations, not live embed totals.</p>
+            <div id="performance-posts" class="post-grid"></div>
+            <p id="performance-posts-empty" class="top-posts-empty">No visible jokes with an observed checkpoint in this mature cohort yet.</p>
+          </div>
+        </div>
+      </section>
+
       <section class="dashboard-section engagement-section" aria-labelledby="engagement-heading">
         <div class="section-inner engagement-layout">
           <div>
             <p class="eyebrow">Audience response</p>
-            <h2 id="engagement-heading">Received engagement</h2>
+            <h2 id="engagement-heading">Cumulative visible engagement</h2>
             <p class="engagement-total"><strong id="engagement-total">--</strong> total interactions</p>
             <dl class="engagement-momentum">
               <div><dt>Observed 7-day change</dt><dd id="engagement-change-7">--</dd></div>
@@ -343,7 +382,7 @@
           <div class="section-heading">
             <div>
               <p class="eyebrow">Recent stand-outs</p>
-              <h2 id="top-posts-heading">Top joke posts</h2>
+              <h2 id="top-posts-heading">Top jokes by current totals</h2>
             </div>
             <div id="top-post-range" class="range-control" role="group" aria-label="Top joke post date range">
               <button type="button" data-top-range="7" aria-pressed="false">7 days</button>

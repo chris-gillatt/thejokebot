@@ -10,6 +10,9 @@ on:
     paths:
       - "dashboard/**"
       - "src/thejokebot/commands/collect_dashboard_metrics.py"
+      - "src/thejokebot/commands/dashboard_engagement.py"
+      - "src/thejokebot/commands/dashboard_metrics.py"
+      - "src/thejokebot/commands/dashboard_history.py"
       - ".github/workflows/bluesky_dashboard.yml"
 
 concurrency:
@@ -52,7 +55,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           python scripts/persist_workflow_state.py \
             --commit-message "chore(dashboard): update public metrics; GH run: ${GITHUB_RUN_NUMBER}" \
-            dashboard/data
+            dashboard/data state/dashboard_engagement.json
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6

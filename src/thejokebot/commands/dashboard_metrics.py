@@ -12,6 +12,7 @@ import requests
 
 from thejokebot import config as runtime_config
 from thejokebot import state as bot_state
+from thejokebot.commands import dashboard_engagement
 from thejokebot.commands import dashboard_history
 from thejokebot.commands import dashboard_workflows
 
@@ -26,13 +27,7 @@ TOP_POST_LIMIT = 6
 PROVIDER_COMPARISON_MIN_POSTS = 30
 POSTING_DELIVERY_WINDOWS = (7, 30)
 POSTING_SLOT_MATCH_HOURS = 2
-ENGAGEMENT_FIELDS = (
-    ("likes", "likeCount"),
-    ("replies", "replyCount"),
-    ("reposts", "repostCount"),
-    ("quotes", "quoteCount"),
-    ("bookmarks", "bookmarkCount"),
-)
+ENGAGEMENT_FIELDS = dashboard_engagement.ENGAGEMENT_FIELDS
 
 
 def _request_json(session, method: str, params: dict) -> dict:
@@ -83,7 +78,10 @@ def _collect_original_posts(posts: dict[str, dict], feed: list, actor_did: str) 
     for item in feed:
         post = _original_post(item, actor_did)
         if post:
-            posts[post["uri"]] = post
+            posts[post["uri"]] = {
+                **post,
+                "_dashboard_observed_at": datetime.now(timezone.utc).isoformat(),
+            }
 
 
 def fetch_original_posts(
@@ -134,10 +132,7 @@ def fetch_original_posts(
 
 
 def _engagement(post: dict) -> dict[str, int]:
-    return {
-        name: max(0, int(post.get(api_name) or 0))
-        for name, api_name in ENGAGEMENT_FIELDS
-    }
+    return dashboard_engagement.engagement(post)
 
 
 def _post_summary(post: dict, handle: str) -> dict:
@@ -972,6 +967,12 @@ def collect_metrics(
         if entry.get("post_uri")
     }
     joke_posts = [post for post in original_posts if post.get("uri") in joke_uris]
+    engagement_checkpoints = dashboard_engagement.collect(
+        existing.get("engagement_checkpoints"),
+        state.get("posted_jokes", []),
+        joke_posts,
+        now,
+    )
 
     totals = dict.fromkeys((name for name, _ in ENGAGEMENT_FIELDS), 0)
     for post in joke_posts:
@@ -1046,6 +1047,10 @@ def collect_metrics(
             "profile_url": f"https://bsky.app/profile/{profile['handle']}",
         },
         "latest_joke": _post_summary(latest_post, profile["handle"]),
+        "engagement_checkpoints": engagement_checkpoints,
+        "joke_performance": dashboard_engagement.summary(
+            engagement_checkpoints, joke_posts, now
+        ),
         "current": current,
         "snapshots": snapshots,
         "daily_activity": _daily_activity(state, workflow_activity),

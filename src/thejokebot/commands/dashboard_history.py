@@ -584,4 +584,5 @@ def _compact_metrics(metrics: dict, now: datetime) -> dict:
         if datetime.strptime(item["date"], "%Y-%m-%d").date() >= cutoff.date()
     ]
     compact.pop("workflow_activity", None)
+    compact.pop("engagement_checkpoints", None)
     return compact

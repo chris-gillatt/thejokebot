@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 import requests
 
 from thejokebot import state as bot_state
+from thejokebot.commands import dashboard_engagement
 from thejokebot.commands import dashboard_metrics
 from thejokebot.commands import dashboard_history
 from thejokebot.commands import dashboard_workflows
@@ -163,6 +164,9 @@ def main() -> None:
         dashboard_history._migrate_existing_history(existing),
     )
     collector_existing = dashboard_history._collector_existing(existing, history, now)
+    collector_existing["engagement_checkpoints"] = dashboard_engagement.load(
+        dashboard_engagement.STATE_FILE
+    )
     workflow_activity = collect_workflow_activity(
         session,
         repository,
@@ -184,6 +188,9 @@ def main() -> None:
         history, dashboard_history._history_from_collection(metrics, workflow_runs)
     )
     dashboard_history._write_history(history, now, workflow_activity)
+    dashboard_history._write_json(
+        dashboard_engagement.STATE_FILE, metrics["engagement_checkpoints"]
+    )
     _write_metrics(dashboard_history._compact_metrics(metrics, now))
     print(
         f"Dashboard metrics updated for @{metrics['account']['handle']} "

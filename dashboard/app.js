@@ -5,6 +5,7 @@ const colours = ["#087fdb", "#df6255", "#138a78", "#e9aa31", "#08a9cf"];
 const charts = {};
 let metrics;
 let selectedTopRange = "30";
+let selectedPerformanceAge = "24";
 let blueskyEmbedLoad;
 const dashboardViews = ["audience", "operations"];
 const historicalViews = {
@@ -1112,12 +1113,101 @@ function renderTopPosts() {
   loadBlueskyEmbeds(container);
 }
 
+function performancePeriod(period) {
+  const end = new Date(`${period.end}T00:00:00Z`);
+  end.setUTCDate(end.getUTCDate() - 1);
+  const start = new Date(`${period.start}T00:00:00Z`);
+  return `${dateFormat.format(start)} to ${dateFormat.format(end)}`;
+}
+
+function renderPerformanceGroups(checkpoint, minimum) {
+  const body = document.querySelector("#performance-comparison-table tbody");
+  body.replaceChildren();
+  const groups = [
+    ...checkpoint.providers.map((item) => ({ ...item, label: displayName(item.provider) })),
+    ...checkpoint.publishing_hours.map((item) => ({ ...item, label: `${item.utc_hour} UTC publishing hour` })),
+  ];
+  groups.forEach((item) => {
+    const row = document.createElement("tr");
+    const ready = item.observed >= minimum;
+    appendCell(row, item.label);
+    appendCell(row, `${item.observed} observed / ${item.missed} missed`);
+    appendCell(row, ready ? metricText(item.mean) : `Needs ${minimum} observations`);
+    appendCell(row, ready ? metricText(item.median) : "--");
+    appendCell(row, ready ? `${percentageFormat.format(item.zero_share)}%` : "--");
+    body.append(row);
+  });
+}
+
+function renderPerformancePosts(posts) {
+  const container = document.getElementById("performance-posts");
+  container.replaceChildren();
+  document.getElementById("performance-posts-empty").hidden = posts.length > 0;
+  posts.forEach((post) => {
+    const article = document.createElement("article");
+    article.className = "performance-post";
+    const text = document.createElement("p");
+    text.textContent = post.text;
+    const observation = document.createElement("p");
+    // Do not round a near-deadline observation up to the excluded boundary.
+    const age = Math.floor(post.age_hours * 100) / 100;
+    observation.textContent = `${numberFormat.format(Object.values(post.engagement).reduce((sum, value) => sum + value, 0))} interactions observed at ${numberFormat.format(age)} hours old (${dateTimeFormat.format(new Date(post.observed_at))}).`;
+    const link = document.createElement("a");
+    link.href = `https://bsky.app/profile/${encodeURIComponent(metrics.account.handle)}/post/${encodeURIComponent(post.uri.split("/").at(-1))}`;
+    link.textContent = "View public joke on Bluesky";
+    article.append(text, observation, link);
+    container.append(article);
+  });
+}
+
+function renderJokePerformance() {
+  const performance = metrics.joke_performance;
+  const checkpoint = performance?.checkpoints?.[selectedPerformanceAge];
+  document.getElementById("performance-content").hidden = !checkpoint;
+  if (!checkpoint) {
+    setText("performance-coverage", "Collecting comparable-age history. Earlier checkpoint counts cannot be reconstructed.");
+    return;
+  }
+  const current = checkpoint.periods.recent;
+  const previous = checkpoint.periods.previous;
+  const band = checkpoint.window_hours.join("–");
+  const coverage = checkpoint.coverage;
+  setText("performance-coverage", `Tracking since ${dateTimeFormat.format(new Date(performance.coverage_started_at))}. ${coverage.observed} observations; ${coverage.missed} missed; ${coverage.pending} pending; ${coverage.before_coverage} checkpoints predate tracking. Receipts retained for ${performance.retention_days} days.`);
+  setText("performance-period", `Publishing cohorts: ${performancePeriod(current)} compared with ${performancePeriod(previous)}. Each period is 30 complete UTC publishing days whose ${band}-hour windows have closed.`);
+  setText("performance-samples", `${current.observed} / ${current.observed + current.missed}`);
+  setText("performance-sample-note", `${current.missed} missed; ${current.before_coverage} before tracking. Previous period: ${previous.observed} observations, ${previous.missed} missed.`);
+  setText("performance-mean", metricText(current.mean));
+  setText("performance-median", metricText(current.median));
+  setText("performance-zero", current.zero_share == null ? "--" : `${percentageFormat.format(current.zero_share)}%`);
+  setText("performance-mean-change", historyComparison(current.mean, previous.mean));
+  setText("performance-median-change", historyComparison(current.median, previous.median));
+  setText("performance-zero-change", historyComparison(current.zero_share, previous.zero_share, true));
+  setText("performance-empty", current.observed ? `Observed sample only, not impressions or causal attribution. All counts below use ${band}-hour observations.` : `Collecting comparable-age history: no ${band}-hour observations in this mature publishing cohort. Missing observations are not zero interactions.`);
+  setText("performance-breakdown", current.observed ? Object.entries(current.engagement).map(([name, count]) => `${name}: ${numberFormat.format(count)}`).join(" · ") : "Interaction breakdown unavailable until a checkpoint is observed.");
+  setText("performance-comparison-note", `Same mature publishing cohort and age band. Descriptive only: providers and UTC publishing hours may have different audiences. Group averages require ${performance.comparison_min_posts} observed posts; missed observations may bias samples. Publishing hour is not an inferred scheduled slot.`);
+  renderPerformanceGroups(checkpoint, performance.comparison_min_posts);
+  renderPerformancePosts(checkpoint.top_posts);
+  const months = checkpoint.months;
+  replaceChart("jokePerformance", document.getElementById("performance-chart"), {
+    type: "line",
+    data: {
+      labels: months.map((item) => `${item.month} (n=${item.observed})`),
+      datasets: [
+        { label: `Mean at ${band} hours`, data: months.map((item) => item.mean), borderColor: colours[0], spanGaps: false },
+        { label: `Median at ${band} hours`, data: months.map((item) => item.median), borderColor: colours[1], spanGaps: false },
+      ],
+    },
+    options: baseOptions(),
+  });
+}
+
 function renderCharts() {
   renderAudienceChart();
   renderActivityChart();
   renderAudienceGrowth();
   renderSocialActivity();
   renderEngagement();
+  renderJokePerformance();
 }
 
 function bindRangeControls() {
@@ -1152,6 +1242,17 @@ function bindRangeControls() {
         item.setAttribute("aria-pressed", String(selected));
       });
       renderTopPosts();
+    });
+  });
+  document.querySelectorAll("[data-performance-age]").forEach((button) => {
+    button.addEventListener("click", () => {
+      selectedPerformanceAge = button.dataset.performanceAge;
+      document.querySelectorAll("[data-performance-age]").forEach((item) => {
+        const selected = item === button;
+        item.classList.toggle("active", selected);
+        item.setAttribute("aria-pressed", String(selected));
+      });
+      renderJokePerformance();
     });
   });
 }
