@@ -539,6 +539,72 @@ summary:focus-visible {
   line-height: 1.6;
 }
 
+.range-control.history-controls {
+  flex-wrap: wrap;
+  gap: 4px;
+  overflow: visible;
+  border: 0;
+  background: transparent;
+}
+
+.range-control.history-controls button {
+  flex: 0 0 auto;
+  padding: 8px 12px;
+  border: 1px solid #b7c7cd;
+  border-radius: 4px;
+  background: var(--white);
+  white-space: nowrap;
+}
+
+.range-control.history-controls button.active {
+  background: var(--navy);
+  color: var(--white);
+}
+
+.history-custom {
+  margin-bottom: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+}
+
+.history-custom[hidden] {
+  display: none;
+}
+
+.history-custom label {
+  display: grid;
+  gap: 6px;
+}
+
+.history-custom input,
+.history-custom button {
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--ink);
+  background: var(--white);
+  font: inherit;
+}
+
+.history-panel {
+  margin-block: 36px;
+  padding-block: 24px;
+  border-block: 1px solid var(--line);
+}
+
+#audience-panel .data-note {
+  color: var(--muted);
+}
+
+.operations-section .history-panel .growth-stat span,
+.operations-section .history-panel .growth-stat small,
+.operations-section .history-panel .chart-title span,
+.operations-section .history-status {
+  color: #b8cedd;
+}
+
 .growth-source {
   min-width: 0;
   padding: 20px;

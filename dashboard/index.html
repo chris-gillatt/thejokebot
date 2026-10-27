@@ -21,14 +21,15 @@
         [role="tabpanel"][hidden] { display: block; }
       </style>
     </noscript>
-    <link rel="stylesheet" href="styles.css?v=23" />
+    <link rel="stylesheet" href="styles.css?v=24" />
     <script
       src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"
       integrity="sha384-jb8JQMbMoBUzgWatfe6COACi2ljcDdZQ2OxczGA3bGNeWe+6DChMTBJemed7ZnvJ"
       crossorigin="anonymous"
       defer
     ></script>
-    <script src="app.js?v=18" defer></script>
+    <script src="history.js?v=1" defer></script>
+    <script src="app.js?v=19" defer></script>
   </head>
   <body>
     <noscript>
@@ -112,13 +113,31 @@
               <p class="eyebrow">Account pulse</p>
               <h2 id="trends-heading">Growth over time</h2>
             </div>
-            <div class="range-control" role="group" aria-label="Chart date range">
+            <div class="range-control history-controls" role="group" aria-label="Audience historical date range">
               <button type="button" data-range="7" aria-pressed="false">7 days</button>
               <button type="button" data-range="30" aria-pressed="true" class="active">30 days</button>
+              <button type="button" data-range="90" aria-pressed="false">90 days</button>
+              <button type="button" data-range="ytd" aria-pressed="false">Year to date</button>
               <button type="button" data-range="all" aria-pressed="false">All</button>
+              <button type="button" data-range="custom" aria-pressed="false">Custom</button>
             </div>
-            <p class="history-status" id="history-status" role="status" hidden></p>
           </div>
+
+          <form id="audience-history-custom" class="history-custom" hidden>
+            <label>First UTC day <input id="audience-history-start" type="date" required /></label>
+            <label>Last UTC day <input id="audience-history-end" type="date" required /></label>
+            <button type="submit">Apply audience period</button>
+          </form>
+          <p id="audience-history-status" class="history-status" role="status" hidden></p>
+          <p id="audience-history-period">Last 30 complete UTC days</p>
+          <p class="data-note">These controls apply to the historical charts and summaries below. Current account counters, rolling source activity, cohort outcomes and top-post controls retain their separately labelled windows.</p>
+          <div class="growth-summary" aria-label="Selected audience period">
+            <div class="growth-stat"><span>Sampled net followers</span><strong id="audience-history-followers">--</strong><small id="audience-history-followers-comparison">Loading comparison</small></div>
+            <div class="growth-stat"><span>Jokes published</span><strong id="audience-history-jokes">--</strong><small id="audience-history-jokes-comparison">Loading comparison</small></div>
+            <div class="growth-stat"><span>Outgoing follows</span><strong id="audience-history-follows">--</strong><small id="audience-history-follows-comparison">Loading comparison</small></div>
+            <div class="growth-stat"><span>Visible engagement change</span><strong id="audience-history-engagement">--</strong><small id="audience-history-engagement-comparison">Loading comparison</small></div>
+          </div>
+          <p id="audience-history-coverage" class="data-note">Historical coverage is being checked.</p>
 
           <div class="chart-grid">
             <article class="chart-block">
@@ -160,6 +179,10 @@
                   </table>
                 </div>
               </details>
+            </article>
+            <article class="chart-block">
+              <div class="chart-title"><h3>Visible engagement over time</h3><span>Sampled retained-joke totals; removed or hidden posts can reduce the series</span></div>
+              <div class="chart-frame"><canvas id="engagement-history-chart"></canvas></div>
             </article>
           </div>
         </div>
@@ -369,6 +392,42 @@
             <strong>Operational pulse</strong>
             <div id="operational-pulse"></div>
           </div>
+
+          <article class="history-panel" aria-labelledby="operational-history-heading">
+            <div class="section-heading">
+              <div><h3 id="operational-history-heading">Operational history</h3><p>Independent of the current seven/30-day operational cards</p></div>
+              <div class="range-control history-controls" role="group" aria-label="Operations historical date range">
+                <button type="button" data-operations-range="7" aria-pressed="false">7 days</button>
+                <button type="button" data-operations-range="30" aria-pressed="true" class="active">30 days</button>
+                <button type="button" data-operations-range="90" aria-pressed="false">90 days</button>
+                <button type="button" data-operations-range="ytd" aria-pressed="false">Year to date</button>
+                <button type="button" data-operations-range="all" aria-pressed="false">All</button>
+                <button type="button" data-operations-range="custom" aria-pressed="false">Custom</button>
+              </div>
+            </div>
+            <form id="operations-history-custom" class="history-custom" hidden>
+              <label>First UTC day <input id="operations-history-start" type="date" required /></label>
+              <label>Last UTC day <input id="operations-history-end" type="date" required /></label>
+              <button type="submit">Apply operations period</button>
+            </form>
+            <p id="operations-history-status" class="history-status" role="status" hidden></p>
+            <p id="operations-history-period">Last 30 complete UTC days</p>
+            <div class="growth-summary" aria-label="Selected operations period">
+              <div class="growth-stat"><span>Observed completed attempts</span><strong id="operations-history-completed">--</strong><small id="operations-history-completed-comparison">Loading comparison</small></div>
+              <div class="growth-stat"><span>Failed attempts</span><strong id="operations-history-failed">--</strong><small id="operations-history-failed-comparison">Loading comparison</small></div>
+              <div class="growth-stat"><span>Workflow success</span><strong id="operations-history-successRate">--</strong><small id="operations-history-successRate-comparison">Loading comparison</small></div>
+              <div class="growth-stat"><span>Posting-run fall-through</span><strong id="operations-history-fallthroughRate">--</strong><small id="operations-history-fallthroughRate-comparison">Loading comparison</small></div>
+            </div>
+            <p id="operations-history-coverage" class="data-note">History loads when this view is opened.</p>
+            <div class="chart-grid">
+              <article class="chart-block"><div class="chart-title"><h3>Workflow failures by day</h3><span>Recorded completed attempts, including retries; no observations are gaps</span></div><div class="chart-frame"><canvas id="workflow-history-chart"></canvas></div></article>
+              <article class="chart-block"><div class="chart-title"><h3>Posting pressure and delivery</h3><span>Daily run pressure versus sampled rolling seven-day slot delivery; rolling windows are never summed</span></div><div class="chart-frame"><canvas id="pressure-history-chart"></canvas></div></article>
+              <article class="chart-block"><div class="chart-title"><h3>Observed day-30 source outcomes</h3><span>Point-in-time cohort observations, not period acquisitions; follow-backs measure existing-follower retention</span></div><div class="chart-frame"><canvas id="source-history-chart"></canvas></div></article>
+            </div>
+            <h4>Recorded maintenance events</h4>
+            <ul id="history-maintenance-events"></ul>
+            <p id="history-maintenance-empty" class="data-note">No completed unfollow events observed in this period. Release or schedule changes are not inferred from activity.</p>
+          </article>
 
           <div class="moderation-block" aria-labelledby="moderation-heading">
             <div class="operations-block-heading">

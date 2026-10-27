@@ -7,6 +7,7 @@ STAGING_DIR="$REPO_ROOT/.agent-tmp/pages"
 required_files=(
   "$REPO_ROOT/dashboard/index.html"
   "$REPO_ROOT/dashboard/app.js"
+  "$REPO_ROOT/dashboard/history.js"
   "$REPO_ROOT/dashboard/styles.css"
   "$REPO_ROOT/dashboard/data/metrics.json"
   "$REPO_ROOT/images/jokebot_cover.png"

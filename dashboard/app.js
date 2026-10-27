@@ -1,15 +1,17 @@
 const DATA_URL = "data/metrics.json";
-const HISTORY_URL = "data/history/daily.json";
 const EMBED_SCRIPT_URL = "https://embed.bsky.app/static/embed.js";
 const AVATAR_ORIGIN = "https://cdn.bsky.app";
 const colours = ["#087fdb", "#df6255", "#138a78", "#e9aa31", "#08a9cf"];
 const charts = {};
 let metrics;
-let historyMetrics;
-let selectedRange = "30";
 let selectedTopRange = "30";
 let blueskyEmbedLoad;
 const dashboardViews = ["audience", "operations"];
+const historicalViews = {
+  audience: { selection: "30", period: null, data: null, revision: 0 },
+  operations: { selection: "30", period: null, data: null, revision: 0 },
+};
+const historyRequests = new Map();
 
 const numberFormat = new Intl.NumberFormat("en-GB");
 const percentageFormat = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 1 });
@@ -60,8 +62,9 @@ function showDashboardView(view) {
   document.querySelectorAll("[data-dashboard-panel]").forEach((panel) => {
     panel.hidden = panel.dataset.dashboardPanel !== selectedView;
   });
-  if (selectedView === "audience") {
-    requestAnimationFrame(() => Object.values(charts).forEach((chart) => chart.resize()));
+  requestAnimationFrame(() => Object.values(charts).forEach((chart) => chart.resize()));
+  if (metrics && selectedView === "operations" && !historicalViews.operations.revision) {
+    void updateHistoricalView("operations", "30");
   }
 }
 
@@ -179,55 +182,202 @@ function renderMetrics() {
   setText("posts-delta", deltaText(current.profile_posts, previous?.profile_posts));
 }
 
-function cutoffDate() {
-  if (selectedRange === "all") return null;
-  const cutoff = new Date(metrics.generated_at);
-  cutoff.setUTCDate(cutoff.getUTCDate() - Number(selectedRange));
-  return cutoff;
-}
-
 function inRange(value) {
-  const cutoff = cutoffDate();
-  return !cutoff || new Date(value) >= cutoff;
-}
-
-function mergeSeries(historical, recent, identity) {
-  const merged = new Map(historical.map((item) => [identity(item), item]));
-  recent.forEach((item) => merged.set(identity(item), item));
-  return [...merged.values()].sort((left, right) =>
-    identity(left).localeCompare(identity(right)),
+  return DashboardHistory.inPeriod(
+    value,
+    historicalViews.audience.period || DashboardHistory.range("30", metrics.generated_at),
   );
 }
 
 function snapshotSeries() {
-  if (selectedRange !== "all" || !historyMetrics) return metrics.snapshots;
-  return mergeSeries(
-    historyMetrics.snapshots,
-    metrics.snapshots,
-    (item) => item.collected_at,
-  );
+  const view = historicalViews.audience;
+  if (!view.data) return metrics.snapshots;
+  const period = view.period;
+  const daily = DashboardHistory.series(view.data, period);
+  const recent = DashboardHistory.range("30", metrics.generated_at).start;
+  return daily.flatMap((day) => {
+    const samples = view.data.snapshots.filter((item) => item.collected_at.slice(0, 10) === day.date);
+    if (!samples.length) {
+      return [{ collected_at: `${day.date}T00:00:00Z`, source: "missing", followers: null, following: null }];
+    }
+    return day.date < recent
+      ? [{ ...samples.at(-1), source: "bluesky_daily" }]
+      : samples;
+  });
 }
 
 function activitySeries() {
-  if (selectedRange !== "all" || !historyMetrics) return metrics.daily_activity;
-  return mergeSeries(historyMetrics.daily_activity, metrics.daily_activity, (item) => item.date);
+  const view = historicalViews.audience;
+  return view.data ? DashboardHistory.series(view.data, view.period) : metrics.daily_activity;
 }
 
-async function loadHistory() {
-  if (historyMetrics) return true;
-  const status = document.getElementById("history-status");
+async function readHistoryJson(url) {
+  if (!historyRequests.has(url)) {
+    historyRequests.set(url, fetch(url).then(async (response) => {
+      if (!response.ok) throw new Error(`History request failed: ${response.status}`);
+      return response.json();
+    }).catch((error) => {
+      historyRequests.delete(url);
+      throw error;
+    }));
+  }
+  return historyRequests.get(url);
+}
+
+function historyComparison(current, previous, rate = false) {
+  if (current == null || previous == null) return "Comparison unavailable";
+  const change = current - previous;
+  if (rate) return `${change > 0 ? "+" : ""}${percentageFormat.format(change)} percentage points vs previous period`;
+  const relative = previous > 0
+    ? ` (${signedNumber(Math.round(change * 1000 / previous) / 10)}%)`
+    : "";
+  return `${signedNumber(change)}${relative} vs previous period (${numberFormat.format(previous)})`;
+}
+
+function renderHistorySummary(viewName) {
+  const view = historicalViews[viewName];
+  const current = DashboardHistory.summary(view.data, view.period);
+  const prior = DashboardHistory.summary(view.data, DashboardHistory.previous(view.period));
+  const end = new Date(`${view.period.end}T00:00:00Z`);
+  end.setUTCDate(end.getUTCDate() - 1);
+  setText(`${viewName}-history-period`, `${dateFormat.format(new Date(`${view.period.start}T00:00:00Z`))} to ${dateFormat.format(end)} · complete UTC days`);
+  const available = DashboardHistory.availability(view.data);
+  const coverage = viewName === "audience"
+    ? `${current.sampledDays}/${view.period.days} days sampled; ${current.activityDays}/${view.period.days} activity days. Loaded audience samples from ${available.audience || "unavailable"}; activity from ${available.activity || "unavailable"}.`
+    : `Loaded workflow observations from ${available.workflows || "unavailable"}; operational snapshots from ${available.operations || "unavailable"}. ${current.postingRuns} posting runs have pressure telemetry.`;
+  setText(`${viewName}-history-coverage`, `${coverage} Gaps are not zeroes. Comparisons use the preceding ${view.period.days} complete days.`);
+  const fields = viewName === "audience"
+    ? ["followers", "jokes", "follows", "engagement"]
+    : ["completed", "failed", "successRate", "fallthroughRate"];
+  fields.forEach((field) => {
+    const rate = field.endsWith("Rate");
+    const value = current[field];
+    const partial = current.observedActivity[field];
+    const displayed = value ?? partial?.total;
+    setText(`${viewName}-history-${field}`, displayed == null ? "--" : `${numberFormat.format(Math.round(displayed * 10) / 10)}${rate ? "%" : ""}`);
+    const comparison = value == null && partial?.total != null
+      ? `Observed subtotal: ${partial.days}/${view.period.days} days; comparison unavailable`
+      : historyComparison(value, prior[field], rate);
+    setText(`${viewName}-history-${field}-comparison`, comparison);
+  });
+}
+
+function renderOperationalHistory() {
+  const view = historicalViews.operations;
+  const daily = DashboardHistory.series(view.data, view.period);
+  const labels = daily.map((item) => item.date);
+  const options = baseOptions();
+  options.plugins.legend.labels.color = "#b8cedd";
+  Object.values(options.scales).forEach((scale) => {
+    scale.ticks = { ...scale.ticks, color: "#b8cedd" };
+    scale.grid.color = "#31516a";
+  });
+  options.scales.y.beginAtZero = true;
+  options.scales.y.ticks.precision = 0;
+  replaceChart("workflowHistory", document.getElementById("workflow-history-chart"), {
+    type: "bar",
+    data: { labels, datasets: [{ label: "Failed workflow attempts", data: daily.map((item) => item.failures), backgroundColor: colours[1] }] },
+    options,
+  });
+  const rates = baseOptions();
+  rates.plugins.legend.labels.color = "#b8cedd";
+  rates.scales.x.ticks.color = "#b8cedd";
+  rates.scales.y = {
+    min: 0, max: 100,
+    ticks: { color: "#b8cedd" },
+    grid: { color: "#31516a" },
+    title: { display: true, text: "Percent", color: "#b8cedd" },
+  };
+  replaceChart("pressureHistory", document.getElementById("pressure-history-chart"), {
+    type: "line",
+    data: {
+      labels,
+      datasets: [
+        { label: "Daily posting-run fall-through", data: daily.map((item) => item.fallthroughRate), borderColor: colours[1], spanGaps: false },
+        { label: "Sampled rolling 7-day slot delivery", data: daily.map((item) => item.deliveryRate), borderColor: colours[0], spanGaps: false },
+      ],
+    },
+    options: rates,
+  });
+  replaceChart("sourceHistory", document.getElementById("source-history-chart"), {
+    type: "line",
+    data: {
+      labels,
+      datasets: ["followback", "interaction", "discovery"].map((source, index) => ({
+        label: source === "followback" ? "Existing follower retention" : `${displayName(source)} reciprocity`,
+        data: daily.map((item) => item.sourceOutcomes[source]),
+        borderColor: colours[index],
+        spanGaps: false,
+      })),
+    },
+    options: rates,
+  });
+  const events = view.data.activity_runs.filter((run) =>
+    run.workflow === "bluesky_unfollow" && run.unfollows > 0 &&
+    DashboardHistory.inPeriod(run.created_at, view.period),
+  ).sort((left, right) => left.created_at.localeCompare(right.created_at));
+  const list = document.getElementById("history-maintenance-events");
+  list.replaceChildren();
+  events.forEach((event) => {
+    const item = document.createElement("li");
+    item.textContent = `${dateTimeFormat.format(new Date(event.created_at))}: ${numberFormat.format(event.unfollows)} unfollows completed`;
+    list.append(item);
+  });
+  document.getElementById("history-maintenance-empty").hidden = events.length > 0;
+}
+
+async function updateHistoricalView(viewName, selection, custom = {}) {
+  const view = historicalViews[viewName];
+  const revision = ++view.revision;
+  const status = document.getElementById(`${viewName}-history-status`);
   status.hidden = false;
-  status.textContent = "Loading all-time history...";
+  status.textContent = "Loading selected and comparison history...";
   try {
-    const response = await fetch(HISTORY_URL);
-    if (!response.ok) throw new Error(`History request failed: ${response.status}`);
-    historyMetrics = await response.json();
+    const index = await readHistoryJson("data/history/index.json");
+    const earliest = index.months?.map((month) => month.first_timestamp).filter(Boolean).sort()[0];
+    if (selection === "all" && !earliest) throw new Error("No archived history is available.");
+    const period = DashboardHistory.range(selection, metrics.generated_at, custom, earliest);
+    const partitions = viewName === "operations"
+      ? await DashboardHistory.loadPartitions(index, period, readHistoryJson)
+      : [];
+    const daily = viewName === "audience" ? await readHistoryJson("data/history/daily.json") : null;
+    const data = DashboardHistory.merge(partitions, metrics, daily);
+    if (revision !== view.revision) return;
+    Object.assign(view, { selection, period, data });
+    const attribute = viewName === "audience" ? "range" : "operationsRange";
+    const selector = viewName === "audience" ? "[data-range]" : "[data-operations-range]";
+    document.querySelectorAll(selector).forEach((button) => {
+      const selected = button.dataset[attribute] === selection;
+      button.classList.toggle("active", selected);
+      button.setAttribute("aria-pressed", String(selected));
+    });
+    renderHistorySummary(viewName);
+    if (viewName === "audience") {
+      renderAudienceChart();
+      renderActivityChart();
+      const dailySeries = DashboardHistory.series(data, period);
+      replaceChart("engagementHistory", document.getElementById("engagement-history-chart"), {
+        type: "line",
+        data: {
+          labels: dailySeries.map((item) => item.date),
+          datasets: [{
+            label: "Visible retained joke interactions",
+            data: dailySeries.map((item) => item.engagement_total),
+            borderColor: colours[0],
+            spanGaps: false,
+          }],
+        },
+        options: baseOptions(),
+      });
+    } else {
+      renderOperationalHistory();
+    }
     status.hidden = true;
-    return true;
   } catch (error) {
+    if (revision !== view.revision) return;
     console.error(error);
-    status.textContent = "All-time history is unavailable. Select All to retry.";
-    return false;
+    historyRequests.clear();
+    status.textContent = `${error.message} Previous charts remain unchanged. Select the period again to retry.`;
   }
 }
 
@@ -255,12 +405,13 @@ function baseOptions() {
 function renderAudienceChart() {
   const allSnapshots = snapshotSeries().filter((item) => inRange(item.collected_at));
   const snapshots = allSnapshots.filter((item) =>
-    ["bluesky_snapshot", "bluesky_daily"].includes(item.source),
+    ["bluesky_snapshot", "bluesky_daily", "missing"].includes(item.source),
   );
   const chartFrame = document.getElementById("audience-chart-frame");
   const chartCanvas = document.getElementById("audience-chart");
   const emptyState = document.getElementById("audience-empty");
-  const hasHistory = snapshots.length >= 2;
+  const measured = snapshots.filter((item) => item.followers != null);
+  const hasHistory = measured.length >= 2;
   chartCanvas.hidden = !hasHistory;
   emptyState.hidden = hasHistory;
   chartFrame.classList.toggle("is-empty", !hasHistory);
@@ -269,7 +420,7 @@ function renderAudienceChart() {
     charts.audience?.destroy();
     delete charts.audience;
   } else {
-    const baseline = snapshots[0];
+    const baseline = measured[0];
     const options = baseOptions();
     options.scales.y.beginAtZero = true;
     options.scales.y.title = { display: true, text: "Change since first sample" };
@@ -287,7 +438,7 @@ function renderAudienceChart() {
         datasets: [
           {
             label: "Followers",
-            data: snapshots.map((item) => item.followers - baseline.followers),
+            data: snapshots.map((item) => item.followers == null ? null : item.followers - baseline.followers),
             absoluteValues: snapshots.map((item) => item.followers),
             borderColor: colours[0],
             backgroundColor: colours[0],
@@ -295,7 +446,7 @@ function renderAudienceChart() {
           },
           {
             label: "Following",
-            data: snapshots.map((item) => item.following - baseline.following),
+            data: snapshots.map((item) => item.following == null ? null : item.following - baseline.following),
             absoluteValues: snapshots.map((item) => item.following),
             borderColor: colours[2],
             backgroundColor: colours[2],
@@ -317,7 +468,7 @@ function renderAudienceChart() {
         ? "Sampled"
         : item.source === "bluesky_daily"
           ? "Daily sample"
-          : "Reconstructed",
+          : item.source === "missing" ? "No sample" : "Reconstructed",
     ]),
   );
 }
@@ -333,7 +484,7 @@ function renderActivityChart() {
       labels: activity.map((item) => dateFormat.format(new Date(`${item.date}T00:00:00Z`))),
       datasets: [
         { label: "Joke posts", data: activity.map((item) => item.joke_posts), backgroundColor: colours[0] },
-        { label: "Follows", data: activity.map((item) => item.follows ?? 0), backgroundColor: colours[2] },
+        { label: "Follows", data: activity.map((item) => item.follows ?? null), backgroundColor: colours[2] },
         { label: "Unfollows", data: activity.map((item) => item.unfollows), backgroundColor: colours[1] },
       ],
     },
@@ -341,7 +492,7 @@ function renderActivityChart() {
   });
   renderTable(
     "activity-table",
-    activity.map((item) => [item.date, item.joke_posts, item.follows ?? 0, item.unfollows]),
+    activity.map((item) => [item.date, metricText(item.joke_posts), metricText(item.follows), metricText(item.unfollows)]),
   );
 }
 
@@ -971,16 +1122,25 @@ function renderCharts() {
 
 function bindRangeControls() {
   document.querySelectorAll("[data-range]").forEach((button) => {
-    button.addEventListener("click", async () => {
-      selectedRange = button.dataset.range;
-      document.querySelectorAll("[data-range]").forEach((item) => {
-        const selected = item === button;
-        item.classList.toggle("active", selected);
-        item.setAttribute("aria-pressed", String(selected));
-      });
-      if (selectedRange === "all") await loadHistory();
-      renderAudienceChart();
-      renderActivityChart();
+    button.addEventListener("click", () => {
+      selectHistoricalPeriod("audience", button.dataset.range);
+    });
+  });
+  document.querySelectorAll("[data-operations-range]").forEach((button) => {
+    button.addEventListener("click", () => {
+      selectHistoricalPeriod("operations", button.dataset.operationsRange);
+    });
+  });
+  ["audience", "operations"].forEach((viewName) => {
+    const form = document.getElementById(`${viewName}-history-custom`);
+    const start = document.getElementById(`${viewName}-history-start`);
+    const end = document.getElementById(`${viewName}-history-end`);
+    const lastComplete = new Date(`${metrics.generated_at.slice(0, 10)}T00:00:00Z`);
+    lastComplete.setUTCDate(lastComplete.getUTCDate() - 1);
+    start.max = end.max = lastComplete.toISOString().slice(0, 10);
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      void updateHistoricalView(viewName, "custom", { start: start.value, end: end.value });
     });
   });
   document.querySelectorAll("[data-top-range]").forEach((button) => {
@@ -994,6 +1154,16 @@ function bindRangeControls() {
       renderTopPosts();
     });
   });
+}
+
+function selectHistoricalPeriod(viewName, selection) {
+  const form = document.getElementById(`${viewName}-history-custom`);
+  form.hidden = selection !== "custom";
+  if (selection === "custom") {
+    document.getElementById(`${viewName}-history-start`).focus();
+    return;
+  }
+  void updateHistoricalView(viewName, selection);
 }
 
 async function initialise() {
@@ -1010,6 +1180,8 @@ async function initialise() {
     renderAutomation();
     renderTopPosts();
     bindRangeControls();
+    void updateHistoricalView("audience", "30");
+    if (dashboardViewFromHash() === "operations") void updateHistoricalView("operations", "30");
   } catch (error) {
     console.error(error);
     document.getElementById("page-error").hidden = false;

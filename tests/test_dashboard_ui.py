@@ -96,9 +96,9 @@ class DashboardUiTests(unittest.TestCase):
             self.assertEqual(panel.attributes["aria-labelledby"], tab.attributes["id"])
 
     def test_range_controls_have_one_pressed_button_each(self):
-        for attribute in ("data-range", "data-top-range"):
+        for attribute in ("data-range", "data-operations-range", "data-top-range"):
             buttons = [node for node in self.nodes if attribute in node.attributes]
-            self.assertEqual(len(buttons), 3)
+            self.assertEqual(len(buttons), 3 if attribute == "data-top-range" else 6)
             self.assertEqual(
                 sum(
                     button.attributes.get("aria-pressed") == "true"
@@ -448,6 +448,7 @@ class DashboardUiTests(unittest.TestCase):
             ".nojekyll",
             "index.html",
             "app.js",
+            "history.js",
             "styles.css",
             "data/metrics.json",
             "data/history/daily.json",

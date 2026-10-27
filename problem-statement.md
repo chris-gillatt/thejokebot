@@ -46,6 +46,7 @@ Do not claim source-specific post engagement, impressions, sentiment, demographi
 
 | Decision | Reason |
 |---|---|
+| Use independent historical controls and complete UTC-day comparisons | Keep Audience and Operations periods separate; preserve explicit scopes for current counters and cohort checkpoints, and never turn missing history into zeroes or sum rolling delivery windows. |
 | Separate completed outgoing follows from observed incoming relationship outcomes | Follow completion is operational execution, not follower acquisition; show cohort sample sizes and derive protection durations from collected data. |
 | Show specific operational alert reasons and available workflow/run details | Distinguish repeated CI failures, overdue joke-request checks and uncertain state persistence without implying that Python assertions or posting necessarily failed. |
 | Keep state files instead of a database | Current operational scale does not justify a migration. |
