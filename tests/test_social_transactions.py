@@ -8,7 +8,7 @@ from unittest import mock
 import pytest
 import requests
 
-from thejokebot import social_transactions, state
+from thejokebot import state_transactions, state
 from thejokebot.commands import follow_back, follow_interactors, interaction_likes
 from thejokebot.commands import joke_requests, starter_pack_attribution
 
@@ -103,7 +103,7 @@ def test_failed_transaction_does_not_mutate_working_state(social_file):
     before = copy.deepcopy(working)
     social_file.write_text("{broken", encoding="utf-8")
     with pytest.raises(state.StateReadError):
-        social_transactions.apply(
+        state_transactions.apply(
             working, lambda latest: state.record_liked_reply_uri(latest, "new")
         )
     assert working == before
@@ -116,8 +116,8 @@ def test_checkpoint_validation_error_cannot_be_swallowed_as_api_error(social_fil
     with mock.patch.object(
         state, "update_state", side_effect=ValueError("invalid state")
     ):
-        with pytest.raises(social_transactions.CheckpointError):
-            social_transactions.apply(
+        with pytest.raises(state_transactions.CheckpointError):
+            state_transactions.apply(
                 working, lambda latest: state.record_liked_reply_uri(latest, "new")
             )
     assert working == before

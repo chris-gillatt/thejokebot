@@ -12,7 +12,7 @@ import requests
 from colorama import Fore, Style
 
 from thejokebot import state as bot_state
-from thejokebot import social_transactions
+from thejokebot import state_transactions
 from thejokebot.runtime import get_nested_value, retry_network_call
 
 _WINDOW_DAYS = 30
@@ -245,5 +245,5 @@ def track_starter_pack_follows(
                 )
             bot_state.record_starter_pack_attribution_scan(latest, **scan)
 
-        social_transactions.apply(state, record)
+        state_transactions.apply(state, record)
     return count

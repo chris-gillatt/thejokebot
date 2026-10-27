@@ -26,10 +26,6 @@ This is the operating brief for open work and lasting decisions. See the [README
 
 Report-resolution duration should use newly observed aggregate lifecycle events only. Do not infer it from legacy identifier-only state. Add it once there is sufficient history, with a producer-to-collector test and desktop/mobile dashboard verification.
 
-### State Transactions
-
-Unfollow reconciliation and social-processing checkpoints now use domain-scoped locked transactions. Review remaining direct state saves in report processing for the same migration. Mutations are interleaved with network actions, so preserve existing checkpoints and idempotency rather than doing a mechanical rewrite.
-
 ### Transport Review
 
 Retain the working transport override until an authenticated login from a GitHub Actions runner proves native SDK transport is reliable, or a new block requires a replacement. Evaluate dependency and deployment implications before considering `curl_cffi`.
@@ -44,6 +40,7 @@ Do not claim source-specific post engagement, impressions, sentiment, demographi
 |---|---|
 | Keep state files instead of a database | Current operational scale does not justify a migration. |
 | Keep synchronous command execution | No throughput requirement justifies an async rewrite. |
+| Use domain-scoped locked transactions for runtime state mutations | Preserve newer state while retaining confirmed-action receipts, retry queues and notification checkpoints. |
 | Change workflow schedules only for observed needs | Current cadence and action caps are safety controls. |
 | Retain encoded joke state | Avoid fragile comparisons and indexing raw joke text. |
 | Do not integrate HumorAPI | Content use and storage terms are unsuitable. |

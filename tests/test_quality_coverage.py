@@ -9,6 +9,8 @@ from unittest import mock
 
 import atproto_client.exceptions
 import requests
+import pytest
+from thejokebot import state as bot_state
 
 from scripts import update_provider_health
 from thejokebot import denylist
@@ -20,6 +22,12 @@ from thejokebot.commands import unfollow
 from thejokebot.commands import validate_runtime_config
 from thejokebot.commands import validate_unfollow_ignore
 from thejokebot.commands import verify_latest_joke_post
+
+
+@pytest.fixture(autouse=True)
+def isolated_report_state(request, tmp_path, monkeypatch):
+    if request.cls is not None and request.cls.__name__ == "ReportCommandCoverageTests":
+        monkeypatch.setattr(bot_state, "STATE_FILE", str(tmp_path / "bot_state.json"))
 
 
 class DenylistCoverageTests(unittest.TestCase):

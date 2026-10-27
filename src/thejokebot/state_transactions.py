@@ -1,4 +1,4 @@
-"""Checkpoint explicit social operations without writing stale domain snapshots."""
+"""Checkpoint explicit state operations without writing stale domain snapshots."""
 
 from collections.abc import Callable
 
@@ -19,5 +19,5 @@ def apply(
     try:
         bot_state.update_state(operation, domains=domains)
     except ValueError as exc:
-        raise CheckpointError(f"Could not checkpoint social state: {exc}") from exc
+        raise CheckpointError(f"Could not checkpoint state: {exc}") from exc
     operation(state)

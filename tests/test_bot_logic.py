@@ -15,7 +15,7 @@ from unittest import mock
 import atproto_client.exceptions
 import requests
 import pytest
-from thejokebot import social_transactions
+from thejokebot import state_transactions
 from thejokebot import blocks as blocks
 from thejokebot import runtime as runtime
 from thejokebot import config as runtime_config
@@ -58,10 +58,11 @@ def local_social_checkpoints(request, monkeypatch):
         "JokeRequestReplyTests",
         "FollowBackTests",
         "FollowInteractorsTests",
+        "ApprovedReportDeletionTests",
     }
     if request.cls is not None and request.cls.__name__ in classes:
         monkeypatch.setattr(
-            social_transactions,
+            state_transactions,
             "apply",
             lambda state, operation, **kwargs: operation(state),
         )
@@ -2200,6 +2201,10 @@ class ReportParsingTests(unittest.TestCase):
 
     def test_acknowledge_report_calls_send_post_with_reply_ref(self):
         client = mock.Mock()
+        client.me.did = "did:plc:bot"
+        client.get_post_thread.return_value = SimpleNamespace(
+            thread=SimpleNamespace(post=SimpleNamespace(uri="at://reply/1"), replies=[])
+        )
         proposal = {
             "source_reply_uri": "at://reply/1",
             "reply_cid": "cid1",

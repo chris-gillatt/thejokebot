@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: "40 */4 * * *"  # Runs every 4 hours (UTC), offset from other state writers
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Preview report collection without account actions, checkpoint writes or PR creation
+        type: boolean
+        default: false
 
 concurrency:
   group: moderation_state_writer
@@ -48,7 +53,9 @@ jobs:
         run: scripts/restore_bluesky_session.sh
 
       - name: Process #report replies
+        id: reports
         env:
+          BLUESKY_DRY_RUN: ${{ inputs.dry_run && 'true' || 'false' }}
           BLUESKY_USERNAME: ${{ vars.BLUESKY_USERNAME }}
           BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
           BLUESKY_PASSWORD_SOURCE: app_password
@@ -72,7 +79,9 @@ jobs:
           key: bluesky-session-v2-${{ github.ref_name }}-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Persist report checkpoint state
+        if: always() && (steps.reports.outcome == 'success' || steps.reports.outcome == 'failure') && !inputs.dry_run
         run: |
+          python -c 'import json; from pathlib import Path; payload = json.loads(Path("state/moderation_state.json").read_text()); assert isinstance(payload, dict), "Moderation state must be a JSON object"'
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           python scripts/persist_workflow_state.py \
@@ -80,6 +89,7 @@ jobs:
             state/moderation_state.json
 
       - name: Create denylist PRs for new reports
+        if: success() && !inputs.dry_run
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           BLUESKY_REPORT_OUTPUT: .agent-tmp/report_proposals.json

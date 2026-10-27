@@ -12,7 +12,7 @@ from colorama import Fore, Style
 
 from thejokebot import config as runtime_config
 from thejokebot import state as bot_state
-from thejokebot import social_transactions
+from thejokebot import state_transactions
 from thejokebot.runtime import get_nested_value, mask_sensitive, retry_network_call
 
 _CONFIG = runtime_config.get_follows_and_likes_config()
@@ -179,7 +179,7 @@ def like_replies(
             break
 
     if not dry_run and completed_scan:
-        social_transactions.apply(state, bot_state.set_likes_checked_now)
+        state_transactions.apply(state, bot_state.set_likes_checked_now)
     summary["interactions_liked"] = liked_count
     return liked_count
 
@@ -190,4 +190,4 @@ def _checkpoint_likes(state, uris):
             bot_state.record_liked_reply_uri(latest, uri)
         bot_state.prune_liked_reply_uris(latest)
 
-    social_transactions.apply(state, record)
+    state_transactions.apply(state, record)

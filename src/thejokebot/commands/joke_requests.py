@@ -12,7 +12,7 @@ from thejokebot import config as runtime_config
 from thejokebot import denylist as joke_denylist
 from thejokebot import providers as joke_providers
 from thejokebot import state as bot_state
-from thejokebot import social_transactions
+from thejokebot import state_transactions
 from thejokebot.commands import post_joke as joke_posting
 from thejokebot.runtime import get_nested_value, mask_sensitive, retry_network_call
 
@@ -187,7 +187,7 @@ def _checkpoint_reply(state, uri, *, failures=(), pool_size=None):
         bot_state.prune_replied_joke_request_uris(latest)
 
     domains = ("posting", "social") if pool_size is not None else "social"
-    social_transactions.apply(state, record, domains=domains)
+    state_transactions.apply(state, record, domains=domains)
 
 
 def _checkpoint_scan(state, upper_epoch, upper_boundary_uris):
@@ -202,7 +202,7 @@ def _checkpoint_scan(state, upper_epoch, upper_boundary_uris):
                 latest, checkpoint, boundary | upper_boundary_uris
             )
 
-    social_transactions.apply(state, record)
+    state_transactions.apply(state, record)
 
 
 def reply_to_joke_requests(client, username, state, dry_run, summary=None):

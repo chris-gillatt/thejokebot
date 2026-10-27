@@ -14,6 +14,7 @@ import atproto_client.exceptions
 from thejokebot import config as runtime_config
 from thejokebot import denylist as joke_denylist
 from thejokebot import state as bot_state
+from thejokebot import report_transactions, state_transactions
 from atproto import models
 from thejokebot.runtime import (
     get_int_env,
@@ -21,6 +22,7 @@ from thejokebot.runtime import (
     login_client,
     mask_sensitive,
     retry_network_call,
+    get_runtime_controls,
 )
 from thejokebot.paths import AGENT_TMP_DIR
 
@@ -178,6 +180,24 @@ def _delete_post(client, post_uri: str) -> tuple[bool, bool]:
         return False, False
 
 
+def _has_acknowledgement(client, reply_uri):
+    response = retry_network_call(
+        lambda: client.get_post_thread(uri=reply_uri, depth=1),
+        description="verifying report acknowledgement thread",
+    )
+    thread = get_nested_value(response, "thread")
+    bot_did = get_nested_value(client, "me", "did")
+    if get_nested_value(thread, "post", "uri") != reply_uri or not isinstance(
+        bot_did, str
+    ):
+        return None
+    return any(
+        get_nested_value(reply, "post", "author", "did") == bot_did
+        and get_nested_value(reply, "post", "record", "text") == _ACK_TEXT
+        for reply in get_nested_value(thread, "replies") or []
+    )
+
+
 def acknowledge_report(client, proposal: dict) -> tuple[bool, bool]:
     """
     Reply to a #report notification to acknowledge receipt to the reporter.
@@ -198,6 +218,11 @@ def acknowledge_report(client, proposal: dict) -> tuple[bool, bool]:
     masked_reply_uri = mask_sensitive(reply_uri)
 
     try:
+        existing_ack = _has_acknowledgement(client, reply_uri)
+        if existing_ack is None:
+            return False, True
+        if existing_ack:
+            return True, False
         reply_ref = models.AppBskyFeedPost.ReplyRef(
             parent=models.ComAtprotoRepoStrongRef.Main(uri=reply_uri, cid=reply_cid),
             root=models.ComAtprotoRepoStrongRef.Main(uri=root_uri, cid=root_cid),
@@ -205,6 +230,7 @@ def acknowledge_report(client, proposal: dict) -> tuple[bool, bool]:
         retry_network_call(
             lambda: client.send_post(text=_ACK_TEXT, reply_to=reply_ref),
             description=f"acknowledging report {masked_reply_uri}",
+            max_attempts=1,
         )
         return True, False
     except (
@@ -247,12 +273,14 @@ def delete_approved_report_posts(client, denylist: dict, state: dict) -> int:
         success, should_retry = _delete_post(client, uri)
         masked_uri = mask_sensitive(uri)
         if success:
-            bot_state.record_deleted_post_uri(state, uri)
+            report_transactions.receipt(state, uri, deleted=True)
+            already_deleted.add(uri)
             deleted_count += 1
             print(f"Deleted approved report post: {masked_uri}")
         elif not should_retry:
             # Mark permanent failures to avoid retrying forever
-            bot_state.record_deleted_post_uri(state, uri)
+            report_transactions.receipt(state, uri, deleted=True)
+            already_deleted.add(uri)
             print(f"Recorded permanent failure for: {masked_uri}")
 
     return deleted_count
@@ -317,6 +345,7 @@ def _process_report_notification(
     if not notification_uri:
         return None
     if notification_uri in scan_context["processed_uris"]:
+        scan_context["changes"]["resolved"].add(notification_uri)
         bot_state.clear_unresolved_notification_attempt(state, notification_uri)
         return None
 
@@ -328,10 +357,12 @@ def _process_report_notification(
         client,
     )
     if should_mark:
+        scan_context["changes"]["resolved"].add(notification_uri)
         scan_context["processed_notifications"].add(notification_uri)
         bot_state.clear_unresolved_notification_attempt(state, notification_uri)
         return proposal
 
+    scan_context["changes"]["attempted"].append(notification_uri)
     unresolved_attempts = bot_state.increment_unresolved_notification_attempt(
         state, notification_uri
     )
@@ -348,7 +379,7 @@ def _process_report_notification(
 
 
 def collect_report_proposals(
-    client, state: dict, denylisted_b64s: set[str]
+    client, state: dict, denylisted_b64s: set[str], changes: dict | None = None
 ) -> tuple[list[dict], set[str], int]:
     """
     Collect new denylist proposals from reply notifications.
@@ -375,6 +406,14 @@ def collect_report_proposals(
         DEFAULT_MAX_UNRESOLVED_ATTEMPTS,
         minimum=1,
     )
+    if changes is None:
+        changes = {}
+    changes.update(
+        resolved=set(),
+        attempted=[],
+        max_attempts=max_unresolved_attempts,
+        complete=False,
+    )
 
     cursor = None
     proposals: list[dict] = []
@@ -387,6 +426,7 @@ def collect_report_proposals(
         "seen_b64s": seen_b64s,
         "processed_notifications": processed_notifications,
         "max_unresolved_attempts": max_unresolved_attempts,
+        "changes": changes,
     }
 
     pages_fetched = 0
@@ -428,6 +468,7 @@ def collect_report_proposals(
 
         cursor = get_nested_value(response, "cursor")
         if not cursor:
+            changes["complete"] = True
             break
 
     return proposals, processed_notifications, pages_fetched
@@ -435,9 +476,11 @@ def collect_report_proposals(
 
 def _write_output(output_path: Path, payload: dict) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(output_path, "w", encoding="utf-8") as f:
+    temporary_path = output_path.with_suffix(output_path.suffix + ".tmp")
+    with open(temporary_path, "w", encoding="utf-8") as f:
         json.dump(payload, f, indent=2)
         f.write("\n")
+    os.replace(temporary_path, output_path)
 
 
 def main() -> None:
@@ -448,46 +491,19 @@ def main() -> None:
     denylisted_b64s = joke_denylist.get_denylisted_b64s(denylist)
 
     client, _ = login_client()
+    dry_run = get_runtime_controls()["dry_run"]
 
-    deleted_count = delete_approved_report_posts(client, denylist, state)
+    deleted_count = (
+        0 if dry_run else delete_approved_report_posts(client, denylist, state)
+    )
 
+    changes = {}
     proposals, processed_notifications, pages_fetched = collect_report_proposals(
         client,
         state,
         denylisted_b64s,
+        changes,
     )
-
-    for notification_uri in processed_notifications:
-        bot_state.record_processed_notification(state, notification_uri)
-    bot_state.prune_processed_notifications(state)
-    bot_state.prune_unresolved_notification_attempts(state)
-    bot_state.set_reports_checked_now(state)
-
-    acknowledged_uris = bot_state.get_acknowledged_report_uris(state)
-    ack_count = 0
-    for proposal in proposals:
-        reply_uri = proposal.get("source_reply_uri")
-        if reply_uri and reply_uri not in acknowledged_uris:
-            success, should_retry = acknowledge_report(client, proposal)
-            masked_reply_uri = mask_sensitive(reply_uri)
-            if success:
-                bot_state.record_acknowledged_report_uri(state, reply_uri)
-                ack_count += 1
-                print(f"Acknowledged report reply: {masked_reply_uri}")
-            elif not should_retry:
-                # Mark permanent failures to avoid retrying forever
-                bot_state.record_acknowledged_report_uri(state, reply_uri)
-                print(f"Recorded permanent failure for: {masked_reply_uri}")
-
-    unresolved_count = len(bot_state.get_unresolved_notification_attempts(state))
-    bot_state.record_moderation_activity(
-        state,
-        proposals=len(proposals),
-        acknowledgements=ack_count,
-        approved_removals=deleted_count,
-        unresolved=unresolved_count,
-    )
-    bot_state.save_state(state, domains="moderation")
 
     payload = {
         "source": "app.bsky.notification.listNotifications",
@@ -496,6 +512,41 @@ def main() -> None:
         "proposals": proposals,
     }
     _write_output(output_path, payload)
+    if not dry_run:
+        report_transactions.scan(state, processed_notifications, changes, proposals)
+
+    acknowledged_uris = bot_state.get_acknowledged_report_uris(state)
+    ack_count = 0
+    pending = list(report_transactions.pending_acknowledgements(state).values())
+    for proposal in pending if not dry_run else []:
+        reply_uri = proposal.get("source_reply_uri")
+        if reply_uri and reply_uri not in acknowledged_uris:
+            success, should_retry = acknowledge_report(client, proposal)
+            masked_reply_uri = mask_sensitive(reply_uri)
+            if success:
+                report_transactions.receipt(state, reply_uri)
+                acknowledged_uris.add(reply_uri)
+                ack_count += 1
+                print(f"Acknowledged report reply: {masked_reply_uri}")
+            elif not should_retry:
+                # Mark permanent failures to avoid retrying forever
+                report_transactions.receipt(state, reply_uri)
+                acknowledged_uris.add(reply_uri)
+                print(f"Recorded permanent failure for: {masked_reply_uri}")
+
+    unresolved_count = len(bot_state.get_unresolved_notification_attempts(state))
+    if not dry_run:
+        state_transactions.apply(
+            state,
+            lambda latest: bot_state.record_moderation_activity(
+                latest,
+                proposals=len(proposals),
+                acknowledgements=ack_count,
+                approved_removals=deleted_count,
+                unresolved=len(bot_state.get_unresolved_notification_attempts(latest)),
+            ),
+            domains="moderation",
+        )
 
     print(f"Processed notifications: {len(processed_notifications)}")
     print(f"New report proposals: {len(proposals)}")

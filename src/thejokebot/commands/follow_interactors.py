@@ -11,7 +11,7 @@ from colorama import Fore, Style
 
 from thejokebot import config as runtime_config
 from thejokebot import state as bot_state
-from thejokebot import social_transactions
+from thejokebot import state_transactions
 from thejokebot.followers import fetch_paginated_data
 from thejokebot.runtime import get_nested_value, mask_sensitive, retry_network_call
 
@@ -101,7 +101,7 @@ def _checkpoint_follow(state, did):
         bot_state.record_acquisition(latest, did, "interaction")
         bot_state.prune_follow_grace(latest)
 
-    social_transactions.apply(state, record)
+    state_transactions.apply(state, record)
 
 
 def _follow_did_list(client, state, to_follow, dry_run, action_delay_seconds):
