@@ -1,6 +1,7 @@
 """Persist report receipts and resolution operations against fresh moderation state."""
 
 import copy
+import hashlib
 import time
 
 from thejokebot import state as bot_state
@@ -13,6 +14,58 @@ ACK_FIELDS = (
     "root_cid",
     "source_post_uri",
 )
+PROPOSAL_FIELDS = (
+    "b64",
+    "source_provider",
+    "source_post_uri",
+    "source_reply_uri",
+    "reason",
+)
+
+
+def proposal_key(proposal):
+    target = (
+        "jokebook"
+        if proposal.get("source_provider") == "jokebot_jokebook"
+        else "denylist"
+    )
+    return hashlib.sha256(f"{target}:{proposal['b64']}".encode()).hexdigest()
+
+
+def pending_proposals(state):
+    return state.setdefault("reports", {}).setdefault("pending_proposals", {})
+
+
+def _queue_proposals(state, proposals):
+    receipts = state.setdefault("reports", {}).setdefault("proposal_deliveries", {})
+    pending = pending_proposals(state)
+    for proposal in proposals:
+        if not isinstance(proposal.get("b64"), str) or not proposal["b64"]:
+            continue
+        key = proposal_key(proposal)
+        if key not in receipts:
+            pending.setdefault(
+                key, {field: proposal.get(field) for field in PROPOSAL_FIELDS}
+            )
+
+
+def enqueue_proposals(state, proposals):
+    state_transactions.apply(
+        state, lambda latest: _queue_proposals(latest, proposals), domains="moderation"
+    )
+
+
+def confirm_delivery(state, proposal, proof):
+    key = proposal_key(proposal)
+
+    def record(latest):
+        pending_proposals(latest).pop(key, None)
+        receipts = latest["reports"].setdefault("proposal_deliveries", {})
+        receipts[key] = {"number": proof["number"], "state": proof["state"]}
+        while len(receipts) > 5000:
+            del receipts[next(iter(receipts))]
+
+    state_transactions.apply(state, record, domains="moderation")
 
 
 def pending_acknowledgements(state):
@@ -49,6 +102,7 @@ def scan(state, processed, changes, proposals):
             bot_state.record_processed_notification(latest, uri)
             bot_state.clear_unresolved_notification_attempt(latest, uri)
         _queue_acknowledgements(latest, proposals)
+        _queue_proposals(latest, proposals)
         bot_state.prune_processed_notifications(latest)
         bot_state.prune_unresolved_notification_attempts(latest)
         if changes.get("complete"):

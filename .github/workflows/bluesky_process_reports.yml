@@ -26,6 +26,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Python
@@ -89,6 +90,7 @@ jobs:
             state/moderation_state.json
 
       - name: Create denylist PRs for new reports
+        id: delivery
         if: success() && !inputs.dry_run
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -97,3 +99,12 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           thejokebot-create-report-prs
+
+      - name: Persist report delivery receipts
+        if: always() && (steps.delivery.outcome == 'success' || steps.delivery.outcome == 'failure') && !inputs.dry_run
+        run: |
+          test "$(git branch --show-current)" = main
+          python -c 'import json; from pathlib import Path; payload = json.loads(Path("state/moderation_state.json").read_text()); assert isinstance(payload, dict), "Moderation state must be a JSON object"'
+          python scripts/persist_workflow_state.py \
+            --commit-message "chore(reports): persist verified proposal deliveries; GH run: ${GITHUB_RUN_NUMBER}" \
+            state/moderation_state.json

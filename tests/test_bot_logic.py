@@ -2013,7 +2013,7 @@ class ReportPrRoutingTests(unittest.TestCase):
 
         run_command.assert_has_calls(
             [
-                mock.call(["git", "checkout", "main"], check=False),
+                mock.call(["git", "checkout", "main"]),
                 mock.call(
                     ["git", "branch", "-D", "chore/report-denylist-abc"],
                     check=False,
@@ -2021,39 +2021,23 @@ class ReportPrRoutingTests(unittest.TestCase):
             ]
         )
 
-    def test_has_open_pr_for_branch_fails_closed_when_gh_fails(self):
+    def test_review_lookup_exposes_authentication_failure(self):
         result = subprocess.CompletedProcess(
-            args=["gh", "pr", "list"],
-            returncode=1,
-            stdout="",
-            stderr="authentication failed",
+            [], 1, stdout="", stderr="authentication failed"
         )
-
-        with mock.patch(
-            "thejokebot.commands.create_report_prs.run_command", return_value=result
+        with mock.patch.object(
+            bluesky_create_report_prs, "run_command", return_value=result
         ):
-            has_open_pr = bluesky_create_report_prs.has_open_pr_for_branch(
-                "chore/report-denylist-abc"
-            )
+            with self.assertRaises(subprocess.CalledProcessError):
+                bluesky_create_report_prs.find_review_pr("chore/report-denylist-abc")
 
-        self.assertTrue(has_open_pr)
-
-    def test_has_open_pr_for_branch_fails_closed_on_invalid_json(self):
-        result = subprocess.CompletedProcess(
-            args=["gh", "pr", "list"],
-            returncode=0,
-            stdout="not json",
-            stderr="",
-        )
-
-        with mock.patch(
-            "thejokebot.commands.create_report_prs.run_command", return_value=result
+    def test_review_lookup_exposes_invalid_json(self):
+        result = subprocess.CompletedProcess([], 0, stdout="not json")
+        with mock.patch.object(
+            bluesky_create_report_prs, "run_command", return_value=result
         ):
-            has_open_pr = bluesky_create_report_prs.has_open_pr_for_branch(
-                "chore/report-denylist-abc"
-            )
-
-        self.assertTrue(has_open_pr)
+            with self.assertRaises(json.JSONDecodeError):
+                bluesky_create_report_prs.find_review_pr("chore/report-denylist-abc")
 
     def test_create_pr_for_proposal_cleans_up_after_push_failure(self):
         proposal = {
@@ -2077,8 +2061,8 @@ class ReportPrRoutingTests(unittest.TestCase):
             return_value=False,
         ):
             with mock.patch(
-                "thejokebot.commands.create_report_prs.has_open_pr_for_branch",
-                return_value=False,
+                "thejokebot.commands.create_report_prs.find_review_pr",
+                side_effect=[None, {"number": 1}],
             ):
                 with mock.patch(
                     "thejokebot.commands.create_report_prs.joke_denylist.load_denylist",
@@ -2098,11 +2082,13 @@ class ReportPrRoutingTests(unittest.TestCase):
                                     "thejokebot.commands.create_report_prs.run_command",
                                     side_effect=_run_side_effect,
                                 ):
-                                    result = bluesky_create_report_prs.create_pr_for_proposal(
-                                        proposal
-                                    )
+                                    with self.assertRaises(
+                                        subprocess.CalledProcessError
+                                    ):
+                                        bluesky_create_report_prs.create_pr_for_proposal(
+                                            proposal
+                                        )
 
-        self.assertFalse(result)
         cleanup.assert_called_once_with(branch_name)
 
     def test_create_pr_for_proposal_returns_branch_after_creating_pr(self):
@@ -2117,8 +2103,8 @@ class ReportPrRoutingTests(unittest.TestCase):
                 return_value=False,
             ),
             mock.patch(
-                "thejokebot.commands.create_report_prs.has_open_pr_for_branch",
-                return_value=False,
+                "thejokebot.commands.create_report_prs.find_review_pr",
+                side_effect=[None, {"number": 1}],
             ),
             mock.patch(
                 "thejokebot.commands.create_report_prs._stage_denylist_change",

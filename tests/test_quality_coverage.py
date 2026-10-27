@@ -453,14 +453,19 @@ class ReportCommandCoverageTests(unittest.TestCase):
                     create_report_prs, "create_pr_for_proposal", return_value="branch"
                 ),
             ):
-                create_report_prs.main()
+                with mock.patch.object(
+                    create_report_prs,
+                    "find_review_pr",
+                    return_value={"number": 1, "state": "OPEN"},
+                ):
+                    create_report_prs.main()
 
     def test_create_pr_handles_missing_existing_and_command_failure(self):
         self.assertIsNone(create_report_prs.create_pr_for_proposal({}))
         with mock.patch.object(
-            create_report_prs, "has_remote_branch", return_value=True
+            create_report_prs, "find_review_pr", return_value={"number": 1}
         ):
-            self.assertIsNone(create_report_prs.create_pr_for_proposal({"b64": "one"}))
+            self.assertTrue(create_report_prs.create_pr_for_proposal({"b64": "one"}))
 
     def test_create_report_storage_and_staging_helpers(self):
         completed = subprocess.CompletedProcess([], 0, stdout="", stderr="")
@@ -503,16 +508,15 @@ class ReportCommandCoverageTests(unittest.TestCase):
             mock.patch.object(
                 create_report_prs, "has_remote_branch", return_value=False
             ),
-            mock.patch.object(
-                create_report_prs, "has_open_pr_for_branch", return_value=False
-            ),
+            mock.patch.object(create_report_prs, "find_review_pr", return_value=None),
             mock.patch.object(
                 create_report_prs,
                 "run_command",
                 side_effect=subprocess.CalledProcessError(1, "git"),
             ),
         ):
-            self.assertIsNone(create_report_prs.create_pr_for_proposal({"b64": "one"}))
+            with self.assertRaises(subprocess.CalledProcessError):
+                create_report_prs.create_pr_for_proposal({"b64": "one"})
 
     def test_process_reports_main_persists_summary_and_output(self):
         proposal = {"source_reply_uri": "at://reply"}
