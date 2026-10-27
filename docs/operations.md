@@ -67,6 +67,8 @@ Each run samples one page of up to `follow_fellows.search_limit` posts (at most 
 
 Discovery requires a complete following-list read and successful saved-preference/feed reads before following anyone. A failed or truncated prerequisite read aborts the run without follow actions. No saved custom feeds is a valid result and leaves hashtag discovery active. Dispatch `bluesky_follow_fellows` with `dry_run=true` to preview candidates without following accounts or changing social state; local runs can use `BLUESKY_DRY_RUN=true`.
 
+Unfollow runs commit grace reconciliation and candidate selection against fresh social state in a locked transaction before making changes to Bluesky. Each confirmed unfollow is checkpointed immediately in a fresh transaction; a later failure or throttle cannot discard earlier confirmed history or overwrite newer unrelated social fields. A checkpoint persistence failure stops the run. Dry runs preview reconciliation without saving social state. Existing workflow concurrency still serialises social jobs; local file locks do not replace that control.
+
 To enforce account blocks, set private repository variable `BLUESKY_BLOCK_DIDS` to one stable DID per line, optionally followed by a handle comment. The social workflow restores missing blocks but never unblocks anyone. Removing a DID from the variable stops enforcing it; unblock manually on Bluesky if appropriate.
 
 To prevent future automatic follows of an account, use its stable DID in `unfollow_history`, not a handle-based list. Do not edit state during a concurrent scheduled write:

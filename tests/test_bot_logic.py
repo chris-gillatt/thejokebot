@@ -1147,7 +1147,7 @@ class UnfollowIgnoreValidationTests(unittest.TestCase):
                 "nocontextbritss.bsky.social",
             }.issubset(resolved_handles)
         )
-        save_state.assert_called_once_with(state, domains="social")
+        save_state.assert_not_called()
 
     def test_load_source_list_uri_returns_empty_when_file_missing(self):
         missing_path = pathlib.Path("/tmp/does-not-exist-jokebot-starter-pack.json")
@@ -1231,7 +1231,7 @@ class UnfollowIgnoreValidationTests(unittest.TestCase):
             execute_unfollow_loop.call_args.args[2],
             [],
         )
-        save_state.assert_called_once_with(state, domains="social")
+        save_state.assert_not_called()
 
 
 class StarterPackManagerTests(unittest.TestCase):

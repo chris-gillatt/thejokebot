@@ -28,7 +28,7 @@ Report-resolution duration should use newly observed aggregate lifecycle events 
 
 ### State Transactions
 
-Review remaining direct state saves in report, social and unfollow workflows for a domain-scoped locked transaction migration. Mutations are interleaved with network actions, so preserve existing checkpoints and idempotency rather than doing a mechanical rewrite.
+Unfollow reconciliation and confirmed-action checkpoints now use domain-scoped locked transactions. Review remaining direct state saves in report and social-processing workflows for the same migration. Mutations are interleaved with network actions, so preserve existing checkpoints and idempotency rather than doing a mechanical rewrite.
 
 ### Transport Review
 

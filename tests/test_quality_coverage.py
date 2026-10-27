@@ -738,8 +738,11 @@ class UnfollowCommandCoverageTests(unittest.TestCase):
         self.assertEqual(
             unfollow._unfollow_one(client, state, "did", "uri", True), (True, False)
         )
-        with mock.patch.object(
-            unfollow, "retry_network_call", side_effect=lambda fn, description: fn()
+        with (
+            mock.patch.object(
+                unfollow, "retry_network_call", side_effect=lambda fn, description: fn()
+            ),
+            mock.patch.object(unfollow, "_checkpoint_unfollow"),
         ):
             self.assertEqual(
                 unfollow._unfollow_one(client, state, "did", "uri", False),

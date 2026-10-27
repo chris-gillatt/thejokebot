@@ -172,11 +172,10 @@ def _reconcile_follow_grace_from_following(state, following_map):
     return newly_graced_count, is_bootstrap
 
 
-def _prepare_unfollow_candidates(
-    following_map, follower_dids, ignorable_dids, max_actions
+def _select_unfollow_from_state(
+    state, following_map, follower_dids, ignorable_dids, max_actions
 ):
-    """Load state, reconcile grace entries, and compute candidate lists."""
-    state = _state.load_state()
+    """Reconcile grace and compute candidates from one state snapshot."""
     newly_graced_count, is_bootstrap = _reconcile_follow_grace_from_following(
         state, following_map
     )
@@ -207,6 +206,28 @@ def _prepare_unfollow_candidates(
     return state, to_unfollow_all, to_unfollow
 
 
+def _prepare_unfollow_candidates(
+    following_map, follower_dids, ignorable_dids, max_actions, dry_run=False
+):
+    def prepare(latest_state):
+        _state.prune_unfollow_history(latest_state)
+        return _select_unfollow_from_state(
+            latest_state, following_map, follower_dids, ignorable_dids, max_actions
+        )
+
+    if dry_run:
+        return prepare(_state.load_state())
+    return _state.update_state(prepare, domains="social")
+
+
+def _checkpoint_unfollow(did):
+    def record(latest_state):
+        _state.record_unfollow(latest_state, did)
+        _state.prune_unfollow_history(latest_state)
+
+    _state.update_state(record, domains="social")
+
+
 def _unfollow_one(client, state, did, uri, dry_run):
     masked_did = mask_sensitive(did)
     if dry_run:
@@ -217,9 +238,6 @@ def _unfollow_one(client, state, did, uri, dry_run):
             lambda: client.unfollow(uri),
             description=f"unfollowing {masked_did}",
         )
-        print(f"{Fore.GREEN}Unfollowed {masked_did}{Style.RESET_ALL}")
-        _state.record_unfollow(state, did)
-        return True, False
     except (
         ValueError,
         requests.RequestException,
@@ -229,6 +247,10 @@ def _unfollow_one(client, state, did, uri, dry_run):
     ) as exc:
         print(f"{Fore.RED}Failed to unfollow {masked_did}: {exc}{Style.RESET_ALL}")
         return False, _is_rate_limited_error(exc)
+    _checkpoint_unfollow(did)
+    _state.record_unfollow(state, did)
+    print(f"{Fore.GREEN}Unfollowed {masked_did}{Style.RESET_ALL}")
+    return True, False
 
 
 def _pause_after_unfollow(
@@ -390,6 +412,7 @@ def unfollow_users():
             follower_dids,
             ignorable_dids,
             max_actions,
+            dry_run=dry_run,
         )
 
         print(
@@ -426,8 +449,6 @@ def unfollow_users():
             f"unfollowed={unfollowed_count}, failed={failed_count}, "
             f"missing_uri={skipped_missing_uri}.{Style.RESET_ALL}"
         )
-        _state.prune_unfollow_history(state)
-        _state.save_state(state, domains="social")
         print(f"{Fore.GREEN}Unfollow actions completed! 🎉{Style.RESET_ALL}")
     except (
         ValueError,
