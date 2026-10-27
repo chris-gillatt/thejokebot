@@ -6186,7 +6186,7 @@ class FollowFellowsMainTests(unittest.TestCase):
 
     def setUp(self):
         feeds = mock.patch.object(
-            bluesky_follow_fellows, "fetch_saved_feed_users", return_value={}
+            bluesky_follow_fellows, "fetch_saved_feed_users", return_value=({}, 0)
         )
         feeds.start()
         self.addCleanup(feeds.stop)

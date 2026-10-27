@@ -71,20 +71,29 @@ def test_samples_bounded_feeds_and_uses_post_authors_not_reposters(capsys):
         ],
         cursor="more-posts",
     )
-    candidates = discovery_feeds.fetch_saved_feed_users(client, limit=100)
+    candidates, next_offset = discovery_feeds.fetch_saved_feed_users(client, limit=100)
     assert len(candidates) == 10
     assert all(users == ["did:plc:author"] for users in candidates.values())
     assert client.app.bsky.feed.get_feed.call_count == 10
     client.app.bsky.feed.get_feed.assert_any_call(
         {"feed": FEED_URI + "0", "limit": 100}
     )
-    assert "first 10 custom feeds" in capsys.readouterr().out
+    assert next_offset == 10
+    assert "sampling 10 of 12 custom feeds" in capsys.readouterr().out
+    client.app.bsky.feed.get_feed.reset_mock()
+    _, next_offset = discovery_feeds.fetch_saved_feed_users(
+        client, limit=100, offset=10
+    )
+    assert client.app.bsky.feed.get_feed.call_args_list[0] == mock.call(
+        {"feed": FEED_URI + "10", "limit": 100}
+    )
+    assert next_offset == 8
 
 
 def test_no_custom_feeds_leaves_tag_discovery_available():
     client = mock.Mock()
     client.app.bsky.actor.get_preferences.return_value = SimpleNamespace(preferences=[])
-    assert discovery_feeds.fetch_saved_feed_users(client, limit=100) == {}
+    assert discovery_feeds.fetch_saved_feed_users(client, limit=100) == ({}, 0)
     client.app.bsky.feed.get_feed.assert_not_called()
 
 
@@ -211,3 +220,35 @@ def test_zero_budget_selects_nobody():
     assert (
         follow_fellows.select_users({"feed:1": ["did:plc:a"]}, ["feed:1"], 1, 0) == []
     )
+
+
+@pytest.mark.parametrize("dry_run", [False, True])
+def test_empty_scan_rotates_feeds_only_on_live_run(monkeypatch, dry_run):
+    client = mock.Mock()
+    client.me.did = "did:plc:bot"
+    state = bot_state._default_state()
+    state["follow_fellows"]["tag_offset"] = 4
+    monkeypatch.setattr(follow_fellows, "login_client", lambda: (client, "bot"))
+    monkeypatch.setattr(
+        follow_fellows,
+        "get_runtime_controls",
+        lambda: {"dry_run": dry_run, "action_delay_seconds": 0},
+    )
+    monkeypatch.setattr(follow_fellows.bot_state, "load_state", lambda: state)
+    with (
+        mock.patch.object(follow_fellows, "get_following", return_value=set()),
+        mock.patch.object(follow_fellows, "fetch_users_for_tag", return_value=[]),
+        mock.patch.object(
+            follow_fellows, "fetch_saved_feed_users", return_value=({"feed:1": []}, 10)
+        ),
+        mock.patch.object(
+            follow_fellows.bot_state,
+            "update_state",
+            side_effect=lambda mutator, **kwargs: mutator(state),
+        ) as save,
+    ):
+        follow_fellows.main()
+    assert state["follow_fellows"]["feed_offset"] == (0 if dry_run else 10)
+    assert state["follow_fellows"]["tag_offset"] == 4
+    assert save.call_count == (0 if dry_run else 1)
+    client.follow.assert_not_called()

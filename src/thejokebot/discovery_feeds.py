@@ -41,19 +41,26 @@ def eligible_author_dids(authors) -> list[str]:
     return dids
 
 
-def fetch_saved_feed_users(client, *, limit: int) -> dict[str, list[str]]:
+def fetch_saved_feed_users(
+    client, *, limit: int, offset: int = 0
+) -> tuple[dict[str, list[str]], int]:
     """Sample one page per feed, allowing read errors to stop discovery before writes."""
     preferences = retry_network_call(
         client.app.bsky.actor.get_preferences,
         description="reading saved-feed preferences",
     ).preferences
     feeds = saved_feed_uris(preferences)
+    if not feeds:
+        return {}, 0
+    offset %= len(feeds)
     if len(feeds) > MAX_SAVED_FEEDS:
         print(
-            f"Saved-feed discovery limited to the first {MAX_SAVED_FEEDS} custom feeds."
+            f"Saved-feed discovery sampling {MAX_SAVED_FEEDS} of {len(feeds)} custom feeds "
+            f"from offset {offset}."
         )
     candidates = {}
-    for index, uri in enumerate(feeds[:MAX_SAVED_FEEDS], start=1):
+    rotated_feeds = feeds[offset:] + feeds[:offset]
+    for index, uri in enumerate(rotated_feeds[:MAX_SAVED_FEEDS], start=1):
         response = retry_network_call(
             lambda feed_uri=uri: client.app.bsky.feed.get_feed(
                 {"feed": feed_uri, "limit": limit}
@@ -63,4 +70,5 @@ def fetch_saved_feed_users(client, *, limit: int) -> dict[str, list[str]]:
         candidates[f"feed:{index}"] = eligible_author_dids(
             item.post.author for item in response.feed
         )
-    return candidates
+    next_offset = (offset + min(len(feeds), MAX_SAVED_FEEDS)) % len(feeds)
+    return candidates, next_offset

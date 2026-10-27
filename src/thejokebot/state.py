@@ -143,6 +143,7 @@ def _default_state() -> dict:
         },
         "follow_fellows": {
             "tag_offset": 0,
+            "feed_offset": 0,
         },
         "posting": {
             "tag_offset": 0,
@@ -236,6 +237,7 @@ def _normalise_state(state: dict) -> dict:
 
     follow_fellows_state = state.setdefault("follow_fellows", {})
     follow_fellows_state.setdefault("tag_offset", 0)
+    follow_fellows_state.setdefault("feed_offset", 0)
 
     posting_state = state.setdefault("posting", {})
     posting_state.setdefault("tag_offset", 0)

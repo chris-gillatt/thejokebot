@@ -107,15 +107,20 @@ def select_users(tag_users, tag_order, per_tag_limit, overall_limit):
     return selected_users[:overall_limit]
 
 
-def _build_eligible_source_users(client, hashtags, already_following, unfollowed_dids):
+def _build_eligible_source_users(
+    client, hashtags, already_following, unfollowed_dids, feed_offset
+):
     """Combine saved feeds and tags under the same exclusions and selection budget."""
-    sources = fetch_saved_feed_users(client, limit=search_limit)
+    sources, next_feed_offset = fetch_saved_feed_users(
+        client, limit=search_limit, offset=feed_offset
+    )
     sources.update({tag: fetch_users_for_tag(client, tag) for tag in hashtags})
     excluded = already_following | unfollowed_dids | {client.me.did}
-    return {
+    candidates = {
         source: [did for did in users if did not in excluded]
         for source, users in sources.items()
     }
+    return candidates, next_feed_offset
 
 
 def _execute_follow_loop(client, selected_users, dry_run, action_delay_seconds):
@@ -144,15 +149,20 @@ def _successful_tag_counts(selected_users, followed_dids, tags):
     return counts
 
 
-def _persist_follow_fellows_state(followed_dids, rotation_step, total_tags):
+def _persist_follow_fellows_state(
+    followed_dids, rotation_step, total_tags, next_feed_offset=None
+):
     def apply_follow_fellows_state_updates(latest_state):
         for did in followed_dids:
             bot_state.record_follow_grace(latest_state, did)
             bot_state.record_acquisition(latest_state, did, "discovery")
-        bot_state.advance_follow_fellows_tag_offset(
-            latest_state, rotation_step, total_tags
-        )
-        bot_state.prune_follow_grace(latest_state)
+        if followed_dids:
+            bot_state.advance_follow_fellows_tag_offset(
+                latest_state, rotation_step, total_tags
+            )
+            bot_state.prune_follow_grace(latest_state)
+        if next_feed_offset is not None:
+            latest_state["follow_fellows"]["feed_offset"] = next_feed_offset
 
     bot_state.update_state(
         apply_follow_fellows_state_updates,
@@ -183,8 +193,9 @@ def main():
             f"{len(unfollowed_dids)} DID(s) in unfollow history — excluded from candidates."
         )
 
-    tag_users = _build_eligible_source_users(
-        client, hashtags, already_following, unfollowed_dids
+    feed_offset = state["follow_fellows"].get("feed_offset", 0)
+    tag_users, next_feed_offset = _build_eligible_source_users(
+        client, hashtags, already_following, unfollowed_dids, feed_offset
     )
     source_order = [source for source in tag_users if source.startswith("feed:")]
     source_order.extend(rotated_hashtags)
@@ -213,9 +224,11 @@ def main():
         client, selected_users, dry_run, action_delay_seconds
     )
 
-    if followed_dids:
+    if not dry_run and (followed_dids or next_feed_offset != feed_offset):
         rotation_step = max(1, len(hashtags) // 2)
-        _persist_follow_fellows_state(followed_dids, rotation_step, len(hashtags))
+        _persist_follow_fellows_state(
+            followed_dids, rotation_step, len(hashtags), next_feed_offset
+        )
 
     followed_tag_counts = _successful_tag_counts(
         selected_users, followed_dids, source_order
