@@ -1,6 +1,6 @@
 {
   "schema_version": 11,
-  "generated_at": "2026-10-27T13:25:07.412957+00:00",
+  "generated_at": "2026-10-27T13:48:17.122738+00:00",
   "account": {
     "handle": "thejokebot.bsky.social",
     "display_name": "The Joke Bot",
@@ -13,7 +13,7 @@
     "text": "I threw a boomerang years ago.\n\nI now live in constant fear.\n\n#dadjoke #humour #mumjokes",
     "created_at": "2026-10-27T12:14:25.658262+00:00",
     "engagement": {
-      "likes": 2,
+      "likes": 3,
       "replies": 0,
       "reposts": 1,
       "quotes": 0,
@@ -21,12 +21,12 @@
     }
   },
   "current": {
-    "followers": 6958,
+    "followers": 6959,
     "following": 10336,
     "profile_posts": 2737,
     "joke_posts": 1076,
     "engagement": {
-      "likes": 5228,
+      "likes": 5229,
       "replies": 383,
       "reposts": 420,
       "quotes": 44,
@@ -2060,19 +2060,19 @@
     },
     {
       "period_start": "2026-10-27T12:00:00+00:00",
-      "collected_at": "2026-10-27T13:25:07.412957+00:00",
-      "followers": 6958,
+      "collected_at": "2026-10-27T13:48:17.122738+00:00",
+      "followers": 6959,
       "following": 10336,
       "profile_posts": 2737,
       "joke_posts": 1076,
       "engagement": {
-        "likes": 5228,
+        "likes": 5229,
         "replies": 383,
         "reposts": 420,
         "quotes": 44,
         "bookmarks": 72
       },
-      "engagement_total": 6147,
+      "engagement_total": 6148,
       "source": "bluesky_snapshot"
     }
   ],
@@ -7356,8 +7356,8 @@
   "audience_growth": {
     "window_days": 30,
     "net_followers": {
-      "7": 30,
-      "30": 175
+      "7": 31,
+      "30": 176
     },
     "sources": {
       "followback": {
@@ -8828,8 +8828,8 @@
   "engagement_momentum": {
     "basis": "visible_joke_snapshot_total",
     "deltas": {
-      "7": 143,
-      "30": 768
+      "7": 144,
+      "30": 769
     }
   },
   "provider_pressure": {
@@ -11765,20 +11765,20 @@
   },
   "automation": {
     "window_days": 30,
-    "collected_at": "2026-10-27T13:25:07.412957+00:00",
+    "collected_at": "2026-10-27T13:48:17.122738+00:00",
     "runs": 985,
-    "successful": 950,
-    "failed": 28,
+    "successful": 951,
+    "failed": 27,
     "cancelled": 2,
-    "success_rate": 97.1,
+    "success_rate": 97.2,
     "workflows": [
       {
         "name": "bluesky_dashboard",
-        "runs": 104,
-        "successful": 102,
+        "runs": 105,
+        "successful": 103,
         "failed": 1,
         "cancelled": 0,
-        "last_run_at": "2026-10-27T13:24:38Z",
+        "last_run_at": "2026-10-27T13:47:47Z",
         "last_status": "in_progress",
         "last_conclusion": null,
         "latest_duration_seconds": null,
@@ -11802,9 +11802,9 @@
       },
       {
         "name": "bluesky_follows_and_likes",
-        "runs": 305,
-        "successful": 302,
-        "failed": 3,
+        "runs": 303,
+        "successful": 301,
+        "failed": 2,
         "cancelled": 0,
         "last_run_at": "2026-10-27T12:44:20Z",
         "last_status": "completed",
@@ -11890,7 +11890,7 @@
         "successful": 38,
         "failed": 3,
         "cancelled": 0,
-        "last_run_at": "2026-10-27T13:24:38Z",
+        "last_run_at": "2026-10-27T13:47:47Z",
         "last_status": "in_progress",
         "last_conclusion": null,
         "latest_duration_seconds": null,
@@ -11932,7 +11932,7 @@
         "successful": 25,
         "failed": 13,
         "cancelled": 0,
-        "last_run_at": "2026-10-27T13:24:38Z",
+        "last_run_at": "2026-10-27T13:47:47Z",
         "last_status": "in_progress",
         "last_conclusion": null,
         "latest_duration_seconds": null,
@@ -11946,24 +11946,24 @@
         "successful": 40,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-10-27T13:24:38Z",
+        "last_run_at": "2026-10-27T13:47:47Z",
         "last_status": "completed",
         "last_conclusion": "success",
-        "latest_duration_seconds": 26,
-        "median_duration_seconds": 19,
+        "latest_duration_seconds": 24,
+        "median_duration_seconds": 20,
         "expected_interval_hours": null,
         "consecutive_failures": 0
       },
       {
         "name": "validate_runtime_config",
-        "runs": 39,
-        "successful": 39,
+        "runs": 40,
+        "successful": 40,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-10-27T13:24:38Z",
+        "last_run_at": "2026-10-27T13:47:47Z",
         "last_status": "completed",
         "last_conclusion": "success",
-        "latest_duration_seconds": 24,
+        "latest_duration_seconds": 20,
         "median_duration_seconds": 20,
         "expected_interval_hours": null,
         "consecutive_failures": 0
