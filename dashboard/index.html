@@ -21,14 +21,14 @@
         [role="tabpanel"][hidden] { display: block; }
       </style>
     </noscript>
-    <link rel="stylesheet" href="styles.css?v=22" />
+    <link rel="stylesheet" href="styles.css?v=23" />
     <script
       src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"
       integrity="sha384-jb8JQMbMoBUzgWatfe6COACi2ljcDdZQ2OxczGA3bGNeWe+6DChMTBJemed7ZnvJ"
       crossorigin="anonymous"
       defer
     ></script>
-    <script src="app.js?v=17" defer></script>
+    <script src="app.js?v=18" defer></script>
   </head>
   <body>
     <noscript>
@@ -192,30 +192,34 @@
               <small>Visible joke interactions</small>
             </div>
             <div class="growth-stat">
-              <span>30-day reciprocity</span>
+              <span>Following us at day 30</span>
               <strong id="growth-reciprocity-30">--</strong>
               <small id="growth-reciprocity-note">Collecting cohort history</small>
             </div>
           </div>
 
-          <div class="growth-source-grid" aria-label="30-day acquisition sources">
+          <p class="growth-explanation">Counts below are outgoing follows completed in the last 30 days, not new followers gained. Candidate counts are summed workflow observations and may include the same account more than once. Follow completion uses each source's measured candidate, eligible or selected count. Day-30 and day-90 outcomes use observed acquisition cohorts, not the last 30 days of activity.</p>
+          <div class="growth-source-grid" aria-label="30-day outgoing follows and observed relationship outcomes">
             <article class="growth-source" data-growth-source="followback">
               <span>Follow-backs</span>
               <strong id="growth-followback-acquired">--</strong>
+              <small>Existing followers followed back</small>
               <small id="growth-followback-context">Collecting activity</small>
-              <dl><div><dt>Success</dt><dd id="growth-followback-success">--</dd></div><div><dt>30 days</dt><dd id="growth-followback-30">--</dd></div><div><dt>90 days</dt><dd id="growth-followback-90">--</dd></div></dl>
+              <dl><div><dt>Follow completion</dt><dd id="growth-followback-success">--</dd></div><div><dt>Still following at day 30</dt><dd id="growth-followback-30">--</dd></div><div><dt>Still following at day 90</dt><dd id="growth-followback-90">--</dd></div></dl>
             </article>
             <article class="growth-source" data-growth-source="interaction">
               <span>Interaction-led</span>
               <strong id="growth-interaction-acquired">--</strong>
+              <small>Outgoing follows after interactions</small>
               <small id="growth-interaction-context">Collecting activity</small>
-              <dl><div><dt>Success</dt><dd id="growth-interaction-success">--</dd></div><div><dt>30 days</dt><dd id="growth-interaction-30">--</dd></div><div><dt>90 days</dt><dd id="growth-interaction-90">--</dd></div></dl>
+              <dl><div><dt>Follow completion</dt><dd id="growth-interaction-success">--</dd></div><div><dt>Following us at day 30</dt><dd id="growth-interaction-30">--</dd></div><div><dt>Following us at day 90</dt><dd id="growth-interaction-90">--</dd></div></dl>
             </article>
             <article class="growth-source" data-growth-source="discovery">
               <span>Discovery</span>
               <strong id="growth-discovery-acquired">--</strong>
+              <small>Outgoing follows from discovery</small>
               <small id="growth-discovery-context">Collecting activity</small>
-              <dl><div><dt>Success</dt><dd id="growth-discovery-success">--</dd></div><div><dt>30 days</dt><dd id="growth-discovery-30">--</dd></div><div><dt>90 days</dt><dd id="growth-discovery-90">--</dd></div></dl>
+              <dl><div><dt>Follow completion</dt><dd id="growth-discovery-success">--</dd></div><div><dt>Following us at day 30</dt><dd id="growth-discovery-30">--</dd></div><div><dt>Following us at day 90</dt><dd id="growth-discovery-90">--</dd></div></dl>
             </article>
           </div>
 
@@ -223,7 +227,7 @@
             <summary>View cohort observations</summary>
             <div class="table-scroll">
               <table id="growth-cohort-table">
-                <thead><tr><th>Month</th><th>Source</th><th>Acquired</th><th>30-day observed</th><th>30-day reciprocity</th><th>90-day observed</th><th>90-day reciprocity</th></tr></thead>
+                <thead><tr><th>Follow cohort month</th><th>Source</th><th>Follows made</th><th>Following us at day 30</th><th>Following us at day 90</th></tr></thead>
                 <tbody></tbody>
               </table>
             </div>
@@ -248,7 +252,7 @@
                 <p id="unfollow-history-note">Collecting history</p>
               </div>
               <div class="response-window">
-                <div><span>Active response window</span><strong id="response-window-active">--</strong><small>30-day protection</small></div>
+                <div><span>Active response window</span><strong id="response-window-active">--</strong><small id="response-window-duration">Duration unavailable</small></div>
                 <dl>
                   <div><dt>Discovery</dt><dd id="response-discovery">--</dd></div>
                   <div><dt>Interaction</dt><dd id="response-interaction">--</dd></div>

@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from html.parser import HTMLParser
 from pathlib import Path
 
-from thejokebot.commands import dashboard_workflows
+from thejokebot.commands import dashboard_metrics, dashboard_workflows
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -227,6 +227,156 @@ class DashboardUiTests(unittest.TestCase):
             self.assertIn(f"growth-{source_id}-30", self.by_id)
             self.assertIn(f"growth-{source_id}-90", self.by_id)
         self.assertEqual(self.by_id["growth-cohort-table"].tag, "table")
+
+    def test_growth_labels_separate_follow_completion_from_relationship_outcomes(self):
+        source = self.by_id["growth-followback-success"].parent
+        self.assertIn(
+            "Follow completion", " ".join(node.text for node in source.children)
+        )
+        self.assertIn("response-window-duration", self.by_id)
+        self.assertNotIn("30-day protection", DASHBOARD_HTML.read_text())
+        self.assertIn("Existing followers", DASHBOARD_HTML.read_text())
+
+    def test_collected_growth_shows_follow_counts_and_observed_cohort_samples(self):
+        now = datetime(2026, 10, 27, 12, tzinfo=timezone.utc)
+        social = {
+            "completed_runs": 1,
+            "follow_back_candidates": 8,
+            "follow_back_added": 6,
+            "interaction_candidates": 12,
+            "interaction_eligible": 5,
+            "interaction_added": 3,
+            "runs": [{"created_at": now.isoformat()}],
+        }
+        growth = dashboard_metrics._audience_growth_metrics(
+            {},
+            [],
+            {"selected": 20, "followed": 10},
+            social,
+            now,
+        )
+        growth["cohorts"]["periods"] = [
+            {
+                "month": "2026-09",
+                "source": "discovery",
+                "acquired": 20,
+                "checkpoints": {
+                    "30": {
+                        "observed": 10,
+                        "still_following": 4,
+                        "rate": 40,
+                        "pending_due": 2,
+                    },
+                    "90": {
+                        "observed": 0,
+                        "still_following": 0,
+                        "rate": None,
+                        "pending_due": 1,
+                    },
+                },
+            }
+        ]
+        rendered = self._render_growth(growth, social=social, days=90)
+
+        self.assertEqual(rendered["growth-followback-success"], "6/8 (75%)")
+        self.assertEqual(
+            rendered["growth-interaction-context"],
+            "12 candidates; 5 eligible accounts",
+        )
+        self.assertEqual(
+            rendered["growth-discovery-30"],
+            "4/10 observed (40%) · 2 due",
+        )
+        self.assertEqual(rendered["growth-discovery-90"], "Not yet observed · 1 due")
+        self.assertEqual(
+            rendered["growth-reciprocity-note"], "4/10 observed accounts following us"
+        )
+        self.assertEqual(rendered["response-window-duration"], "90-day protection")
+
+    def test_growth_unavailable_and_zero_denominators_are_not_success(self):
+        growth = dashboard_metrics._audience_growth_metrics(
+            {}, [], {}, {}, datetime(2026, 10, 27, tzinfo=timezone.utc)
+        )
+        for days in (None, 30):
+            with self.subTest(days=days):
+                rendered = self._render_growth(growth, days=days)
+                self.assertEqual(rendered["growth-followback-success"], "--")
+                self.assertEqual(rendered["growth-discovery-30"], "Not yet observed")
+                self.assertEqual(
+                    rendered["response-window-duration"],
+                    "Duration unavailable" if days is None else "30-day protection",
+                )
+
+    def test_growth_keeps_legacy_telemetry_and_zero_cohort_outcomes_readable(self):
+        growth = dashboard_metrics._audience_growth_metrics(
+            {},
+            [],
+            {},
+            {"interaction_eligible": 3, "interaction_added": 0},
+            datetime(2026, 10, 27, tzinfo=timezone.utc),
+        )
+        growth["cohorts"]["periods"] = [
+            {
+                "month": "2026-09",
+                "source": "interaction",
+                "acquired": 3,
+                "checkpoints": {
+                    "30": {"observed": 3, "still_following": 0, "rate": 0},
+                },
+            }
+        ]
+        rendered = self._render_growth(growth, social={"completed_runs": 1})
+        self.assertEqual(rendered["growth-interaction-context"], "3 eligible accounts")
+        self.assertEqual(rendered["growth-interaction-success"], "0/3 (0%)")
+        self.assertEqual(rendered["growth-interaction-30"], "0/3 observed (0%)")
+        self.assertEqual(rendered["growth-interaction-90"], "Not yet observed")
+        self.assertNotIn("NaN", json.dumps(rendered))
+
+    @staticmethod
+    def _render_growth(growth, *, social=None, days=None):
+        javascript = DASHBOARD_JS.read_text()
+        growth_functions = javascript[
+            javascript.index("function checkpointSummary(") : javascript.index(
+                "function renderStarterPackAttribution("
+            )
+        ]
+        maintenance = javascript[
+            javascript.index("function renderNetworkMaintenance(") : javascript.index(
+                "function renderSocialActivity("
+            )
+        ]
+        result = subprocess.run(
+            [
+                "node",
+                "-e",
+                'const fs = require("node:fs");'
+                'const metrics = JSON.parse(fs.readFileSync(0, "utf8"));'
+                'const numberFormat = new Intl.NumberFormat("en-GB");'
+                'const percentageFormat = new Intl.NumberFormat("en-GB", {maximumFractionDigits:1});'
+                'const dateFormat = new Intl.DateTimeFormat("en-GB");'
+                "const values = {};"
+                "const setText = (id, value) => { values[id] = value; };"
+                "const metricText = value => value == null ? '--' : numberFormat.format(value);"
+                "const signedNumber = value => String(value);"
+                "const renderTable = () => {};"
+                "const document = {getElementById: () => ({})};"
+                + growth_functions
+                + maintenance
+                + "renderAudienceGrowth();renderNetworkMaintenance(metrics.network_maintenance);"
+                + "console.log(JSON.stringify(values));",
+            ],
+            input=json.dumps(
+                {
+                    "audience_growth": growth,
+                    "social_activity": social or {},
+                    "network_maintenance": {"response_window": {"days": days}},
+                }
+            ),
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        return json.loads(result.stdout)
 
     def test_starter_pack_introductions_show_separate_windows(self):
         self.assertIn("starter-pack-total-7", self.by_id)

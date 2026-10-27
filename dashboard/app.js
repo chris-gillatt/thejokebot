@@ -360,6 +360,12 @@ function checkpointSummary(periods, source, checkpoint) {
   };
 }
 
+function checkpointText(summary) {
+  const pending = summary.pending ? ` · ${numberFormat.format(summary.pending)} due` : "";
+  if (summary.rate === null) return `Not yet observed${pending}`;
+  return `${numberFormat.format(summary.stillFollowing)}/${numberFormat.format(summary.observed)} observed (${percentageFormat.format(summary.rate)}%)${pending}`;
+}
+
 function renderAudienceGrowth() {
   const growth = metrics.audience_growth || { net_followers: {}, sources: {}, cohorts: { periods: [] } };
   const periods = growth.cohorts?.periods || [];
@@ -384,7 +390,9 @@ function renderAudienceGrowth() {
   );
   setText(
     "growth-reciprocity-note",
-    observed30 ? `${numberFormat.format(observed30)} accounts observed` : "Collecting cohort history",
+    observed30
+      ? `${numberFormat.format(retained30)}/${numberFormat.format(observed30)} observed accounts following us`
+      : "No day-30 observations yet",
   );
   setText(
     "growth-coverage",
@@ -403,23 +411,30 @@ function renderAudienceGrowth() {
     const checkpoint30 = checkpointSummary(periods, source, "30");
     const checkpoint90 = checkpointSummary(periods, source, "90");
     setText(`growth-${source}-acquired`, metricText(values.acquired));
+    let context = values.considered === undefined
+      ? "Collecting activity"
+      : `${numberFormat.format(values.considered)} ${denominatorLabels[values.denominator] || "accounts"}`;
+    if (
+      source === "interaction" &&
+      metrics.social_activity?.completed_runs > 0 &&
+      Number.isFinite(metrics.social_activity.interaction_candidates)
+    ) {
+      context = `${numberFormat.format(metrics.social_activity.interaction_candidates)} candidates; ${context}`;
+    }
     setText(
       `growth-${source}-context`,
-      values.considered === undefined
-        ? "Collecting activity"
-        : `of ${numberFormat.format(values.considered)} ${denominatorLabels[values.denominator] || "accounts"}`,
+      context,
     );
     setText(
       `growth-${source}-success`,
       values.success_rate === null || values.success_rate === undefined
         ? "--"
-        : `${percentageFormat.format(values.success_rate)}%`,
+        : `${numberFormat.format(values.acquired)}/${numberFormat.format(values.considered)} (${percentageFormat.format(values.success_rate)}%)`,
     );
     [["30", checkpoint30], ["90", checkpoint90]].forEach(([checkpoint, summary]) => {
-      const suffix = summary.pending ? ` · ${summary.pending} due` : "";
       setText(
         `growth-${source}-${checkpoint}`,
-        summary.rate === null ? `Collecting${suffix}` : `${percentageFormat.format(summary.rate)}%${suffix}`,
+        checkpointText(summary),
       );
     });
   });
@@ -430,10 +445,8 @@ function renderAudienceGrowth() {
       period.month,
       period.source,
       numberFormat.format(period.acquired),
-      numberFormat.format(period.checkpoints["30"].observed),
-      period.checkpoints["30"].rate === null ? "--" : `${percentageFormat.format(period.checkpoints["30"].rate)}%`,
-      numberFormat.format(period.checkpoints["90"].observed),
-      period.checkpoints["90"].rate === null ? "--" : `${percentageFormat.format(period.checkpoints["90"].rate)}%`,
+      checkpointText(checkpointSummary([period], period.source, "30")),
+      checkpointText(checkpointSummary([period], period.source, "90")),
     ]),
   );
   document.getElementById("growth-cohort-details").hidden = periods.length === 0;
@@ -477,6 +490,12 @@ function renderNetworkMaintenance(network) {
   const responseWindow = network.response_window;
   const unfollow = network.unfollow;
   const hasUnfollowHistory = unfollow?.completed_runs > 0;
+  setText(
+    "response-window-duration",
+    responseWindow?.days == null
+      ? "Duration unavailable"
+      : `${numberFormat.format(responseWindow.days)}-day protection`,
+  );
   setText("response-window-active", metricText(responseWindow?.active));
   setText("response-discovery", metricText(responseWindow?.by_source?.discovery));
   setText("response-interaction", metricText(responseWindow?.by_source?.interaction));
