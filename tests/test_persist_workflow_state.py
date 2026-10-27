@@ -13,7 +13,7 @@ def _completed(*, stdout: str = "", returncode: int = 0):
 
 def _git(cwd: Path, *arguments: str) -> str:
     return subprocess.run(
-        ["git", *arguments],
+        ["git", "-c", "safe.bareRepository=explicit", *arguments],
         cwd=cwd,
         check=True,
         capture_output=True,
@@ -35,7 +35,7 @@ def _repository_with_remote(tmp_path: Path) -> tuple[Path, Path]:
     _git(worktree, "commit", "-m", "initial")
     _git(worktree, "remote", "add", "origin", str(remote))
     _git(worktree, "push", "--set-upstream", "origin", "main")
-    _git(remote, "symbolic-ref", "HEAD", "refs/heads/main")
+    _git(remote, f"--git-dir={remote}", "symbolic-ref", "HEAD", "refs/heads/main")
     return worktree, remote
 
 
@@ -210,7 +210,10 @@ def test_persist_pushes_declared_file_to_remote(tmp_path, monkeypatch):
         ["state/social.json"], commit_message="chore: update state", branch="main"
     )
 
-    assert _git(remote, "show", "main:state/social.json") == "updated\n"
+    assert (
+        _git(remote, f"--git-dir={remote}", "show", "main:state/social.json")
+        == "updated\n"
+    )
     assert not _git(worktree, "status", "--porcelain")
 
 
@@ -225,8 +228,11 @@ def test_persist_refuses_unexpected_tracked_changes(tmp_path, monkeypatch):
             ["state/social.json"], commit_message="chore: update state", branch="main"
         )
 
-    assert _git(remote, "show", "main:state/social.json") == "initial\n"
-    assert _git(remote, "show", "main:README.md") == "initial\n"
+    assert (
+        _git(remote, f"--git-dir={remote}", "show", "main:state/social.json")
+        == "initial\n"
+    )
+    assert _git(remote, f"--git-dir={remote}", "show", "main:README.md") == "initial\n"
 
 
 def test_persist_rebases_over_remote_change_in_another_domain(tmp_path, monkeypatch):
@@ -243,8 +249,14 @@ def test_persist_rebases_over_remote_change_in_another_domain(tmp_path, monkeypa
         ["state/social.json"], commit_message="chore: update state", branch="main"
     )
 
-    assert _git(remote, "show", "main:state/social.json") == "local state\n"
-    assert _git(remote, "show", "main:README.md") == "remote update\n"
+    assert (
+        _git(remote, f"--git-dir={remote}", "show", "main:state/social.json")
+        == "local state\n"
+    )
+    assert (
+        _git(remote, f"--git-dir={remote}", "show", "main:README.md")
+        == "remote update\n"
+    )
 
 
 def test_persist_fails_closed_on_same_file_rebase_conflict(tmp_path, monkeypatch):
@@ -264,4 +276,7 @@ def test_persist_fails_closed_on_same_file_rebase_conflict(tmp_path, monkeypatch
             ["state/social.json"], commit_message="chore: update state", branch="main"
         )
 
-    assert _git(remote, "show", "main:state/social.json") == "remote state\n"
+    assert (
+        _git(remote, f"--git-dir={remote}", "show", "main:state/social.json")
+        == "remote state\n"
+    )
