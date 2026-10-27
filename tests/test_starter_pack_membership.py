@@ -216,7 +216,8 @@ def test_cli_writes_only_report_and_accepts_explicit_unobserved_pack(
 ):
     output = tmp_path / "report.json"
     state = {}
-    monkeypatch.setattr(sys, "argv", ["inspect", "--output", str(output)])
+    monkeypatch.setattr(sys, "argv", ["inspect"])
+    monkeypatch.setattr(command, "OUTPUT_PATH", output)
     monkeypatch.setenv("BLUESKY_INSPECT_PACK_URI", PACK)
     monkeypatch.setattr(command.bot_state, "load_state", lambda: state)
     monkeypatch.setattr(command, "login_client", lambda: (client, "bot"))
@@ -237,6 +238,15 @@ def test_cli_writes_only_report_and_accepts_explicit_unobserved_pack(
 def test_cli_rejects_invalid_input_before_login(monkeypatch):
     monkeypatch.setattr(sys, "argv", ["inspect", "--pack-uri", "bad"])
     monkeypatch.delenv("BLUESKY_INSPECT_PACK_URI", raising=False)
+    with mock.patch.object(command, "login_client") as login, pytest.raises(SystemExit):
+        command.main()
+    login.assert_not_called()
+
+
+def test_cli_cannot_override_report_path(monkeypatch):
+    monkeypatch.setattr(
+        sys, "argv", ["inspect", "--output", "../state/social_state.json"]
+    )
     with mock.patch.object(command, "login_client") as login, pytest.raises(SystemExit):
         command.main()
     login.assert_not_called()
