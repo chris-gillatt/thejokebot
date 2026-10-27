@@ -18,6 +18,8 @@ To sync your checkout, use `git pull --rebase && git submodule update --init --r
 
 Preview the staged GitHub Pages dashboard locally with `./scripts/preview-dashboard.sh` at <http://localhost:8765/>. Set `DASHBOARD_PREVIEW_PORT` to change the port. The dashboard publishes public aggregate metrics every six hours, keeps UTC monthly history, and never exports audience identifiers or raw workflow logs. Its Audience and Operations views distinguish sampled counts from reconstructed activity.
 
+The Operations pulse names failed or overdue workflows and reports consecutive completed-run failures. A workflow failure is not necessarily a Python test failure: inspect its GitHub Actions logs to identify the failed step. If a failed run already made changes, its alert includes the run ID; verify saved state against completed actions before retrying. An overdue joke-request checkpoint points to the Follows and likes workflow. Unrecognised alert types are shown explicitly rather than hidden behind a generic warning.
+
 Follower totals are collection-time snapshots; missing historical follower totals remain blank rather than being estimated. Up to 30 days of following and profile-post totals can be reconstructed from aggregate successful-action logs and retained post timestamps, while joke-post, follow and unfollow activity is shown by day. The all-time view loads daily points from monthly history on demand. Audience growth combines follow-backs, interaction-led and discovery follows with source-specific success rates; 30/90-day reciprocity cohorts are reported only when observed. Pending checkpoints keep account hashes in private state and publish aggregate results only.
 
 ## Configuration

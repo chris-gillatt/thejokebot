@@ -832,13 +832,22 @@ function operationalAlertText(alert) {
   if (alert.kind === "stale_dashboard") return "Dashboard collection is overdue";
   if (alert.kind === "workflow_failure") return `${displayName(alert.workflow)} failed most recently`;
   if (alert.kind === "workflow_overdue") return `${displayName(alert.workflow)} is overdue`;
+  if (alert.kind === "workflow_failure_streak") {
+    return `${displayName(alert.workflow)} failed ${numberFormat.format(alert.count)} consecutive completed runs; check the workflow logs`;
+  }
+  if (alert.kind === "mutation_persistence_uncertain") {
+    return `${displayName(alert.workflow)} run ${alert.run_id} failed after making changes; verify saved state against completed actions before retrying`;
+  }
+  if (alert.kind === "joke_request_checkpoint_stale") {
+    return "Joke-request checking is overdue; check the Follows and likes workflow";
+  }
   if (alert.kind === "provider_health") {
-    return `${numberFormat.format(alert.count)} configured provider${alert.count === 1 ? "" : "s"} need attention`;
+    return `${numberFormat.format(alert.count)} configured provider${alert.count === 1 ? " needs" : "s need"} attention`;
   }
   if (alert.kind === "posting_delivery") {
     return `${numberFormat.format(alert.count)} posting slot${alert.count === 1 ? "" : "s"} missed in 7 complete days`;
   }
-  return "Operational attention needed";
+  return `Unrecognised operational alert: ${alert.kind}; check the dashboard collector`;
 }
 
 function renderOperationalPulse(automation) {

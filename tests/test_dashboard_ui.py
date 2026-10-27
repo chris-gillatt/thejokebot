@@ -1,7 +1,11 @@
+import json
 import subprocess
 import unittest
+from datetime import datetime, timezone
 from html.parser import HTMLParser
 from pathlib import Path
+
+from thejokebot.commands import dashboard_workflows
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -127,6 +131,89 @@ class DashboardUiTests(unittest.TestCase):
         self.assertEqual(
             self.by_id["workflow-table"].parent.parent.attributes["aria-labelledby"],
             "workflows-heading",
+        )
+
+    def test_collected_operational_alerts_have_specific_dashboard_messages(self):
+        now = datetime(2026, 10, 27, 12, tzinfo=timezone.utc)
+        alerts = dashboard_workflows._operational_alerts(
+            {
+                "workflows": [
+                    {
+                        "name": "python_tests",
+                        "consecutive_failures": 6,
+                    },
+                    {
+                        "name": "bluesky_follows_and_likes",
+                        "last_run_at": "2026-10-27T07:00:00Z",
+                        "last_conclusion": "failure",
+                        "expected_interval_hours": 2,
+                    },
+                ]
+            },
+            {"providers": [{"configured": True, "healthy": False}]},
+            {"windows": {"7": {"missed": 2}}},
+            now,
+            state={"joke_requests": {}},
+            workflow_runs=[
+                {
+                    "id": 42,
+                    "name": "bluesky_follows_and_likes",
+                    "conclusion": "failure",
+                    "created_at": "2026-10-27T07:00:00Z",
+                }
+            ],
+            workflow_activity={"runs": [{"id": 42, "follows": 1}]},
+        )
+        alerts.extend(
+            [
+                {"kind": "stale_dashboard"},
+                {"kind": "provider_health", "count": 2},
+                {"kind": "posting_delivery", "count": 1},
+                {"kind": "future_alert"},
+            ]
+        )
+        javascript = DASHBOARD_JS.read_text()
+        names = javascript[
+            javascript.index("function displayName(") : javascript.index(
+                "function appendCell("
+            )
+        ]
+        formatter = javascript[
+            javascript.index("function operationalAlertText(") : javascript.index(
+                "function renderOperationalPulse("
+            )
+        ]
+        result = subprocess.run(
+            [
+                "node",
+                "-e",
+                'const fs = require("node:fs");'
+                'const numberFormat = new Intl.NumberFormat("en-GB");'
+                + names
+                + formatter
+                + "console.log(JSON.stringify("
+                'JSON.parse(fs.readFileSync(0, "utf8")).map(operationalAlertText)));',
+            ],
+            input=json.dumps(alerts),
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(
+            json.loads(result.stdout),
+            [
+                "Python tests failed 6 consecutive completed runs; check the workflow logs",
+                "Follows and likes is overdue",
+                "Follows and likes failed most recently",
+                "Follows and likes run 42 failed after making changes; verify saved state against completed actions before retrying",
+                "Joke-request checking is overdue; check the Follows and likes workflow",
+                "1 configured provider needs attention",
+                "2 posting slots missed in 7 complete days",
+                "Dashboard collection is overdue",
+                "2 configured providers need attention",
+                "1 posting slot missed in 7 complete days",
+                "Unrecognised operational alert: future_alert; check the dashboard collector",
+            ],
         )
 
     def test_audience_growth_unifies_sources_and_removes_generic_privacy_copy(self):

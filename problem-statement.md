@@ -22,6 +22,10 @@ This is the operating brief for open work and lasting decisions. See the [README
 
 ## Deferred Work
 
+### Existing CodeQL findings
+
+The 27 October 2026 local CodeQL analysis reported 18 findings outside the dashboard alert change (resource handling, imports, exception/finally behaviour and unused symbols); triage these separately rather than mixing them into the alert fix. Git-persistence integration fixtures now use explicit Git-directory paths and enforce `safe.bareRepository=explicit` in their Git helper, preserving the safety setting while avoiding working-directory discovery of bare repositories.
+
 ### Starter-pack inclusion
 
 The manual read-only membership prototype checks candidate packs from retained attributed follows and explicit pack URIs. It does not provide complete reverse membership discovery or inclusion dates. Issue #115 remains open for discovery coverage, a once-per-pack acknowledgement policy, quote-post selection and visual verification before enabling public posts or dashboard membership claims.
@@ -42,6 +46,7 @@ Do not claim source-specific post engagement, impressions, sentiment, demographi
 
 | Decision | Reason |
 |---|---|
+| Show specific operational alert reasons and available workflow/run details | Distinguish repeated CI failures, overdue joke-request checks and uncertain state persistence without implying that Python assertions or posting necessarily failed. |
 | Keep state files instead of a database | Current operational scale does not justify a migration. |
 | Keep synchronous command execution | No throughput requirement justifies an async rewrite. |
 | Use domain-scoped locked transactions for runtime state mutations | Preserve newer state while retaining confirmed-action receipts, retry queues and notification checkpoints. |
@@ -51,4 +56,27 @@ Do not claim source-specific post engagement, impressions, sentiment, demographi
 
 ## Dependency Exceptions
 
-No deliberate first-party version exceptions are currently recorded. Recheck against upstream releases or Dependabot results at the end of each work batch and document exceptions here before closing it.
+Checked on 27 October 2026 against PyPI, npm and upstream GitHub Action releases. Pyright's declared version (1.1.414) is current, although the local installation is still 1.1.413. Other Action pins are current; the exceptions below are deferred to a separate dependency-maintenance change to keep the dashboard alert fix isolated. Review these at the next dependency-maintenance batch, or immediately if an applicable security advisory appears. Update transitive Python dependencies through the lock resolver, not independently.
+
+| Dependency | Current locked/pinned version | Latest stable | Reason / review trigger |
+|---|---|---|---|
+| anyio | 4.14.2 | 4.15.1 | Separate lock refresh; next maintenance batch or advisory. |
+| atproto | 0.0.72 | 0.0.73 | Separate SDK compatibility and lock validation; next maintenance batch or advisory. |
+| certifi | 2026.7.22 | 2026.10.23 | Separate lock refresh; next maintenance batch or advisory. |
+| charset-normalizer | 3.5.1 | 3.5.2 | Separate lock refresh; next maintenance batch or advisory. |
+| coverage | 7.16.0 | 7.17.0 | Separate coverage-tool validation; next maintenance batch or advisory. |
+| cryptography | 50.0.1 | 50.0.2 | Separate lock refresh; next maintenance batch or advisory. |
+| dnspython | 2.8.0 | 2.9.0 | Separate lock refresh; next maintenance batch or advisory. |
+| idna | 3.19 | 3.20 | Separate lock refresh; next maintenance batch or advisory. |
+| iniconfig | 2.3.0 | 2.3.1 | Separate lock refresh; next maintenance batch or advisory. |
+| libipld | 3.4.1 | 3.5.0 | Separate lock refresh; next maintenance batch or advisory. |
+| pluggy | 1.6.0 | 1.7.0 | Separate lock refresh; next maintenance batch or advisory. |
+| pycparser | 3.0 | 3.12 | Separate lock refresh; next maintenance batch or advisory. |
+| pydantic | 2.13.5 | 2.14.1 | Separate compatible resolver update with pydantic-core; next maintenance batch or advisory. |
+| pydantic-core | 2.46.5 | 2.50.1 | Follow pydantic's compatible pin; next maintenance batch or advisory. |
+| python-dotenv | 1.2.3 | 1.2.4 | Separate lock refresh; next maintenance batch or advisory. |
+| regex | 2026.9.10 | 2026.9.29 | Separate lock refresh; next maintenance batch or advisory. |
+| urllib3 | 2.7.0 | 2.8.0 | Validate the transport workaround during a separate lock refresh; next maintenance batch or advisory. |
+| websockets | 17.1 | 17.3 | Separate lock refresh; next maintenance batch or advisory. |
+| Ruff | 0.15.13 | 0.17.3 | Separate lint-tool behaviour validation; next maintenance batch or advisory. |
+| actions/setup-python | 7.0.0 | 7.1.0 | Separate workflow pin update and validation; next maintenance batch or advisory. |
