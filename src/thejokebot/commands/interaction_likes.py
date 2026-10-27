@@ -12,6 +12,7 @@ from colorama import Fore, Style
 
 from thejokebot import config as runtime_config
 from thejokebot import state as bot_state
+from thejokebot import social_transactions
 from thejokebot.runtime import get_nested_value, mask_sensitive, retry_network_call
 
 _CONFIG = runtime_config.get_follows_and_likes_config()
@@ -126,6 +127,7 @@ def like_replies(
     liked_count = 0
     cutoff_epoch = time.time() - _WINDOW_SECONDS
     cursor = None
+    completed_scan = False
 
     for _ in range(_MAX_PAGES):
         try:
@@ -147,9 +149,11 @@ def like_replies(
             print(
                 f"{Fore.RED}Failed to fetch interaction notifications: {exc}{Style.RESET_ALL}"
             )
+            summary["failed"] = summary.get("failed", 0) + 1
             break
 
         notifications = get_nested_value(response, "notifications") or []
+        previous_likes = set(already_liked)
         page_new_likes, stop_paging = _process_page(
             client,
             state,
@@ -162,17 +166,28 @@ def like_replies(
         )
         liked_count += page_new_likes
 
-        if page_new_likes > 0:
-            bot_state.prune_liked_reply_uris(state)
-            bot_state.save_state(state, domains="social")
+        if page_new_likes > 0 and not dry_run:
+            _checkpoint_likes(state, already_liked - previous_likes)
 
         if stop_paging:
+            completed_scan = True
             break
 
         cursor = get_nested_value(response, "cursor")
         if not cursor:
+            completed_scan = True
             break
 
-    bot_state.set_likes_checked_now(state)
+    if not dry_run and completed_scan:
+        social_transactions.apply(state, bot_state.set_likes_checked_now)
     summary["interactions_liked"] = liked_count
     return liked_count
+
+
+def _checkpoint_likes(state, uris):
+    def record(latest):
+        for uri in sorted(uris):
+            bot_state.record_liked_reply_uri(latest, uri)
+        bot_state.prune_liked_reply_uris(latest)
+
+    social_transactions.apply(state, record)

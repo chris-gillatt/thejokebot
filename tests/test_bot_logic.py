@@ -14,6 +14,8 @@ from unittest import mock
 
 import atproto_client.exceptions
 import requests
+import pytest
+from thejokebot import social_transactions
 from thejokebot import blocks as blocks
 from thejokebot import runtime as runtime
 from thejokebot import config as runtime_config
@@ -45,6 +47,24 @@ from thejokebot.commands import (
     verify_latest_joke_post as bluesky_verify_latest_joke_post,
 )
 from thejokebot.followers import extract_list_member_did
+
+
+@pytest.fixture(autouse=True)
+def local_social_checkpoints(request, monkeypatch):
+    """Keep component tests in memory; transaction integration tests use real files."""
+    classes = {
+        "StarterPackAttributionTests",
+        "LikeRepliesTests",
+        "JokeRequestReplyTests",
+        "FollowBackTests",
+        "FollowInteractorsTests",
+    }
+    if request.cls is not None and request.cls.__name__ in classes:
+        monkeypatch.setattr(
+            social_transactions,
+            "apply",
+            lambda state, operation, **kwargs: operation(state),
+        )
 
 
 class RuntimeControlTests(unittest.TestCase):
@@ -2973,7 +2993,7 @@ class LikeRepliesTests(unittest.TestCase):
         self.assertEqual(count, 1)
         client.like.assert_called_once()
         sleep.assert_called_once_with(0.5)
-        save_state.assert_called_once_with(state, domains="social")
+        save_state.assert_not_called()
 
     def test_failed_like_increments_failure_summary(self):
         state = bot_state._default_state()
@@ -3201,7 +3221,7 @@ class JokeRequestReplyTests(unittest.TestCase):
 
         self.assertEqual(second_count, 0)
         client.send_post.assert_not_called()
-        second_save_state.assert_called_once_with(state, domains="social")
+        second_save_state.assert_not_called()
 
     def test_report_request_is_not_answered(self):
         notification = self._notification(text="tell me a joke #report")
@@ -3523,13 +3543,7 @@ class JokeRequestReplyTests(unittest.TestCase):
         client.send_post.assert_not_called()
         self.assertIn(notification.uri, bot_state.get_replied_joke_request_uris(state))
         self.assertIsNotNone(bot_state.get_joke_request_checkpoint(state)[0])
-        self.assertEqual(
-            save_state.call_args_list,
-            [
-                mock.call(state, domains="social"),
-                mock.call(state, domains="social"),
-            ],
-        )
+        save_state.assert_not_called()
 
     def test_successful_empty_scan_advances_checkpoint(self):
         client = mock.Mock()
@@ -3554,7 +3568,7 @@ class JokeRequestReplyTests(unittest.TestCase):
 
         self.assertEqual(count, 0)
         self.assertEqual(bot_state.get_joke_request_checkpoint(state), (1234.5, set()))
-        save_state.assert_called_once_with(state, domains="social")
+        save_state.assert_not_called()
 
     def test_checkpoint_filters_requests_seen_before_last_successful_scan(self):
         old = self._notification(indexed_at="2026-01-01T00:00:00Z")

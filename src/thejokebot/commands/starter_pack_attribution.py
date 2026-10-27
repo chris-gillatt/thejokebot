@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import copy
 import re
 from datetime import datetime, timedelta, timezone
 
@@ -11,6 +12,7 @@ import requests
 from colorama import Fore, Style
 
 from thejokebot import state as bot_state
+from thejokebot import social_transactions
 from thejokebot.runtime import get_nested_value, retry_network_call
 
 _WINDOW_DAYS = 30
@@ -226,6 +228,7 @@ def track_starter_pack_follows(
     """Track aggregate follows attributed to starter packs."""
     if summary is None:
         summary = {}
+    baseline = copy.deepcopy(bot_state.get_starter_pack_attribution(state))
     scan = _collect_attribution(client, state, datetime.now(timezone.utc))
     summary["starter_pack_scan_complete"] = int(scan is not None)
     if scan is None:
@@ -234,5 +237,13 @@ def track_starter_pack_follows(
     count = len(scan["observations"])
     summary["starter_pack_follows"] = count
     if not dry_run:
-        bot_state.record_starter_pack_attribution_scan(state, **scan)
+
+        def record(latest):
+            if bot_state.get_starter_pack_attribution(latest) != baseline:
+                raise RuntimeError(
+                    "Starter-pack attribution changed during scan; retry with fresh state."
+                )
+            bot_state.record_starter_pack_attribution_scan(latest, **scan)
+
+        social_transactions.apply(state, record)
     return count

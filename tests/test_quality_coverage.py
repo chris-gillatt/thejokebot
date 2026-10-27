@@ -815,7 +815,7 @@ class SocialCommandMainCoverageTests(unittest.TestCase):
             follows_and_likes.main()
 
         reply.assert_called_once()
-        save.assert_called_once_with(state, domains="social")
+        save.assert_not_called()
 
     def test_main_counts_joke_reply_failure_as_failed_social_action(self):
         client = mock.Mock()

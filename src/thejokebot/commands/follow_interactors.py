@@ -11,6 +11,7 @@ from colorama import Fore, Style
 
 from thejokebot import config as runtime_config
 from thejokebot import state as bot_state
+from thejokebot import social_transactions
 from thejokebot.followers import fetch_paginated_data
 from thejokebot.runtime import get_nested_value, mask_sensitive, retry_network_call
 
@@ -94,6 +95,15 @@ def _collect_interactor_dids(client, user_did, cutoff_epoch):
     return interactor_dids
 
 
+def _checkpoint_follow(state, did):
+    def record(latest):
+        bot_state.record_follow_grace(latest, did, source="interaction")
+        bot_state.record_acquisition(latest, did, "interaction")
+        bot_state.prune_follow_grace(latest)
+
+    social_transactions.apply(state, record)
+
+
 def _follow_did_list(client, state, to_follow, dry_run, action_delay_seconds):
     followed_count = 0
     for index, did in enumerate(to_follow, start=1):
@@ -115,8 +125,7 @@ def _follow_did_list(client, state, to_follow, dry_run, action_delay_seconds):
                     description=f"following interactor {masked_did}",
                 )
                 print(f"{Fore.GREEN}Followed interactor {masked_did}{Style.RESET_ALL}")
-                bot_state.record_follow_grace(state, did, source="interaction")
-                bot_state.record_acquisition(state, did, "interaction")
+                _checkpoint_follow(state, did)
                 followed_count += 1
             except (
                 requests.RequestException,
@@ -187,9 +196,6 @@ def follow_interactors(
     )
     summary["interaction_added"] = followed_count
     summary["failed"] = summary.get("failed", 0) + len(to_follow) - followed_count
-
-    if followed_count > 0 and not dry_run:
-        bot_state.prune_follow_grace(state)
 
     print(f"{Fore.GREEN}Interaction-follow completed.{Style.RESET_ALL}")
     return followed_count

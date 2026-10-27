@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: "20 */2 * * *"  # Runs every 2 hours (UTC), offset from other state writers
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Preview social processing without applying account actions or state changes
+        type: boolean
+        default: false
 
 concurrency:
   group: joke_and_social_state_writer
@@ -48,7 +53,9 @@ jobs:
         run: scripts/restore_bluesky_session.sh
 
       - name: Run bluesky_follows_and_likes
+        id: social
         env:
+          BLUESKY_DRY_RUN: ${{ inputs.dry_run && 'true' || 'false' }}
           BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
           BLUESKY_USERNAME: ${{ vars.BLUESKY_USERNAME }}
           BLUESKY_BLOCK_DIDS: ${{ vars.BLUESKY_BLOCK_DIDS }}
@@ -72,7 +79,9 @@ jobs:
           key: bluesky-session-v2-${{ github.ref_name }}-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Persist social state
+        if: always() && (steps.social.outcome == 'success' || steps.social.outcome == 'failure')
         run: |
+          python -c 'import json; from pathlib import Path; payloads = [json.loads(Path(path).read_text()) for path in ("state/posting_state.json", "state/social_state.json")]; assert all(isinstance(payload, dict) for payload in payloads), "Checkpoint state must contain JSON objects"'
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           python scripts/persist_workflow_state.py \

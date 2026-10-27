@@ -259,7 +259,6 @@ def main() -> None:
         print(f"{Fore.RED}Interaction liking failed: {exc}{Style.RESET_ALL}")
 
     print(_social_summary_line(social_summary, dry_run))
-    bot_state.save_state(state, domains="social")
     if social_summary["failed"]:
         raise RuntimeError(
             f"Social run completed with {social_summary['failed']} failed action(s)."

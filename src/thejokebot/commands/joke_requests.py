@@ -12,6 +12,7 @@ from thejokebot import config as runtime_config
 from thejokebot import denylist as joke_denylist
 from thejokebot import providers as joke_providers
 from thejokebot import state as bot_state
+from thejokebot import social_transactions
 from thejokebot.commands import post_joke as joke_posting
 from thejokebot.runtime import get_nested_value, mask_sensitive, retry_network_call
 
@@ -172,6 +173,38 @@ def _collect_notifications(client, cutoff_epoch):
     )
 
 
+def _checkpoint_reply(state, uri, *, failures=(), pool_size=None):
+    def record(latest):
+        if uri in bot_state.get_replied_joke_request_uris(latest):
+            return
+        for provider, error, reason_counts in failures:
+            bot_state.record_failure(
+                latest, provider, error, reason_counts=reason_counts
+            )
+        if pool_size is not None:
+            bot_state.advance_posting_tag_offset(latest, 1, pool_size)
+        bot_state.record_replied_joke_request_uri(latest, uri)
+        bot_state.prune_replied_joke_request_uris(latest)
+
+    domains = ("posting", "social") if pool_size is not None else "social"
+    social_transactions.apply(state, record, domains=domains)
+
+
+def _checkpoint_scan(state, upper_epoch, upper_boundary_uris):
+    def record(latest):
+        checkpoint, boundary = bot_state.get_joke_request_checkpoint(latest)
+        if checkpoint is None or upper_epoch > checkpoint:
+            bot_state.set_joke_request_checkpoint(
+                latest, upper_epoch, upper_boundary_uris
+            )
+        elif upper_epoch == checkpoint:
+            bot_state.set_joke_request_checkpoint(
+                latest, checkpoint, boundary | upper_boundary_uris
+            )
+
+    social_transactions.apply(state, record)
+
+
 def reply_to_joke_requests(client, username, state, dry_run, summary=None):
     if summary is None:
         summary = {}
@@ -224,10 +257,8 @@ def reply_to_joke_requests(client, username, state, dry_run, summary=None):
                 "Skipping joke request because the bot has already replied: "
                 f"{mask_sensitive(uri)}"
             )
-            bot_state.record_replied_joke_request_uri(state, uri)
+            _checkpoint_reply(state, uri)
             replied_uris.add(uri)
-            bot_state.prune_replied_joke_request_uris(state)
-            bot_state.save_state(state, domains="social")
             continue
         joke, encoded, provider, _starting_provider, failures, _cutoff = (
             select_reply_joke(state, used_b64s)
@@ -248,25 +279,17 @@ def reply_to_joke_requests(client, username, state, dry_run, summary=None):
             # would create another reply; the next run can inspect the thread.
             max_attempts=1,
         )
-        for failed_provider, error, reason_counts in failures:
-            bot_state.record_failure(
-                state, failed_provider, error, reason_counts=reason_counts
-            )
-        bot_state.advance_posting_tag_offset(state, 1, pool_size)
+        _checkpoint_reply(state, uri, failures=failures, pool_size=pool_size)
         used_b64s.add(encoded)
-        bot_state.record_replied_joke_request_uri(state, uri)
         replied_uris.add(uri)
         replied_count += 1
         replies_by_person[author_did] = replies_by_person.get(author_did, 0) + 1
-        bot_state.prune_replied_joke_request_uris(state)
-        bot_state.save_state(state, domains=("posting", "social"))
     if not dry_run:
         upper_boundary_uris = {
             str(get_nested_value(notification, "uri") or "")
             for notification in notifications
             if _notification_epoch(notification) == upper_epoch
         }
-        bot_state.set_joke_request_checkpoint(state, upper_epoch, upper_boundary_uris)
-        bot_state.save_state(state, domains="social")
+        _checkpoint_scan(state, upper_epoch, upper_boundary_uris)
     summary["joke_replies"] = replied_count
     return replied_count

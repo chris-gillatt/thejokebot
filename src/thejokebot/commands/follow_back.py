@@ -9,6 +9,7 @@ import requests
 from colorama import Fore, Style
 
 from thejokebot import state as bot_state
+from thejokebot import social_transactions
 from thejokebot.followers import fetch_paginated_data
 from thejokebot.runtime import mask_sensitive, retry_network_call
 
@@ -46,7 +47,12 @@ def _follow_candidates(
                 )
                 print(f"{Fore.GREEN}Followed {masked_did}{Style.RESET_ALL}")
                 if state is not None:
-                    bot_state.record_acquisition(state, did, "followback")
+                    social_transactions.apply(
+                        state,
+                        lambda latest, current_did=did: bot_state.record_acquisition(
+                            latest, current_did, "followback"
+                        ),
+                    )
                 summary["follow_back_added"] += 1
             except (
                 requests.RequestException,
@@ -104,7 +110,12 @@ def follow_back(
         follower_dids = {follower.did for follower in followers}
         following_dids = {followed.did for followed in following}
         if state is not None and not dry_run and not cohorts_reconciled:
-            bot_state.reconcile_acquisition_cohorts(state, follower_dids)
+            social_transactions.apply(
+                state,
+                lambda latest, current_followers=follower_dids: (
+                    bot_state.reconcile_acquisition_cohorts(latest, current_followers)
+                ),
+            )
             cohorts_reconciled = True
         remaining_dids = follower_dids - following_dids
         observed_candidate_dids |= remaining_dids
