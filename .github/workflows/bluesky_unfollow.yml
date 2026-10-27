@@ -48,6 +48,7 @@ jobs:
         run: scripts/restore_bluesky_session.sh
 
       - name: Run bluesky_unfollow
+        id: unfollow
         env:
           BLUESKY_USERNAME: ${{ vars.BLUESKY_USERNAME }}
           BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
@@ -74,7 +75,9 @@ jobs:
           key: bluesky-session-v2-${{ github.ref_name }}-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Persist unfollow history state
+        if: always() && (steps.unfollow.outcome == 'success' || steps.unfollow.outcome == 'failure')
         run: |
+          python -c 'import json; from pathlib import Path; payload = json.loads(Path("state/social_state.json").read_text()); assert isinstance(payload, dict), "Social state must be a JSON object"'
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           python scripts/persist_workflow_state.py \
