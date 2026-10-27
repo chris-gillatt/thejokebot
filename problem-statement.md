@@ -22,6 +22,10 @@ This is the operating brief for open work and lasting decisions. See the [README
 
 ## Deferred Work
 
+### Starter-pack inclusion
+
+The manual read-only membership prototype checks candidate packs from retained attributed follows and explicit pack URIs. It does not provide complete reverse membership discovery or inclusion dates. Issue #115 remains open for discovery coverage, a once-per-pack acknowledgement policy, quote-post selection and visual verification before enabling public posts or dashboard membership claims.
+
 ### Dashboard Resolution Time
 
 Report-resolution duration should use newly observed aggregate lifecycle events only. Do not infer it from legacy identifier-only state. Add it once there is sufficient history, with a producer-to-collector test and desktop/mobile dashboard verification.

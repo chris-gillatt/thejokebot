@@ -1,0 +1,35 @@
+name: bluesky_inspect_starter_packs
+
+on:
+  workflow_dispatch:
+    inputs:
+      pack_uri:
+        description: Optional canonical starter-pack AT URI to check alongside retained candidates
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          python -m pip install --require-hashes --only-binary=:all: -r requirements.lock
+          python -m pip install --no-deps --no-build-isolation --editable .
+      - name: Inspect known starter-pack membership
+        env:
+          BLUESKY_USERNAME: ${{ vars.BLUESKY_USERNAME }}
+          BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
+          BLUESKY_PASSWORD_SOURCE: app_password
+          BLUESKY_INSPECT_PACK_URI: ${{ inputs.pack_uri }}
+        run: thejokebot-inspect-starter-packs
