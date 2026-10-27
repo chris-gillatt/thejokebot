@@ -1,6 +1,6 @@
 {
   "schema_version": 11,
-  "generated_at": "2026-10-27T12:49:56.573579+00:00",
+  "generated_at": "2026-10-27T13:05:29.400200+00:00",
   "account": {
     "handle": "thejokebot.bsky.social",
     "display_name": "The Joke Bot",
@@ -13,7 +13,7 @@
     "text": "I threw a boomerang years ago.\n\nI now live in constant fear.\n\n#dadjoke #humour #mumjokes",
     "created_at": "2026-10-27T12:14:25.658262+00:00",
     "engagement": {
-      "likes": 0,
+      "likes": 1,
       "replies": 0,
       "reposts": 0,
       "quotes": 0,
@@ -26,7 +26,7 @@
     "profile_posts": 2737,
     "joke_posts": 1076,
     "engagement": {
-      "likes": 5226,
+      "likes": 5227,
       "replies": 383,
       "reposts": 419,
       "quotes": 44,
@@ -2060,19 +2060,19 @@
     },
     {
       "period_start": "2026-10-27T12:00:00+00:00",
-      "collected_at": "2026-10-27T12:49:56.573579+00:00",
+      "collected_at": "2026-10-27T13:05:29.400200+00:00",
       "followers": 6958,
       "following": 10336,
       "profile_posts": 2737,
       "joke_posts": 1076,
       "engagement": {
-        "likes": 5226,
+        "likes": 5227,
         "replies": 383,
         "reposts": 419,
         "quotes": 44,
         "bookmarks": 72
       },
-      "engagement_total": 6144,
+      "engagement_total": 6145,
       "source": "bluesky_snapshot"
     }
   ],
@@ -7550,13 +7550,6 @@
     "unresolved": 0,
     "runs": [
       {
-        "created_at": "2026-09-27T12:50:33Z",
-        "proposals": 0,
-        "acknowledgements": 0,
-        "approved_removals": 0,
-        "unresolved": 0
-      },
-      {
         "created_at": "2026-09-27T16:44:56Z",
         "proposals": 0,
         "acknowledgements": 0,
@@ -8822,14 +8815,21 @@
         "acknowledgements": 0,
         "approved_removals": 0,
         "unresolved": 0
+      },
+      {
+        "created_at": "2026-10-27T12:58:26Z",
+        "proposals": 0,
+        "acknowledgements": 0,
+        "approved_removals": 0,
+        "unresolved": 0
       }
     ]
   },
   "engagement_momentum": {
     "basis": "visible_joke_snapshot_total",
     "deltas": {
-      "7": 140,
-      "30": 765
+      "7": 141,
+      "30": 766
     }
   },
   "provider_pressure": {
@@ -11667,7 +11667,7 @@
         "name": "groandeck",
         "published": 462,
         "visible_posts": 460,
-        "average_interactions": 4.76,
+        "average_interactions": 4.77,
         "fallthroughs": 1,
         "rejection_counts": {
           "duplicate": 5,
@@ -11765,20 +11765,20 @@
   },
   "automation": {
     "window_days": 30,
-    "collected_at": "2026-10-27T12:49:56.573579+00:00",
-    "runs": 984,
-    "successful": 951,
+    "collected_at": "2026-10-27T13:05:29.400200+00:00",
+    "runs": 985,
+    "successful": 950,
     "failed": 28,
     "cancelled": 2,
     "success_rate": 97.1,
     "workflows": [
       {
         "name": "bluesky_dashboard",
-        "runs": 102,
-        "successful": 100,
+        "runs": 103,
+        "successful": 101,
         "failed": 1,
         "cancelled": 0,
-        "last_run_at": "2026-10-27T12:49:23Z",
+        "last_run_at": "2026-10-27T13:05:00Z",
         "last_status": "in_progress",
         "last_conclusion": null,
         "latest_duration_seconds": null,
@@ -11844,14 +11844,14 @@
       },
       {
         "name": "bluesky_process_reports",
-        "runs": 151,
-        "successful": 151,
+        "runs": 152,
+        "successful": 152,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-10-27T12:16:38Z",
+        "last_run_at": "2026-10-27T12:58:26Z",
         "last_status": "completed",
         "last_conclusion": "success",
-        "latest_duration_seconds": 31,
+        "latest_duration_seconds": 36,
         "median_duration_seconds": 26,
         "expected_interval_hours": 4.0,
         "consecutive_failures": 0
@@ -11887,14 +11887,14 @@
       {
         "name": "codeql",
         "runs": 43,
-        "successful": 40,
+        "successful": 39,
         "failed": 3,
         "cancelled": 0,
-        "last_run_at": "2026-10-27T12:42:46Z",
-        "last_status": "completed",
-        "last_conclusion": "success",
-        "latest_duration_seconds": 92,
-        "median_duration_seconds": 85,
+        "last_run_at": "2026-10-27T13:05:00Z",
+        "last_status": "in_progress",
+        "last_conclusion": null,
+        "latest_duration_seconds": null,
+        "median_duration_seconds": 84,
         "expected_interval_hours": null,
         "consecutive_failures": 0
       },
@@ -11929,27 +11929,27 @@
       {
         "name": "python_tests",
         "runs": 39,
-        "successful": 26,
+        "successful": 25,
         "failed": 13,
         "cancelled": 0,
-        "last_run_at": "2026-10-27T12:42:46Z",
-        "last_status": "completed",
-        "last_conclusion": "success",
-        "latest_duration_seconds": 125,
-        "median_duration_seconds": 112,
+        "last_run_at": "2026-10-27T13:05:00Z",
+        "last_status": "in_progress",
+        "last_conclusion": null,
+        "latest_duration_seconds": null,
+        "median_duration_seconds": 111,
         "expected_interval_hours": null,
         "consecutive_failures": 0
       },
       {
         "name": "ruff_quality",
-        "runs": 40,
-        "successful": 40,
+        "runs": 39,
+        "successful": 39,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-10-27T12:42:46Z",
+        "last_run_at": "2026-10-27T13:05:00Z",
         "last_status": "completed",
         "last_conclusion": "success",
-        "latest_duration_seconds": 19,
+        "latest_duration_seconds": 24,
         "median_duration_seconds": 19,
         "expected_interval_hours": null,
         "consecutive_failures": 0
@@ -11960,10 +11960,10 @@
         "successful": 40,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-10-27T12:42:46Z",
+        "last_run_at": "2026-10-27T13:05:00Z",
         "last_status": "completed",
         "last_conclusion": "success",
-        "latest_duration_seconds": 19,
+        "latest_duration_seconds": 21,
         "median_duration_seconds": 20,
         "expected_interval_hours": null,
         "consecutive_failures": 0
