@@ -867,16 +867,17 @@
       "at://did:plc:3wscmhdbzcnrogtkg6ry56sq/app.bsky.feed.repost/3mypsuunc2425",
       "at://did:plc:ewb7glyvsxc63hxjgdmoupnk/app.bsky.feed.post/3myse6osmxc2w",
       "at://did:plc:ewb7glyvsxc63hxjgdmoupnk/app.bsky.feed.post/3mysdcjhgjs2t",
-      "at://did:plc:poy2zzk2bxceczindgvz6aja/app.bsky.feed.repost/3myucu2xbhg2s"
+      "at://did:plc:poy2zzk2bxceczindgvz6aja/app.bsky.feed.repost/3myucu2xbhg2s",
+      "at://did:plc:qsufp343aihnz4z2peuva7dv/app.bsky.feed.repost/3myvke2fpzl27"
     ],
-    "last_checked_at": 1793148656
+    "last_checked_at": 1793154642
   },
   "joke_requests": {
     "replied_uris": [
       "at://did:plc:ea4cyvzxqvubnkpo6g2kkv6i/app.bsky.feed.post/3mwirjfd7qk2o",
       "at://did:plc:ea4cyvzxqvubnkpo6g2kkv6i/app.bsky.feed.post/3mwl4ggasjc2l"
     ],
-    "last_checked_at": 1793148655.5338311,
+    "last_checked_at": 1793154641.1674905,
     "boundary_notification_uris": []
   },
   "unfollow_history": {
@@ -51114,6 +51115,11 @@
         "did": "did:plc:6twwjmztlkndoj6ppazm5sdh",
         "followed_at": 1793150386,
         "source": "follow_fellows"
+      },
+      {
+        "did": "did:plc:ajyh57y72lj4oxsevpd2zxhl",
+        "followed_at": 1793154640,
+        "source": "interaction"
       }
     ]
   },
@@ -59410,7 +59416,7 @@
     ],
     "starter_pack_attribution": {
       "coverage_started_at": "2026-08-01T14:31:28.650280Z",
-      "last_checked_at": "2026-10-28T00:50:55.216160Z",
+      "last_checked_at": "2026-10-28T02:30:40.748286Z",
       "high_water_indexed_at": "2026-10-27T20:48:57.986Z",
       "boundary_notification_hashes": [
         "ecc57b5160e79ef87619d2b9f6436fc8b1916dbb2f781581dccd0e49f28ee40b"
@@ -72676,6 +72682,15 @@
             "30": null,
             "90": null
           }
+        },
+        "fe478c95fc1589b2a64db5807d66aebf98639f7d2261e5e557f125b0a1f3a225": {
+          "source": "interaction",
+          "acquired_at": 1793154640,
+          "cohort_month": "2026-10",
+          "checkpoints": {
+            "30": null,
+            "90": null
+          }
         }
       },
       "cohorts": {
@@ -72735,7 +72750,7 @@
             }
           },
           "interaction": {
-            "acquired": 10,
+            "acquired": 11,
             "checkpoints": {
               "30": {
                 "observed": 0,
