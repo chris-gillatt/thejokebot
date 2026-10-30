@@ -1,7 +1,7 @@
 {
   "provider": {
     "last_used": "groandeck",
-    "last_used_at": 1793319521,
+    "last_used_at": 1793333296,
     "rotation_order": [
       "icanhazdadjoke",
       "jokeapi",
@@ -10,23 +10,23 @@
     ],
     "failures": {
       "icanhazdadjoke": {
-        "count": 139,
-        "last_failure_at": 1793319521,
+        "count": 140,
+        "last_failure_at": 1793333296,
         "last_error": "All 5 jokes from 'icanhazdadjoke' were rejected (5 duplicates, 0 too long)",
         "reason_counts": {
-          "duplicate": 499,
+          "duplicate": 504,
           "too_long": 1,
           "network_error": 0,
           "provider_error": 0
         }
       },
       "jokeapi": {
-        "count": 382,
-        "last_failure_at": 1793319521,
-        "last_error": "All 5 jokes from 'jokeapi' were rejected (5 duplicates, 0 too long)",
+        "count": 383,
+        "last_failure_at": 1793333296,
+        "last_error": "All 5 jokes from 'jokeapi' were rejected (3 duplicates, 2 too long)",
         "reason_counts": {
-          "duplicate": 1004,
-          "too_long": 11,
+          "duplicate": 1007,
+          "too_long": 13,
           "network_error": 1,
           "provider_error": 0
         }
@@ -54,11 +54,11 @@
         }
       }
     },
-    "last_started_primary": "syrsly",
-    "last_started_primary_at": 1793319521
+    "last_started_primary": "icanhazdadjoke",
+    "last_started_primary_at": 1793333296
   },
   "posting": {
-    "tag_offset": 13
+    "tag_offset": 14
   },
   "posted_jokes": [
     {
@@ -10903,6 +10903,18 @@
         "dadjoke",
         "humour",
         "pun"
+      ]
+    },
+    {
+      "ts": 1793333296,
+      "b64": "V2h5IGRpZCB0aGUgdHJlZSBmZWVsIGVtYmFycmFzc2VkIGF0IHRoZSBnYXJkZW4gcGFydHk/CgpJdCB3YXMgY2F1Z2h0IHdpdGggaXRzIHBsYW50cyBkb3duIQ==",
+      "provider": "groandeck",
+      "post_uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mz2vt3koay22",
+      "post_cid": "bafyreicrisw5wdw2wnsn2zltq7ouave25ovi3uyk65bw3bcdyw3ndqkrya",
+      "hashtags": [
+        "dadjoke",
+        "humorsky",
+        "funny"
       ]
     }
   ]
