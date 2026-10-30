@@ -1071,6 +1071,7 @@ class UnfollowIgnoreValidationTests(unittest.TestCase):
     def test_default_ignorable_handles_include_dad_reply_bot(self):
         expected_handles = (
             "dadreplybot.bsky.social",
+            "thatericalper.com",
             "wholesomememe.bsky.social",
             "docatcdi.com",
         )
