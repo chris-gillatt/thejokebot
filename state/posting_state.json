@@ -1,7 +1,7 @@
 {
   "provider": {
-    "last_used": "syrsly",
-    "last_used_at": 1793376404,
+    "last_used": "groandeck",
+    "last_used_at": 1793390756,
     "rotation_order": [
       "icanhazdadjoke",
       "jokeapi",
@@ -10,22 +10,22 @@
     ],
     "failures": {
       "icanhazdadjoke": {
-        "count": 140,
-        "last_failure_at": 1793333296,
+        "count": 141,
+        "last_failure_at": 1793390756,
         "last_error": "All 5 jokes from 'icanhazdadjoke' were rejected (5 duplicates, 0 too long)",
         "reason_counts": {
-          "duplicate": 504,
+          "duplicate": 509,
           "too_long": 1,
           "network_error": 0,
           "provider_error": 0
         }
       },
       "jokeapi": {
-        "count": 384,
-        "last_failure_at": 1793347748,
+        "count": 385,
+        "last_failure_at": 1793390756,
         "last_error": "All 5 jokes from 'jokeapi' were rejected (5 duplicates, 0 too long)",
         "reason_counts": {
-          "duplicate": 1012,
+          "duplicate": 1017,
           "too_long": 13,
           "network_error": 1,
           "provider_error": 0
@@ -54,11 +54,11 @@
         }
       }
     },
-    "last_started_primary": "syrsly",
-    "last_started_primary_at": 1793376404
+    "last_started_primary": "icanhazdadjoke",
+    "last_started_primary_at": 1793390756
   },
   "posting": {
-    "tag_offset": 0
+    "tag_offset": 1
   },
   "posted_jokes": [
     {
@@ -10951,6 +10951,18 @@
         "dadjoke",
         "funny",
         "mumjokes"
+      ]
+    },
+    {
+      "ts": 1793390756,
+      "b64": "V2h5IGFyZSB0dXJrZXlzIHNvIGdvb2QgYXQgYm93bGluZz8KCkJlY2F1c2UgdGhleSBhbHdheXMgZ2V0IHR1cmtleXMhIFRocmVlIHN0cmlrZXMgaW4gYSByb3ch",
+      "provider": "groandeck",
+      "post_uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mz4ldjtthe2x",
+      "post_cid": "bafyreiabr4owbyzaf4kk3llj35ri6bg3xmtklftuuzg2l4liumgfstsaja",
+      "hashtags": [
+        "dadjoke",
+        "punny",
+        "funny"
       ]
     }
   ]
