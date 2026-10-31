@@ -46,6 +46,7 @@ Do not claim source-specific post engagement, impressions, sentiment, demographi
 
 | Decision | Reason |
 |---|---|
+| Separate production outcomes from CI and expose source-time investigation | Lead with observed delivery/checkpoints, preserve existing freshness tolerances, publish allowlisted failed-step/run receipts, and distinguish successful workflows from proven operational recovery or live queues. |
 | Separate provider access, candidate supply and confirmed publication contribution | Preserve posting decisions and legacy telemetry, disclose detailed sample coverage, and use descriptive period/concentration changes without automatic rotation changes or new alert thresholds. |
 | Observe joke response in 24–30-hour and 168–174-hour bands | Keep the existing six-hour collector, freeze the first in-band reading, show mature publishing-cohort samples and misses, and never reconstruct earlier checkpoints from later totals. Retain public-post-only receipts for 400 days outside Pages. |
 | Use independent historical controls and complete UTC-day comparisons | Keep Audience and Operations periods separate; preserve explicit scopes for current counters and cohort checkpoints, and never turn missing history into zeroes or sum rolling delivery windows. |
@@ -60,7 +61,7 @@ Do not claim source-specific post engagement, impressions, sentiment, demographi
 
 ## Dependency Exceptions
 
-Checked on 31 October 2026 against PyPI, npm and upstream GitHub Action releases. Pyright's declared version (1.1.414) is current, although the local installation is still 1.1.413. Other Action pins are current; the exceptions below are deferred to a separate dependency-maintenance change to keep the dashboard alert fix isolated. Review these at the next dependency-maintenance batch, or immediately if an applicable security advisory appears. Update transitive Python dependencies through the lock resolver, not independently.
+Checked on 31 October 2026 against PyPI, npm and upstream GitHub Action releases. Pyright's declared version (1.1.414) is current, although the local installation is still 1.1.413. Other Action pins are current; the exceptions below are deferred to a separate dependency-maintenance change to keep the dashboard improvements focused. Review these at the next dependency-maintenance batch, or immediately if an applicable security advisory appears. Update transitive Python dependencies through the lock resolver, not independently.
 
 | Dependency | Current locked/pinned version | Latest stable | Reason / review trigger |
 |---|---|---|---|

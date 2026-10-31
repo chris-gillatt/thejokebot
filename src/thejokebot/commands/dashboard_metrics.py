@@ -15,6 +15,7 @@ from thejokebot import state as bot_state
 from thejokebot.commands import dashboard_engagement
 from thejokebot.commands import dashboard_history
 from thejokebot.commands import dashboard_provider_telemetry
+from thejokebot.commands import dashboard_operations
 from thejokebot.commands import dashboard_workflows
 
 PUBLIC_API_BASE = "https://public.api.bsky.app/xrpc"
@@ -875,11 +876,16 @@ def _posting_slots(
 
 
 def _summarise_posting_slots(
-    slots: list[datetime], published_at: list[datetime], match_window: timedelta
+    slots: list[datetime],
+    published_at: list[datetime],
+    match_window: timedelta,
+    *,
+    include_exceptions: bool = False,
 ) -> dict:
     delivered = 0
     delayed = 0
     publication_index = 0
+    exceptions = []
     for slot in slots:
         while (
             publication_index < len(published_at)
@@ -893,7 +899,18 @@ def _summarise_posting_slots(
             delivered += 1
             if published_at[publication_index] > slot + timedelta(minutes=30):
                 delayed += 1
+                exceptions.append(
+                    {
+                        "slot_at": slot.isoformat(),
+                        "published_at": published_at[publication_index].isoformat(),
+                        "outcome": "delayed",
+                    }
+                )
             publication_index += 1
+        else:
+            exceptions.append(
+                {"slot_at": slot.isoformat(), "published_at": None, "outcome": "missed"}
+            )
     expected = len(slots)
     return {
         "expected": expected,
@@ -901,6 +918,7 @@ def _summarise_posting_slots(
         "missed": expected - delivered,
         "delayed": delayed,
         "delivery_rate": round(delivered * 100 / expected, 1) if expected else None,
+        **({"exceptions": exceptions} if include_exceptions else {}),
     }
 
 
@@ -948,6 +966,9 @@ def _posting_delivery(state: dict, cron: str, now: datetime) -> dict:
         "match_window_hours": POSTING_SLOT_MATCH_HOURS,
         "current_streak": _posting_streak(closed_slots, published_at, match_window),
         "windows": windows,
+        "closed_slot_exceptions": _summarise_posting_slots(
+            closed_slots, published_at, match_window, include_exceptions=True
+        )["exceptions"],
     }
 
 
@@ -1091,6 +1112,15 @@ def collect_metrics(
         "providers": providers,
         "posting_delivery": posting_delivery,
         "automation": automation,
+        "operations": {
+            "workflow_runs": dashboard_operations.public_runs(
+                workflow_runs or [], dashboard_history.TRACKED_WORKFLOWS
+            ),
+            "ci_workflows": sorted(dashboard_operations.CI_WORKFLOWS),
+            "components": dashboard_operations.component_observations(
+                state, workflow_activity, automation, now
+            ),
+        },
         "top_posts": _top_post_summaries(joke_posts, profile["handle"]),
         "top_posts_by_window": _top_posts_by_window(joke_posts, profile["handle"], now),
     }

@@ -116,7 +116,9 @@ const DashboardHistory = (() => {
       ).sort((left, right) => left.date.localeCompare(right.date)),
       activity_runs: activityRuns.filter((run) => run.workflow !== "legacy_activity" ||
         !authoritativeRuns.has(`${run.id}/${run.attempt || 1}`)),
-      automation_runs: mergeRecords(records("automation_runs"), runIdentity),
+      automation_runs: mergeRecords(
+        [...records("automation_runs"), ...(metrics.operations?.workflow_runs || [])], runIdentity,
+      ),
       operational_observations: mergeRecords(
         records("operational_observations"), (item) => item.period_start,
       ).sort((left, right) => left.collected_at.localeCompare(right.collected_at)),
@@ -245,6 +247,40 @@ const DashboardHistory = (() => {
     };
   }
 
+  function incidents(data, period) {
+    const outcomeAt = (run) => run.updated_at || run.created_at;
+    const grouped = new Map();
+    data.automation_runs.forEach((run) => {
+      if (!grouped.has(run.workflow)) grouped.set(run.workflow, []);
+      grouped.get(run.workflow).push(run);
+    });
+    const episodes = [];
+    grouped.forEach((runs, workflow) => {
+      let failures = [];
+      const save = (recovery) => {
+        if (failures.some((run) => inPeriod(outcomeAt(run), period))) {
+          episodes.push({
+            workflow, failures, recovery,
+            first_failure_at: outcomeAt(failures[0]),
+            last_failure_at: outcomeAt(failures.at(-1)),
+          });
+        }
+        failures = [];
+      };
+      runs.sort((left, right) => outcomeAt(left).localeCompare(outcomeAt(right)) ||
+        left.id - right.id || (left.attempt || 1) - (right.attempt || 1));
+      runs.forEach((run) => {
+        if (run.status !== "completed") return;
+        if (run.conclusion === "failure") failures.push(run);
+        else if (run.conclusion === "success") save(run);
+      });
+      save(null);
+    });
+    return episodes.sort((left, right) =>
+      right.last_failure_at.localeCompare(left.last_failure_at),
+    );
+  }
+
   function series(data, period) {
     const activity = new Map(data.daily_activity.map((item) => [item.date, item]));
     const accounts = new Map();
@@ -297,5 +333,5 @@ const DashboardHistory = (() => {
     };
   }
 
-  return { range, previous, dates, inPeriod, requestedMonths, loadPartitions, merge, summary, series, providerSupply, availability };
+  return { range, previous, dates, inPeriod, requestedMonths, loadPartitions, merge, summary, series, providerSupply, incidents, availability };
 })();

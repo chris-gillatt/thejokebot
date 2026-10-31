@@ -10,6 +10,7 @@ import requests
 
 from thejokebot import state as bot_state
 from thejokebot.commands import dashboard_engagement
+from thejokebot.commands import dashboard_operations
 from thejokebot.commands import dashboard_metrics
 from thejokebot.commands import dashboard_history
 from thejokebot.commands import dashboard_workflows
@@ -145,6 +146,19 @@ def _write_metrics(metrics: dict) -> None:
     dashboard_history._write_json(METRICS_FILE, metrics)
 
 
+def fetch_failed_steps(
+    session, repository: str, run_id: int, attempt: int, token
+) -> list[dict]:
+    return dashboard_operations.fetch_failed_steps(
+        session,
+        repository,
+        run_id,
+        attempt,
+        dashboard_workflows._github_headers(token),
+        retry_network_call,
+    )
+
+
 def main() -> None:
     actor = os.getenv("BLUESKY_USERNAME", "").strip()
     if not actor:
@@ -164,6 +178,14 @@ def main() -> None:
         dashboard_history._migrate_existing_history(existing),
     )
     collector_existing = dashboard_history._collector_existing(existing, history, now)
+    workflow_runs = dashboard_operations.enrich_runs(
+        workflow_runs,
+        collector_existing.get("automation_runs", []),
+        dashboard_history.TRACKED_WORKFLOWS,
+        lambda run_id, attempt: fetch_failed_steps(
+            session, repository, run_id, attempt, os.getenv("GITHUB_TOKEN")
+        ),
+    )
     collector_existing["engagement_checkpoints"] = dashboard_engagement.load(
         dashboard_engagement.STATE_FILE
     )

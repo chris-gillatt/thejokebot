@@ -314,6 +314,7 @@ function renderOperationalHistory() {
     options: rates,
   });
   renderProviderSupply(daily, rates);
+  renderIncidentHistory();
   const events = view.data.activity_runs.filter((run) =>
     run.workflow === "bluesky_unfollow" && run.unfollows > 0 &&
     DashboardHistory.inPeriod(run.created_at, view.period),
@@ -326,6 +327,84 @@ function renderOperationalHistory() {
     list.append(item);
   });
   document.getElementById("history-maintenance-empty").hidden = events.length > 0;
+}
+
+function runLink(run, label) {
+  const link = document.createElement("a");
+  if (!Number.isSafeInteger(run.id) || run.id <= 0 || !Number.isSafeInteger(run.attempt || 1) || (run.attempt || 1) < 1) {
+    throw new Error("Invalid workflow run identity.");
+  }
+  link.href = `https://github.com/chris-gillatt/thejokebot/actions/runs/${run.id}/attempts/${run.attempt || 1}`;
+  link.textContent = label;
+  return link;
+}
+
+function renderIncidentHistory() {
+  const view = historicalViews.operations;
+  const episodes = DashboardHistory.incidents(view.data, view.period);
+  const body = document.querySelector("#incident-table tbody");
+  body.replaceChildren();
+  episodes.forEach((episode) => {
+    const row = document.createElement("tr");
+    const ci = (metrics.operations?.ci_workflows || []).includes(episode.workflow);
+    appendCell(row, `${displayName(episode.workflow)} (${ci ? "CI" : "production"})`);
+    appendCell(row, `${dateTimeFormat.format(new Date(episode.first_failure_at))} – ${dateTimeFormat.format(new Date(episode.last_failure_at))}`);
+    const links = document.createElement("div");
+    episode.failures.forEach((run) => {
+      const entry = document.createElement("p");
+      entry.append(runLink(run, `Run ${run.id}, attempt ${run.attempt || 1}`));
+      const steps = document.createElement("span");
+      steps.textContent = run.failed_steps?.length
+        ? ` · ${run.failed_steps.map((step) => step.name).join("; ")}`
+        : " · Failed step unavailable";
+      entry.append(steps);
+      links.append(entry);
+    });
+    appendCell(row, links);
+    appendCell(row, episode.recovery
+      ? runLink(episode.recovery, `Successful run ${episode.recovery.id} (${dateTimeFormat.format(new Date(episode.recovery.updated_at || episode.recovery.created_at))})`)
+      : "No successful recovery observed in loaded history");
+    body.append(row);
+  });
+  document.getElementById("incident-empty").hidden = episodes.length > 0;
+}
+
+function renderComponentFreshness() {
+  const body = document.querySelector("#component-freshness-table tbody");
+  body.replaceChildren();
+  (metrics.operations?.components || []).forEach((component) => {
+    const row = document.createElement("tr");
+    appendCell(row, component.name);
+    appendCell(row, component.observed_at ? dateTimeFormat.format(new Date(component.observed_at)) : "Not observed");
+    appendCell(row, component.last_success_at ? dateTimeFormat.format(new Date(component.last_success_at)) : "Not observed / not applicable");
+    let status = "Unavailable";
+    if (component.observed_at) status = component.overdue ? "Overdue at collection" : "Observed at collection";
+    appendCell(row, status);
+    body.append(row);
+  });
+  const checkpoint = metrics.operations?.components?.find((item) => item.name === "Joke-request checkpoint");
+  setText("production-checkpoint", checkpoint?.observed_at ? dateTimeFormat.format(new Date(checkpoint.observed_at)) : "Not observed");
+  setText("production-moderation", metricText(metrics.moderation_activity?.unresolved));
+  const moderation = metrics.operations?.components?.find((item) => item.name === "Moderation summary");
+  setText("production-moderation-note", moderation?.observed_at ? `At ${dateTimeFormat.format(new Date(moderation.observed_at))}; not a live queue` : "Summary observation unavailable");
+  const bodySlots = document.querySelector("#slot-exceptions-table tbody");
+  bodySlots.replaceChildren();
+  const observedExceptions = metrics.posting_delivery?.closed_slot_exceptions;
+  const exceptions = observedExceptions || [];
+  setText("slot-exceptions-summary", observedExceptions
+    ? `${numberFormat.format(exceptions.length)} closed-slot exceptions in the recent 30 days`
+    : "Closed-slot exceptions (detail unavailable)");
+  setText("slot-exceptions-empty", observedExceptions
+    ? "No missed or delayed closed slots observed in the retained 30-day window."
+    : "Closed-slot exception detail unavailable in this metrics snapshot.");
+  exceptions.forEach((slot) => {
+    const row = document.createElement("tr");
+    appendCell(row, dateTimeFormat.format(new Date(slot.slot_at)));
+    appendCell(row, slot.outcome === "delayed" ? "Delayed (more than 30 minutes)" : "Missed within matching window");
+    appendCell(row, slot.published_at ? dateTimeFormat.format(new Date(slot.published_at)) : "No matching publication observed");
+    bodySlots.append(row);
+  });
+  document.getElementById("slot-exceptions-empty").hidden = exceptions.length > 0;
 }
 
 function providerSupplyCells(row, provider, prior) {
@@ -1027,6 +1106,8 @@ function renderModerationActivity() {
   const delivery = metrics.posting_delivery;
   const sevenDays = delivery?.windows?.["7"];
   const thirtyDays = delivery?.windows?.["30"];
+  setText("production-delivery", sevenDays ? `${sevenDays.delivered}/${sevenDays.expected}` : "--");
+  setText("production-missed", metricText(sevenDays?.missed));
   setText(
     "posting-delivery-rate",
     sevenDays?.delivery_rate == null
@@ -1091,19 +1172,28 @@ function renderOperationalPulse(automation) {
   }
   const pulse = document.getElementById("operational-pulse");
   pulse.replaceChildren();
-  if (!alerts.length) {
+  const ciNames = metrics.operations?.ci_workflows || [];
+  const production = alerts.filter((alert) => !ciNames.includes(alert.workflow));
+  const ci = alerts.filter((alert) => ciNames.includes(alert.workflow));
+  if (!production.length) {
     const clear = document.createElement("p");
     clear.className = "pulse-clear";
-    clear.textContent = "No current operational alerts";
+    clear.textContent = "No production alerts in the latest observation";
     pulse.append(clear);
   } else {
-    alerts.forEach((alert) => {
+    production.forEach((alert) => {
       const item = document.createElement("p");
       item.className = `pulse-alert ${alert.level || "attention"}`;
       item.textContent = operationalAlertText(alert);
       pulse.append(item);
     });
   }
+  const ciPulse = document.getElementById("ci-pulse");
+  ciPulse.replaceChildren();
+  const note = document.createElement("p");
+  note.textContent = ci.length ? ci.map(operationalAlertText).join(" · ") : "No current CI alerts. Passing CI does not prove that posting or social actions completed.";
+  ciPulse.append(note);
+  renderComponentFreshness();
 }
 
 function renderWorkflowTable(workflows) {

@@ -10,6 +10,7 @@ from pathlib import Path
 
 from thejokebot import state as bot_state
 from thejokebot.commands import dashboard_provider_telemetry
+from thejokebot.commands import dashboard_operations
 from thejokebot.paths import DASHBOARD_DIR
 
 _UTC_OFFSET = "+00:00"
@@ -93,6 +94,8 @@ HISTORY_RECORD_FIELDS = {
         "updated_at",
         "status",
         "conclusion",
+        "failure_metadata",
+        "failed_steps",
     ),
     "daily_activity": ("date", "joke_posts", "follows", "unfollows"),
     "operational_observations": (
@@ -136,6 +139,10 @@ def _history_record(record: dict, family: str) -> dict:
     if family == "activity_runs" and "provider_candidates" in public:
         public["provider_candidates"] = dashboard_provider_telemetry.sanitise(
             public["provider_candidates"]
+        )
+    if family == "automation_runs" and "failed_steps" in public:
+        public["failed_steps"] = dashboard_operations.sanitise_steps(
+            public["failed_steps"]
         )
     return public
 
@@ -235,6 +242,11 @@ def _history_from_collection(
             "updated_at": run.get("updated_at"),
             "status": run.get("status"),
             "conclusion": run.get("conclusion"),
+            **{
+                field: run[field]
+                for field in ("failure_metadata", "failed_steps")
+                if field in run
+            },
         }
         merge(_utc_month(record["created_at"]), "automation_runs", record)
 
@@ -567,6 +579,13 @@ def _collector_existing(
     return {
         "schema_version": SCHEMA_VERSION,
         "snapshots": snapshots,
+        "automation_runs": [
+            item
+            for partition in partitions.values()
+            for item in partition["automation_runs"]
+            if datetime.fromisoformat(item["created_at"].replace("Z", _UTC_OFFSET))
+            >= cutoff
+        ],
         "workflow_activity": {
             "window_days": WORKFLOW_WINDOW_DAYS,
             "coverage_start": metadata.get("coverage_start") or cutoff.isoformat(),

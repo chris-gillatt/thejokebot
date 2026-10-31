@@ -21,15 +21,15 @@
         [role="tabpanel"][hidden] { display: block; }
       </style>
     </noscript>
-    <link rel="stylesheet" href="styles.css?v=26" />
+    <link rel="stylesheet" href="styles.css?v=27" />
     <script
       src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"
       integrity="sha384-jb8JQMbMoBUzgWatfe6COACi2ljcDdZQ2OxczGA3bGNeWe+6DChMTBJemed7ZnvJ"
       crossorigin="anonymous"
       defer
     ></script>
-    <script src="history.js?v=2" defer></script>
-    <script src="app.js?v=21" defer></script>
+    <script src="history.js?v=3" defer></script>
+    <script src="app.js?v=22" defer></script>
   </head>
   <body>
     <noscript>
@@ -285,9 +285,10 @@
               <div class="maintenance-summary">
                 <div><span>Reviewed</span><strong id="unfollow-processed">--</strong></div>
                 <div><span>Completed</span><strong id="unfollow-completed">--</strong></div>
-                <div><span>Cap remaining</span><strong id="unfollow-pending">--</strong></div>
+                <div><span>Unreviewed in past runs</span><strong id="unfollow-pending">--</strong></div>
                 <div><span>Exceptions</span><strong id="unfollow-exceptions">--</strong></div>
               </div>
+              <p class="growth-explanation">The historical remainder sums unreviewed candidates across past runs, not a currently observed maintenance queue. An account can appear in more than one review.</p>
               <details>
                 <summary>View maintenance run data</summary>
                 <div class="table-scroll social-table-scroll">
@@ -403,14 +404,20 @@
           <div class="section-heading operations-heading">
             <div>
               <p class="eyebrow">Behind the punchline</p>
-              <h2 id="operations-heading">Build and run health</h2>
+              <h2 id="operations-heading">Delivery and operational outcomes</h2>
             </div>
             <p class="section-note">Tracked bot and CI workflows over the last 30 days</p>
           </div>
 
+          <div class="operations-summary" aria-label="Production outcomes">
+            <div class="operation-stat"><span>7-day delivered slots</span><strong id="production-delivery">--</strong><small>Complete UTC days, not workflow success</small></div>
+            <div class="operation-stat"><span>7-day missed slots</span><strong id="production-missed">--</strong><small>Inspect matched exceptions below</small></div>
+            <div class="operation-stat"><span>Joke-request checkpoint</span><strong id="production-checkpoint">--</strong><small>Last actual checkpoint, not refresh time</small></div>
+            <div class="operation-stat"><span>Observed unresolved reports</span><strong id="production-moderation">--</strong><small id="production-moderation-note">Summary observation unavailable</small></div>
+          </div>
           <div class="operations-summary" aria-label="Automation summary">
             <div class="operation-stat">
-              <span>Success rate</span>
+              <span>All-workflow success rate</span>
               <strong id="automation-rate">--</strong>
             </div>
             <div class="operation-stat">
@@ -428,9 +435,13 @@
           </div>
 
           <div class="operational-pulse" aria-live="polite" aria-label="Current operational alerts">
-            <strong>Operational pulse</strong>
+            <strong>Production pulse</strong>
             <div id="operational-pulse"></div>
           </div>
+          <div class="operational-pulse"><strong>CI health (separate from production)</strong><div id="ci-pulse"></div></div>
+          <h3>Component observations and last successful workflows</h3>
+          <p class="data-note">These are source observation times, not the dashboard regeneration time. Cached action summaries and availability checks do not become fresh just because this page updates. Overdue uses each existing workflow interval plus two hours; the page-level eight-hour collection warning remains in force.</p>
+          <div class="table-scroll"><table id="component-freshness-table"><thead><tr><th>Component</th><th>Last source observation</th><th>Last successful workflow</th><th>Observation status</th></tr></thead><tbody></tbody></table></div>
 
           <article class="history-panel" aria-labelledby="operational-history-heading">
             <div class="section-heading">
@@ -480,6 +491,10 @@
             <h4>Recorded maintenance events</h4>
             <ul id="history-maintenance-events"></ul>
             <p id="history-maintenance-empty" class="data-note">No completed unfollow events observed in this period. Release or schedule changes are not inferred from activity.</p>
+            <h4>Failed workflow episodes and observed recovery</h4>
+            <p class="data-note">Selected historical period; consecutive failures are grouped until a successful workflow is observed. Recovery means workflow success, not proven operational recovery. Queued/running/cancelled attempts do not establish recovery. Older failed steps may be unavailable; links identify exact run attempts. Only explicitly named first-party steps are published, never command text or raw logs.</p>
+            <div class="table-scroll"><table id="incident-table"><thead><tr><th>Workflow / domain</th><th>First / last observed failure</th><th>Failed attempts and available steps</th><th>Observed workflow recovery</th></tr></thead><tbody></tbody></table></div>
+            <p id="incident-empty" class="data-note">No completed failure episodes observed in this selected period.</p>
           </article>
 
           <div class="moderation-block" aria-labelledby="moderation-heading">
@@ -510,6 +525,10 @@
               <div><span>Missed slots</span><strong id="posting-missed">--</strong><small id="posting-missed-context">Delayed slots unavailable</small></div>
               <div><span>Current streak</span><strong id="posting-streak">--</strong><small>Closed slots</small></div>
             </div>
+            <h4 id="slot-exceptions-summary">Closed-slot exceptions in the recent 30 days</h4>
+            <p class="data-note">Actual UTC slots and publication times, independent of the historical selector. A delayed match is more than 30 minutes after its slot; missed means no publication within the existing two-hour matching window. Publications are matched once only; these are delivery outcomes, not CI results.</p>
+            <div class="table-scroll" tabindex="0" aria-label="Closed-slot exceptions; scroll for more observations"><table id="slot-exceptions-table"><thead><tr><th>Scheduled UTC slot</th><th>Observed outcome</th><th>Matched publication</th></tr></thead><tbody></tbody></table></div>
+            <p id="slot-exceptions-empty" class="data-note">Closed-slot exception detail unavailable.</p>
           </div>
 
           <div class="provider-pressure-block" aria-labelledby="provider-pressure-heading">

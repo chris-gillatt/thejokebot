@@ -11,6 +11,8 @@ on:
       - "dashboard/**"
       - "src/thejokebot/commands/collect_dashboard_metrics.py"
       - "src/thejokebot/commands/dashboard_engagement.py"
+      - "src/thejokebot/commands/dashboard_operations.py"
+      - "src/thejokebot/commands/dashboard_provider_telemetry.py"
       - "src/thejokebot/commands/dashboard_metrics.py"
       - "src/thejokebot/commands/dashboard_history.py"
       - ".github/workflows/bluesky_dashboard.yml"

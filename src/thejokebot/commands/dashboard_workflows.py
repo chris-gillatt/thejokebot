@@ -552,6 +552,7 @@ def _workflow_metrics(workflow_runs: list[dict], now: datetime) -> dict:
             "last_run_at": None,
             "last_status": None,
             "last_conclusion": None,
+            "last_success_at": None,
             "latest_duration_seconds": None,
             "median_duration_seconds": None,
             "expected_interval_hours": _daily_schedule_interval_hours(
@@ -566,6 +567,13 @@ def _workflow_metrics(workflow_runs: list[dict], now: datetime) -> dict:
         if name not in TRACKED_WORKFLOWS:
             continue
         summary = grouped[name]
+        if run.get("status") == "completed" and run.get("conclusion") == "success":
+            completed_at = run.get("updated_at") or run.get("created_at")
+            if completed_at and (
+                not summary["last_success_at"]
+                or completed_at > summary["last_success_at"]
+            ):
+                summary["last_success_at"] = completed_at
         duration = _update_workflow_summary(summary, run)
         if duration is not None:
             durations[name].append(duration)
