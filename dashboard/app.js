@@ -1364,6 +1364,9 @@ function renderCharts() {
 }
 
 function bindRangeControls() {
+  document.getElementById("slot-exceptions-inspect").addEventListener("click", () => {
+    document.getElementById("slot-exceptions-region").focus();
+  });
   document.querySelectorAll("[data-range]").forEach((button) => {
     button.addEventListener("click", () => {
       selectHistoricalPeriod("audience", button.dataset.range);

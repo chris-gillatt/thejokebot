@@ -14,6 +14,7 @@ from thejokebot.commands import (
 from thejokebot.commands import dashboard_operations as operations
 from thejokebot.commands import collect_dashboard_metrics as collector
 from thejokebot.commands import dashboard_engagement
+from thejokebot.paths import PROJECT_ROOT
 from test_dashboard_providers import _js
 
 NOW = datetime(2026, 10, 31, 12, tzinfo=timezone.utc)
@@ -505,3 +506,21 @@ def test_legacy_slot_detail_is_unavailable_not_a_fabricated_healthy_result():
     assert (
         result == "Closed-slot exception detail unavailable in this metrics snapshot."
     )
+
+
+def test_slot_inspection_button_focuses_the_region_without_a_static_tab_stop():
+    result = _js(
+        "(()=>{metrics={generated_at:'2026-10-31T12:00:00Z'};"
+        "document.querySelectorAll=()=>[];Node.prototype.addEventListener=function(type,handler){this[type]=handler;};"
+        "Node.prototype.focus=function(){this.focused=true;};bindRangeControls();"
+        "get('slot-exceptions-inspect').click();return get('slot-exceptions-region').focused;})()",
+        {},
+        controller=True,
+    )
+    assert result is True
+    html = (PROJECT_ROOT / "dashboard/index.html").read_text()
+    assert (
+        '<section id="slot-exceptions-region" class="table-scroll" tabindex="-1"'
+        in html
+    )
+    assert 'aria-controls="slot-exceptions-region"' in html
