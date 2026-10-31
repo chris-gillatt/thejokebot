@@ -1924,7 +1924,7 @@
     },
     {
       "period_start": "2026-10-31T00:00:00+00:00",
-      "collected_at": "2026-10-31T04:46:48.707299+00:00",
+      "collected_at": "2026-10-31T05:44:17.581847+00:00",
       "followers": 7005,
       "following": 10668,
       "profile_posts": 2760,
@@ -20194,7 +20194,15 @@
       "created_at": "2026-10-19T20:31:13Z",
       "updated_at": "2026-10-19T20:31:56Z",
       "status": "completed",
-      "conclusion": "failure"
+      "conclusion": "failure",
+      "failure_metadata": "available",
+      "failed_steps": [
+        {
+          "number": 7,
+          "job_id": 118291230603,
+          "name": "Run bluesky_follows_and_likes"
+        }
+      ]
     },
     {
       "id": 39322072431,
@@ -21949,7 +21957,15 @@
       "created_at": "2026-10-26T06:38:01Z",
       "updated_at": "2026-10-26T06:38:49Z",
       "status": "completed",
-      "conclusion": "failure"
+      "conclusion": "failure",
+      "failure_metadata": "available",
+      "failed_steps": [
+        {
+          "number": 10,
+          "job_id": 121433940207,
+          "name": "Run unit tests"
+        }
+      ]
     },
     {
       "id": 40280966783,
@@ -22336,7 +22352,15 @@
       "created_at": "2026-10-27T10:22:34Z",
       "updated_at": "2026-10-27T10:23:55Z",
       "status": "completed",
-      "conclusion": "failure"
+      "conclusion": "failure",
+      "failure_metadata": "available",
+      "failed_steps": [
+        {
+          "number": 13,
+          "job_id": 122134402134,
+          "name": "Require zero unresolved Sonar issues"
+        }
+      ]
     },
     {
       "id": 40487957807,
@@ -23056,7 +23080,15 @@
       "created_at": "2026-10-27T12:29:26Z",
       "updated_at": "2026-10-27T12:30:56Z",
       "status": "completed",
-      "conclusion": "failure"
+      "conclusion": "failure",
+      "failure_metadata": "available",
+      "failed_steps": [
+        {
+          "number": 12,
+          "job_id": 122189041927,
+          "name": "Run SonarQube Cloud analysis"
+        }
+      ]
     },
     {
       "id": 40504146604,
@@ -23542,7 +23574,15 @@
       "created_at": "2026-10-28T08:28:53Z",
       "updated_at": "2026-10-28T08:29:33Z",
       "status": "completed",
-      "conclusion": "failure"
+      "conclusion": "failure",
+      "failure_metadata": "available",
+      "failed_steps": [
+        {
+          "number": 7,
+          "job_id": 122710639771,
+          "name": "Run bluesky_follows_and_likes"
+        }
+      ]
     },
     {
       "id": 40658748772,
@@ -24386,27 +24426,27 @@
       "attempt": 1,
       "workflow": "bluesky_dashboard",
       "created_at": "2026-10-31T04:46:20Z",
-      "updated_at": "2026-10-31T04:46:24Z",
-      "status": "in_progress",
-      "conclusion": null
+      "updated_at": "2026-10-31T04:47:55Z",
+      "status": "completed",
+      "conclusion": "success"
     },
     {
       "id": 41169908642,
       "attempt": 1,
       "workflow": "codeql",
       "created_at": "2026-10-31T04:46:20Z",
-      "updated_at": "2026-10-31T04:46:24Z",
-      "status": "in_progress",
-      "conclusion": null
+      "updated_at": "2026-10-31T04:47:19Z",
+      "status": "completed",
+      "conclusion": "success"
     },
     {
       "id": 41169908517,
       "attempt": 1,
       "workflow": "python_tests",
       "created_at": "2026-10-31T04:46:20Z",
-      "updated_at": "2026-10-31T04:46:23Z",
-      "status": "in_progress",
-      "conclusion": null
+      "updated_at": "2026-10-31T04:48:25Z",
+      "status": "completed",
+      "conclusion": "success"
     },
     {
       "id": 41169908515,
@@ -24423,6 +24463,51 @@
       "workflow": "validate_runtime_config",
       "created_at": "2026-10-31T04:46:20Z",
       "updated_at": "2026-10-31T04:46:39Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 41173747020,
+      "attempt": 1,
+      "workflow": "bluesky_dashboard",
+      "created_at": "2026-10-31T05:43:49Z",
+      "updated_at": "2026-10-31T05:43:53Z",
+      "status": "in_progress",
+      "conclusion": null
+    },
+    {
+      "id": 41173746998,
+      "attempt": 1,
+      "workflow": "codeql",
+      "created_at": "2026-10-31T05:43:49Z",
+      "updated_at": "2026-10-31T05:43:53Z",
+      "status": "in_progress",
+      "conclusion": null
+    },
+    {
+      "id": 41173747024,
+      "attempt": 1,
+      "workflow": "python_tests",
+      "created_at": "2026-10-31T05:43:49Z",
+      "updated_at": "2026-10-31T05:43:53Z",
+      "status": "in_progress",
+      "conclusion": null
+    },
+    {
+      "id": 41173746968,
+      "attempt": 1,
+      "workflow": "ruff_quality",
+      "created_at": "2026-10-31T05:43:49Z",
+      "updated_at": "2026-10-31T05:44:11Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 41173747006,
+      "attempt": 1,
+      "workflow": "validate_runtime_config",
+      "created_at": "2026-10-31T05:43:49Z",
+      "updated_at": "2026-10-31T05:44:11Z",
       "status": "completed",
       "conclusion": "success"
     }
@@ -64106,7 +64191,7 @@
     },
     {
       "period_start": "2026-10-31T00:00:00+00:00",
-      "collected_at": "2026-10-31T04:46:48.707299+00:00",
+      "collected_at": "2026-10-31T05:44:17.581847+00:00",
       "providers": [
         {
           "name": "icanhazdadjoke",
