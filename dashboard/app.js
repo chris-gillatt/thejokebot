@@ -313,6 +313,7 @@ function renderOperationalHistory() {
     },
     options: rates,
   });
+  renderProviderSupply(daily, rates);
   const events = view.data.activity_runs.filter((run) =>
     run.workflow === "bluesky_unfollow" && run.unfollows > 0 &&
     DashboardHistory.inPeriod(run.created_at, view.period),
@@ -325,6 +326,64 @@ function renderOperationalHistory() {
     list.append(item);
   });
   document.getElementById("history-maintenance-empty").hidden = events.length > 0;
+}
+
+function providerSupplyCells(row, provider, prior) {
+  appendCell(row, displayName(provider.name));
+  const share = provider.publicationShare == null ? "--" : `${percentageFormat.format(provider.publicationShare)}%`;
+  appendCell(row, `${provider.published} (${share})`);
+  appendCell(row, provider.detailed ? `${provider.visits} / ${provider.fetches}` : "Not measured");
+  appendCell(row, provider.detailed ? `${provider.selected} / ${provider.candidates}` : "Not measured");
+  appendCell(row, provider.rejectionRate == null ? "--" : `${percentageFormat.format(provider.rejectionRate)}% (${provider.duplicate + provider.too_long}/${provider.candidates})`);
+  appendCell(row, provider.detailed ? `${provider.exhausted}` : "Not measured");
+  appendCell(row, provider.errorRate == null ? "--" : `${percentageFormat.format(provider.errorRate)}% (${provider.network_error + provider.provider_error}/${provider.fetches})`);
+  const reasons = Object.fromEntries(["duplicate", "too_long", "network_error", "provider_error"].map((reason) => [reason, provider[reason]]));
+  appendCell(row, provider.detailed ? rejectionSummary(reasons) : "Historical detail unavailable");
+  appendCell(row, historyComparison(provider.rejectionRate, prior?.rejectionRate, true));
+}
+
+function renderProviderSupply(daily, options) {
+  const view = historicalViews.operations;
+  const current = DashboardHistory.providerSupply(view.data, view.period);
+  const prior = DashboardHistory.providerSupply(view.data, DashboardHistory.previous(view.period));
+  setText("provider-supply-coverage", `${current.measuredRuns}/${current.postingAttempts} archived posting attempts have publication outcomes; ${current.detailedRuns} have per-provider candidate detail. ${current.published} publications; ${current.failedPublications} unsuccessful publication attempts. Manual runs and retries count as separate attempts, not scheduled slots. Missing archive/log observations are not zeroes.`);
+  setText("provider-leading-source", current.leadingSource ? displayName(current.leadingSource) : "--");
+  setText("provider-leading-share", current.leadingShare == null ? "--" : `${percentageFormat.format(current.leadingShare)}%`);
+  setText("provider-leading-change", historyComparison(current.leadingShare, prior.leadingShare, true));
+  setText("provider-concentration", current.concentration == null ? "--" : numberFormat.format(current.concentration));
+  setText("provider-publication-change", `All-source publications: ${historyComparison(current.measuredRuns ? current.published : null, prior.measuredRuns ? prior.published : null)}`);
+  const body = document.querySelector("#provider-supply-table tbody");
+  body.replaceChildren();
+  current.providers.forEach((provider) => {
+    const row = document.createElement("tr");
+    providerSupplyCells(row, provider, prior.providers.find((item) => item.name === provider.name));
+    body.append(row);
+  });
+  document.getElementById("provider-supply-empty").hidden = current.providers.length > 0;
+  replaceChart("providerConcentration", document.getElementById("provider-concentration-chart"), {
+    type: "line",
+    data: {
+      labels: daily.map((item) => item.date),
+      datasets: [
+        { label: "Largest source's daily publication share", data: daily.map((item) => item.providerLeadingShare), borderColor: colours[2], spanGaps: false },
+        { label: "Daily concentration index × 100", data: daily.map((item) => item.providerConcentration == null ? null : item.providerConcentration * 100), borderColor: colours[3], spanGaps: false },
+      ],
+    },
+    options,
+  });
+  replaceChart("providerRejections", document.getElementById("provider-rejections-chart"), {
+    type: "line",
+    data: {
+      labels: daily.map((item) => item.date),
+      datasets: current.providers.filter((provider) => provider.detailed).map((provider, index) => ({
+        label: `${displayName(provider.name)} content rejection`,
+        data: daily.map((item) => item.providerRejectionRates[provider.name] ?? null),
+        borderColor: colours[index % colours.length],
+        spanGaps: false,
+      })),
+    },
+    options,
+  });
 }
 
 async function updateHistoricalView(viewName, selection, custom = {}) {
@@ -751,6 +810,7 @@ function renderEngagement() {
 
 function displayName(value) {
   const names = {
+    fallback: "Static fallback",
     api_ninjas: "API Ninjas",
     bluesky_dashboard: "Dashboard",
     bluesky_follow_fellows: "Follow fellows",
@@ -817,7 +877,7 @@ function renderProviders() {
   const providers = providerMetrics.providers;
   const minimumComparisonPosts = providerMetrics.minimum_comparison_posts || 30;
   const checked = providers.filter(
-    (provider) => provider.configured !== false && provider.healthy !== null,
+    (provider) => provider.configured !== false && typeof provider.healthy === "boolean",
   );
   const healthy = checked.filter((provider) => provider.healthy === true).length;
   setText("providers-healthy", `${healthy}/${checked.length}`);
@@ -928,6 +988,9 @@ function renderProviders() {
     const badge = document.createElement("span");
     badge.className = `health-badge ${health.className}`;
     badge.textContent = health.label;
+    if (Number.isFinite(provider.last_health_check_at)) {
+      badge.title = `Availability observed ${dateTimeFormat.format(new Date(provider.last_health_check_at * 1000))}`;
+    }
     appendCell(row, badge);
     body.append(row);
   });

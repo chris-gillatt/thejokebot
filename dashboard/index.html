@@ -21,15 +21,15 @@
         [role="tabpanel"][hidden] { display: block; }
       </style>
     </noscript>
-    <link rel="stylesheet" href="styles.css?v=25" />
+    <link rel="stylesheet" href="styles.css?v=26" />
     <script
       src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"
       integrity="sha384-jb8JQMbMoBUzgWatfe6COACi2ljcDdZQ2OxczGA3bGNeWe+6DChMTBJemed7ZnvJ"
       crossorigin="anonymous"
       defer
     ></script>
-    <script src="history.js?v=1" defer></script>
-    <script src="app.js?v=20" defer></script>
+    <script src="history.js?v=2" defer></script>
+    <script src="app.js?v=21" defer></script>
   </head>
   <body>
     <noscript>
@@ -462,7 +462,21 @@
               <article class="chart-block"><div class="chart-title"><h3>Workflow failures by day</h3><span>Recorded completed attempts, including retries; no observations are gaps</span></div><div class="chart-frame"><canvas id="workflow-history-chart"></canvas></div></article>
               <article class="chart-block"><div class="chart-title"><h3>Posting pressure and delivery</h3><span>Daily run pressure versus sampled rolling seven-day slot delivery; rolling windows are never summed</span></div><div class="chart-frame"><canvas id="pressure-history-chart"></canvas></div></article>
               <article class="chart-block"><div class="chart-title"><h3>Observed day-30 source outcomes</h3><span>Point-in-time cohort observations, not period acquisitions; follow-backs measure existing-follower retention</span></div><div class="chart-frame"><canvas id="source-history-chart"></canvas></div></article>
+              <article class="chart-block"><div class="chart-title"><h3>Publication concentration by day</h3><span>Observed successful publications only; gaps are not zeroes</span></div><div class="chart-frame"><canvas id="provider-concentration-chart"></canvas></div></article>
+              <article class="chart-block"><div class="chart-title"><h3>Candidate supply by provider</h3><span>Daily duplicate/length rejection rates among returned candidates; old or absent detail remains a gap</span></div><div class="chart-frame"><canvas id="provider-rejections-chart"></canvas></div></article>
             </div>
+            <h4>Provider supply and publication contribution</h4>
+            <p id="provider-supply-coverage" class="data-note">Loading measured provider history.</p>
+            <div class="growth-summary">
+              <div class="growth-stat"><span>Largest publication source</span><strong id="provider-leading-source">--</strong><small id="provider-publication-change"></small></div>
+              <div class="growth-stat"><span>Largest source share</span><strong id="provider-leading-share">--</strong><small id="provider-leading-change"></small></div>
+              <div class="growth-stat"><span>Concentration index</span><strong id="provider-concentration">--</strong><small>Sum of squared shares: nearer 1 means greater reliance on fewer sources</small></div>
+            </div>
+            <div class="table-scroll provider-supply-scroll"><table id="provider-supply-table">
+              <thead><tr><th>Source</th><th>Published / share</th><th>Detailed visits / fetch calls</th><th>Selected / returned candidates</th><th>Content rejection</th><th>Exhausted visits</th><th>Fetch errors</th><th>Measured reasons</th><th>Rejection change</th></tr></thead><tbody></tbody>
+            </table></div>
+            <p id="provider-supply-empty" class="data-note">No provider contribution or candidate detail observed in this period.</p>
+            <p class="data-note">The selected Operations period governs this table. Publications use all measured outcomes; candidate detail covers only newly instrumented runs. Content rejection is duplicate/too-long candidates divided by returned candidates, including rejects before eventual success. Fetch error rate uses candidate fetch calls; internal transport retries are not separate calls. Exhaustion means the candidate limit was reached, not endpoint failure. Static fallback publications appear in the mix but have no candidate-fetch measurements. Source share and changes are descriptive: no advisory thresholds or automatic rotation changes. Comparable-age engagement comparisons are in Audience; cumulative averages below are not equal-age comparisons.</p>
             <h4>Recorded maintenance events</h4>
             <ul id="history-maintenance-events"></ul>
             <p id="history-maintenance-empty" class="data-note">No completed unfollow events observed in this period. Release or schedule changes are not inferred from activity.</p>
@@ -536,9 +550,9 @@
                       <th>Provider</th>
                       <th>Published</th>
                       <th title="Average likes, replies, reposts, quotes, and bookmarks per visible joke">Avg. engagement / joke</th>
-                      <th>Fall-throughs</th>
-                      <th>Rejected candidates</th>
-                      <th>Health</th>
+                      <th>Cumulative failed visits</th>
+                      <th>Cumulative failure counters</th>
+                      <th>Availability check</th>
                     </tr>
                   </thead>
                   <tbody></tbody>
@@ -546,9 +560,10 @@
               </div>
               <p class="data-note">
                 Average engagement is the combined likes, replies, reposts, quotes, and bookmarks per currently visible joke. It appears after 30 observations and is
-                descriptive, not a controlled provider comparison. Fall-throughs are cumulative exhausted provider attempts. Existing data combines duplicate,
+                descriptive, not a controlled provider comparison. Failed visits are cumulative provider fall-throughs due to candidate exhaustion or fetch errors. Existing data combines duplicate,
                 length, malformed-response, and API failures. Detailed rejection counters begin with the
                 telemetry release; earlier fall-throughs remain aggregate-only.
+                Availability checks test endpoint/local-source access, not fresh-candidate supply; a reachable provider can still be exhausted.
               </p>
             </article>
 

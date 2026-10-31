@@ -1,5 +1,6 @@
 import base64
 import html
+import json
 import os
 import random
 import secrets
@@ -14,6 +15,7 @@ from thejokebot import config as runtime_config
 from thejokebot import providers as joke_providers
 from thejokebot import state as bot_state
 from thejokebot.runtime import login_client
+from thejokebot.commands.dashboard_provider_telemetry import FIELDS
 
 # Joke memory and posting defaults now come from central runtime config.
 _POSTING_CONFIG = runtime_config.get_posting_config()
@@ -220,7 +222,11 @@ def _normalise_stored_b64_for_deduplication(encoded_joke: str) -> str:
 
 
 def pick_joke(
-    recent_b64s: set, provider_name: str, hashtags: list[str] | None = None
+    recent_b64s: set,
+    provider_name: str,
+    hashtags: list[str] | None = None,
+    *,
+    telemetry: dict[str, int] | None = None,
 ) -> tuple:
     """
     Fetch up to MAX_ATTEMPTS jokes from provider_name, skipping recent duplicates
@@ -238,10 +244,11 @@ def pick_joke(
     duplicate_count = 0
     too_long_count = 0
     for _ in range(MAX_ATTEMPTS):
-        joke = sanitise_joke_text(fetch_fn())
+        joke = _fetch_candidate(fetch_fn, telemetry)
         grapheme_count = _grapheme_len(joke)
         if grapheme_count > max_joke_chars:
             too_long_count += 1
+            _count_candidate(telemetry, "too_long")
             print(
                 f"Skipping joke from '{provider_name}': "
                 f"{grapheme_count} graphemes exceeds limit of {max_joke_chars}"
@@ -250,9 +257,34 @@ def pick_joke(
         encoded = base64.b64encode(joke.encode("utf-8")).decode()
         dedupe_encoded = _encode_deduplication_key(joke)
         if dedupe_encoded not in recent_dedupe_b64s:
+            _count_candidate(telemetry, "selected")
             return joke, encoded
         duplicate_count += 1
+        _count_candidate(telemetry, "duplicate")
+    _count_candidate(telemetry, "exhausted")
     raise JokeSelectionExhausted(provider_name, duplicate_count, too_long_count)
+
+
+def _count_candidate(telemetry: dict[str, int] | None, field: str) -> None:
+    if telemetry is not None:
+        telemetry[field] += 1
+
+
+def _fetch_candidate(fetch_fn, telemetry: dict[str, int] | None) -> str:
+    _count_candidate(telemetry, "fetches")
+    try:
+        joke = sanitise_joke_text(fetch_fn())
+    except (
+        ValueError,
+        requests.RequestException,
+        TimeoutError,
+        atproto_client.exceptions.NetworkError,
+    ) as exc:
+        reason = next(iter(_failure_reason_counts(exc)))
+        _count_candidate(telemetry, reason)
+        raise
+    _count_candidate(telemetry, "candidates")
+    return joke
 
 
 def _failure_reason_counts(error: Exception) -> dict[str, int]:
@@ -418,13 +450,18 @@ def main():
     b64 = None
     used_provider = None
     provider_failures = []
+    provider_candidates = []
     posted_successfully = False
     post_uri = None
     post_cid = None
 
     for provider_name in providers_to_try:
+        counters: dict[str, int] = dict.fromkeys(FIELDS, 0)
+        provider_candidates.append({"name": provider_name, "counts": counters})
         try:
-            joke, b64 = pick_joke(recent_b64s, provider_name, hashtags=[tag_fallback])
+            joke, b64 = pick_joke(
+                recent_b64s, provider_name, hashtags=[tag_fallback], telemetry=counters
+            )
             used_provider = provider_name
             break
         except (
@@ -486,6 +523,22 @@ def main():
                 starting_provider,
                 used_provider,
                 posted_successfully,
+            )
+        )
+        for provider in provider_candidates:
+            provider["counts"]["published"] = int(
+                provider["name"] == used_provider and posted_successfully
+            )
+        print(
+            "Provider candidates: "
+            + json.dumps(
+                {
+                    "schema_version": 1,
+                    "providers": [
+                        {"name": provider["name"], **provider["counts"]}
+                        for provider in provider_candidates
+                    ],
+                }
             )
         )
         bot_state.update_state(

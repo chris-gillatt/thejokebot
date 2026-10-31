@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import json
 import re
 import zipfile
 from datetime import datetime, timedelta, timezone
@@ -12,6 +13,7 @@ import requests
 
 from thejokebot import config as runtime_config
 from thejokebot.commands import dashboard_history
+from thejokebot.commands import dashboard_provider_telemetry
 from thejokebot.runtime import retry_network_call
 
 GITHUB_API_BASE = "https://api.github.com"
@@ -190,7 +192,7 @@ def _provider_activity_counts(log_text: str) -> dict | None:
         provider_error,
         posted,
     ) = summaries[-1]
-    return {
+    counts = {
         "follows": 0,
         "unfollows": 0,
         "provider_attempts": int(attempts),
@@ -204,6 +206,20 @@ def _provider_activity_counts(log_text: str) -> dict | None:
         "provider_error": int(provider_error),
         "posted": posted == "true",
     }
+    details = re.findall(
+        r"Provider candidates: ([^\n]+)",
+        log_text.rsplit("Provider summary: ", 1)[-1],
+    )
+    if details:
+        payload = json.loads(details[-1])
+        if not isinstance(payload, dict) or payload.get("schema_version") != 1:
+            raise ValueError("Unsupported provider candidate telemetry version")
+        if "providers" not in payload:
+            raise ValueError("Provider candidate telemetry is missing provider records")
+        counts["provider_candidates"] = dashboard_provider_telemetry.sanitise(
+            payload["providers"]
+        )
+    return counts
 
 
 def _social_summary_counts(plain_text: str) -> dict:

@@ -46,6 +46,7 @@ Do not claim source-specific post engagement, impressions, sentiment, demographi
 
 | Decision | Reason |
 |---|---|
+| Separate provider access, candidate supply and confirmed publication contribution | Preserve posting decisions and legacy telemetry, disclose detailed sample coverage, and use descriptive period/concentration changes without automatic rotation changes or new alert thresholds. |
 | Observe joke response in 24–30-hour and 168–174-hour bands | Keep the existing six-hour collector, freeze the first in-band reading, show mature publishing-cohort samples and misses, and never reconstruct earlier checkpoints from later totals. Retain public-post-only receipts for 400 days outside Pages. |
 | Use independent historical controls and complete UTC-day comparisons | Keep Audience and Operations periods separate; preserve explicit scopes for current counters and cohort checkpoints, and never turn missing history into zeroes or sum rolling delivery windows. |
 | Separate completed outgoing follows from observed incoming relationship outcomes | Follow completion is operational execution, not follower acquisition; show cohort sample sizes and derive protection durations from collected data. |
@@ -59,7 +60,7 @@ Do not claim source-specific post engagement, impressions, sentiment, demographi
 
 ## Dependency Exceptions
 
-Checked on 27 October 2026 against PyPI, npm and upstream GitHub Action releases. Pyright's declared version (1.1.414) is current, although the local installation is still 1.1.413. Other Action pins are current; the exceptions below are deferred to a separate dependency-maintenance change to keep the dashboard alert fix isolated. Review these at the next dependency-maintenance batch, or immediately if an applicable security advisory appears. Update transitive Python dependencies through the lock resolver, not independently.
+Checked on 31 October 2026 against PyPI, npm and upstream GitHub Action releases. Pyright's declared version (1.1.414) is current, although the local installation is still 1.1.413. Other Action pins are current; the exceptions below are deferred to a separate dependency-maintenance change to keep the dashboard alert fix isolated. Review these at the next dependency-maintenance batch, or immediately if an applicable security advisory appears. Update transitive Python dependencies through the lock resolver, not independently.
 
 | Dependency | Current locked/pinned version | Latest stable | Reason / review trigger |
 |---|---|---|---|
@@ -69,17 +70,19 @@ Checked on 27 October 2026 against PyPI, npm and upstream GitHub Action releases
 | charset-normalizer | 3.5.1 | 3.5.2 | Separate lock refresh; next maintenance batch or advisory. |
 | coverage | 7.16.0 | 7.17.0 | Separate coverage-tool validation; next maintenance batch or advisory. |
 | cryptography | 50.0.1 | 50.0.2 | Separate lock refresh; next maintenance batch or advisory. |
-| dnspython | 2.8.0 | 2.9.0 | Separate lock refresh; next maintenance batch or advisory. |
+| dnspython | 2.8.0 | 2.9.1 | Separate lock refresh; next maintenance batch or advisory. |
 | idna | 3.19 | 3.20 | Separate lock refresh; next maintenance batch or advisory. |
 | iniconfig | 2.3.0 | 2.3.1 | Separate lock refresh; next maintenance batch or advisory. |
 | libipld | 3.4.1 | 3.5.0 | Separate lock refresh; next maintenance batch or advisory. |
 | pluggy | 1.6.0 | 1.7.0 | Separate lock refresh; next maintenance batch or advisory. |
 | pycparser | 3.0 | 3.12 | Separate lock refresh; next maintenance batch or advisory. |
-| pydantic | 2.13.5 | 2.14.1 | Separate compatible resolver update with pydantic-core; next maintenance batch or advisory. |
-| pydantic-core | 2.46.5 | 2.50.1 | Follow pydantic's compatible pin; next maintenance batch or advisory. |
+| pydantic | 2.13.5 | 2.14.2 | Separate compatible resolver update with pydantic-core; next maintenance batch or advisory. |
+| pydantic-core | 2.46.5 | 2.50.2 | Follow pydantic's compatible pin; next maintenance batch or advisory. |
+| pytest | 9.1.1 | 9.2.0 | Separate test-runner compatibility validation and lock refresh; next maintenance batch or advisory. |
 | python-dotenv | 1.2.3 | 1.2.4 | Separate lock refresh; next maintenance batch or advisory. |
 | regex | 2026.9.10 | 2026.9.29 | Separate lock refresh; next maintenance batch or advisory. |
 | urllib3 | 2.7.0 | 2.8.0 | Validate the transport workaround during a separate lock refresh; next maintenance batch or advisory. |
-| websockets | 17.1 | 17.3 | Separate lock refresh; next maintenance batch or advisory. |
+| websockets | 17.1 | 17.4 | Separate lock refresh; next maintenance batch or advisory. |
 | Ruff | 0.15.13 | 0.17.3 | Separate lint-tool behaviour validation; next maintenance batch or advisory. |
 | actions/setup-python | 7.0.0 | 7.1.0 | Separate workflow pin update and validation; next maintenance batch or advisory. |
+| SonarSource/sonarqube-scan-action | 8.3.0 | 8.4.0 | Separate scanner-action validation and pin update; next maintenance batch or advisory. |

@@ -14,6 +14,7 @@ from thejokebot import config as runtime_config
 from thejokebot import state as bot_state
 from thejokebot.commands import dashboard_engagement
 from thejokebot.commands import dashboard_history
+from thejokebot.commands import dashboard_provider_telemetry
 from thejokebot.commands import dashboard_workflows
 
 PUBLIC_API_BASE = "https://public.api.bsky.app/xrpc"
@@ -574,6 +575,20 @@ def _provider_pressure_metrics(workflow_activity: dict | None, now: datetime) ->
             continue
         observed_runs.append(
             {
+                **{
+                    field: run[field]
+                    for field in ("id", "attempt", "workflow")
+                    if field in run
+                },
+                **(
+                    {
+                        "provider_candidates": dashboard_provider_telemetry.sanitise(
+                            run["provider_candidates"]
+                        )
+                    }
+                    if "provider_candidates" in run
+                    else {}
+                ),
                 "created_at": run["created_at"],
                 "provider_attempts": max(0, int(run.get("provider_attempts") or 0)),
                 "starting_provider": run.get("starting_provider"),
@@ -607,7 +622,7 @@ def _provider_pressure_metrics(workflow_activity: dict | None, now: datetime) ->
         starts = Counter(
             run["starting_provider"] for run in runs if run["starting_provider"]
         )
-        sources = Counter(run["successful_source"] for run in runs)
+        sources = Counter(run["successful_source"] for run in runs if run["posted"])
         windows[str(days)] = {
             "completed_runs": len(runs),
             "posted_runs": sum(run["posted"] for run in runs),

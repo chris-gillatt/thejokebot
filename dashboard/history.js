@@ -97,7 +97,11 @@ const DashboardHistory = (() => {
       ...item, source: "bluesky_snapshot",
     }));
     const activityRuns = mergeRecords(
-      [...records("activity_runs"), ...(metrics.workflow_activity?.runs || [])], runIdentity,
+      [
+        ...records("activity_runs"),
+        ...(metrics.workflow_activity?.runs || []),
+        ...(metrics.provider_pressure?.runs || []).filter((run) => run.id != null),
+      ], runIdentity,
     );
     const authoritativeRuns = new Set(activityRuns.filter((run) =>
       run.workflow !== "legacy_activity",
@@ -188,6 +192,59 @@ const DashboardHistory = (() => {
     return observed ? following * 100 / observed : null;
   }
 
+  function providerSupply(data, period) {
+    const runs = data.activity_runs.filter((run) =>
+      run.workflow === "bluesky_post_joke" && inPeriod(run.created_at, period),
+    );
+    const measured = runs.filter((run) => typeof run.posted === "boolean");
+    const detailed = measured.filter((run) => Array.isArray(run.provider_candidates));
+    const publications = measured.filter((run) => run.posted);
+    const sources = new Map();
+    publications.forEach((run) => {
+      const name = run.successful_source || "unknown";
+      sources.set(name, (sources.get(name) || 0) + 1);
+    });
+    const fields = ["fetches", "candidates", "selected", "published", "duplicate", "too_long", "network_error", "provider_error", "exhausted"];
+    const groups = new Map();
+    sources.forEach((published, name) => groups.set(name, { name, published, visits: 0, detailed: false }));
+    detailed.forEach((run) => {
+      run.provider_candidates.forEach((item) => {
+        if (fields.some((field) => !Number.isSafeInteger(item[field]) || item[field] < 0)) {
+          throw new Error("Invalid provider candidate counters in history.");
+        }
+        const group = groups.get(item.name) || { name: item.name, published: 0, visits: 0, detailed: false };
+        if (!group.detailed) {
+          Object.assign(group, Object.fromEntries(fields.filter((field) => field !== "published").map((field) => [field, 0])));
+        }
+        group.detailed = true;
+        group.visits += 1;
+        fields.filter((field) => field !== "published").forEach((field) => { group[field] += item[field]; });
+        groups.set(item.name, group);
+      });
+    });
+    const providers = [...groups.values()].map((group) => ({
+      ...group,
+      publicationShare: publications.length ? group.published * 100 / publications.length : null,
+      rejectionRate: group.detailed && group.candidates
+        ? (group.duplicate + group.too_long) * 100 / group.candidates : null,
+      errorRate: group.detailed && group.fetches
+        ? (group.network_error + group.provider_error) * 100 / group.fetches : null,
+    })).sort((left, right) => right.published - left.published || left.name.localeCompare(right.name));
+    const leading = providers[0];
+    return {
+      postingAttempts: runs.length,
+      measuredRuns: measured.length,
+      detailedRuns: detailed.length,
+      published: publications.length,
+      failedPublications: measured.length - publications.length,
+      leadingSource: publications.length ? leading.name : null,
+      leadingShare: publications.length ? leading.publicationShare : null,
+      concentration: publications.length
+        ? providers.reduce((sum, item) => sum + (item.published / publications.length) ** 2, 0) : null,
+      providers,
+    };
+  }
+
   function series(data, period) {
     const activity = new Map(data.daily_activity.map((item) => [item.date, item]));
     const accounts = new Map();
@@ -206,6 +263,7 @@ const DashboardHistory = (() => {
         run.created_at?.slice(0, 10) === date &&
         run.workflow === "bluesky_post_joke" && typeof run.fallthrough === "boolean",
       );
+      const supply = providerSupply(data, { start: date, end: dateString(utcDate(date) + DAY), days: 1 });
       return {
         date,
         followers: account?.followers ?? null,
@@ -220,6 +278,9 @@ const DashboardHistory = (() => {
           ? posting.filter((run) => run.fallthrough).length * 100 / posting.length
           : null,
         deliveryRate: operational.get(date)?.posting_delivery?.windows?.["7"]?.delivery_rate ?? null,
+        providerLeadingShare: supply.leadingShare,
+        providerConcentration: supply.concentration,
+        providerRejectionRates: Object.fromEntries(supply.providers.map((item) => [item.name, item.rejectionRate])),
         sourceOutcomes: Object.fromEntries(["followback", "interaction", "discovery"].map((source) =>
           [source, sourceOutcome(operational.get(date), source)],
         )),
@@ -236,5 +297,5 @@ const DashboardHistory = (() => {
     };
   }
 
-  return { range, previous, dates, inPeriod, requestedMonths, loadPartitions, merge, summary, series, availability };
+  return { range, previous, dates, inPeriod, requestedMonths, loadPartitions, merge, summary, series, providerSupply, availability };
 })();

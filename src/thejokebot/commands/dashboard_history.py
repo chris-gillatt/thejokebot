@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from thejokebot import state as bot_state
+from thejokebot.commands import dashboard_provider_telemetry
 from thejokebot.paths import DASHBOARD_DIR
 
 _UTC_OFFSET = "+00:00"
@@ -73,6 +74,7 @@ HISTORY_RECORD_FIELDS = {
         "approved_removals",
         "unresolved",
         "provider_attempts",
+        "provider_candidates",
         "starting_provider",
         "successful_source",
         "fallthrough",
@@ -126,11 +128,16 @@ def _empty_history_partition(month: str) -> dict:
 
 
 def _history_record(record: dict, family: str) -> dict:
-    return {
+    public = {
         field: record[field]
         for field in HISTORY_RECORD_FIELDS[family]
         if field in record
     }
+    if family == "activity_runs" and "provider_candidates" in public:
+        public["provider_candidates"] = dashboard_provider_telemetry.sanitise(
+            public["provider_candidates"]
+        )
+    return public
 
 
 def _history_identity(item: dict, family: str):
