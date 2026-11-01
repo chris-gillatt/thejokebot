@@ -48,9 +48,12 @@ Update [CHANGELOG.md](../CHANGELOG.md) in the same substantive commit as each
 meaningful feature, fix, configuration, workflow, dependency, documentation or
 project-process change. Before committing, check that its entry describes the
 delivered effect and any breaking change; before completing work, confirm the
-log is current alongside the validation and remote-check results. Follow the
+log is current alongside the applicable validation and remote-check results.
+Group delivered changes by actual commit date, newest first; never create or
+restore an `Unreleased` section. Use verified package versions where relevant,
+not invented release labels. Follow the
 [repository changelog policy](../.github/copilot-instructions.md#changelog-policy)
-for grouping and release boundaries.
+for grouping and automation exclusions.
 
 For a retrospective audit, start with your authored commits:
 

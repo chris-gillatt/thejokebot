@@ -5,7 +5,7 @@
 
 ## Completing any change
 
-- Update [CHANGELOG.md](CHANGELOG.md) in the same substantive commit as every meaningful first-party change, including documentation and process changes. Verify the entry before committing and completing the task; follow the [changelog policy](.github/copilot-instructions.md#changelog-policy) for grouping, dates and automation exclusions.
+- Update [CHANGELOG.md](CHANGELOG.md) in the same substantive commit as every meaningful first-party change, including documentation and process changes. Use actual commit dates, newest first; never create or restore an `Unreleased` section. Verify the entry before committing and completing the task; follow the [changelog policy](.github/copilot-instructions.md#changelog-policy) for grouping, dates and automation exclusions.
 - For docs-only changes, including prose-only agent guidance, skip tests, preflight, builds, code lint/type checks, coverage, CodeQL/Sonar and dependency audits. Do not install validation tools, dispatch full CI or wait for full validation gates solely for docs. Review the text and links, confirm only documentation changed, run `git diff --check`, update the changelog, then rebase/push. Mixed code/configuration/workflow/dependency changes retain normal validation.
 
 ## Completing issue work
