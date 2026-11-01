@@ -3,6 +3,10 @@
 - Use British English where possible, except where it would interfere with syntax.
 - For GitHub issues, pull requests and repository metadata, use the GitHub API or `gh` CLI. Do not use a browser for these tasks. If API access fails, retry or report the access problem.
 
+## Completing any change
+
+- Update [CHANGELOG.md](CHANGELOG.md) in the same substantive commit as every meaningful first-party change, including documentation and process changes. Verify the entry before committing and completing the task; follow the [changelog policy](.github/copilot-instructions.md#changelog-policy) for grouping, dates and automation exclusions.
+
 ## Completing issue work
 
 - When committing work for a GitHub issue, include its number in the substantive commit message before pushing (for example, `Closes #126` when the work fully resolves it). Verify the message with `git log -1 --format=%B` before pushing. Do not leave the issue link to a later empty commit.

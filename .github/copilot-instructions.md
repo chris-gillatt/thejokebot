@@ -9,6 +9,11 @@
 - Avoid speculative refactors.
 - Capture out-of-scope ideas in `problem-statement.md` under a deferred backlog section rather than mixing them into active work.
 
+## Changelog Policy
+- Update [CHANGELOG.md](../CHANGELOG.md) in the same substantive commit as every meaningful first-party change, including features, fixes, configuration, workflows, dependencies, documentation and project processes. Check this before committing and before declaring the task complete.
+- Describe the delivered effect and breaking changes, group related work, and keep the newest progress first under `Unreleased` until a real release is made. Use actual commit dates and link existing commits or issues when backfilling; do not invent release versions.
+- Omit routine automated state/metrics refreshes and issue-link-only commits. Author-filtered history is a starting point, not a reason to omit meaningful agent or Dependabot changes.
+
 ## Version Currency Policy
 - For any newly introduced workflow element, GitHub Action, dependency, SDK, or tooling reference, always check and use the latest stable available version at implementation time.
 - If the latest version is not used, include an explicit justification in the change notes (for example known vulnerability, incompatibility, upstream regression, or required temporary workaround).

@@ -6,6 +6,7 @@ This is the operating brief for open work and lasting decisions. See the [README
 
 - Preserve existing posting, moderation and follow behaviour unless a change explicitly calls for it. Keep changes focused and reversible.
 - Keep credentials and audience identifiers out of published data and source control. Use British English in documentation and Conventional Commits with a reason for every change.
+- Update [CHANGELOG.md](CHANGELOG.md) in the same substantive commit as every meaningful first-party change. Check it before committing and completing work; omit routine automated state/metrics refreshes, not substantive agent or dependency changes.
 - Before pushing, run `./scripts/preflight-local.sh` separately, then sync with `git pull --rebase`, then push. Do not use a pre-push hook. The gate includes Ruff, Pyright, workflow lint, tests, coverage and local CodeQL; a passing test suite alone is insufficient.
 - Maintain at least 90% overall first-party Python coverage and 95% on changed executable lines, with focused tests for material failure paths and safety limits. Sonar analysis must pass its gate **and** report zero unresolved issues.
 - Check current first-party Python, npm and GitHub Actions dependency versions before closing a work batch. Handle upgrades separately; record a deliberate exception with current and latest stable versions, reason and review trigger below. Treat `references/` submodules as read-only and do not refresh them without an explicit request.
