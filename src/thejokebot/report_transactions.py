@@ -72,9 +72,15 @@ def pending_acknowledgements(state):
     return state.setdefault("reports", {}).setdefault("pending_acknowledgements", {})
 
 
-def receipt(state, uri, *, deleted=False):
+def receipt(state, uri, *, deleted=False, successful=True):
+    recorded_at = int(time.time())
+
     def record(latest):
         if deleted:
+            if uri not in bot_state.get_deleted_post_uris(latest):
+                bot_state.record_report_removal(
+                    latest, uri, recorded_at, successful=successful
+                )
             bot_state.record_deleted_post_uri(latest, uri)
         else:
             bot_state.record_acknowledged_report_uri(latest, uri)
@@ -88,6 +94,10 @@ def scan(state, processed, changes, proposals):
 
     def record(latest):
         known = bot_state.get_processed_notification_uris(latest)
+        resolution = latest["reports"]["resolution"]
+        if resolution["coverage_started_at"] is None:
+            resolution["coverage_started_at"] = checked_at
+        _observe_reports(latest, proposals, checked_at)
         for uri in changes.get("resolved", ()):
             bot_state.clear_unresolved_notification_attempt(latest, uri)
         for uri in changes.get("attempted", ()):
@@ -113,6 +123,26 @@ def scan(state, processed, changes, proposals):
         return copy.deepcopy(latest["reports"])
 
     state["reports"] = bot_state.update_state(record, domains="moderation")
+
+
+def _observe_reports(state, proposals, observed_at):
+    reports = state["reports"]
+    known = bot_state.get_processed_notification_uris(state)
+    deleted = bot_state.get_deleted_post_uris(state)
+    legacy = set(reports.get("proposal_deliveries", {})) | set(
+        reports.get("pending_proposals", {})
+    )
+    for proposal in proposals:
+        uri = proposal.get("source_post_uri")
+        reply = proposal.get("source_reply_uri")
+        if not all(
+            isinstance(value, str) and value
+            for value in (uri, reply, proposal.get("b64"))
+        ):
+            continue
+        if uri in deleted or reply in known or proposal_key(proposal) in legacy:
+            continue
+        bot_state.record_report_observation(state, uri, observed_at)
 
 
 def _queue_acknowledgements(state, proposals):

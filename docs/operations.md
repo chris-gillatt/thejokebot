@@ -206,6 +206,20 @@ Report processing checkpoints confirmed deletions immediately and replays notifi
 
 Report proposals enter a durable moderation outbox in the same transaction that marks their notifications processed. Delivery retries that outbox even if the temporary proposals file is absent or empty. Pending entries retain the encoded joke, provider, source links and reason; reporter identifiers and reply text are not copied into the outbox. A matching same-repository review PR targeting `main`, whether open, closed or merged, is required before clearing the entry. Closed reviews are respected without reopening or recreating them. If a report branch exists without a PR, its changed files and content are checked against the original branch base before creating the missing review PR; unrelated or mismatched changes require investigation. API and delivery failures retain the proposal and fail the workflow visibly. Verified delivery receipts are saved even after another proposal fails, with a `main` branch check preventing an unapproved report branch from being pushed as state. Delivery receipts retain the latest 5,000 proposal keys; older reports still check PR history before creating anything.
 
+Approved-post removal timing is prospective. A newly persisted valid report proposal
+starts one timer per source post; a successful approved deletion finishes it in
+the same locked transaction as its deletion receipt. Retries preserve the start
+time. Permanent deletion failures retain their existing deduplication behaviour
+but do not produce timing samples. Existing notifications, outbox entries and
+identifier-only receipts are not backfilled. Moderation state retains pending
+timers keyed by a post-URI hash and the latest 5,000 anonymous completed samples.
+The dashboard publishes only a 30-day completion count, coverage start and median
+duration; the median remains `Collecting` below three samples. Timing includes
+review and polling delays, excludes closed reviews without removal, and does not
+measure all report outcomes or a live queue. Dry runs do not start timers. A
+backwards clock omits the affected sample with a warning without losing the
+deletion checkpoint.
+
 To enforce account blocks, set private repository variable `BLUESKY_BLOCK_DIDS` to one stable DID per line, optionally followed by a handle comment. The social workflow restores missing blocks but never unblocks anyone. Removing a DID from the variable stops enforcing it; unblock manually on Bluesky if appropriate.
 
 To prevent future automatic follows of an account, use its stable DID in `unfollow_history`, not a handle-based list. Do not edit state during a concurrent scheduled write:

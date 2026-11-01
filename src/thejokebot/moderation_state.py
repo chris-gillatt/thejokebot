@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import time
 
 MAX_DEDUPE_ENTRIES = 5000
@@ -118,6 +119,32 @@ def get_deleted_post_uris(state: dict) -> set[str]:
     reports = state.setdefault("reports", {})
     uris = reports.setdefault("deleted_post_uris", [])
     return set(uris)
+
+
+def record_report_observation(state: dict, post_uri: str, observed_at: int) -> None:
+    """Start timing a newly observed reported post, not a legacy receipt."""
+    resolution = state["reports"]["resolution"]
+    key = hashlib.sha256(post_uri.encode()).hexdigest()
+    resolution["pending"].setdefault(key, observed_at)
+
+
+def record_report_removal(
+    state: dict, post_uri: str, resolved_at: int, *, successful: bool
+) -> None:
+    """Retain anonymous timing samples only for successful approved removals."""
+    resolution = state["reports"]["resolution"]
+    key = hashlib.sha256(post_uri.encode()).hexdigest()
+    observed_at = resolution["pending"].pop(key, None)
+    if observed_at is None or not successful:
+        return
+    if resolved_at < observed_at:
+        print("Warning: report-removal clock moved backwards; timing sample omitted.")
+        return
+    resolution["events"].append(
+        {"resolved_at": resolved_at, "duration_seconds": resolved_at - observed_at}
+    )
+    if len(resolution["events"]) > MAX_DEDUPE_ENTRIES:
+        del resolution["events"][:-MAX_DEDUPE_ENTRIES]
 
 
 def record_deleted_post_uri(state: dict, post_uri: str) -> None:

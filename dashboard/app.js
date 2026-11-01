@@ -1100,6 +1100,24 @@ function renderModerationActivity() {
       ? `${numberFormat.format(moderation.completed_runs)} report workflow runs observed over 30 days`
       : "Report workflow history will appear after the next completed run.",
   );
+  const resolution = metrics.report_resolution;
+  setText(
+    "moderation-resolution-median",
+    resolution?.median_seconds == null
+      ? "Collecting"
+      : durationText(resolution.median_seconds),
+  );
+  const samples = resolution?.sample_count ?? 0;
+  const minimum = resolution?.minimum_samples ?? 3;
+  const coverage = resolution?.coverage_started_at;
+  setText(
+    "moderation-resolution-note",
+    `${numberFormat.format(samples)} timed approved-post removals in the last ${resolution?.window_days ?? 30} days; median requires ${minimum}. ${
+      Number.isFinite(coverage)
+        ? `Timing observed since ${dateTimeFormat.format(new Date(coverage * 1000))}.`
+        : "Timing starts with the next report scan."
+    }`,
+  );
     }
 
     function renderPostingDelivery() {

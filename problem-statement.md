@@ -62,7 +62,16 @@ dashboard membership claims. See the [pilot procedures](docs/operations.md#start
 
 ### Dashboard Resolution Time
 
-Report-resolution duration should use newly observed aggregate lifecycle events only. Do not infer it from legacy identifier-only state. Add it once there is sufficient history, with a producer-to-collector test and desktop/mobile dashboard verification.
+Delivered prospective approved-post removal timing: from the bot first recording
+a valid report proposal to a successful approved-post deletion. The dashboard
+publishes only aggregate samples from the last 30 days and shows a median after
+three completed removals. Failed deletions, reviews closed without removal and
+legacy identifier-only records are excluded; there is no historical backfill or
+claim to measure every report outcome. Pending timings remain in moderation
+state; the latest 5,000 anonymous completed samples are retained. Timing begins
+with the next persisted report scan, so the live display initially says
+`Collecting`. Producer-to-collector and desktop/mobile checks cover both the
+collecting state and a sufficient-sample fixture.
 
 ### Transport Review
 

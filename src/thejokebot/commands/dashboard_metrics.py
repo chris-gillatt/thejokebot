@@ -27,6 +27,7 @@ MAX_FEED_RUNTIME_SECONDS = 120
 WORKFLOW_WINDOW_DAYS = dashboard_history.WORKFLOW_WINDOW_DAYS
 TOP_POST_LIMIT = 6
 PROVIDER_COMPARISON_MIN_POSTS = 30
+REPORT_RESOLUTION_MIN_SAMPLES = 3
 POSTING_DELIVERY_WINDOWS = (7, 30)
 POSTING_SLOT_MATCH_HOURS = 2
 ENGAGEMENT_FIELDS = dashboard_engagement.ENGAGEMENT_FIELDS
@@ -565,6 +566,44 @@ def _moderation_metrics(workflow_activity: dict | None) -> dict:
     }
 
 
+def _report_resolution_metrics(state: dict, now: datetime) -> dict:
+    resolution = state.get("reports", {}).get("resolution", {})
+    coverage = resolution.get("coverage_started_at")
+    events = resolution.get("events", [])
+    current = now.timestamp()
+    if not isinstance(events, list) or (
+        coverage is not None
+        and (type(coverage) is not int or not 0 <= coverage <= current)
+    ):
+        raise ValueError("Invalid report-resolution coverage or events")
+    durations = []
+    cutoff = current - WORKFLOW_WINDOW_DAYS * 86400
+    for event in events:
+        if not isinstance(event, dict):
+            raise ValueError("Invalid report-resolution event")
+        resolved = event.get("resolved_at")
+        duration = event.get("duration_seconds")
+        if (
+            type(resolved) is not int
+            or type(duration) is not int
+            or coverage is None
+            or not coverage <= resolved <= current
+            or not 0 <= duration <= resolved - coverage
+        ):
+            raise ValueError("Invalid report-resolution timing")
+        if resolved >= cutoff:
+            durations.append(duration)
+    return {
+        "window_days": WORKFLOW_WINDOW_DAYS,
+        "coverage_started_at": coverage,
+        "sample_count": len(durations),
+        "minimum_samples": REPORT_RESOLUTION_MIN_SAMPLES,
+        "median_seconds": median(durations)
+        if len(durations) >= REPORT_RESOLUTION_MIN_SAMPLES
+        else None,
+    }
+
+
 def _provider_pressure_metrics(workflow_activity: dict | None, now: datetime) -> dict:
     observed_runs = []
     for run in (workflow_activity or {}).get("runs", []):
@@ -1097,6 +1136,7 @@ def collect_metrics(
         ),
         "starter_pack_attribution": _starter_pack_attribution_metrics(state, now),
         "moderation_activity": _moderation_metrics(workflow_activity),
+        "report_resolution": _report_resolution_metrics(state, now),
         "engagement_momentum": _engagement_momentum(snapshots, now),
         "provider_pressure": _provider_pressure_metrics(workflow_activity, now),
         "network_maintenance": _network_maintenance_metrics(

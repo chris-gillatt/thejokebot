@@ -16,6 +16,13 @@ Jump to [2025](#020---2025) or the [project's beginning](#010---2024-12-10).
 
 ## 2026-11-01
 
+- Added prospective approved-post removal timing to Operations: measure from the
+  bot recording a valid report proposal to successful approved deletion, publish
+  only aggregate 30-day samples and show the median after three completions.
+  Preserve first-observed times across retries and stale-state checkpoints;
+  exclude permanent deletion failures and legacy receipts without inventing
+  historical durations. Added producer-to-collector and rendering regression
+  coverage, with explicit collection and limited-outcome labels.
 - Added the opt-in starter-pack acknowledgement pilot for #115: baseline existing
   known memberships without thanking them, then preview one creator mention,
   popular original-joke quote and pack link. Added permanent once-per-pack

@@ -279,7 +279,7 @@ def delete_approved_report_posts(client, denylist: dict, state: dict) -> int:
             print(f"Deleted approved report post: {masked_uri}")
         elif not should_retry:
             # Mark permanent failures to avoid retrying forever
-            report_transactions.receipt(state, uri, deleted=True)
+            report_transactions.receipt(state, uri, deleted=True, successful=False)
             already_deleted.add(uri)
             print(f"Recorded permanent failure for: {masked_uri}")
 

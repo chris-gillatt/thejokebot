@@ -62,6 +62,8 @@ prune_unresolved_notification_attempts = (
 prune_processed_notifications = moderation_state.prune_processed_notifications
 set_reports_checked_now = moderation_state.set_reports_checked_now
 record_moderation_activity = moderation_state.record_moderation_activity
+record_report_observation = moderation_state.record_report_observation
+record_report_removal = moderation_state.record_report_removal
 get_deleted_post_uris = moderation_state.get_deleted_post_uris
 record_deleted_post_uri = moderation_state.record_deleted_post_uri
 get_acknowledged_report_uris = moderation_state.get_acknowledged_report_uris
@@ -109,6 +111,11 @@ def _default_state() -> dict:
             "deleted_post_uris": [],
             "acknowledged_report_uris": [],
             "activity_events": [],
+            "resolution": {
+                "coverage_started_at": None,
+                "pending": {},
+                "events": [],
+            },
         },
         "liked_replies": {
             "liked_uris": [],
@@ -209,6 +216,10 @@ def _normalise_state(state: dict) -> dict:
     reports.setdefault("deleted_post_uris", [])
     reports.setdefault("acknowledged_report_uris", [])
     reports.setdefault("activity_events", [])
+    resolution = reports.setdefault("resolution", {})
+    resolution.setdefault("coverage_started_at", None)
+    resolution.setdefault("pending", {})
+    resolution.setdefault("events", [])
 
     liked_replies = state.setdefault("liked_replies", {})
     liked_replies.setdefault("liked_uris", [])
