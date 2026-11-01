@@ -216,7 +216,7 @@ def _normalise_stored_b64_for_deduplication(encoded_joke: str) -> str:
     """Normalise a stored joke b64 value for duplicate checks."""
     try:
         decoded = base64.b64decode(encoded_joke, validate=True).decode("utf-8")
-    except (ValueError, UnicodeError):
+    except ValueError, UnicodeError:
         return ""
     return _encode_deduplication_key(decoded)
 

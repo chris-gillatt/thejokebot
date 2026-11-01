@@ -236,11 +236,11 @@ def _get_retry_after_seconds(exc):
         return None
     try:
         return max(0.0, float(raw_value))
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         try:
             retry_at = parsedate_to_datetime(str(raw_value))
             return max(0.0, retry_at.timestamp() - time.time())
-        except (TypeError, ValueError, OverflowError):
+        except TypeError, ValueError, OverflowError:
             return None
 
 

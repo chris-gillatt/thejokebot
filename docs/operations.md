@@ -6,16 +6,16 @@ The [README](../README.md) covers the project at a glance. This guide covers loc
 
 Use standard CPython 3.14.10 for the primary environment and follow the README's
 Homebrew and `venv` locked-dependency installation steps. Recreate an existing
-virtual environment when changing its interpreter. Python 3.12 remains the
-minimum; CI installs the hash-locked binary packages and runs the full suite on
-both 3.12 and 3.14.10, with deprecation warnings visible. Python 3.13 is not
-separately tested. Python 3.15 remains blocked by atproto 0.0.73's `<3.15`
+virtual environment when changing its interpreter. Python 3.14 is the minimum;
+CI installs the hash-locked binary packages and runs the full suite on 3.14.10,
+with deprecation warnings visible. Python 3.12 and 3.13 are no longer supported
+or tested. Python 3.15 remains blocked by atproto 0.0.73's `<3.15`
 constraint; do not bypass dependency metadata to force installation.
 
-Pyright's Python 3.12 target and Ruff's inferred Python 3.12 target preserve the
-compatibility floor. Only the primary 3.14.10 CI job runs the authoritative Sonar
-analysis and zero-issue gate; Sonar's supported-version list includes both 3.12
-and 3.14. Dependabot merges require both Python checks.
+Pyright, Ruff's inferred target and Sonar's supported-version setting use Python
+3.14. A single 3.14.10 CI job runs the authoritative Sonar analysis and zero-issue
+gate. Dependabot merges require the current `tests` check, not the removed 3.12
+compatibility check.
 `pyproject.toml` defines the application version and direct dependencies;
 `requirements.lock` pins the complete environment. An editable install uses
 `--no-deps` deliberately so it cannot resolve a different set of dependencies.

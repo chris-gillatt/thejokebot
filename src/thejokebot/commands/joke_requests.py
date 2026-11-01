@@ -35,7 +35,7 @@ def _notification_epoch(notification):
         return None
     try:
         return datetime.fromisoformat(indexed_at.replace("Z", "+00:00")).timestamp()
-    except (ValueError, AttributeError):
+    except ValueError, AttributeError:
         return None
 
 

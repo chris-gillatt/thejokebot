@@ -42,11 +42,15 @@ Retain the working transport override until an authenticated login from a GitHub
 
 Do not claim source-specific post engagement, impressions, sentiment, demographics or individual audience outcomes without appropriate, privacy-safe source data. Keep separate the dashboard's observed history and historical estimates.
 
+### Python 3.14 annotation simplification
+
+The new minimum permits native deferred annotations, but removing existing `from __future__ import annotations` statements changes annotation introspection. Review that behaviour separately rather than mixing a broad source rewrite into the support-policy change. No first-party version fallbacks or `typing_extensions` imports need removal; the SDK's transitive backports remain dependency-owned.
+
 ## Standing Decisions
 
 | Decision | Reason |
 |---|---|
-| Use CPython 3.14.10 as the primary runtime while retaining Python 3.12 | Local and Linux target wheels accept the existing hash lock; CI tests both runtimes, minimum-target analysis remains unchanged, and one primary job owns Sonar. Python 3.13 is not separately tested; atproto 0.0.73 excludes Python 3.15. |
+| Require Python 3.14 and test CPython 3.14.10 only | The bot's local and GitHub runtimes already use 3.14.10. Drop 3.12/3.13 support, align analysis targets with 3.14 and retain one authoritative Sonar job. atproto 0.0.73 currently excludes Python 3.15. |
 | Separate production outcomes from CI and expose source-time investigation | Lead with observed delivery/checkpoints, preserve existing freshness tolerances, publish allowlisted failed-step/run receipts, and distinguish successful workflows from proven operational recovery or live queues. |
 | Separate provider access, candidate supply and confirmed publication contribution | Preserve posting decisions and legacy telemetry, disclose detailed sample coverage, and use descriptive period/concentration changes without automatic rotation changes or new alert thresholds. |
 | Observe joke response in 24–30-hour and 168–174-hour bands | Keep the existing six-hour collector, freeze the first in-band reading, show mature publishing-cohort samples and misses, and never reconstruct earlier checkpoints from later totals. Retain public-post-only receipts for 400 days outside Pages. |
@@ -64,7 +68,7 @@ Do not claim source-specific post engagement, impressions, sentiment, demographi
 
 Rechecked on 1 November 2026 against PyPI, npm and upstream GitHub Action releases/tags. No first-party version exceptions remain.
 
-- All 35 Python lock entries use the latest stable releases, resolved together with hashes. This includes atproto 0.0.73, pydantic 2.14.2/core 2.50.2, pytest 9.2.0 and urllib3 2.8.0. The SDK's new `tlds` dependency is included; Python 3.12 remains the minimum.
+- All 35 Python lock entries use the latest stable releases, resolved together with hashes. This includes atproto 0.0.73, pydantic 2.14.2/core 2.50.2, pytest 9.2.0 and urllib3 2.8.0. The SDK's new `tlds` dependency is included; Python 3.14 is the minimum.
 - Ruff is 0.17.3. Explicit rule selection (`E4`, `E7`, `E9`, `F`, plus `C901`) and file inclusion preserve the verified 0.15.13 quality policy rather than adopting unrelated new defaults.
 - npm Pyright is 1.1.414, including the local installation. The dashboard uses Chart.js 4.6.1 with a freshly calculated integrity hash.
 - All ten first-party GitHub Action repositories are pinned to their latest stable release commits, including setup-python 7.1.0 and Sonar scan 8.4.0. CodeQL uses Action v4.39.1, not a differently versioned bundle release.

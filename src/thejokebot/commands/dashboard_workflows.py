@@ -491,7 +491,7 @@ def _daily_schedule_times(cron: str) -> list[tuple[int, int]]:
 def _daily_schedule_interval_hours(cron: str) -> float | None:
     try:
         schedule_times = _daily_schedule_times(cron)
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         return None
     minutes = sorted(hour * 60 + minute for hour, minute in schedule_times)
     if not minutes:

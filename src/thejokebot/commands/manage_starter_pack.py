@@ -183,7 +183,7 @@ def _fetch_existing_created_at(client, repo_did, target_rkey):
         )
         ex_value = _extract_record_value(existing)
         return ex_value.get("createdAt") or ex_value.get("created_at")
-    except (ValueError, AttributeError):
+    except ValueError, AttributeError:
         # Permanent format error — record is unreadable; fall back to current time.
         return None
 

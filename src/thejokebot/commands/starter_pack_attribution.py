@@ -32,7 +32,7 @@ def _parse_notification_epoch(notification):
         return None
     try:
         return datetime.fromisoformat(indexed_at.replace("Z", _UTC_OFFSET)).timestamp()
-    except (ValueError, AttributeError):
+    except ValueError, AttributeError:
         return None
 
 
@@ -53,7 +53,7 @@ def _starter_pack_observation(notification) -> dict | None:
         observed_at = datetime.fromisoformat(
             str(indexed_at).replace("Z", _UTC_OFFSET)
         ).astimezone(timezone.utc)
-    except (ValueError, AttributeError):
+    except ValueError, AttributeError:
         return None
     return {
         "pack_uri": pack_uri,

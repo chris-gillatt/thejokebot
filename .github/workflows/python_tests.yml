@@ -13,16 +13,7 @@ permissions:
 
 jobs:
   tests:
-    name: ${{ matrix.name }}
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - python-version: "3.12"
-            name: tests (Python 3.12)
-          - python-version: "3.14.10"
-            name: tests
 
     steps:
       - name: Checkout repository
@@ -54,7 +45,7 @@ jobs:
         if: github.event_name == 'workflow_dispatch' || steps.changed_files.outputs.non_docs == 'true'
         uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.14.10"
 
       - name: Set up Node.js
         if: github.event_name == 'workflow_dispatch' || steps.changed_files.outputs.non_docs == 'true'
@@ -92,7 +83,6 @@ jobs:
 
       - name: Run SonarQube Cloud analysis
         if: >
-          matrix.python-version == '3.14.10' &&
           (github.event_name == 'workflow_dispatch' || steps.changed_files.outputs.non_docs == 'true') &&
           (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
         uses: SonarSource/sonarqube-scan-action@4d1dc0c91ee400dcf8a6dddf2f705ac36542e304 # v8.4.0
@@ -109,7 +99,6 @@ jobs:
 
       - name: Require zero unresolved Sonar issues
         if: >
-          matrix.python-version == '3.14.10' &&
           (github.event_name == 'workflow_dispatch' || steps.changed_files.outputs.non_docs == 'true') &&
           (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
         env:

@@ -84,7 +84,7 @@ def _load_source_list_uri(config_path=_STARTER_PACK_CONFIG_PATH):
 
     try:
         payload = json.loads(config_path.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
+    except OSError, ValueError:
         return ""
 
     if not isinstance(payload, dict):

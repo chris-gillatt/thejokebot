@@ -45,9 +45,10 @@ def test_requires_all_successful_checks():
 
 
 @pytest.mark.parametrize("state", ["MISSING", "IN_PROGRESS", "FAILURE"])
-def test_requires_minimum_python_compatibility_check(state):
-    name = "tests (Python 3.12)"
+def test_requires_current_python_check(state):
+    name = "tests"
     assert name in merge_dependabot.REQUIRED_CHECKS
+    assert "tests (Python 3.12)" not in merge_dependabot.REQUIRED_CHECKS
     checks = [check for check in _checks() if check["name"] != name]
     if state != "MISSING":
         check = {

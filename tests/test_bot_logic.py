@@ -2204,6 +2204,14 @@ class ReportParsingTests(unittest.TestCase):
 
 
 class JokeProviderTests(unittest.TestCase):
+    def test_stored_joke_normalisation_rejects_corrupt_base64_and_utf8(self):
+        for encoded in ("not valid base64!", base64.b64encode(b"\xff").decode()):
+            with self.subTest(encoded=encoded):
+                self.assertEqual(
+                    bluesky_post_joke._normalise_stored_b64_for_deduplication(encoded),
+                    "",
+                )
+
     def test_fetch_from_icanhazdadjoke_returns_text(self):
         mock_response = mock.Mock()
         mock_response.text = "Why did the chicken cross the road?"
@@ -2567,6 +2575,18 @@ class StarterPackAttributionTests(unittest.TestCase):
             creator=SimpleNamespace(handle="creator.example"),
             record=SimpleNamespace(name="Comedy people"),
         )
+
+    def test_starter_pack_observation_rejects_invalid_timestamps(self):
+        for indexed_at in ("not-a-timestamp", None, 123):
+            with self.subTest(indexed_at=indexed_at):
+                notification = self._notification(
+                    "at://did:plc:follower/app.bsky.graph.follow/invalid",
+                    indexed_at,
+                    starter_pack=self._starter_pack(),
+                )
+                self.assertIsNone(
+                    starter_pack_attribution._starter_pack_observation(notification)
+                )
 
     def test_track_starter_pack_follows_counts_only_attributed_follow(self):
         indexed_at = "2026-08-31T10:00:00Z"
@@ -3095,6 +3115,16 @@ class JokeRequestReplyTests(unittest.TestCase):
             author=SimpleNamespace(did=uri.split("/")[2]),
             record=SimpleNamespace(text=text, reply=reply),
         )
+
+    def test_candidate_rejects_invalid_timestamps(self):
+        for indexed_at in ("not-a-timestamp", 123):
+            with self.subTest(indexed_at=indexed_at):
+                notification = self._notification(indexed_at=indexed_at)
+                self.assertIsNone(
+                    bluesky_follows_and_likes._joke_request_candidate(
+                        notification, "thejokebot.bsky.social", set(), 0
+                    )
+                )
 
     def test_candidate_requires_explicit_tag_for_reply_notification(self):
         notification = self._notification(reason="reply", text="tell me a joke")
