@@ -33,10 +33,18 @@ Posts dad jokes to [Bluesky](https://bsky.app/) and looks after the account thro
 
 ## Run Locally
 
-Requires Python 3.12 or newer. From the repository root:
+Python 3.14.10 is the primary local and GitHub runtime; Python 3.12 remains the
+minimum. CI tests both versions. Python 3.13 is not separately tested, and Python
+3.15 is currently excluded by the atproto SDK's dependency constraint.
+
+On macOS, install the interpreter with Homebrew, then create a fresh virtual
+environment from the repository root. Recreate an existing environment rather
+than attempting to upgrade its Python interpreter in place:
 
 ```bash
-python3.12 -m venv .venv
+brew install python@3.14
+python3.14 --version  # Verify 3.14.10 before creating the environment.
+python3.14 -m venv .venv
 .venv/bin/python -m pip install --require-hashes --only-binary=:all: -r requirements.lock
 .venv/bin/python -m pip install --no-deps --no-build-isolation --editable .
 cp .env.example .env

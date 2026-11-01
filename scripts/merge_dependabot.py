@@ -13,6 +13,7 @@ DEPENDABOT_ID = 49699333
 REQUIRED_CHECKS = frozenset(
     {
         "tests",
+        "tests (Python 3.12)",
         "ruff",
         "validate_runtime_config",
         "Analyse (Python) (python)",

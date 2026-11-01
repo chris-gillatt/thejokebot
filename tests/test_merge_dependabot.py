@@ -44,6 +44,22 @@ def test_requires_all_successful_checks():
     assert not merge_dependabot._checks_passed(checks)
 
 
+@pytest.mark.parametrize("state", ["MISSING", "IN_PROGRESS", "FAILURE"])
+def test_requires_minimum_python_compatibility_check(state):
+    name = "tests (Python 3.12)"
+    assert name in merge_dependabot.REQUIRED_CHECKS
+    checks = [check for check in _checks() if check["name"] != name]
+    if state != "MISSING":
+        check = {
+            "name": name,
+            "status": "IN_PROGRESS" if state == "IN_PROGRESS" else "COMPLETED",
+        }
+        if state == "FAILURE":
+            check["conclusion"] = "FAILURE"
+        checks.append(check)
+    assert merge_dependabot._check_blockers(checks) == [f"{name}: {state}"]
+
+
 def test_reports_missing_pending_and_failed_checks():
     checks = [
         check for check in _checks() if check["name"] != "SonarCloud Code Analysis"
