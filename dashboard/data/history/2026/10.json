@@ -15122,6 +15122,90 @@
       "starter_pack_follows": 0,
       "starter_pack_scan_complete": 1,
       "protected": 12
+    },
+    {
+      "id": 41237217511,
+      "attempt": 1,
+      "workflow": "bluesky_post_joke",
+      "created_at": "2026-10-31T20:05:10Z",
+      "follows": 0,
+      "unfollows": 0,
+      "provider_attempts": 1,
+      "provider_candidates": [
+        {
+          "name": "groandeck",
+          "fetches": 1,
+          "candidates": 1,
+          "selected": 1,
+          "published": 1,
+          "duplicate": 0,
+          "too_long": 0,
+          "network_error": 0,
+          "provider_error": 0,
+          "exhausted": 0
+        }
+      ],
+      "starting_provider": "groandeck",
+      "successful_source": "groandeck",
+      "fallthrough": false,
+      "static_fallback": false,
+      "duplicate": 0,
+      "too_long": 0,
+      "network_error": 0,
+      "provider_error": 0,
+      "posted": true
+    },
+    {
+      "id": 41238616985,
+      "attempt": 1,
+      "workflow": "bluesky_follows_and_likes",
+      "created_at": "2026-10-31T20:22:37Z",
+      "follows": 0,
+      "unfollows": 0,
+      "failed": 0,
+      "social_summary_observed": true,
+      "follow_back_candidates": 0,
+      "follow_back_added": 0,
+      "interaction_candidates": 11,
+      "interaction_eligible": 0,
+      "interaction_added": 0,
+      "interactions_liked": 1,
+      "joke_replies": 0,
+      "starter_pack_follows": 0,
+      "starter_pack_scan_complete": 1,
+      "protected": 11
+    },
+    {
+      "id": 41240156444,
+      "attempt": 1,
+      "workflow": "bluesky_process_reports",
+      "created_at": "2026-10-31T20:42:29Z",
+      "follows": 0,
+      "unfollows": 0,
+      "proposals": 0,
+      "acknowledgements": 0,
+      "approved_removals": 0,
+      "unresolved": 0
+    },
+    {
+      "id": 41247878816,
+      "attempt": 1,
+      "workflow": "bluesky_follows_and_likes",
+      "created_at": "2026-10-31T22:22:13Z",
+      "follows": 0,
+      "unfollows": 0,
+      "failed": 0,
+      "social_summary_observed": true,
+      "follow_back_candidates": 0,
+      "follow_back_added": 0,
+      "interaction_candidates": 11,
+      "interaction_eligible": 0,
+      "interaction_added": 0,
+      "interactions_liked": 0,
+      "joke_replies": 0,
+      "starter_pack_follows": 0,
+      "starter_pack_scan_complete": 1,
+      "protected": 11
     }
   ],
   "automation_runs": [
@@ -25123,16 +25207,52 @@
       "attempt": 1,
       "workflow": "bluesky_dashboard",
       "created_at": "2026-10-31T18:32:57Z",
-      "updated_at": "2026-10-31T18:33:01Z",
-      "status": "in_progress",
-      "conclusion": null
+      "updated_at": "2026-10-31T18:34:05Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 41237217511,
+      "attempt": 1,
+      "workflow": "bluesky_post_joke",
+      "created_at": "2026-10-31T20:05:10Z",
+      "updated_at": "2026-10-31T20:05:37Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 41238616985,
+      "attempt": 1,
+      "workflow": "bluesky_follows_and_likes",
+      "created_at": "2026-10-31T20:22:37Z",
+      "updated_at": "2026-10-31T20:23:36Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 41240156444,
+      "attempt": 1,
+      "workflow": "bluesky_process_reports",
+      "created_at": "2026-10-31T20:42:29Z",
+      "updated_at": "2026-10-31T20:43:01Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 41247878816,
+      "attempt": 1,
+      "workflow": "bluesky_follows_and_likes",
+      "created_at": "2026-10-31T22:22:13Z",
+      "updated_at": "2026-10-31T22:23:16Z",
+      "status": "completed",
+      "conclusion": "success"
     }
   ],
   "daily_activity": [
     {
       "date": "2026-10-01",
       "joke_posts": 6,
-      "follows": 2,
+      "follows": 0,
       "unfollows": 1200
     },
     {
@@ -25311,7 +25431,7 @@
     },
     {
       "date": "2026-10-31",
-      "joke_posts": 5,
+      "joke_posts": 6,
       "follows": 2,
       "unfollows": 0
     }
