@@ -7,6 +7,10 @@ versions. Routine automated state and dashboard-data refreshes are omitted.
 
 ### 2026-11-01
 
+- Added a docs-only SDLC exception: review text, links and the diff, but skip
+  tests, preflight, builds, code quality/coverage scans, dependency audits and
+  manually dispatched full CI. Keep changelog updates and rebase/push discipline;
+  mixed code, configuration, workflow or dependency changes retain normal checks.
 - **Breaking:** Raised the minimum to Python 3.14 and removed Python 3.12/3.13
   support. Aligned packaging, Pyright, Ruff and Sonar, removed the legacy CI leg,
   regenerated the lock, and covered malformed timestamps and corrupt joke

@@ -18,7 +18,7 @@
 - For any newly introduced workflow element, GitHub Action, dependency, SDK, or tooling reference, always check and use the latest stable available version at implementation time.
 - If the latest version is not used, include an explicit justification in the change notes (for example known vulnerability, incompatibility, upstream regression, or required temporary workaround).
 - Treat unverified or stale versions as technical debt; do not introduce them by default.
-- Before completing each issue, sprint, or coherent batch of work, check all first-party dependency ecosystems (Python, npm, and GitHub Actions) against authoritative upstream sources or current Dependabot results.
+- Before completing each non-documentation issue, sprint, or coherent batch of work, check all first-party dependency ecosystems (Python, npm, and GitHub Actions) against authoritative upstream sources or current Dependabot results. Skip dependency audits for docs-only changes.
 - Update stale dependencies in a separate focused change, or record each deliberate exception with its current version, latest stable version, reason, and review trigger in `problem-statement.md`.
 
 ## Git Commit Policy
@@ -27,12 +27,13 @@
 - Every commit message must explain why the change is being made.
 - When a commit resolves a tracked GitHub issue, include a closing keyword in the commit body (for example `Closes #38` or `Resolves #15`). This allows GitHub to automatically close the issue when the commit lands on the default branch.
 - Keep unrelated changes in separate commits.
-- Before any `git push`, run the relevant validation as a separate command, then sync with the remote (`git pull --rebase` unless there is a deliberate reason not to), and only then push. The bot's GitHub Actions workflows can update the branch while local checks run.
+- Before any `git push`, run the relevant validation as a separate command, then sync with the remote (`git pull --rebase` unless there is a deliberate reason not to), and only then push. For docs-only changes, use the lightweight documentation review below instead of preflight or full CI gates. The bot's GitHub Actions workflows can update the branch while local checks run.
 - Do not install or rely on a Git pre-push hook for validation; it makes the push operation stale and difficult to recover when automation updates the remote branch.
 
 ## Validation Expectations
-- Run relevant checks before finishing a task (script run, lint, or targeted tests where available).
-- Report the dependency-currency check alongside code validation, including any deferred upgrades and their recorded justification.
+- Docs-only changes, including prose-only agent instructions and process documentation, must not run tests, preflight, builds, code lint/type checks, coverage, CodeQL, Sonar or dependency audits. Do not install validation dependencies, manually dispatch full CI, or wait for full test/analysis gates solely for documentation. Review wording, links and formatting, confirm the diff is docs-only, and use `git diff --check`; retain changelog updates and the rebase/push sequence. Allow existing automatic docs-only CI skips.
+- Changes to executable code, runtime configuration, workflows, dependency manifests/locks or dashboard application assets are not docs-only, even when accompanied by documentation. Run their normal relevant validation.
+- Report which checks were run or deliberately skipped under the docs-only rule. For non-documentation work, report dependency currency alongside code validation, including any deferred upgrades and their recorded justification.
 - Report what was verified and what could not be verified.
 - Treat zero unresolved Sonar issues as a repository quality rule. A passing quality gate alone is insufficient; after analysis, verify that the unresolved issue total is exactly zero.
 - Treat posting telemetry, `bot_state.json` provider fields, dashboard metrics JSON, and dashboard rendering as one cross-file contract. Changes to any part must include producer-to-collector tests and local desktop/mobile dashboard verification.
@@ -40,14 +41,14 @@
 ## SonarQube Cloud Workflow
 - Use the `sonar-quality` project skill for Sonar configuration, local scans, quality-gate failures, coverage import, and finding remediation.
 - Keep `sonar-project.properties` as the scanner source of truth and keep automatic analysis disabled.
-- Never expose `SONAR_TOKEN`, analyse `references/**`, or declare success without both a passing quality gate and the expected unresolved issue count.
+- Never expose `SONAR_TOKEN` or analyse `references/**`. When analysis is required for non-documentation work, require both a passing quality gate and the expected unresolved issue count; docs-only changes require no scan or coverage regeneration.
 - Generate fresh Python coverage with `--cov=.` before scanning; an empty Cobertura `<source>` makes Sonar report 0% coverage.
 
 ## Terminal Command Workflow
 - Avoid heredocs for shell commands and file generation to reduce interruption-related issues.
 - Prefer temporary files inside `.agent-tmp/` for intermediate command input.
 - Keep `.agent-tmp/` out of commits except for `.agent-tmp/.gitkeep`.
-- Treat `./scripts/preflight-local.sh`, then `git pull --rebase`, then `git push` as the default terminal workflow for this repository unless the user explicitly asks for a different validation or Git strategy.
+- For non-documentation work, use `./scripts/preflight-local.sh`, then `git pull --rebase`, then `git push`. For docs-only work, use lightweight documentation review and `git diff --check`, then rebase and push; do not run preflight or force full CI.
 
 ## References Directory Policy
 - The `references/` directory contains read-only external resources (submodules, documentation, cookbooks).

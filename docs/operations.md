@@ -26,7 +26,21 @@ To regenerate the lock file after a separately reviewed dependency change:
 pip-compile --upgrade --allow-unsafe --extra=dev --generate-hashes --output-file=requirements.lock --strip-extras pyproject.toml
 ```
 
-Run `npm ci --ignore-scripts` once to install the locked Pyright quality tool. Before a push, run `./scripts/preflight-local.sh` as a separate command. It checks Ruff lint and format, Pyright, workflow lint, unit tests, application coverage (at least 90% overall and 95% of changed executable Python), and local CodeQL. If CodeQL is unavailable, `BLUESKY_PREFLIGHT_ALLOW_REDUCED_COVERAGE=true ./scripts/preflight-local.sh` explicitly opts into reduced coverage. `./scripts/test-local.sh` runs only the tests.
+Run `npm ci --ignore-scripts` once to install the locked Pyright quality tool when needed for code validation. Before a non-documentation push, run `./scripts/preflight-local.sh` as a separate command. It checks Ruff lint and format, Pyright, workflow lint, unit tests, application coverage (at least 90% overall and 95% of changed executable Python), and local CodeQL. If CodeQL is unavailable, `BLUESKY_PREFLIGHT_ALLOW_REDUCED_COVERAGE=true ./scripts/preflight-local.sh` explicitly opts into reduced coverage. `./scripts/test-local.sh` runs only the tests.
+
+**Docs-only SDLC exception**
+
+For documentation-only changes, including prose-only agent instructions and
+process guidance, do not run tests, preflight, builds, code lint/type checks,
+coverage, CodeQL, Sonar or dependency audits. Do not install validation tools,
+manually dispatch full CI or wait for full test/analysis gates solely for docs.
+Review wording, links and formatting, confirm that only documentation changed,
+run `git diff --check`, update the changelog, then rebase and push. Existing
+automatic docs-only CI skips are sufficient.
+
+Executable code, runtime configuration, workflows, dependency manifests/locks
+and dashboard application assets are not documentation-only changes. Mixed
+changes still require their normal relevant validation.
 
 **Changelog completion gate**
 
@@ -50,7 +64,7 @@ commit dates and stable commit links, not a bullet for every automation run.
 
 Ruff's rule selection and file inclusion are explicit so a tool upgrade does not silently broaden the established lint policy. Keep runtime packages hash-locked, GitHub Actions SHA-pinned, and the dashboard's Chart.js version and integrity hash in sync.
 
-To sync your checkout, use `git pull --rebase && git submodule update --init --recursive`. The `references/` submodules are read-only upstream resources, not first-party code. Do not refresh them proactively. Validate before syncing and pushing; scheduled workflows may update `main` while local checks run.
+To sync your checkout, use `git pull --rebase && git submodule update --init --recursive`. The `references/` submodules are read-only upstream resources, not first-party code. Do not refresh them proactively. Apply the relevant code-validation or docs-only review before syncing and pushing; scheduled workflows may update `main` while work is in progress.
 
 Preview the staged GitHub Pages dashboard locally with `./scripts/preview-dashboard.sh` at <http://localhost:8765/>. Set `DASHBOARD_PREVIEW_PORT` to change the port. The dashboard publishes public aggregate metrics every six hours, keeps UTC monthly history, and never exports audience identifiers or raw workflow logs. Its Audience and Operations views distinguish sampled counts from reconstructed activity.
 
