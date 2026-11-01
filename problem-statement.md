@@ -24,9 +24,24 @@ This is the operating brief for open work and lasting decisions. See the [README
 
 ## Deferred Work
 
-### Existing CodeQL findings
+### CodeQL baseline
 
-The 27 October 2026 local CodeQL analysis reported 18 findings outside the dashboard alert change (resource handling, imports, exception/finally behaviour and unused symbols); triage these separately rather than mixing them into the alert fix. Git-persistence integration fixtures now use explicit Git-directory paths and enforce `safe.bareRepository=explicit` in their Git helper, preserving the safety setting while avoiding working-directory discovery of bare repositories.
+Triaged the full first-party security-and-quality suite on 1 November 2026.
+Restored four hashtag tests that were accidentally nested and never collected,
+tidied seven import findings, removed three unused private pagination aliases,
+and explained the intentional Unicode-repair fallback. No actionable findings
+remain from the original 18; the scanner still reports these three false
+positives, without query exclusions or suppressions:
+
+| Rule | Location | Evidence and disposition |
+|---|---|---|
+| `py/file-not-closed` | [State locks](src/thejokebot/state_store.py) | `ExitStack.enter_context` owns the handles. Regression tests verify closure after successful shared/exclusive locking, acquisition failure, consumer failure and unlock failure. |
+| `py/exit-from-finally` | [Posting checkpoint](src/thejokebot/commands/post_joke.py) | The flagged return belongs to a lambda, not the enclosing `finally`. A regression test proves the original unexpected exception propagates while the posting checkpoint and failure telemetry are retained. |
+| `py/unused-global-variable` | [Social test alias](src/thejokebot/commands/follows_and_likes.py) | `_joke_request_candidate` is used by the joke-request tests; retain the compatibility seam. |
+
+Re-triage these if their code changes, and investigate any new findings rather
+than treating a successful scanner exit as proof of clean results.
+Git-persistence fixtures continue to enforce `safe.bareRepository=explicit`.
 
 ### Starter-pack inclusion
 

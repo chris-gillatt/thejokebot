@@ -2,7 +2,7 @@ import io
 import json
 import os
 import unittest
-from unittest import mock
+import unittest.mock as mock
 from urllib.parse import parse_qs, urlparse
 
 from scripts import check_sonar_issues

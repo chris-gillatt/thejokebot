@@ -16,6 +16,13 @@ Jump to [2025](#020---2025) or the [project's beginning](#010---2024-12-10).
 
 ## 2026-11-01
 
+- Triaged all 18 recorded CodeQL security/quality findings. Restored four
+  accidentally nested hashtag tests that pytest never collected, tidied imports
+  and removed unused private pagination aliases. Documented the intentional
+  Unicode-repair fallback and added regression evidence for three remaining
+  model-limited false positives: `ExitStack` file ownership, a lambda inside
+  `finally`, and an externally used social test alias. No queries were disabled
+  or findings suppressed, and posting/social behaviour is unchanged.
 - Assigned chronological pre-1.0.0 milestone versions from `0.1.0` (the initial
   bot) to `0.8.0` (September's packaging and audience improvements), retaining
   the historical dates and commit evidence. These are retrospective labels,

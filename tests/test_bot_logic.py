@@ -9,8 +9,8 @@ import subprocess
 import tempfile
 import time
 import unittest
+import unittest.mock as mock
 from types import SimpleNamespace
-from unittest import mock
 
 import atproto_client.exceptions
 import requests
@@ -2346,18 +2346,14 @@ class JokeProviderTests(unittest.TestCase):
         self.assertNotIn("jokebot_jokebook", joke_providers.BACKUP_PROVIDERS)
 
     def test_fetch_from_jokebot_jokebook_returns_decoded_joke(self):
-        import base64
-        import json
-        import unittest.mock as umock
-
         joke_text = "Why did the chicken cross the road?\n\nTo get to the other side."
         encoded = base64.b64encode(joke_text.encode()).decode()
         fake_data = json.dumps({"jokes": [encoded]})
-        mock_path = umock.MagicMock()
+        mock_path = mock.MagicMock()
         mock_path.exists.return_value = True
-        mock_open = umock.mock_open(read_data=fake_data)
-        with umock.patch("thejokebot.providers._JOKEBOOK_PATH", mock_path):
-            with umock.patch("builtins.open", mock_open):
+        mock_open = mock.mock_open(read_data=fake_data)
+        with mock.patch("thejokebot.providers._JOKEBOOK_PATH", mock_path):
+            with mock.patch("builtins.open", mock_open):
                 joke = joke_providers.fetch_from_jokebot_jokebook()
         self.assertEqual(joke, joke_text)
 
@@ -2369,15 +2365,12 @@ class JokeProviderTests(unittest.TestCase):
                 joke_providers.fetch_from_jokebot_jokebook()
 
     def test_fetch_from_jokebot_jokebook_raises_on_empty_list(self):
-        import json
-        import unittest.mock as umock
-
         fake_data = json.dumps({"jokes": []})
-        mock_path = umock.MagicMock()
+        mock_path = mock.MagicMock()
         mock_path.exists.return_value = True
-        mock_open = umock.mock_open(read_data=fake_data)
-        with umock.patch("thejokebot.providers._JOKEBOOK_PATH", mock_path):
-            with umock.patch("builtins.open", mock_open):
+        mock_open = mock.mock_open(read_data=fake_data)
+        with mock.patch("thejokebot.providers._JOKEBOOK_PATH", mock_path):
+            with mock.patch("builtins.open", mock_open):
                 with self.assertRaises(ValueError):
                     joke_providers.fetch_from_jokebot_jokebook()
 
@@ -5165,6 +5158,11 @@ class JokeRetryChainTests(unittest.TestCase):
         fixed = bluesky_post_joke.sanitise_joke_text(raw)
         self.assertEqual(fixed, "Why do pumpkins sit on people's porches?")
 
+    def test_sanitise_joke_text_preserves_text_when_unicode_repair_fails(self):
+        for raw in ("\u00e2 \U0001f600", "\u00e2"):
+            with self.subTest(raw=raw):
+                self.assertEqual(bluesky_post_joke.sanitise_joke_text(raw), raw)
+
     def test_sanitise_joke_text_removes_utf8_bom_prefix(self):
         raw = "\ufeffA clean joke"
         fixed = bluesky_post_joke.sanitise_joke_text(raw)
@@ -5387,59 +5385,59 @@ class JokeRetryChainTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 bluesky_post_joke.pick_joke(set(), "test_provider")
 
-        def test_pick_joke_uses_selected_hashtags_for_length_budget(self):
-            joke = "x" * 120
-            long_hashtags = ["#" + ("x" * 90), "#" + ("y" * 90), "#" + ("z" * 90)]
+    def test_pick_joke_uses_selected_hashtags_for_length_budget(self):
+        joke = "x" * 120
+        long_hashtags = ["#" + ("x" * 90), "#" + ("y" * 90), "#" + ("z" * 90)]
 
-            with mock.patch.object(
-                joke_providers,
-                "PROVIDERS",
-                {"test_provider": lambda: joke},
-            ):
-                with self.assertRaises(ValueError):
-                    bluesky_post_joke.pick_joke(
-                        set(),
-                        "test_provider",
-                        hashtags=long_hashtags,
-                    )
-
-            with mock.patch.object(
-                joke_providers,
-                "PROVIDERS",
-                {"test_provider": lambda: joke},
-            ):
-                selected_joke, _ = bluesky_post_joke.pick_joke(
+        with mock.patch.object(
+            joke_providers,
+            "PROVIDERS",
+            {"test_provider": lambda: joke},
+        ):
+            with self.assertRaises(ValueError):
+                bluesky_post_joke.pick_joke(
                     set(),
                     "test_provider",
-                    hashtags=["#jokes", "#dadjoke", "#funny"],
+                    hashtags=long_hashtags,
                 )
 
-            self.assertEqual(selected_joke, joke)
-
-        def test_select_posting_hashtags_rotates_by_offset(self):
-            pool = ["#one", "#two", "#three", "#four"]
-            selected = bluesky_post_joke.shuffle_posting_hashtags(
-                pool, offset=2, similarity_groups=[]
+        with mock.patch.object(
+            joke_providers,
+            "PROVIDERS",
+            {"test_provider": lambda: joke},
+        ):
+            selected_joke, _ = bluesky_post_joke.pick_joke(
+                set(),
+                "test_provider",
+                hashtags=["#jokes", "#dadjoke", "#funny"],
             )
-            self.assertCountEqual(selected, pool)
 
-        def test_get_posting_hashtag_pool_uses_resolved_runtime_pool(self):
-            with mock.patch(
-                "thejokebot.commands.post_joke.runtime_config.get_posting_tag_runtime_config",
-                return_value={"tag_pool": ["#dadjokes", "#punny"]},
-            ):
-                pool = bluesky_post_joke.get_posting_hashtag_pool()
+        self.assertEqual(selected_joke, joke)
 
-            self.assertEqual(pool, ["#dadjokes", "#punny"])
+    def test_select_posting_hashtags_rotates_by_offset(self):
+        pool = ["#one", "#two", "#three", "#four"]
+        selected = bluesky_post_joke.shuffle_posting_hashtags(
+            pool, offset=2, similarity_groups=[]
+        )
+        self.assertCountEqual(selected, pool)
 
-        def test_get_posting_hashtag_pool_uses_default_posting_hashtags(self):
-            with mock.patch(
-                "thejokebot.commands.post_joke.runtime_config.get_posting_tag_runtime_config",
-                return_value={"tag_pool": bluesky_post_joke.DEFAULT_POSTING_HASHTAGS},
-            ):
-                pool = bluesky_post_joke.get_posting_hashtag_pool()
+    def test_get_posting_hashtag_pool_uses_resolved_runtime_pool(self):
+        with mock.patch(
+            "thejokebot.commands.post_joke.runtime_config.get_posting_tag_runtime_config",
+            return_value={"tag_pool": ["#dadjokes", "#punny"]},
+        ):
+            pool = bluesky_post_joke.get_posting_hashtag_pool()
 
-            self.assertEqual(pool, bluesky_post_joke.DEFAULT_POSTING_HASHTAGS)
+        self.assertEqual(pool, ["#dadjokes", "#punny"])
+
+    def test_get_posting_hashtag_pool_uses_default_posting_hashtags(self):
+        with mock.patch(
+            "thejokebot.commands.post_joke.runtime_config.get_posting_tag_runtime_config",
+            return_value={"tag_pool": bluesky_post_joke.DEFAULT_POSTING_HASHTAGS},
+        ):
+            pool = bluesky_post_joke.get_posting_hashtag_pool()
+
+        self.assertEqual(pool, bluesky_post_joke.DEFAULT_POSTING_HASHTAGS)
 
     def test_provider_fallback_chain_tries_primaries_first(self):
         """Provider fallback tries primary providers before backups."""
@@ -5958,6 +5956,79 @@ class StateStoreTests(unittest.TestCase):
         with state_store._state_locks(("posting",), False, {}, None):
             pass
 
+    def test_state_locks_close_files_on_success_and_failure(self):
+        real_open = open
+        for failure, exclusive in (
+            (None, True),
+            (None, False),
+            ("acquisition", True),
+            ("body", True),
+            ("release", True),
+        ):
+            with self.subTest(failure=failure, exclusive=exclusive):
+                opened = []
+
+                def record_open(*args, **kwargs):
+                    handle = real_open(*args, **kwargs)
+                    opened.append(handle)
+                    return handle
+
+                lock_module = mock.Mock(LOCK_EX=2, LOCK_SH=1, LOCK_UN=8)
+                if failure == "acquisition":
+                    lock_module.flock.side_effect = [
+                        None,
+                        OSError("lock acquisition failed"),
+                        None,
+                    ]
+                elif failure == "release":
+                    lock_module.flock.side_effect = [
+                        None,
+                        None,
+                        OSError("lock release failed"),
+                        None,
+                    ]
+
+                with tempfile.TemporaryDirectory() as tmpdir:
+                    lock_files = {
+                        domain: str(pathlib.Path(tmpdir) / f"{domain}.lock")
+                        for domain in ("posting", "social")
+                    }
+
+                    def exercise_locks():
+                        with state_store._state_locks(
+                            ("social", "posting"),
+                            exclusive,
+                            lock_files,
+                            lock_module,
+                        ):
+                            self.assertEqual(len(opened), 2)
+                            self.assertTrue(all(not handle.closed for handle in opened))
+                            if failure == "body":
+                                raise RuntimeError("locked operation failed")
+
+                    with mock.patch("builtins.open", side_effect=record_open):
+                        if failure is None:
+                            exercise_locks()
+                        elif failure == "body":
+                            with self.assertRaisesRegex(
+                                RuntimeError, "locked operation failed"
+                            ):
+                                exercise_locks()
+                        else:
+                            with self.assertRaisesRegex(
+                                OSError, f"lock {failure} failed"
+                            ):
+                                exercise_locks()
+
+                    self.assertEqual(len(opened), 2)
+                    self.assertTrue(all(handle.closed for handle in opened))
+                    mode = lock_module.LOCK_EX if exclusive else lock_module.LOCK_SH
+                    self.assertEqual(lock_module.flock.call_args_list[0].args[1], mode)
+                    self.assertEqual(
+                        lock_module.flock.call_args_list[-1].args[1],
+                        lock_module.LOCK_UN,
+                    )
+
     def test_invalid_legacy_state_marks_missing_domains_failed(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             legacy_path = pathlib.Path(tmpdir) / "bot_state.json"
@@ -6086,7 +6157,6 @@ class StateRoundTripTests(unittest.TestCase):
 
     def test_load_state_normalises_old_state_missing_liked_replies(self):
         """Older state files without liked_replies are backfilled on load."""
-        import json
         import tempfile
 
         old = {

@@ -3,9 +3,9 @@ import json
 import subprocess
 import tempfile
 import unittest
+import unittest.mock as mock
 from pathlib import Path
 from types import SimpleNamespace
-from unittest import mock
 
 import atproto_client.exceptions
 import requests

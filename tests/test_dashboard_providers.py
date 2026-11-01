@@ -214,6 +214,41 @@ def test_static_fallback_is_a_publication_not_an_invented_candidate_fetch(capsys
     assert counts["provider_candidates"] == [_record(fetches=1, provider_error=1)]
 
 
+def test_unexpected_post_error_propagates_after_finally_checkpoint(capsys):
+    client = Mock()
+    client.me.handle = "bot.bsky.social"
+    error = RuntimeError("unexpected posting failure")
+    client.send_post.side_effect = error
+    state = bot_state._default_state()
+    with (
+        patch.object(post_joke.bot_state, "load_state", return_value=state),
+        patch.object(post_joke.bot_state, "update_state") as checkpoint,
+        patch.object(post_joke, "login_client", return_value=(client, None)),
+        patch.object(
+            post_joke, "_provider_order_for_run", return_value=(["jokeapi"], "jokeapi")
+        ),
+        patch.object(post_joke.joke_denylist, "load_denylist", return_value={}),
+        patch.dict(
+            post_joke.joke_providers.PROVIDERS,
+            {"jokeapi": Mock(return_value="Fresh test joke")},
+        ),
+    ):
+        with pytest.raises(RuntimeError) as failure:
+            post_joke.main()
+
+    assert failure.value is error
+    checkpoint.assert_called_once()
+    assert checkpoint.call_args.kwargs == {"domains": "posting"}
+    checkpoint.call_args.args[0](state)
+    assert state["posted_jokes"] == []
+    counts = dashboard_workflows._provider_activity_counts(capsys.readouterr().out)
+    assert counts is not None
+    assert counts["posted"] is False
+    assert counts["provider_candidates"] == [
+        _record(fetches=1, candidates=1, selected=1, published=0)
+    ]
+
+
 @pytest.mark.parametrize(
     "bad",
     [

@@ -2,7 +2,7 @@
 
 import os
 import unittest
-from unittest import mock
+import unittest.mock as mock
 
 from thejokebot import providers as joke_providers
 from thejokebot import state as bot_state

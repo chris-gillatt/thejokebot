@@ -189,6 +189,7 @@ def sanitise_joke_text(joke: str) -> str:
             ):
                 cleaned = repaired
         except UnicodeError:
+            # Keep the original Unicode text when lossless repair is impossible.
             pass
 
     # Prefer plain ASCII quotes to avoid display quirks across clients/providers.

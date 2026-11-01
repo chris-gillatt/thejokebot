@@ -27,9 +27,6 @@ _JOKE_REQUEST_MAX_PAGES = joke_requests._MAX_PAGES
 joke_denylist = joke_requests.joke_denylist
 joke_posting = joke_requests.joke_posting
 
-_FOLLOW_BACK_PAGE_LIMIT = follow_back_processing.PAGE_LIMIT
-_FOLLOW_BACK_MAX_PAGES = follow_back_processing.MAX_PAGES
-_FOLLOW_BACK_MAX_RUNTIME_SECONDS = follow_back_processing.MAX_RUNTIME_SECONDS
 _SOCIAL_SUMMARY_FIELDS = (
     "follow_back_candidates",
     "follow_back_added",
