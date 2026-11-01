@@ -9,10 +9,12 @@ Use Python 3.12 or newer and follow the README's locked-dependency installation 
 To regenerate the lock file after a separately reviewed dependency change:
 
 ```bash
-pip-compile --allow-unsafe --extra=dev --generate-hashes --output-file=requirements.lock --strip-extras pyproject.toml
+pip-compile --upgrade --allow-unsafe --extra=dev --generate-hashes --output-file=requirements.lock --strip-extras pyproject.toml
 ```
 
 Run `npm ci --ignore-scripts` once to install the locked Pyright quality tool. Before a push, run `./scripts/preflight-local.sh` as a separate command. It checks Ruff lint and format, Pyright, workflow lint, unit tests, application coverage (at least 90% overall and 95% of changed executable Python), and local CodeQL. If CodeQL is unavailable, `BLUESKY_PREFLIGHT_ALLOW_REDUCED_COVERAGE=true ./scripts/preflight-local.sh` explicitly opts into reduced coverage. `./scripts/test-local.sh` runs only the tests.
+
+Ruff's rule selection and file inclusion are explicit so a tool upgrade does not silently broaden the established lint policy. Keep runtime packages hash-locked, GitHub Actions SHA-pinned, and the dashboard's Chart.js version and integrity hash in sync.
 
 To sync your checkout, use `git pull --rebase && git submodule update --init --recursive`. The `references/` submodules are read-only upstream resources, not first-party code. Do not refresh them proactively. Validate before syncing and pushing; scheduled workflows may update `main` while local checks run.
 
