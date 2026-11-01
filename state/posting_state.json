@@ -1,7 +1,7 @@
 {
   "provider": {
-    "last_used": "syrsly",
-    "last_used_at": 1793492354,
+    "last_used": "groandeck",
+    "last_used_at": 1793506016,
     "rotation_order": [
       "icanhazdadjoke",
       "jokeapi",
@@ -10,23 +10,23 @@
     ],
     "failures": {
       "icanhazdadjoke": {
-        "count": 143,
-        "last_failure_at": 1793448466,
+        "count": 144,
+        "last_failure_at": 1793506016,
         "last_error": "All 5 jokes from 'icanhazdadjoke' were rejected (5 duplicates, 0 too long)",
         "reason_counts": {
-          "duplicate": 519,
+          "duplicate": 524,
           "too_long": 1,
           "network_error": 0,
           "provider_error": 0
         }
       },
       "jokeapi": {
-        "count": 389,
-        "last_failure_at": 1793462735,
-        "last_error": "All 5 jokes from 'jokeapi' were rejected (5 duplicates, 0 too long)",
+        "count": 390,
+        "last_failure_at": 1793506016,
+        "last_error": "All 5 jokes from 'jokeapi' were rejected (4 duplicates, 1 too long)",
         "reason_counts": {
-          "duplicate": 1037,
-          "too_long": 13,
+          "duplicate": 1041,
+          "too_long": 14,
           "network_error": 1,
           "provider_error": 0
         }
@@ -54,11 +54,11 @@
         }
       }
     },
-    "last_started_primary": "syrsly",
-    "last_started_primary_at": 1793492354
+    "last_started_primary": "icanhazdadjoke",
+    "last_started_primary_at": 1793506016
   },
   "posting": {
-    "tag_offset": 8
+    "tag_offset": 9
   },
   "posted_jokes": [
     {
@@ -11047,6 +11047,18 @@
         "dadjoke",
         "jokes",
         "pun"
+      ]
+    },
+    {
+      "ts": 1793506016,
+      "b64": "V2hhdCBkbyB5b3UgY2FsbCBhIGxhenkgdHJhdmVsZXI/CgpBIHRyaXAgaGF6YXJkIQ==",
+      "provider": "groandeck",
+      "post_uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mz7woknyti22",
+      "post_cid": "bafyreib2eg27vtifer5k4avzbvxkjoco54gypee6mfw5nf5d7wrs5d5lsq",
+      "hashtags": [
+        "dadjoke",
+        "humor",
+        "mumjokes"
       ]
     }
   ]
