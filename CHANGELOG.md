@@ -5,21 +5,27 @@ implementation and corrective commits are grouped rather than repeated.
 Routine automated state/dashboard-data refreshes and reference-submodule updates
 are not product milestones.
 
-`1.0.0` is the package version established on 28 September 2026. Earlier periods
-are dated development milestones, not claimed releases: the previous
-`0.0.1`-`0.0.7` headings had no corresponding release tags or package versions.
+`1.0.0` is the package version established on 28 September 2026. Versions
+`0.1.0` through `0.8.0` are retrospective labels for the earlier development
+milestones, assigned for readability rather than original release tags or
+package versions.
 The backfill draws on substantive human, agent and dependency commits and the
 [original development milestone register][historical-milestones].
 
-Jump to [2025](#2025) or the [project's beginning](#2024-12-10).
+Jump to [2025](#020---2025) or the [project's beginning](#010---2024-12-10).
 
 ## 2026-11-01
 
+- Assigned chronological pre-1.0.0 milestone versions from `0.1.0` (the initial
+  bot) to `0.8.0` (September's packaging and audience improvements), retaining
+  the historical dates and commit evidence. These are retrospective labels,
+  not newly published releases.
 - Expanded the pre-1.0.0 history back to December 2024 with dated, commit-linked
   changes covering posting, social automation, moderation, transport recovery,
   dashboard development and quality safeguards. Replaced unsupported historical
   release labels and the release-pending bucket with dated progress; repository
   guidance now forbids recreating that bucket.
+  ([e5818a6b])
 - Added a docs-only SDLC exception: review text, links and the diff, but skip
   tests, preflight, builds, code quality/coverage scans, dependency audits and
   manually dispatched full CI. Keep changelog updates and rebase/push discipline;
@@ -132,7 +138,7 @@ Jump to [2025](#2025) or the [project's beginning](#2024-12-10).
   The dated backfill above and below restores detail lost in that consolidation.
   ([c3c40094])
 
-## September 2026 (before 1.0.0)
+## 0.8.0 - September 2026
 
 - **Dependencies (14-21 September):** Updated the atproto SDK, regex, locked
   Pyright tool and Sonar scanning action. ([2bd9115d], [1dae4103], [903101eb],
@@ -140,7 +146,8 @@ Jump to [2025](#2025) or the [project's beginning](#2024-12-10).
 - **Packaging (12 September):** Established an installable package and central
   repository-path contracts, moved shared modules under the package, installed
   application commands and locked the build backend. This initially used
-  placeholder package version `0.0.0`, not the old monthly changelog labels.
+  placeholder package version `0.0.0`; this log's retrospective milestone
+  labels do not change that metadata.
   ([c111bdd7], [92fa0b39])
 - **Dashboard scheduling (12 September):** Kept collection on its bounded
   schedule after reverting a refresh-after-operational-workflows experiment.
@@ -168,7 +175,7 @@ Jump to [2025](#2025) or the [project's beginning](#2024-12-10).
   interaction-led following retained its churn protection.
   ([21bb6586], [3069c973])
 
-## August 2026
+## 0.7.0 - August 2026
 
 - **Dashboard history and navigation (31 August):** Retained monthly metric
   archives, separated Audience and Operations views and exposed operational
@@ -208,7 +215,7 @@ Jump to [2025](#2025) or the [project's beginning](#2024-12-10).
 - **Dependencies (24 August):** Updated the atproto SDK and python-dotenv.
   ([28984f61], [7d9711f7])
 
-## July 2026
+## 0.6.0 - July 2026
 
 - **State transactions (25 July):** Added locked updates against the latest
   on-disk state, migrated straightforward writers and hardened report PR bodies
@@ -230,7 +237,7 @@ Jump to [2025](#2025) or the [project's beginning](#2024-12-10).
 - **Dependencies (20 July):** Updated setup-python to its next major Action
   version. ([7f5f18ef])
 
-## June 2026
+## 0.5.0 - June 2026
 
 - **Hashtag rotation (20 June):** Introduced persisted posting-tag rotation and
   per-post dynamic length budgeting. July's smart selection superseded the
@@ -243,7 +250,7 @@ Jump to [2025](#2025) or the [project's beginning](#2024-12-10).
   atproto and pytest requirements. ([652346e4], [77e9c34f], [ec6b3d42],
   [dc3b87d0])
 
-## May 2026
+## 0.4.0 - May 2026
 
 - **Docs-only CI (24 May):** Added documentation-only change detection so
   Python test and Ruff jobs could skip expensive steps while still reporting
@@ -298,7 +305,7 @@ Jump to [2025](#2025) or the [project's beginning](#2024-12-10).
 - **Dependencies (4-25 May):** Refreshed pytest and requests requirements and
   the paths-filter Action. ([ddd3f160], [33299eae], [ff0cd791])
 
-## April 2026
+## 0.3.0 - April 2026
 
 - **Provider expansion (21-29 April):** Added GroanDeck as a third primary joke
   source and Syrsly as a backup. ([25895438], [29a73763])
@@ -336,7 +343,7 @@ Jump to [2025](#2025) or the [project's beginning](#2024-12-10).
   latest-post verifier with focused unit coverage.
   ([25b25875], [09e5a7e6], [073f552f], [5a8406ef])
 
-## 2025
+## 0.2.0 - 2025
 
 - **June:** Added per-run follow limits, repaired search/API parameter handling
   and dependency installation, and improved follower-generation diagnostics.
@@ -349,7 +356,7 @@ Jump to [2025](#2025) or the [project's beginning](#2024-12-10).
 - **January:** Split follow and unfollow processing onto separate schedules and
   introduced protection for selected accounts. ([64aab0a3], [7f8cd6d2])
 
-## 2024-12-10
+## 0.1.0 - 2024-12-10
 
 - Created the scheduled Bluesky joke bot, its initial project documentation
   and follow/unfollow automation. ([625fab5e], [381faf8e], [432b8120])
@@ -547,3 +554,4 @@ Jump to [2025](#2025) or the [project's beginning](#2024-12-10).
 [ad4e92e4]: https://github.com/chris-gillatt/thejokebot/commit/ad4e92e40a48600ea1a8f745dbdb43601eb34901
 [26e52cd0]: https://github.com/chris-gillatt/thejokebot/commit/26e52cd03af25d3f42ca302ba8422ef736e98b10
 [historical-milestones]: https://github.com/chris-gillatt/thejokebot/blob/1c4fb2667f40dd1a3a12ecfa605e29b970e1ed9f/problem-statement.md#8-changelog-milestones
+[e5818a6b]: https://github.com/chris-gillatt/thejokebot/commit/e5818a6ba570e36df4c94a6aa534c053f9613003

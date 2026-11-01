@@ -50,8 +50,9 @@ project-process change. Before committing, check that its entry describes the
 delivered effect and any breaking change; before completing work, confirm the
 log is current alongside the applicable validation and remote-check results.
 Group delivered changes by actual commit date, newest first; never create or
-restore an `Unreleased` section. Use verified package versions where relevant,
-not invented release labels. Follow the
+restore an `Unreleased` section. Preserve the retrospective pre-1.0.0 milestone
+numbers, explicitly distinguished from original release tags and package
+metadata; use verified package versions for actual releases. Follow the
 [repository changelog policy](../.github/copilot-instructions.md#changelog-policy)
 for grouping and automation exclusions.
 
