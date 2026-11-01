@@ -45,7 +45,20 @@ Git-persistence fixtures continue to enforce `safe.bareRepository=explicit`.
 
 ### Starter-pack inclusion
 
-The manual read-only membership prototype checks candidate packs from retained attributed follows and explicit pack URIs. It does not provide complete reverse membership discovery or inclusion dates. Issue #115 remains open for discovery coverage, a once-per-pack acknowledgement policy, quote-post selection and visual verification before enabling public posts or dashboard membership claims.
+The candidate-based acknowledgement pilot builds on the read-only membership
+prototype. Agreed scope: retained attributed-follow packs and explicit pack URIs;
+baseline existing memberships without thanks, then acknowledge newly observed
+memberships at most once per pack URI. The proposed post mentions the creator,
+quotes an eligible original from the dashboard's combined-engagement top six,
+and links the pack rather than creating a second share.
+
+The manual workflow supports baseline and preview only. A permanent social-state
+ledger, immutable pending intents, deterministic record keys, repository
+compare-and-swap and exact-receipt verification protect local explicitly approved
+publishing against repeated runs and ambiguous writes. Discovery remains partial
+and inclusion dates unknown. Issue #115 remains open for approved live
+desktop/mobile quote rendering, automated activation, broader discovery and any
+dashboard membership claims. See the [pilot procedures](docs/operations.md#starter-pack-acknowledgement-pilot-115).
 
 ### Dashboard Resolution Time
 

@@ -77,10 +77,10 @@ def _walk_list(client, list_uri, actor_did, deadline, result):
         if not isinstance(items, list):
             raise ValueError("List response has no member array")
         dids = [get_nested_value(item, "subject", "did") for item in items]
-        if actor_did in dids:
-            return "member", "member_observed"
         if any(not isinstance(did, str) or not did.startswith("did:") for did in dids):
             raise ValueError("List response contains an invalid member")
+        if actor_did in dids:
+            return "member", "member_observed"
         cursor = get_nested_value(response, "cursor")
         if not cursor:
             return "not_member", "complete_list"

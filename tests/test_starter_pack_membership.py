@@ -91,6 +91,13 @@ def test_absence_requires_complete_list(client):
     assert report["all_candidates_classified"] is True
 
 
+def test_malformed_members_do_not_establish_membership_even_with_bot_present(client):
+    client.app.bsky.graph.get_list.return_value = _page([BOT, None])
+    report = membership.inspect_membership(client, _state(PACK))
+    assert report["counts"]["unknown"] == 1
+    assert report["counts"]["member"] == 0
+
+
 @pytest.mark.parametrize("record_only", [True, False])
 def test_sdk_models_allow_either_valid_list_reference(client, record_only):
     pack = SimpleNamespace(

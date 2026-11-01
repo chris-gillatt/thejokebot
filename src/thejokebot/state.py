@@ -119,6 +119,10 @@ def _default_state() -> dict:
             "last_checked_at": None,
             "boundary_notification_uris": [],
         },
+        "starter_pack_acknowledgements": {
+            "baseline_at": None,
+            "packs": {},
+        },
         "unfollow_history": {
             "entries": [],
         },
@@ -214,6 +218,10 @@ def _normalise_state(state: dict) -> dict:
     joke_requests.setdefault("replied_uris", [])
     joke_requests.setdefault("last_checked_at", None)
     joke_requests.setdefault("boundary_notification_uris", [])
+
+    acknowledgements = state.setdefault("starter_pack_acknowledgements", {})
+    acknowledgements.setdefault("baseline_at", None)
+    acknowledgements.setdefault("packs", {})
 
     unfollow_history = state.setdefault("unfollow_history", {})
     unfollow_history.setdefault("entries", [])
@@ -319,6 +327,7 @@ def _domain_payload(state: dict, domain: str) -> dict:
             for key in (
                 "liked_replies",
                 "joke_requests",
+                "starter_pack_acknowledgements",
                 "unfollow_history",
                 "follow_grace",
                 "follow_tracking",

@@ -16,6 +16,14 @@ Jump to [2025](#020---2025) or the [project's beginning](#010---2024-12-10).
 
 ## 2026-11-01
 
+- Added the opt-in starter-pack acknowledgement pilot for #115: baseline existing
+  known memberships without thanking them, then preview one creator mention,
+  popular original-joke quote and pack link. Added permanent once-per-pack
+  receipts, immutable pending intents, conditional deterministic record writes
+  and exact reconciliation after uncertain responses. Automatic publishing
+  remains disabled; no complete discovery or inclusion dates are claimed.
+  Added membership, moderation, creator/CID, dry-run and transaction regression
+  tests, and reject malformed member arrays before declaring positive membership.
 - Triaged all 18 recorded CodeQL security/quality findings. Restored four
   accidentally nested hashtag tests that pytest never collected, tidied imports
   and removed unused private pagination aliases. Documented the intentional

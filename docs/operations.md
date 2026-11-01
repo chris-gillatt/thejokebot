@@ -134,6 +134,7 @@ Installed entry points are available under `.venv/bin/`:
 | `thejokebot-process-reports`, `thejokebot-create-report-prs` | Process `#report` replies and propose denylist changes. |
 | `thejokebot-collect-dashboard-metrics` | Collect public aggregate dashboard data. |
 | `thejokebot-manage-starter-pack` | Preview or synchronise the configured list and starter pack. |
+| `thejokebot-acknowledge-starter-packs` | Baseline known memberships or preview a popular-joke thank-you; publishing requires explicit approval. |
 | `thejokebot-validate-runtime-config`, `thejokebot-validate-unfollow-ignore` | Validate configuration and protected unfollow handles. |
 | `thejokebot-verify-latest-joke-post` | Check read-only for a recent post. |
 
@@ -147,7 +148,49 @@ For read-only inclusion checks, run `thejokebot-inspect-starter-packs` or dispat
 
 The prototype checks at most 20 candidate packs, 10 list pages per pack and 100 members per page, with a 60-second request budget. In-flight requests may finish later, but another request or retry cannot start after that budget expires. A matching member is positive evidence; `not_member` means no match was found in a complete list traversal. Failed, mismatched or incomplete reads are `unknown`; candidate caps and runtime exhaustion report unchecked packs explicitly. Individual list-member identifiers are not included in the report. This is partial candidate verification, not a complete list of packs containing TJB, and it cannot establish when inclusion occurred. A successful workflow means a diagnostic report was produced, not that every pack was discovered or classified.
 
-Current canonical schemas are maintained in [bluesky-social/bsky](https://github.com/bluesky-social/bsky/tree/main/lexicons/app/bsky/graph). [`getStarterPacksWithMembership`](https://github.com/bluesky-social/bsky/blob/main/lexicons/app/bsky/graph/getStarterPacksWithMembership.json) enumerates packs created by the session user, so it cannot provide the global reverse lookup needed by issue #115. The prototype instead reads each known pack with [`getStarterPack`](https://github.com/bluesky-social/bsky/blob/main/lexicons/app/bsky/graph/getStarterPack.json) and traverses its underlying list. Public thank-you posts, permanent once-per-pack receipts and any dashboard presentation remain separate work under #115.
+Current canonical schemas are maintained in [bluesky-social/bsky](https://github.com/bluesky-social/bsky/tree/main/lexicons/app/bsky/graph). [`getStarterPacksWithMembership`](https://github.com/bluesky-social/bsky/blob/main/lexicons/app/bsky/graph/getStarterPacksWithMembership.json) enumerates packs created by the session user, so it cannot provide a global reverse lookup. Known-candidate verification uses [`getStarterPack`](https://github.com/bluesky-social/bsky/blob/main/lexicons/app/bsky/graph/getStarterPack.json) and its underlying list.
+
+### Starter-pack acknowledgement pilot (#115)
+
+The pilot uses retained attributed-follow packs and explicit pack URIs only.
+First run `thejokebot-acknowledge-starter-packs --mode baseline`: every candidate
+must be classified, existing memberships are permanently baselined without a
+thank-you, and already-initialised baselines cannot be reset by rerunning it.
+Candidates observed absent can become eligible later; newly discovered members
+are newly *observed*, not proof of a recent inclusion date.
+
+The default `--mode preview` is read-only. It proposes at most one thank-you per
+run: a current creator mention, one random eligible original from the dashboard's
+top six by combined engagement, and a starter-pack link. Metrics must be no more
+than 48 hours old. Original author, current URI/CID, local posting history and
+moderation exclusions are rechecked. Missing, deleted, quoted, reply or moderated
+posts are not selected. The message says “popular”, not “most liked”.
+
+Review `.agent-tmp/starter_pack_acknowledgements.json` and the accompanying
+`.html` draft. The HTML embeds the live original joke, but is not a published
+Bluesky thank-you. Likes on a thank-you and the original remain distinct.
+The manual `bluesky_acknowledge_starter_packs` workflow supports only baseline
+and preview; it has no schedule or publish mode and prints the proposed JSON.
+
+After explicit approval, local
+`thejokebot-acknowledge-starter-packs --mode publish --pack-uri <approved-at-uri>`
+uses that exact saved preview. **This performs a live public action.** Keep it
+disabled until review; use a test account to verify actual quote rendering.
+`BLUESKY_DRY_RUN=true` forbids both publishing and baseline writes.
+
+The permanent `starter_pack_acknowledgements` ledger lives in social state and
+is never age-pruned. Baseline/published packs remain ineligible after removal and
+re-addition. Publish saves an immutable pending intent before the network write,
+uses a deterministic record key and a repository commit compare-and-swap, and
+confirms the exact record before marking it published. Uncertain writes are
+never blindly retried: the next attempt reads that key first. Read errors,
+changed creator handles/CIDs, mismatched records and unverified membership
+withhold publication with an explicit error. Preserve pending entries for
+investigation; never delete them merely to retry. Commit and push social state
+even after a local publish failure before running any further account actions.
+
+Automated activation, live thank-you rendering approval, broader discovery and
+dashboard membership publication remain separate follow-up work under #115.
 
 Fellow discovery reads TJB's saved custom feeds from its Bluesky preferences before searching the configured hashtags. No separate feed list is needed: saving or removing a custom feed in Bluesky changes the discovery sources. Built-in timelines and saved lists are excluded. Current saved-feed preferences take precedence over the legacy format, including when the current list is empty.
 
