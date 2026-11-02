@@ -10,7 +10,6 @@ from unittest import mock
 
 import httpx
 import pytest
-import requests
 from atproto_client import exceptions
 from atproto_client.request import Response
 
@@ -31,9 +30,7 @@ def client(monkeypatch):
 
 def test_fresh_login_authenticated_session_and_bounded_reads(client):
     request = mock.Mock()
-    result = probe.probe_transport(
-        "native", request, "private-user", "private-password"
-    )
+    result = probe.probe_transport(request, "private-user", "private-password")
     assert result == {
         "transport": "native",
         "success": True,
@@ -68,7 +65,6 @@ def test_fresh_login_authenticated_session_and_bounded_reads(client):
         ),
         (exceptions.NetworkError(), None),
         (httpx.ConnectError("private-token"), None),
-        (requests.Timeout("private-token"), None),
         (ValueError("private-token"), None),
     ],
 )
@@ -82,9 +78,7 @@ def test_failures_report_only_phase_category_and_http_status(
     }[phase]
     operation.side_effect = error
     request = mock.Mock()
-    result = probe.probe_transport(
-        "native", request, "private-user", "private-password"
-    )
+    result = probe.probe_transport(request, "private-user", "private-password")
     assert result["success"] is False
     assert result["phase"] == phase
     assert result["error"] == type(error).__name__
@@ -103,7 +97,7 @@ def test_missing_or_changed_identity_cannot_pass(client, phase):
         client.com.atproto.server.get_session.return_value.did = "did:plc:other"
     else:
         client.get_profile.return_value.did = "did:plc:other"
-    result = probe.probe_transport("native", mock.Mock(), "user", "password")
+    result = probe.probe_transport(mock.Mock(), "user", "password")
     assert result["success"] is False
     assert result["phase"] == phase
     assert result["error"] == "ValueError"
@@ -114,7 +108,7 @@ def test_later_read_failure_retains_the_actual_observed_prefix(client):
         SimpleNamespace(did="did:plc:bot"),
         exceptions.NetworkError(),
     ]
-    result = probe.probe_transport("native", mock.Mock(), "user", "password")
+    result = probe.probe_transport(mock.Mock(), "user", "password")
     assert result["success"] is False
     assert result["profile_reads"] == 1
     assert client.get_profile.call_count == 2
@@ -124,49 +118,114 @@ def test_unexpected_error_is_not_silently_classified_as_a_network_failure(client
     client.login.side_effect = RuntimeError("unexpected failure")
     request = mock.Mock()
     with pytest.raises(RuntimeError, match="unexpected failure"):
-        probe.probe_transport("native", request, "user", "password")
+        probe.probe_transport(request, "user", "password")
     request.close.assert_called_once()
 
 
 @pytest.mark.parametrize(
-    "successes,expected",
-    [([True, True], 0), ([False, True], 1), ([True, False], 1), ([False, False], 1)],
+    "successful,expected",
+    [(True, 0), (False, 1)],
 )
-def test_comparison_uses_distinct_transports_and_never_activates_them(
-    monkeypatch, capsys, successes, expected
+def test_native_check_has_no_automatic_fallback(
+    monkeypatch, capsys, successful, expected
 ):
     monkeypatch.setattr(
         probe.runtime,
         "get_bluesky_credentials",
         lambda: ("private-user", "private-password"),
     )
-    transport = mock.Mock()
-    monkeypatch.setattr(
-        probe.runtime, "_RequestsTransport", mock.Mock(return_value=transport)
-    )
-    request_factory = mock.Mock(side_effect=[mock.Mock(), mock.Mock()])
+    request_factory = mock.Mock()
     monkeypatch.setattr(probe, "Request", request_factory)
-    check = mock.Mock(
-        side_effect=[
-            {"transport": name, "success": success}
-            for name, success in zip(("native", "requests"), successes)
-        ]
-    )
+    check = mock.Mock(return_value={"transport": "native", "success": successful})
     monkeypatch.setattr(probe, "probe_transport", check)
     assert probe.main() == expected
     captured = capsys.readouterr()
     payload = json.loads(captured.out)
     assert payload["decision"] == (
-        "native_candidate" if expected == 0 else "retain_adapter"
+        "native_passed" if expected == 0 else "native_failed"
     )
     assert payload["versions"]["atproto"]
-    assert check.call_count == 2
-    assert request_factory.call_args_list == [
-        mock.call(timeout=30.0),
-        mock.call(timeout=30.0, transport=transport),
-    ]
+    check.assert_called_once_with(
+        request_factory.return_value, "private-user", "private-password"
+    )
+    request_factory.assert_called_once_with(timeout=30.0)
     assert "private" not in captured.out + captured.err
     assert bool(captured.err) == bool(expected)
+
+
+def test_production_login_uses_native_sdk_request_with_existing_timeout(monkeypatch):
+    runtime = probe.runtime
+    monkeypatch.setattr(
+        runtime, "get_bluesky_credentials", lambda: ("user", "password")
+    )
+    monkeypatch.setenv("BLUESKY_SESSION_RESTORE_ENABLED", "false")
+    monkeypatch.setenv("BLUESKY_SESSION_PERSIST_ENABLED", "false")
+    request_factory = mock.Mock()
+    client_factory = mock.Mock()
+    monkeypatch.setattr(runtime, "_AtprotoRequest", request_factory)
+    monkeypatch.setattr(runtime, "Client", client_factory)
+    client, username = runtime.login_client()
+    request_factory.assert_called_once_with(timeout=30.0)
+    client_factory.assert_called_once_with(request=request_factory.return_value)
+    client.login.assert_called_once_with("user", "password")
+    client.on_session_change.assert_not_called()
+    assert username == "user"
+
+
+@pytest.mark.parametrize(
+    "failure",
+    [
+        httpx.ConnectError("connection failed"),
+        httpx.ReadTimeout("read timed out"),
+        429,
+        500,
+        502,
+        503,
+    ],
+)
+def test_native_sdk_errors_preserve_bounded_network_retries(monkeypatch, failure):
+    attempts = []
+
+    def handle(request):
+        attempts.append(request)
+        if len(attempts) == 1:
+            if isinstance(failure, Exception):
+                raise failure
+            return httpx.Response(failure, json={"error": "TemporaryFailure"})
+        return httpx.Response(200, json={"ok": True})
+
+    request = probe.Request(transport=httpx.MockTransport(handle), timeout=30.0)
+    monkeypatch.setattr(probe.runtime.time, "sleep", mock.Mock())
+    try:
+        response = probe.runtime.retry_network_call(
+            lambda: request.get("https://example.test/xrpc/test"),
+            "checking native retry contract",
+            max_attempts=2,
+            initial_delay_seconds=0,
+        )
+    finally:
+        request.close()
+    assert response.status_code == 200
+    assert len(attempts) == 2
+
+
+@pytest.mark.parametrize("status", [400, 401, 403])
+def test_native_sdk_permanent_errors_are_not_retried(status):
+    handle = mock.Mock(
+        return_value=httpx.Response(status, json={"error": "PermanentFailure"})
+    )
+    request = probe.Request(transport=httpx.MockTransport(handle), timeout=30.0)
+    try:
+        with pytest.raises(exceptions.RequestErrorBase):
+            probe.runtime.retry_network_call(
+                lambda: request.get("https://example.test/xrpc/test"),
+                "checking native permanent error",
+                max_attempts=2,
+                initial_delay_seconds=0,
+            )
+    finally:
+        request.close()
+    handle.assert_called_once()
 
 
 def test_invalid_credentials_fail_before_opening_any_transport(monkeypatch, capsys):

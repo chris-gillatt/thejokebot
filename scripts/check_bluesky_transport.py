@@ -1,4 +1,4 @@
-"""Compare native SDK and current transports without public or local state writes."""
+"""Check native SDK transport without public or local state writes."""
 
 import json
 import sys
@@ -6,7 +6,6 @@ from importlib.metadata import version
 from typing import TypedDict
 
 import httpx
-import requests
 from atproto import Client
 from atproto_client import exceptions
 from atproto_client.request import Request
@@ -25,11 +24,9 @@ class ProbeResult(TypedDict):
     http_status: int | None
 
 
-def probe_transport(
-    name: str, request: Request, username: str, password: str
-) -> ProbeResult:
+def probe_transport(request: Request, username: str, password: str) -> ProbeResult:
     result: ProbeResult = {
-        "transport": name,
+        "transport": "native",
         "success": False,
         "phase": "login",
         "profile_reads": 0,
@@ -55,7 +52,6 @@ def probe_transport(
     except (
         exceptions.AtProtocolError,
         httpx.HTTPError,
-        requests.RequestException,
         ValueError,
     ) as exc:
         result["error"] = type(exc).__name__
@@ -75,14 +71,8 @@ def main() -> int:
             file=sys.stderr,
         )
         return 2
-    results = []
-    for name in ("native", "requests"):
-        options = (
-            {"transport": runtime._RequestsTransport()} if name == "requests" else {}
-        )
-        request = Request(timeout=30.0, **options)
-        results.append(probe_transport(name, request, username, password))
-    successful = all(result["success"] for result in results)
+    result = probe_transport(Request(timeout=30.0), username, password)
+    successful = result["success"]
     print(
         json.dumps(
             {
@@ -90,15 +80,15 @@ def main() -> int:
                 "versions": {
                     name: version(name) for name in ("atproto", "httpx", "requests")
                 },
-                "results": results,
-                "decision": "native_candidate" if successful else "retain_adapter",
+                "results": [result],
+                "decision": "native_passed" if successful else "native_failed",
             },
             sort_keys=True,
         )
     )
     if not successful:
         print(
-            "ERROR: Transport comparison failed; retain the production adapter.",
+            "ERROR: Native transport check failed; investigate before further account actions.",
             file=sys.stderr,
         )
     return 0 if successful else 1

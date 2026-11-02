@@ -18,7 +18,7 @@ This is the operating brief for open work and lasting decisions. See the [README
 |---|---|
 | Workflow/runtime drift | Preserve entry points, triggers, environment variables and state formats; validate schedule metadata with runtime configuration. |
 | Posting, report and follow regressions | Test idempotency, pagination, provider fallback and safety caps at producer and collector boundaries. |
-| Bluesky transport workaround | API calls currently use the `requests`/urllib3 transport instead of native httpx because of a prior AWS WAF fingerprint block. If urllib3 is blocked too, evaluate an alternative browser-compatible transport before changing the live path. |
+| Bluesky transport availability | Native SDK httpx transport passed authenticated local and independent hosted-runner checks on 2 November 2026. A prior block required an adapter, now removed. If a new block occurs, investigate and validate a replacement before changing the live path; do not assume the previous firewall cause still applies. |
 | Session-cache custody | Cached sessions must stay encrypted with `BLUESKY_SESSION_CACHE_KEY`; rotating it requires a fresh credential login. |
 | Bluesky graph visibility | Profile counters may include hidden accounts that cannot be hydrated through follower/following queries; do not infer actionable accounts from totals. |
 
@@ -75,14 +75,22 @@ collecting state and a sufficient-sample fixture.
 
 ### Transport Review
 
-Retain the working transport override until an authenticated login from a GitHub Actions runner proves native SDK transport is reliable, or a new block requires a replacement. Evaluate dependency and deployment implications before considering `curl_cffi`.
+Completed on 2 November 2026. Independent hosted-runner comparisons
+([first run](https://github.com/chris-gillatt/thejokebot/actions/runs/41450167268),
+[second run](https://github.com/chris-gillatt/thejokebot/actions/runs/41450315596))
+and a local comparison all passed fresh native and adapter logins, authenticated
+session identity checks and three profile reads per transport. Both runners
+used Ubuntu 24.04, Python 3.14.10, atproto 0.0.73 and httpx 0.28.1. These runs
+establish current read-only connectivity, not permanent reliability or posting.
 
-The manual `bluesky_check_transport` workflow now compares fresh native SDK and
-production-adapter authentication, verifies session identity and performs three
-profile reads per transport. It has no public/state writes or session-cache
-access. Failed or inconclusive comparisons retain the adapter; a successful
-probe is only a candidate, not automatic activation or proof of long-term
-reliability. Record the hosted-runner verdict here after the comparison.
+Removed the production adapter in favour of native SDK transport, preserving
+the 30-second timeout, credential selection, retry and session-cache controls.
+No new dependency is required; requests remains in use by first-party providers.
+The manual `bluesky_check_transport` workflow now checks native transport only,
+without public/state writes or session-cache access. It fails visibly without
+automatic fallback. Investigate any future block separately and evaluate
+dependency/deployment implications before introducing `curl_cffi` or another
+transport.
 
 ### Future Dashboard Measures
 

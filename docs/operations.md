@@ -142,9 +142,12 @@ Installed entry points are available under `.venv/bin/`:
 
 ### Read-only transport review
 
-Dispatch `bluesky_check_transport` on `main` to compare the SDK's native httpx
-transport with the production requests/urllib3 adapter from a GitHub-hosted
-runner. Each transport makes one fresh credential-login attempt, verifies the
+Production uses the SDK's native httpx transport with a 30-second timeout.
+The former requests/urllib3 adapter was removed after two independent
+GitHub-hosted comparisons and a local comparison passed on 2 November 2026.
+
+Dispatch `bluesky_check_transport` on `main` for a native SDK check from a
+GitHub-hosted runner. It makes one fresh credential-login attempt, verifies the
 authenticated session and performs three profile reads with identity checks.
 Requests use a 30-second timeout; the job is capped at ten minutes. The probe
 does not retry, post, follow, delete, save state or read/write cached sessions.
@@ -152,12 +155,13 @@ It creates authentication sessions but does not publish their tokens.
 
 Logs contain package versions, completed phases, read counts, exception class
 names and HTTP status codes only, not response bodies, identities or credentials.
-Any failed comparison exits non-zero and retains the production adapter.
-`native_candidate` means both probes passed, not that production transport was
-changed or long-term reliability proved. Repeated successful hosted-runner
-evidence and the normal validation gates are required before removing the
-adapter. A 403 alone does not establish which firewall rule or TLS property
-caused the rejection.
+Failure exits non-zero, with no automatic fallback or production changes.
+Success establishes current read-only connectivity, not permanent availability
+or verified posting. A new block needs investigation and a separately validated
+transport change, not automatic installation of a browser-compatible client.
+A 403 alone does not establish which firewall rule or TLS property caused it.
+
+### Social and report actions
 
 An explicit mention such as `@thejokebot.bsky.social tell me a joke` requests a threaded reply. The two-hourly social workflow sends at most two replies per requester and six replies overall per run. Requests are handled oldest first; those above either limit are discarded when the run advances its checkpoint. Reply jokes come from the bundled jokebook, carry the normal rotating tags, and do not consume the main posting workflow's 730-day uniqueness pool. The workflow excludes reports and checks for an existing bot reply before posting. To report an unsuitable posted joke, reply to the joke with standalone `#report`. The report workflow opens a denylist PR for maintainer review; after merge, a later run removes the approved post.
 
