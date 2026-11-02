@@ -1,7 +1,5 @@
 """Maintain the bot's configured Bluesky account blocks."""
 
-from __future__ import annotations
-
 import os
 import re
 import time

@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 """Safely commit and push explicitly declared workflow-generated files."""
 
-from __future__ import annotations
-
 import argparse
 import os
 import subprocess

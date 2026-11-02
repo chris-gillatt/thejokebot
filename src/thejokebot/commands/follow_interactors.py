@@ -1,7 +1,5 @@
 """Follow recent users who interact with the bot's posts."""
 
-from __future__ import annotations
-
 import time
 from datetime import datetime
 

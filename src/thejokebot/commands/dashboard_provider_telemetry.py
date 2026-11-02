@@ -1,7 +1,5 @@
 """Allowlisted public candidate-supply counters."""
 
-from __future__ import annotations
-
 import re
 
 FIELDS = (

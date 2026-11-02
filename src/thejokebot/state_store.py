@@ -1,7 +1,5 @@
 """Generic domain-based state persistence helpers."""
 
-from __future__ import annotations
-
 import json
 import os
 from contextlib import ExitStack, contextmanager

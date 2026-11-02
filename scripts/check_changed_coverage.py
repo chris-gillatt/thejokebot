@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 """Enforce coverage for changed executable Python lines."""
 
-from __future__ import annotations
-
 import argparse
 import subprocess
 import sys

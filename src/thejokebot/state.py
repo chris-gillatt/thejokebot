@@ -1,7 +1,5 @@
 """Domain-based runtime state for the joke bot."""
 
-from __future__ import annotations
-
 import hashlib
 import sys
 import time

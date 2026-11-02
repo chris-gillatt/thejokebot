@@ -1,7 +1,5 @@
 """Like recent replies and reposts of the bot's posts."""
 
-from __future__ import annotations
-
 import re
 import time
 from datetime import datetime

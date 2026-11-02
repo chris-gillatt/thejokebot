@@ -1,7 +1,5 @@
 """Track follows attributed to Bluesky starter packs."""
 
-from __future__ import annotations
-
 import hashlib
 import copy
 import re

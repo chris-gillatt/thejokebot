@@ -1,7 +1,5 @@
 """Provider rotation and posted-joke state helpers."""
 
-from __future__ import annotations
-
 import time
 
 PROVIDER_ROTATION_ORDER = ["icanhazdadjoke", "jokeapi", "groandeck", "syrsly"]

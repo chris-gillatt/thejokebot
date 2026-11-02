@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 """Reject mutable GitHub Action references in workflow files."""
 
-from __future__ import annotations
-
 import argparse
 import re
 import sys

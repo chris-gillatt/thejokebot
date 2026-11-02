@@ -1,7 +1,5 @@
 """Workflow-analysis domain for dashboard metrics collection."""
 
-from __future__ import annotations
-
 import io
 import json
 import re

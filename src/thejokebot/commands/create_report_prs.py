@@ -1,7 +1,5 @@
 """Create one denylist pull request per reported joke proposal."""
 
-from __future__ import annotations
-
 import hashlib
 import json
 import os

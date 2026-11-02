@@ -1,7 +1,5 @@
 """Moderation and report-processing state helpers."""
 
-from __future__ import annotations
-
 import hashlib
 import time
 

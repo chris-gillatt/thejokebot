@@ -1,7 +1,5 @@
 """Fail unless a SonarQube Cloud analysis has no unresolved issues."""
 
-from __future__ import annotations
-
 import argparse
 import base64
 import json

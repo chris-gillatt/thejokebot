@@ -1,7 +1,5 @@
 """Validate BLUESKY_UNFOLLOW_IGNORE handles and report stale entries."""
 
-from __future__ import annotations
-
 import os
 
 import atproto_client.exceptions

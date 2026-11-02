@@ -1,7 +1,5 @@
 """Collect aggregate public Bluesky metrics for the static dashboard."""
 
-from __future__ import annotations
-
 import re
 import time
 from collections import Counter

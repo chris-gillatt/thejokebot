@@ -1,7 +1,5 @@
 """Follow back followers who are not yet followed by the bot."""
 
-from __future__ import annotations
-
 import time
 
 import atproto_client.exceptions

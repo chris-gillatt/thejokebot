@@ -1,7 +1,5 @@
 """Opt-in, once-per-pack acknowledgements for verified candidate memberships."""
 
-from __future__ import annotations
-
 import base64
 import copy
 import hashlib

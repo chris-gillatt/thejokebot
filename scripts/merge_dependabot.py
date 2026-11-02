@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 """Merge Dependabot PRs after the expected checks pass on their current head."""
 
-from __future__ import annotations
-
 import json
 import os
 import subprocess

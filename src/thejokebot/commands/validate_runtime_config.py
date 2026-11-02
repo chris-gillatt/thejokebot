@@ -1,7 +1,5 @@
 """Validate central runtime config schema and workflow schedule alignment."""
 
-from __future__ import annotations
-
 from pathlib import Path
 
 from thejokebot import config as runtime_config

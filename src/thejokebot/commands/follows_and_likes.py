@@ -1,7 +1,5 @@
 """Follow back new followers and like reply/repost interactions."""
 
-from __future__ import annotations
-
 import requests
 import atproto_client.exceptions
 from colorama import Fore, Style

@@ -14,6 +14,14 @@ The backfill draws on substantive human, agent and dependency commits and the
 
 Jump to [2025](#020---2025) or the [project's beginning](#010---2024-12-10).
 
+## 2026-11-02
+
+- Simplified Python annotations by removing 30 legacy future imports now that
+  Python 3.14 is the minimum. Annotation evaluation remains deferred natively;
+  direct introspection now returns runtime values instead of strings. Added
+  regression checks for resolved annotations and deferred forward references.
+  Bot behaviour, call signatures and dependency-owned backports are unchanged.
+
 ## 2026-11-01
 
 - Added prospective approved-post removal timing to Operations: measure from the

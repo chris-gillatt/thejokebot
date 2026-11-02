@@ -1,7 +1,5 @@
 """Social engagement state helpers."""
 
-from __future__ import annotations
-
 import time
 
 MAX_DEDUPE_ENTRIES = 5000

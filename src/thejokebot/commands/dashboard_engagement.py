@@ -1,7 +1,5 @@
 """Durable, fixed-age observations of public bot posts."""
 
-from __future__ import annotations
-
 import json
 from collections import Counter
 from datetime import datetime, timedelta, timezone
