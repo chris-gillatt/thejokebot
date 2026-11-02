@@ -77,6 +77,13 @@ collecting state and a sufficient-sample fixture.
 
 Retain the working transport override until an authenticated login from a GitHub Actions runner proves native SDK transport is reliable, or a new block requires a replacement. Evaluate dependency and deployment implications before considering `curl_cffi`.
 
+The manual `bluesky_check_transport` workflow now compares fresh native SDK and
+production-adapter authentication, verifies session identity and performs three
+profile reads per transport. It has no public/state writes or session-cache
+access. Failed or inconclusive comparisons retain the adapter; a successful
+probe is only a candidate, not automatic activation or proof of long-term
+reliability. Record the hosted-runner verdict here after the comparison.
+
 ### Future Dashboard Measures
 
 Do not claim source-specific post engagement, impressions, sentiment, demographics or individual audience outcomes without appropriate, privacy-safe source data. Keep separate the dashboard's observed history and historical estimates.
@@ -117,8 +124,8 @@ the SDK's transitive backports remain dependency-owned.
 Rechecked on 2 November 2026 against PyPI, npm and upstream GitHub Action releases/tags.
 
 - Deliberate exception: AnyIO remains locked at 4.15.1; latest stable is 4.16.0.
-  Keep the annotation-only migration separate from transitive runtime dependency
-  changes. Review and resolve this upgrade in the next dependency-maintenance
+  Keep the annotation migration and transport review separate from transitive
+  runtime dependency changes. Review and resolve this upgrade in the next dependency-maintenance
   change, or immediately if an applicable advisory requires it.
 
 - The other 34 Python lock entries use the latest stable releases, resolved together with hashes. This includes atproto 0.0.73, pydantic 2.14.2/core 2.50.2, pytest 9.2.0 and urllib3 2.8.0. The SDK's new `tlds` dependency is included; Python 3.14 is the minimum.

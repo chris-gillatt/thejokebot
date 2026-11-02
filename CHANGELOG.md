@@ -16,6 +16,11 @@ Jump to [2025](#020---2025) or the [project's beginning](#010---2024-12-10).
 
 ## 2026-11-02
 
+- Added a manual, main-only GitHub-hosted transport comparison: fresh native SDK
+  and production-adapter logins, authenticated session checks and three bounded
+  profile reads each. The diagnostic has no public/state writes or session-cache
+  access, publishes status-only results and fails visibly if either transport
+  fails. Production retains the working adapter pending hosted-runner evidence.
 - Simplified Python annotations by removing 30 legacy future imports now that
   Python 3.14 is the minimum. Annotation evaluation remains deferred natively;
   direct introspection now returns runtime values instead of strings. Added
