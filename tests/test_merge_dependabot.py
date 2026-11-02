@@ -3,6 +3,8 @@
 import json
 import sys
 import subprocess
+import configparser
+from pathlib import Path
 from unittest import mock
 
 import pytest
@@ -90,6 +92,123 @@ def test_restricts_author_and_changed_files():
     assert merge_dependabot._allowed_path("requirements.lock")
     assert not merge_dependabot._allowed_path("src/thejokebot/runtime.py")
     assert not merge_dependabot._allowed_path(".github/workflows/nested/other.yml")
+
+
+def test_reference_schedule_and_skip_paths_match_registered_submodules():
+    root = Path(__file__).resolve().parents[1]
+    submodules = configparser.ConfigParser()
+    submodules.read(root / ".gitmodules")
+    paths = {submodules[section]["path"] for section in submodules.sections()}
+    assert paths == merge_dependabot.REFERENCE_SUBMODULES
+    config = (root / ".github/dependabot.yml").read_text()
+    reference_config = config.split("  - package-ecosystem: gitsubmodule\n")[1]
+    assert "interval: weekly" in reference_config
+    assert 'time: "06:30"' in reference_config
+    assert "reference-submodules:" in reference_config
+    assert '"references/*"' in reference_config
+    workflow = (root / ".github/workflows/python_tests.yml").read_text()
+    assert "predicate-quantifier: some-with-excludes" in workflow
+    filters = workflow.split("          filters: |\n")[1].split("\n      - name:")[0]
+    for path in paths:
+        assert f"      - dependency-name: {path}\n" in reference_config
+        assert f"              - '{path}'\n" in filters
+        assert f"              - '!{path}'\n" in filters
+    assert "'!references/**'" not in filters
+    assert (
+        "workflow_dispatch' || steps.changed_files.outputs.non_docs == 'true'"
+        in workflow
+    )
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        ".gitmodules",
+        "references/other",
+        "references/atproto/package.json",
+        "references/cookbook/nextjs-oauth",
+    ],
+)
+def test_rejects_unregistered_reference_changes(path):
+    assert not merge_dependabot._allowed_path(path)
+
+
+@pytest.mark.parametrize(
+    "paths",
+    [
+        ["references/atproto"],
+        ["references/bps-website"],
+        ["references/cookbook"],
+        sorted(merge_dependabot.REFERENCE_SUBMODULES),
+    ],
+)
+def test_merges_reference_only_pr_without_sonar(paths):
+    detail = {
+        "headRefOid": "current-head",
+        "mergeStateStatus": "CLEAN",
+        "statusCheckRollup": [
+            check for check in _checks() if check["name"] != "SonarCloud Code Analysis"
+        ],
+    }
+    with mock.patch.object(
+        merge_dependabot,
+        "_gh",
+        side_effect=[
+            json.dumps([_pr()]),
+            json.dumps([[{"filename": path} for path in paths]]),
+            json.dumps(detail),
+            "merged",
+        ],
+    ) as gh:
+        assert merge_dependabot.merge_ready_prs("owner/repo") == 1
+    assert gh.call_args.args[-2:] == ("--match-head-commit", "current-head")
+    assert gh.call_args.kwargs == {"token": None}
+
+
+@pytest.mark.parametrize(
+    "extra_path", ["requirements.lock", ".github/workflows/codeql.yml"]
+)
+def test_mixed_reference_updates_still_require_sonar(extra_path):
+    detail = {
+        "headRefOid": "current-head",
+        "mergeStateStatus": "CLEAN",
+        "statusCheckRollup": [
+            check for check in _checks() if check["name"] != "SonarCloud Code Analysis"
+        ],
+    }
+    with mock.patch.object(
+        merge_dependabot,
+        "_gh",
+        side_effect=[
+            json.dumps([_pr()]),
+            json.dumps(
+                [[{"filename": path} for path in ["references/atproto", extra_path]]]
+            ),
+            json.dumps(detail),
+        ],
+    ) as gh:
+        assert merge_dependabot.merge_ready_prs("owner/repo") == 0
+    assert gh.call_count == 3
+
+
+@pytest.mark.parametrize("state", ["MISSING", "IN_PROGRESS", "FAILURE"])
+def test_reference_updates_still_require_remaining_checks(state):
+    checks = [
+        check
+        for check in _checks()
+        if check["name"] not in {"tests", "SonarCloud Code Analysis"}
+    ]
+    if state != "MISSING":
+        check = {
+            "name": "tests",
+            "status": "IN_PROGRESS" if state == "IN_PROGRESS" else "COMPLETED",
+        }
+        if state == "FAILURE":
+            check["conclusion"] = "FAILURE"
+        checks.append(check)
+    assert merge_dependabot._check_blockers(
+        checks, required_checks=merge_dependabot.REFERENCE_CHECKS
+    ) == [f"tests: {state}"]
 
 
 def test_merges_only_the_checked_head():

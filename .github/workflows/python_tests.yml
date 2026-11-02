@@ -21,25 +21,37 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Detect docs-only changes
+      - name: Detect documentation and reference-only changes
         id: changed_files
         if: github.event_name != 'workflow_dispatch'
         uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         with:
+          predicate-quantifier: some-with-excludes
           filters: |
             docs:
               - '**/*.md'
               - 'docs/**'
               - 'images/**'
+            references:
+              - 'references/atproto'
+              - 'references/bps-website'
+              - 'references/cookbook'
             non_docs:
               - '**'
               - '!**/*.md'
               - '!docs/**'
               - '!images/**'
+              - '!references/atproto'
+              - '!references/bps-website'
+              - '!references/cookbook'
 
       - name: Report docs-only skip decision
         if: github.event_name != 'workflow_dispatch' && steps.changed_files.outputs.docs == 'true' && steps.changed_files.outputs.non_docs != 'true'
         run: echo "Docs-only change detected; skipping python_tests job steps."
+
+      - name: Report reference-only skip decision
+        if: github.event_name != 'workflow_dispatch' && steps.changed_files.outputs.references == 'true' && steps.changed_files.outputs.non_docs != 'true'
+        run: echo "Reference-only change detected; skipping Python tests, coverage and Sonar analysis."
 
       - name: Set up Python
         if: github.event_name == 'workflow_dispatch' || steps.changed_files.outputs.non_docs == 'true'

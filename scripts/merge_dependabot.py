@@ -21,6 +21,10 @@ REQUIRED_CHECKS = frozenset(
 DEPENDENCY_FILES = frozenset(
     {"requirements.lock", "pyproject.toml", "package.json", "package-lock.json"}
 )
+REFERENCE_SUBMODULES = frozenset(
+    {"references/atproto", "references/bps-website", "references/cookbook"}
+)
+REFERENCE_CHECKS = REQUIRED_CHECKS - {"SonarCloud Code Analysis"}
 
 
 def _gh(*arguments: str, token: str | None = None) -> str:
@@ -37,14 +41,20 @@ def _gh(*arguments: str, token: str | None = None) -> str:
 
 
 def _allowed_path(path: str) -> bool:
-    return path in DEPENDENCY_FILES or (
-        path.startswith(".github/workflows/")
-        and path.endswith((".yml", ".yaml"))
-        and path.count("/") == 2
+    return (
+        path in DEPENDENCY_FILES
+        or path in REFERENCE_SUBMODULES
+        or (
+            path.startswith(".github/workflows/")
+            and path.endswith((".yml", ".yaml"))
+            and path.count("/") == 2
+        )
     )
 
 
-def _check_blockers(checks: list[dict]) -> list[str]:
+def _check_blockers(
+    checks: list[dict], *, required_checks: frozenset[str] = REQUIRED_CHECKS
+) -> list[str]:
     seen: set[str] = set()
     blockers: list[str] = []
     for check in checks:
@@ -60,7 +70,7 @@ def _check_blockers(checks: list[dict]) -> list[str]:
             )
         if result != "SUCCESS":
             blockers.append(f"{name}: {result or 'UNKNOWN'}")
-    blockers.extend(f"{name}: MISSING" for name in sorted(REQUIRED_CHECKS - seen))
+    blockers.extend(f"{name}: MISSING" for name in sorted(required_checks - seen))
     return blockers
 
 
@@ -112,6 +122,7 @@ def merge_ready_prs(repository: str, *, dry_run: bool = False) -> int:
         changes_workflow = any(
             file["filename"].startswith(".github/workflows/") for file in files
         )
+        reference_only = all(file["filename"] in REFERENCE_SUBMODULES for file in files)
         detail = json.loads(
             _gh(
                 "pr",
@@ -126,7 +137,10 @@ def merge_ready_prs(repository: str, *, dry_run: bool = False) -> int:
         if detail["headRefOid"] != pr["head"]["sha"]:
             print(f"PR #{number}: head changed while checking; will retry later.")
             continue
-        blockers = _check_blockers(detail.get("statusCheckRollup") or [])
+        blockers = _check_blockers(
+            detail.get("statusCheckRollup") or [],
+            required_checks=REFERENCE_CHECKS if reference_only else REQUIRED_CHECKS,
+        )
         if detail["mergeStateStatus"] != "CLEAN":
             blockers.insert(0, f"merge state: {detail['mergeStateStatus']}")
         if blockers:

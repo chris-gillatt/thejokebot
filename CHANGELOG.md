@@ -16,6 +16,11 @@ Jump to [2025](#020---2025) or the [project's beginning](#010---2024-12-10).
 
 ## 2026-11-02
 
+- Restored weekly grouped Dependabot updates for the three read-only Bluesky
+  reference submodules and allowed their exact paths through the existing
+  checked-head auto-merge gate. Verified they are not runtime or build inputs.
+  Reference-only PRs skip Python tests, coverage and Sonar; mixed first-party
+  changes retain full validation.
 - Updated the hash-locked AnyIO dependency from 4.15.1 to 4.16.0, retaining
   atproto 0.0.73, httpx 0.28.1 and all other dependency versions. Removed its
   deferred-upgrade exception and validated dependency consistency, the full

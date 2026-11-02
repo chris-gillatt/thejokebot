@@ -53,10 +53,10 @@
 ## References Directory Policy
 - The `references/` directory contains read-only external resources (submodules, documentation, cookbooks).
 - Never make changes to content within `references/`. All content is considered read-only.
-- Do not enable automated dependency updates for reference submodules or proactively update their pinned revisions. Refresh a reference only when the user explicitly requests it; upstream maintenance belongs to the owning project.
+- Dependabot refreshes the three registered reference-submodule pins weekly. The merge gate accepts their exact paths only, requires the existing checks and omits the Sonar requirement only for reference-only PRs, whose Python workflow skips tests, coverage and analysis. Mixed first-party changes retain full validation. Do not edit upstream content or add further automated reference updates without approval.
 - Exclude `references/**` from every first-party test, coverage, lint, static-analysis, and editor-analysis configuration. Validate new quality tools against first-party files only.
 - Only pull in updates from upstream sources. Changes should only flow in one direction: from upstream → local.
-- If any changes appear pending in submodules under `references/`, clear them immediately using:
+- Intentional pin updates are not content drift. If unintentional changes appear within submodules under `references/`, clear them using:
   - `git restore references/`
   - `git submodule update --init --recursive`
   - `git -C references/<submodule> clean -fd && git -C references/<submodule> reset --hard`

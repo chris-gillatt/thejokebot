@@ -48,3 +48,26 @@ updates:
     commit-message:
       prefix: chore
       include: scope
+
+  - package-ecosystem: gitsubmodule
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:30"
+      timezone: "Europe/London"
+    open-pull-requests-limit: 2
+    allow:
+      - dependency-name: references/atproto
+      - dependency-name: references/bps-website
+      - dependency-name: references/cookbook
+    groups:
+      reference-submodules:
+        patterns:
+          - "references/*"
+    labels:
+      - dependencies
+      - submodule
+    commit-message:
+      prefix: chore
+      include: scope
