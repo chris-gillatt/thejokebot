@@ -129,14 +129,9 @@ the SDK's transitive backports remain dependency-owned.
 
 ## Dependency Exceptions
 
-Rechecked on 2 November 2026 against PyPI, npm and upstream GitHub Action releases/tags.
+Rechecked on 2 November 2026 against PyPI, npm and upstream GitHub Action releases/tags. No first-party version exceptions remain.
 
-- Deliberate exception: AnyIO remains locked at 4.15.1; latest stable is 4.16.0.
-  Keep the annotation migration and transport review separate from transitive
-  runtime dependency changes. Review and resolve this upgrade in the next dependency-maintenance
-  change, or immediately if an applicable advisory requires it.
-
-- The other 34 Python lock entries use the latest stable releases, resolved together with hashes. This includes atproto 0.0.73, pydantic 2.14.2/core 2.50.2, pytest 9.2.0 and urllib3 2.8.0. The SDK's new `tlds` dependency is included; Python 3.14 is the minimum.
+- All 35 Python lock entries use the latest stable releases, resolved together with hashes. This includes AnyIO 4.16.0, atproto 0.0.73, pydantic 2.14.2/core 2.50.2, pytest 9.2.0 and urllib3 2.8.0. The SDK's new `tlds` dependency is included; Python 3.14 is the minimum.
 - Ruff is 0.17.3. Explicit rule selection (`E4`, `E7`, `E9`, `F`, plus `C901`) and file inclusion preserve the verified 0.15.13 quality policy rather than adopting unrelated new defaults.
 - npm Pyright is 1.1.414, including the local installation. The dashboard uses Chart.js 4.6.1 with a freshly calculated integrity hash.
 - All ten first-party GitHub Action repositories are pinned to their latest stable release commits, including setup-python 7.1.0 and Sonar scan 8.4.0. CodeQL uses Action v4.39.1, not a differently versioned bundle release.
