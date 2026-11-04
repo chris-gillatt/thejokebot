@@ -891,16 +891,18 @@
       "at://did:plc:ewb7glyvsxc63hxjgdmoupnk/app.bsky.feed.post/3mzgjmyv2sc2b",
       "at://did:plc:v3op6k2udw4kgj46raz67y4h/app.bsky.feed.repost/3mzgtsdcwwy2d",
       "at://did:plc:4u6qqnfyfnzkppqihhwe7vpl/app.bsky.feed.repost/3mzin7ovvfl2t",
-      "at://did:plc:wizbbtrjbhytf6uxrbbezb33/app.bsky.feed.repost/3mzimxxmh3s26"
+      "at://did:plc:wizbbtrjbhytf6uxrbbezb33/app.bsky.feed.repost/3mzimxxmh3s26",
+      "at://did:plc:txicsqqwelvss2ahx7ekclci/app.bsky.feed.repost/3mziru6oknk2d",
+      "at://did:plc:v3op6k2udw4kgj46raz67y4h/app.bsky.feed.repost/3mzixam76cc2m"
     ],
-    "last_checked_at": 1793809425
+    "last_checked_at": 1793816768
   },
   "joke_requests": {
     "replied_uris": [
       "at://did:plc:ea4cyvzxqvubnkpo6g2kkv6i/app.bsky.feed.post/3mwirjfd7qk2o",
       "at://did:plc:ea4cyvzxqvubnkpo6g2kkv6i/app.bsky.feed.post/3mwl4ggasjc2l"
     ],
-    "last_checked_at": 1793809424.5824773,
+    "last_checked_at": 1793816767.2671924,
     "boundary_notification_uris": []
   },
   "starter_pack_acknowledgements": {
@@ -52800,6 +52802,11 @@
         "did": "did:plc:r2yb6lg5qtusd2addwztw3zj",
         "followed_at": 1793809424,
         "source": "interaction"
+      },
+      {
+        "did": "did:plc:yni2ryo4ij6zivdnhvlrcuim",
+        "followed_at": 1793816766,
+        "source": "interaction"
       }
     ]
   },
@@ -60595,10 +60602,10 @@
     ],
     "starter_pack_attribution": {
       "coverage_started_at": "2026-08-01T14:31:28.650280Z",
-      "last_checked_at": "2026-11-04T16:23:44.353971Z",
-      "high_water_indexed_at": "2026-11-04T13:18:17.136Z",
+      "last_checked_at": "2026-11-04T18:26:06.936399Z",
+      "high_water_indexed_at": "2026-11-04T17:29:03.872Z",
       "boundary_notification_hashes": [
-        "e1969c6fa3dc417064ac05ff966ccc8d2ef30cad0031b1c6d0274fedf8acdcc3"
+        "f864a2c7294a4522c4dd5f4c148fc8537f556e3eb63fb7d3d1618888b3b8fa8f"
       ],
       "packs": {
         "at://did:plc:ylslnx2g5q3wvnvywksuxx7g/app.bsky.graph.starterpack/3mucse7m74g2y": {
@@ -77336,6 +77343,33 @@
             "30": null,
             "90": null
           }
+        },
+        "41c5cbcce6b3fbee9df779bbb4eecb7918791c98d4f1081f18683b6c254d4664": {
+          "source": "followback",
+          "acquired_at": 1793816717,
+          "cohort_month": "2026-11",
+          "checkpoints": {
+            "30": null,
+            "90": null
+          }
+        },
+        "03d87354f4b6bc0e11248e91ce710b530989e4ce0b97d4a3292c549778c60f2b": {
+          "source": "followback",
+          "acquired_at": 1793816717,
+          "cohort_month": "2026-11",
+          "checkpoints": {
+            "30": null,
+            "90": null
+          }
+        },
+        "4c476b8530e47ce6d942dd233fbf51e15dde784105d0f19c7dfcc471bbc9151b": {
+          "source": "interaction",
+          "acquired_at": 1793816766,
+          "cohort_month": "2026-11",
+          "checkpoints": {
+            "30": null,
+            "90": null
+          }
         }
       },
       "cohorts": {
@@ -77423,7 +77457,7 @@
         },
         "2026-11": {
           "followback": {
-            "acquired": 14,
+            "acquired": 16,
             "checkpoints": {
               "30": {
                 "observed": 0,
@@ -77436,7 +77470,7 @@
             }
           },
           "interaction": {
-            "acquired": 2,
+            "acquired": 3,
             "checkpoints": {
               "30": {
                 "observed": 0,
