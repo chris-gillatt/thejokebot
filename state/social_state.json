@@ -897,16 +897,22 @@
       "at://did:plc:5eikfnpialcmng5usscwzsnm/app.bsky.feed.post/3mzkcwh5xcs2z",
       "at://did:plc:5eikfnpialcmng5usscwzsnm/app.bsky.feed.repost/3mzkcreccyp2x",
       "at://did:plc:ofsyxtn6motccx6tbjclbygn/app.bsky.feed.post/3mzm4srwbsk2s",
-      "at://did:plc:l4xtuymxomyrzq5bnipfsgff/app.bsky.feed.repost/3mzmmznrhmo23"
+      "at://did:plc:l4xtuymxomyrzq5bnipfsgff/app.bsky.feed.repost/3mzmmznrhmo23",
+      "at://did:plc:bz2suupelqy7aqy6g4rfiqeo/app.bsky.feed.repost/3mzmtw3vble2c",
+      "at://did:plc:zzsyzssca3mf4v6e4hlcymsj/app.bsky.feed.post/3mzmtuc5ojk2f",
+      "at://did:plc:zzsyzssca3mf4v6e4hlcymsj/app.bsky.feed.repost/3mzmtr7euzc2y",
+      "at://did:plc:zzsyzssca3mf4v6e4hlcymsj/app.bsky.feed.repost/3mzmtrclgbj25",
+      "at://did:plc:zzsyzssca3mf4v6e4hlcymsj/app.bsky.feed.repost/3mzmtuudbu72u",
+      "at://did:plc:zzsyzssca3mf4v6e4hlcymsj/app.bsky.feed.repost/3mzmtuz2olh2u"
     ],
-    "last_checked_at": 1793946767
+    "last_checked_at": 1793953598
   },
   "joke_requests": {
     "replied_uris": [
       "at://did:plc:ea4cyvzxqvubnkpo6g2kkv6i/app.bsky.feed.post/3mwirjfd7qk2o",
       "at://did:plc:ea4cyvzxqvubnkpo6g2kkv6i/app.bsky.feed.post/3mwl4ggasjc2l"
     ],
-    "last_checked_at": 1793946767.3452394,
+    "last_checked_at": 1793953596.9657717,
     "boundary_notification_uris": []
   },
   "starter_pack_acknowledgements": {
@@ -53286,6 +53292,11 @@
         "did": "did:plc:53a6xion52meecdwuleo4qee",
         "followed_at": 1793927831,
         "source": "follow_fellows"
+      },
+      {
+        "did": "did:plc:bz2suupelqy7aqy6g4rfiqeo",
+        "followed_at": 1793953596,
+        "source": "interaction"
       }
     ]
   },
@@ -61081,10 +61092,10 @@
     ],
     "starter_pack_attribution": {
       "coverage_started_at": "2026-08-01T14:31:28.650280Z",
-      "last_checked_at": "2026-11-06T06:32:47.130362Z",
-      "high_water_indexed_at": "2026-11-06T02:46:05.673Z",
+      "last_checked_at": "2026-11-06T08:26:36.714329Z",
+      "high_water_indexed_at": "2026-11-06T07:19:13.575Z",
       "boundary_notification_hashes": [
-        "6269452ba7a1792239266e4bbab194c346219bf06990bace0a4aecf55f839dac"
+        "40c3ab318d790f9c53608cbf733f33a77b5f7513ca6ade88f657715d6272554a"
       ],
       "packs": {
         "at://did:plc:ylslnx2g5q3wvnvywksuxx7g/app.bsky.graph.starterpack/3mucse7m74g2y": {
@@ -79553,6 +79564,15 @@
             "30": null,
             "90": null
           }
+        },
+        "89b1abe2e5b8ad573c1b3314cd83dcc1761ea9725f96d78de22008406c9095fd": {
+          "source": "interaction",
+          "acquired_at": 1793953596,
+          "cohort_month": "2026-11",
+          "checkpoints": {
+            "30": null,
+            "90": null
+          }
         }
       },
       "cohorts": {
@@ -79653,7 +79673,7 @@
             }
           },
           "interaction": {
-            "acquired": 3,
+            "acquired": 4,
             "checkpoints": {
               "30": {
                 "observed": 0,
