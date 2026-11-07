@@ -1,19 +1,5 @@
 # Changelog
 
-Notable first-party changes, newest first. Dates come from Git history; related
-implementation and corrective commits are grouped rather than repeated.
-Routine automated state/dashboard-data refreshes and reference-submodule updates
-are not product milestones.
-
-`1.0.0` is the package version established on 28 September 2026. Versions
-`0.1.0` through `0.8.0` are retrospective labels for the earlier development
-milestones, assigned for readability rather than original release tags or
-package versions.
-The backfill draws on substantive human, agent and dependency commits and the
-[original development milestone register][historical-milestones].
-
-Jump to [2025](#020---2025) or the [project's beginning](#010---2024-12-10).
-
 ## 2026-11-02
 
 - Restored weekly grouped Dependabot updates for the three read-only Bluesky
@@ -604,5 +590,4 @@ Jump to [2025](#020---2025) or the [project's beginning](#010---2024-12-10).
 [2214acb8]: https://github.com/chris-gillatt/thejokebot/commit/2214acb8915d905b4a3dbe2e1dbce69c36e11a5d
 [ad4e92e4]: https://github.com/chris-gillatt/thejokebot/commit/ad4e92e40a48600ea1a8f745dbdb43601eb34901
 [26e52cd0]: https://github.com/chris-gillatt/thejokebot/commit/26e52cd03af25d3f42ca302ba8422ef736e98b10
-[historical-milestones]: https://github.com/chris-gillatt/thejokebot/blob/1c4fb2667f40dd1a3a12ecfa605e29b970e1ed9f/problem-statement.md#8-changelog-milestones
 [e5818a6b]: https://github.com/chris-gillatt/thejokebot/commit/e5818a6ba570e36df4c94a6aa534c053f9613003
