@@ -1118,7 +1118,7 @@ class UnfollowIgnoreValidationTests(unittest.TestCase):
             bluesky_validate_unfollow_ignore.is_stale_resolution_error(exc)
         )
 
-    def test_unfollow_users_skips_bad_profile_lookup_error(self):
+    def test_unfollow_users_aborts_on_bad_profile_lookup_error(self):
         state = bot_state._default_state()
         client = mock.Mock()
         client.me.did = "did:plc:test"
@@ -1159,17 +1159,16 @@ class UnfollowIgnoreValidationTests(unittest.TestCase):
                                     with mock.patch(
                                         "thejokebot.commands.unfollow._state.save_state"
                                     ) as save_state:
-                                        bluesky_unfollow.unfollow_users()
+                                        with mock.patch(
+                                            "thejokebot.commands.unfollow._prepare_unfollow_candidates"
+                                        ) as prepare:
+                                            result = bluesky_unfollow.unfollow_users()
 
-        resolved_handles = {call.args[0] for call in client.get_profile.call_args_list}
-        self.assertTrue(
-            {
-                "theonion.bsky.social",
-                "groandeck.bsky.social",
-                "nocontextbritss.bsky.social",
-            }.issubset(resolved_handles)
-        )
+        self.assertEqual(result, 1)
+        self.assertEqual(client.get_profile.call_count, 1)
+        prepare.assert_not_called()
         save_state.assert_not_called()
+        client.unfollow.assert_not_called()
 
     def test_load_source_list_uri_returns_empty_when_file_missing(self):
         missing_path = pathlib.Path("/tmp/does-not-exist-jokebot-starter-pack.json")
@@ -2405,6 +2404,142 @@ class PaginationTests(unittest.TestCase):
         data = followers.fetch_paginated_data(client_method, actor="did:test")
 
         self.assertEqual([item.did for item in data], ["did:one", "did:two"])
+
+    def test_fetch_list_member_dids_accepts_dictionary_response(self):
+        list_uri = "at://did:plc:list/app.bsky.graph.list/key"
+        client = mock.Mock()
+        client.app.bsky.graph.get_list.return_value = {
+            "list": {"uri": list_uri},
+            "items": [{"subject": {"did": "did:plc:member"}}],
+        }
+
+        with mock.patch.object(
+            followers, "retry_network_call", side_effect=lambda fn, description: fn()
+        ):
+            result = followers.fetch_list_member_dids(client, list_uri)
+
+        self.assertEqual(result, {"did:plc:member"})
+
+    def test_fetch_list_member_dids_rejects_malformed_later_page(self):
+        list_uri = "at://did:plc:list/app.bsky.graph.list/key"
+        responses = [
+            SimpleNamespace(
+                list=SimpleNamespace(uri=list_uri),
+                items=[SimpleNamespace(subject=SimpleNamespace(did="did:plc:one"))],
+                cursor="next",
+            ),
+            SimpleNamespace(
+                list=SimpleNamespace(uri=list_uri),
+                items=[SimpleNamespace(subject=None)],
+                cursor=None,
+            ),
+        ]
+        client = mock.Mock()
+        client.app.bsky.graph.get_list.side_effect = responses
+
+        with mock.patch.object(
+            followers, "retry_network_call", side_effect=lambda fn, description: fn()
+        ):
+            with self.assertRaises(followers.IncompletePaginationError):
+                followers.fetch_list_member_dids(client, list_uri)
+
+    def test_fetch_list_member_dids_rejects_invalid_inputs_and_pages(self):
+        list_uri = "at://did:plc:list/app.bsky.graph.list/key"
+        client = mock.Mock()
+        with self.assertRaises(followers.IncompletePaginationError):
+            followers.fetch_list_member_dids(client, "invalid")
+        with self.assertRaisesRegex(ValueError, "limits must be positive"):
+            followers.fetch_list_member_dids(client, list_uri, max_pages=0)
+
+        client.app.bsky.graph.get_list.return_value = SimpleNamespace(
+            list=SimpleNamespace(uri=list_uri), items=None, cursor=None
+        )
+        with self.assertRaisesRegex(
+            followers.IncompletePaginationError, "response format"
+        ):
+            followers.fetch_list_member_dids(client, list_uri)
+
+        client.app.bsky.graph.get_list.return_value = SimpleNamespace(
+            list=SimpleNamespace(uri=list_uri), items=[], cursor=[]
+        )
+        with self.assertRaisesRegex(
+            followers.IncompletePaginationError, "Invalid list pagination cursor"
+        ):
+            followers.fetch_list_member_dids(client, list_uri)
+
+    def test_fetch_list_member_dids_accepts_a_valid_empty_list(self):
+        list_uri = "at://did:plc:list/app.bsky.graph.list/key"
+        client = mock.Mock()
+        client.app.bsky.graph.get_list.return_value = SimpleNamespace(
+            list=SimpleNamespace(uri=list_uri), items=[], cursor=None
+        )
+
+        with mock.patch.object(
+            followers, "retry_network_call", side_effect=lambda fn, description: fn()
+        ):
+            self.assertEqual(followers.fetch_list_member_dids(client, list_uri), set())
+
+    def test_fetch_list_member_dids_rejects_response_uri_mismatch(self):
+        list_uri = "at://did:plc:list/app.bsky.graph.list/key"
+        client = mock.Mock()
+        client.app.bsky.graph.get_list.return_value = SimpleNamespace(
+            list=SimpleNamespace(uri="at://did:plc:other/app.bsky.graph.list/key"),
+            items=[],
+            cursor=None,
+        )
+
+        with mock.patch.object(
+            followers, "retry_network_call", side_effect=lambda fn, description: fn()
+        ):
+            with self.assertRaisesRegex(
+                followers.IncompletePaginationError, "URI mismatch"
+            ):
+                followers.fetch_list_member_dids(client, list_uri)
+
+    def test_fetch_list_member_dids_rejects_repeated_cursor(self):
+        list_uri = "at://did:plc:list/app.bsky.graph.list/key"
+        client = mock.Mock()
+        client.app.bsky.graph.get_list.return_value = SimpleNamespace(
+            list=SimpleNamespace(uri=list_uri), items=[], cursor="next"
+        )
+
+        with mock.patch.object(
+            followers, "retry_network_call", side_effect=lambda fn, description: fn()
+        ):
+            with self.assertRaisesRegex(
+                followers.IncompletePaginationError, "Repeated.*cursor"
+            ):
+                followers.fetch_list_member_dids(client, list_uri)
+
+        self.assertEqual(client.app.bsky.graph.get_list.call_count, 2)
+
+    def test_fetch_list_member_dids_rejects_page_and_runtime_exhaustion(self):
+        list_uri = "at://did:plc:list/app.bsky.graph.list/key"
+        client = mock.Mock()
+        client.app.bsky.graph.get_list.return_value = SimpleNamespace(
+            list=SimpleNamespace(uri=list_uri), items=[], cursor="next"
+        )
+
+        with mock.patch.object(
+            followers, "retry_network_call", side_effect=lambda fn, description: fn()
+        ):
+            with self.assertRaisesRegex(
+                followers.IncompletePaginationError, "pagination safety limit"
+            ):
+                followers.fetch_list_member_dids(client, list_uri, max_pages=1)
+
+        with mock.patch.object(followers.time, "monotonic", side_effect=[0, 0, 2]):
+            with mock.patch.object(
+                followers,
+                "retry_network_call",
+                side_effect=lambda fn, description: fn(),
+            ):
+                with self.assertRaisesRegex(
+                    followers.IncompletePaginationError, "runtime safety limit"
+                ):
+                    followers.fetch_list_member_dids(
+                        client, list_uri, max_runtime_seconds=1
+                    )
 
     def test_fetch_paginated_data_stops_on_repeated_cursor(self):
         response = SimpleNamespace(

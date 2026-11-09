@@ -15,7 +15,11 @@ from thejokebot.runtime import (
     mask_sensitive,
     retry_network_call,
 )
-from thejokebot.followers import fetch_list_member_dids, fetch_paginated_data
+from thejokebot.followers import (
+    IncompletePaginationError,
+    fetch_list_member_dids,
+    fetch_paginated_data,
+)
 from thejokebot.paths import RESOURCES_DIR
 
 _CONFIG_PATH = RESOURCES_DIR / "jokebot_starter_pack.json"
@@ -454,6 +458,7 @@ def _handle_setup_sync_mode(cfg, source_list_uri, args, dry_run, action_delay_se
         )
         return 0
     except (
+        IncompletePaginationError,
         ValueError,
         requests.RequestException,
         TimeoutError,

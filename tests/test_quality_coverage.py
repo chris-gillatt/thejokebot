@@ -1,5 +1,6 @@
 import datetime as dt
 import json
+import runpy
 import subprocess
 import tempfile
 import unittest
@@ -674,6 +675,33 @@ class StarterPackCommandCoverageTests(unittest.TestCase):
                 1,
             )
 
+        with (
+            mock.patch.object(
+                manage_starter_pack, "login_client", return_value=(mock.Mock(), "bot")
+            ),
+            mock.patch.object(
+                manage_starter_pack,
+                "fetch_list_member_dids",
+                side_effect=manage_starter_pack.IncompletePaginationError(
+                    "truncated list"
+                ),
+            ),
+            mock.patch.object(
+                manage_starter_pack, "upsert_starter_pack_record"
+            ) as upsert,
+            mock.patch.object(
+                manage_starter_pack, "ensure_following_list_members"
+            ) as follow,
+        ):
+            self.assertEqual(
+                manage_starter_pack._handle_setup_sync_mode(
+                    cfg, "at://list", args, False, 0
+                ),
+                1,
+            )
+            upsert.assert_not_called()
+            follow.assert_not_called()
+
     def test_main_routes_disabled_pull_invalid_and_setup_modes(self):
         controls = {"dry_run": False, "action_delay_seconds": 0}
         cases = (
@@ -713,36 +741,84 @@ class UnfollowCommandCoverageTests(unittest.TestCase):
     def test_load_source_list_uri_handles_invalid_and_enabled_payloads(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "starter.json"
+            list_uri = "at://did:plc:list/app.bsky.graph.list/key"
             self.assertEqual(unfollow._load_source_list_uri(path), "")
-            for payload in ("invalid", "[]", '{"starter_pack": []}'):
+            for payload in (
+                "invalid",
+                "[]",
+                '{"starter_pack": []}',
+                '{"starter_pack": {"enabled": "false"}}',
+            ):
                 path.write_text(payload, encoding="utf-8")
-                self.assertEqual(unfollow._load_source_list_uri(path), "")
+                with self.assertRaises(unfollow.UnfollowProtectionError):
+                    unfollow._load_source_list_uri(path)
             path.write_text(
                 '{"starter_pack": {"enabled": false, "source_list_uri": "at://list"}}',
                 encoding="utf-8",
             )
             self.assertEqual(unfollow._load_source_list_uri(path), "")
             path.write_text(
-                '{"starter_pack": {"enabled": true, "source_list_uri": "at://list"}}',
+                json.dumps(
+                    {
+                        "starter_pack": {
+                            "enabled": True,
+                            "source_list_uri": list_uri,
+                        }
+                    }
+                ),
                 encoding="utf-8",
             )
-            self.assertEqual(unfollow._load_source_list_uri(path), "at://list")
+            self.assertEqual(unfollow._load_source_list_uri(path), list_uri)
+            path.write_text(
+                '{"starter_pack": {"enabled": true, "source_list_uri": "invalid"}}',
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(
+                unfollow.UnfollowProtectionError, "valid source-list URI"
+            ):
+                unfollow._load_source_list_uri(path)
+            path.unlink()
+            path.mkdir()
+            with self.assertRaisesRegex(
+                unfollow.UnfollowProtectionError, "Unable to read"
+            ):
+                unfollow._load_source_list_uri(path)
 
-    def test_resolve_ignorable_dids_handles_models_dicts_missing_and_errors(self):
+    def test_resolve_ignorable_dids_handles_models_and_dicts(self):
         client = mock.Mock()
         client.get_profile.side_effect = [
             SimpleNamespace(did="did:model"),
             {"did": "did:dict"},
-            {},
-            ValueError("bad"),
         ]
         with mock.patch.object(
             unfollow, "retry_network_call", side_effect=lambda fn, description: fn()
         ):
-            result = unfollow._resolve_ignorable_dids(
-                client, ["model", "dict", "missing", "bad"]
-            )
+            result = unfollow._resolve_ignorable_dids(client, ["model", "dict"])
         self.assertEqual(result, {"did:model", "did:dict"})
+
+    def test_resolve_ignorable_dids_fails_on_missing_did_and_lookup_error(self):
+        client = mock.Mock()
+        for profile, lookup_error in (
+            ({}, None),
+            (None, ValueError("bad")),
+            (None, requests.Timeout("timeout")),
+        ):
+            client.get_profile.return_value = profile
+            client.get_profile.side_effect = lookup_error
+            with mock.patch.object(
+                unfollow, "retry_network_call", side_effect=lambda fn, description: fn()
+            ):
+                with self.assertRaises(unfollow.UnfollowProtectionError):
+                    unfollow._resolve_ignorable_dids(client, ["protected"])
+
+    def test_module_entrypoint_propagates_unfollow_failure(self):
+        with mock.patch(
+            "thejokebot.runtime.login_client", side_effect=ValueError("bad")
+        ):
+            with self.assertRaises(SystemExit) as raised:
+                runpy.run_path(str(Path(unfollow.__file__)), run_name="__main__")
+
+        self.assertEqual(raised.exception.code, 1)
 
     def test_unfollow_one_and_loop_cover_success_failure_missing_and_throttle(self):
         client = mock.Mock()

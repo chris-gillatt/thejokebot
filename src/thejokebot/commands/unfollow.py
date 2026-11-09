@@ -1,11 +1,13 @@
 import os
 import time
 import json
+import re
 import requests
 import atproto_client.exceptions
 from thejokebot import config as runtime_config
 from colorama import Fore, Style
 from thejokebot.followers import (
+    IncompletePaginationError,
     extract_list_member_did,
     fetch_list_member_dids,
     fetch_paginated_data,
@@ -27,6 +29,11 @@ DEFAULT_UNFOLLOW_BATCH_SIZE = _UNFOLLOW_CONFIG["batch_size"]
 DEFAULT_UNFOLLOW_BATCH_PAUSE_SECONDS = _UNFOLLOW_CONFIG["batch_pause_seconds"]
 DEFAULT_IGNORABLE_USERNAMES = tuple(_UNFOLLOW_CONFIG["default_ignorable_handles"])
 _STARTER_PACK_CONFIG_PATH = RESOURCES_DIR / "jokebot_starter_pack.json"
+_LIST_URI_PATTERN = re.compile(r"^at://[^/\s]+/app\.bsky\.graph\.list/[^/?#\s]+$")
+
+
+class UnfollowProtectionError(RuntimeError):
+    """Raised when configured unfollow protections cannot be verified."""
 
 
 def get_unfollow_controls():
@@ -79,26 +86,42 @@ def _extract_list_member_did(item):
 
 
 def _load_source_list_uri(config_path=_STARTER_PACK_CONFIG_PATH):
-    if not config_path.exists():
-        return ""
-
     try:
         payload = json.loads(config_path.read_text(encoding="utf-8"))
-    except OSError, ValueError:
+    except FileNotFoundError:
         return ""
+    except OSError as exc:
+        raise UnfollowProtectionError(
+            "Unable to read starter-pack protection configuration"
+        ) from exc
+    except ValueError as exc:
+        raise UnfollowProtectionError(
+            "Starter-pack protection configuration is invalid JSON"
+        ) from exc
 
     if not isinstance(payload, dict):
-        return ""
+        raise UnfollowProtectionError(
+            "Starter-pack protection configuration is invalid"
+        )
 
     starter_pack = payload.get("starter_pack")
     if not isinstance(starter_pack, dict):
-        return ""
+        raise UnfollowProtectionError("Starter-pack protection settings are missing")
 
-    if not starter_pack.get("enabled"):
+    enabled = starter_pack.get("enabled")
+    if enabled is False:
         return ""
+    if enabled is not True:
+        raise UnfollowProtectionError(
+            "Starter-pack protection enabled setting is invalid"
+        )
 
-    uri = str(starter_pack.get("source_list_uri") or "").strip()
-    return uri if uri.startswith("at://") else ""
+    uri = starter_pack.get("source_list_uri")
+    if not isinstance(uri, str) or not _LIST_URI_PATTERN.fullmatch(uri.strip()):
+        raise UnfollowProtectionError(
+            "Enabled starter-pack protection has no valid source-list URI"
+        )
+    return uri.strip()
 
 
 def _fetch_list_member_dids(client, list_uri):
@@ -116,21 +139,23 @@ def _resolve_ignorable_dids(client, ignorable_usernames):
         masked_handle = mask_sensitive(ignorable_username)
         try:
             profile = retry_network_call(
-                lambda: client.get_profile(ignorable_username),
+                lambda current_username=ignorable_username: client.get_profile(
+                    current_username
+                ),
                 description=f"resolving profile {masked_handle}",
             )
             did = getattr(profile, "did", None)
             if not did and isinstance(profile, dict):
                 did = profile.get("did")
-            if did:
-                ignorable_dids.add(did)
-                print(
-                    f"{Fore.GREEN}Resolved username {masked_handle} to DID {mask_sensitive(did)}{Style.RESET_ALL}"
+            if not isinstance(did, str) or not did.strip().startswith("did:"):
+                raise UnfollowProtectionError(
+                    f"No valid DID found for protected handle {masked_handle}"
                 )
-            else:
-                print(
-                    f"{Fore.RED}No DID found for username {masked_handle}, skipping ignore rule.{Style.RESET_ALL}"
-                )
+            did = did.strip()
+            ignorable_dids.add(did)
+            print(
+                f"{Fore.GREEN}Resolved username {masked_handle} to DID {mask_sensitive(did)}{Style.RESET_ALL}"
+            )
         except (
             ValueError,
             requests.RequestException,
@@ -138,9 +163,9 @@ def _resolve_ignorable_dids(client, ignorable_usernames):
             atproto_client.exceptions.NetworkError,
             atproto_client.exceptions.BadRequestError,
         ) as exc:
-            print(
-                f"{Fore.RED}Failed to resolve username {masked_handle}: {exc}{Style.RESET_ALL}"
-            )
+            raise UnfollowProtectionError(
+                f"Failed to resolve protected handle {masked_handle} ({type(exc).__name__})"
+            ) from exc
     return ignorable_dids
 
 
@@ -366,7 +391,7 @@ def unfollow_users():
         atproto_client.exceptions.BadRequestError,
     ) as exc:
         print(f"{Fore.RED}Login failed: {exc}{Style.RESET_ALL}")
-        return
+        return 1
 
     try:
         user_did = client.me.did
@@ -388,24 +413,12 @@ def unfollow_users():
 
         source_list_uri = _load_source_list_uri()
         if source_list_uri:
-            try:
-                protected_list_dids = _fetch_list_member_dids(client, source_list_uri)
-                ignorable_dids |= protected_list_dids
-                print(
-                    f"{Fore.GREEN}Loaded {len(protected_list_dids)} protected DID(s) "
-                    f"from source list {source_list_uri}.{Style.RESET_ALL}"
-                )
-            except (
-                ValueError,
-                requests.RequestException,
-                TimeoutError,
-                atproto_client.exceptions.NetworkError,
-                atproto_client.exceptions.BadRequestError,
-            ) as exc:
-                print(
-                    f"{Fore.RED}Failed to load protected list members from starter-pack config: {exc}. "
-                    f"Continuing with env-based ignores only.{Style.RESET_ALL}"
-                )
+            protected_list_dids = _fetch_list_member_dids(client, source_list_uri)
+            ignorable_dids |= protected_list_dids
+            print(
+                f"{Fore.GREEN}Loaded {len(protected_list_dids)} protected DID(s) "
+                f"from source list {mask_sensitive(source_list_uri)}.{Style.RESET_ALL}"
+            )
 
         state, to_unfollow_all, to_unfollow = _prepare_unfollow_candidates(
             following_map,
@@ -450,7 +463,10 @@ def unfollow_users():
             f"missing_uri={skipped_missing_uri}.{Style.RESET_ALL}"
         )
         print(f"{Fore.GREEN}Unfollow actions completed! 🎉{Style.RESET_ALL}")
+        return 0
     except (
+        IncompletePaginationError,
+        UnfollowProtectionError,
         ValueError,
         requests.RequestException,
         TimeoutError,
@@ -458,11 +474,12 @@ def unfollow_users():
         atproto_client.exceptions.BadRequestError,
     ) as exc:
         print(f"{Fore.RED}An unexpected error occurred: {exc}{Style.RESET_ALL}")
+        return 1
 
 
-def main() -> None:
-    unfollow_users()
+def main() -> int:
+    return unfollow_users()
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

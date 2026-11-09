@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-11-09
+
+- Made unfollow protections fail closed: unresolved protected handles, malformed
+  enabled source-list settings, and incomplete or mismatched list reads now stop
+  the run with a non-zero status before candidate reconciliation or unfollow
+  actions. Added bounded pagination and regression coverage; an absent or
+  explicitly disabled starter-pack config and a valid empty list remain allowed.
+
 ## 2026-11-02
 
 - Restored weekly grouped Dependabot updates for the three read-only Bluesky

@@ -68,7 +68,9 @@ def fetch_paginated_data(
 
         pages += 1
         response = retry_network_call(
-            lambda: client_method(actor=actor, cursor=cursor, limit=limit),
+            lambda current_cursor=cursor: client_method(
+                actor=actor, cursor=current_cursor, limit=limit
+            ),
             description=f"fetching paginated data page {pages}",
         )
 
@@ -107,47 +109,106 @@ def extract_list_member_did(item) -> str:
 
 
 def _normalise_list_page(response):
-    items = getattr(response, "items", None)
-    cursor = getattr(response, "cursor", None)
     if isinstance(response, dict):
-        items = response.get("items", []) if items is None else items
-        cursor = response.get("cursor") if cursor is None else cursor
-    return items, cursor
+        items = response.get("items")
+        cursor = response.get("cursor")
+        list_view = response.get("list")
+    else:
+        items = getattr(response, "items", None)
+        cursor = getattr(response, "cursor", None)
+        list_view = getattr(response, "list", None)
+
+    if isinstance(list_view, dict):
+        response_list_uri = list_view.get("uri")
+    else:
+        response_list_uri = getattr(list_view, "uri", None)
+    return items, cursor, response_list_uri
 
 
-def _add_list_member_dids(dids, items):
+def _check_list_runtime(started_at, max_runtime_seconds):
+    if time.monotonic() - started_at >= max_runtime_seconds:
+        raise IncompletePaginationError(
+            f"Reached list pagination runtime safety limit ({max_runtime_seconds}s)"
+        )
+
+
+def _fetch_list_page(
+    client, list_uri, cursor, page, description, started_at, max_runtime_seconds
+):
+    _check_list_runtime(started_at, max_runtime_seconds)
+    params = {"list": list_uri, "limit": 100}
+    if cursor:
+        params["cursor"] = cursor
+
+    response = retry_network_call(
+        lambda current_params=params: client.app.bsky.graph.get_list(current_params),
+        description=f"{description} page {page}",
+    )
+    _check_list_runtime(started_at, max_runtime_seconds)
+    return _normalise_list_page(response)
+
+
+def _validate_list_page(items, response_list_uri, list_uri):
+    if response_list_uri != list_uri:
+        raise IncompletePaginationError("List response URI mismatch")
+    if not isinstance(items, (list, tuple, set)):
+        raise IncompletePaginationError("Unexpected list-member response format")
+
+    page_dids = set()
     for item in items:
         did = extract_list_member_did(item)
-        if did:
-            dids.add(did)
+        if not did.startswith("did:"):
+            raise IncompletePaginationError(
+                "List response contains a member without a valid DID"
+            )
+        page_dids.add(did)
+    return page_dids
+
+
+def _validate_next_list_cursor(cursor, seen_cursors):
+    if cursor is None or cursor == "":
+        return None
+    if not isinstance(cursor, str) or not cursor.strip():
+        raise IncompletePaginationError("Invalid list pagination cursor")
+    if cursor in seen_cursors:
+        raise IncompletePaginationError("Repeated list pagination cursor detected")
+    return cursor
 
 
 def fetch_list_member_dids(
     client,
     list_uri: str,
     description: str = "fetching source list members",
+    max_pages: int = 100,
+    max_runtime_seconds: float = 30,
 ) -> set[str]:
-    """Return all DIDs from a Bluesky list URI."""
+    """Return all DIDs from a completely and consistently read Bluesky list."""
+    if not isinstance(list_uri, str) or not list_uri.startswith("at://"):
+        raise IncompletePaginationError("Invalid source list URI")
+    if max_pages < 1 or max_runtime_seconds <= 0:
+        raise ValueError("List pagination limits must be positive")
+
     dids: set[str] = set()
     cursor = None
+    seen_cursors = set()
+    started_at = time.monotonic()
 
-    while True:
-        params = {"list": list_uri, "limit": 100}
-        if cursor:
-            params["cursor"] = cursor
-
-        resp = retry_network_call(
-            lambda: client.app.bsky.graph.get_list(params),
-            description=description,
+    for page in range(1, max_pages + 1):
+        items, next_cursor, response_list_uri = _fetch_list_page(
+            client,
+            list_uri,
+            cursor,
+            page,
+            description,
+            started_at,
+            max_runtime_seconds,
         )
+        dids.update(_validate_list_page(items, response_list_uri, list_uri))
+        cursor = _validate_next_list_cursor(next_cursor, seen_cursors)
+        if cursor is None:
+            return dids
+        seen_cursors.add(cursor)
 
-        items, cursor = _normalise_list_page(resp)
-        if not isinstance(items, (list, tuple, set)):
-            print("Unexpected list-member response format; stopping early.")
-            break
-
-        _add_list_member_dids(dids, items)
-        if not cursor:
-            break
-
-    return dids
+    raise IncompletePaginationError(
+        f"Reached list pagination safety limit ({max_pages} pages)"
+    )

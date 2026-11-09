@@ -49,6 +49,169 @@ def test_reconciliation_commits_grace_before_actions(social_file):
     client.unfollow.assert_not_called()
 
 
+def test_missing_protected_handle_did_fails_closed(monkeypatch):
+    client = mock.Mock()
+    client.get_profile.return_value = {}
+    monkeypatch.setattr(unfollow, "retry_network_call", lambda fn, description: fn())
+
+    with pytest.raises(RuntimeError, match="DID"):
+        unfollow._resolve_ignorable_dids(client, ["protected.example"])
+
+
+@pytest.mark.parametrize("failure", ["handle", "list"])
+def test_protection_read_failure_aborts_before_candidate_mutations(
+    social_file, monkeypatch, failure
+):
+    client = mock.Mock()
+    client.me.did = "did:plc:bot"
+    client.get_profile.return_value = (
+        {} if failure == "handle" else {"did": "did:plc:protected"}
+    )
+    monkeypatch.setattr(unfollow, "DEFAULT_IGNORABLE_USERNAMES", ("protected",))
+    monkeypatch.setenv("BLUESKY_UNFOLLOW_IGNORE", "")
+    monkeypatch.setattr(unfollow, "login_client", lambda: (client, "bot"))
+    monkeypatch.setattr(
+        unfollow,
+        "get_runtime_controls",
+        lambda: {"dry_run": False, "action_delay_seconds": 0},
+    )
+    monkeypatch.setattr(
+        unfollow,
+        "get_unfollow_controls",
+        lambda: {
+            "max_actions": 0,
+            "batch_size": 50,
+            "batch_pause_seconds": 0,
+        },
+    )
+    fetch_graph = mock.Mock(
+        side_effect=[
+            [],
+            [
+                mock.Mock(
+                    did="did:plc:candidate",
+                    viewer=mock.Mock(following="at://did:plc:bot/follow/key"),
+                )
+            ],
+        ]
+    )
+    monkeypatch.setattr(unfollow, "fetch_paginated_data", fetch_graph)
+    list_uri = "at://did:plc:list/app.bsky.graph.list/key"
+    monkeypatch.setattr(
+        unfollow, "_load_source_list_uri", lambda: list_uri if failure == "list" else ""
+    )
+    if failure == "list":
+        fetch_list = mock.Mock(
+            side_effect=unfollow.IncompletePaginationError("truncated")
+        )
+        monkeypatch.setattr(unfollow, "_fetch_list_member_dids", fetch_list)
+    prepare = mock.Mock()
+    monkeypatch.setattr(unfollow, "_prepare_unfollow_candidates", prepare)
+    before = social_file.read_bytes()
+
+    assert unfollow.main() == 1
+
+    prepare.assert_not_called()
+    client.unfollow.assert_not_called()
+    assert social_file.read_bytes() == before
+
+
+def test_login_failure_returns_nonzero_without_candidate_changes(
+    social_file, monkeypatch
+):
+    monkeypatch.setattr(
+        unfollow,
+        "get_runtime_controls",
+        lambda: {"dry_run": False, "action_delay_seconds": 0},
+    )
+    monkeypatch.setattr(
+        unfollow,
+        "get_unfollow_controls",
+        lambda: {
+            "max_actions": 0,
+            "batch_size": 50,
+            "batch_pause_seconds": 0,
+        },
+    )
+    monkeypatch.setattr(
+        unfollow, "login_client", mock.Mock(side_effect=ValueError("bad login"))
+    )
+    prepare = mock.Mock()
+    monkeypatch.setattr(unfollow, "_prepare_unfollow_candidates", prepare)
+    before = social_file.read_bytes()
+
+    assert unfollow.main() == 1
+
+    prepare.assert_not_called()
+    assert social_file.read_bytes() == before
+
+
+def test_enabled_source_list_is_used_before_candidate_selection(
+    social_file, monkeypatch
+):
+    client = mock.Mock()
+    client.me.did = "did:plc:bot"
+    following = [
+        mock.Mock(
+            did="did:plc:protected",
+            viewer=mock.Mock(following="at://did:plc:bot/follow/protected"),
+        ),
+        mock.Mock(
+            did="did:plc:eligible",
+            viewer=mock.Mock(following="at://did:plc:bot/follow/eligible"),
+        ),
+    ]
+    monkeypatch.setattr(unfollow, "DEFAULT_IGNORABLE_USERNAMES", ())
+    monkeypatch.setenv("BLUESKY_UNFOLLOW_IGNORE", "")
+    monkeypatch.setattr(unfollow, "login_client", lambda: (client, "bot"))
+    monkeypatch.setattr(
+        unfollow,
+        "get_runtime_controls",
+        lambda: {"dry_run": False, "action_delay_seconds": 0},
+    )
+    monkeypatch.setattr(
+        unfollow,
+        "get_unfollow_controls",
+        lambda: {
+            "max_actions": 0,
+            "batch_size": 50,
+            "batch_pause_seconds": 0,
+        },
+    )
+    fetch_graph = mock.Mock(side_effect=[[], following])
+    monkeypatch.setattr(unfollow, "fetch_paginated_data", fetch_graph)
+    monkeypatch.setattr(
+        unfollow, "_resolve_ignorable_dids", lambda client, handles: set()
+    )
+    list_uri = "at://did:plc:list/app.bsky.graph.list/key"
+    monkeypatch.setattr(unfollow, "_load_source_list_uri", lambda: list_uri)
+    fetch_list = mock.Mock(return_value={"did:plc:protected"})
+    monkeypatch.setattr(unfollow, "_fetch_list_member_dids", fetch_list)
+
+    def prepare_candidates(
+        following_map, follower_dids, ignorable_dids, max_actions, dry_run=False
+    ):
+        candidates = unfollow.select_unfollow_candidates(
+            following_map, follower_dids, ignorable_dids, max_actions
+        )
+        return {}, candidates, candidates
+
+    prepare = mock.Mock(side_effect=prepare_candidates)
+    execute = mock.Mock(return_value=(0, 0, 0, False))
+    monkeypatch.setattr(unfollow, "_prepare_unfollow_candidates", prepare)
+    monkeypatch.setattr(unfollow, "_execute_unfollow_loop", execute)
+
+    assert unfollow.main() == 0
+
+    assert prepare.call_args.args[2] == {"did:plc:protected"}
+    assert prepare.call_args.args[0] == {
+        "did:plc:protected": "at://did:plc:bot/follow/protected",
+        "did:plc:eligible": "at://did:plc:bot/follow/eligible",
+    }
+    assert execute.call_args.args[2] == ["did:plc:eligible"]
+    client.unfollow.assert_not_called()
+
+
 def test_dry_run_never_writes_reconciliation_or_history(social_file):
     before = social_file.read_bytes()
     preview, _, _ = unfollow._prepare_unfollow_candidates(
