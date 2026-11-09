@@ -1,7 +1,7 @@
 {
   "provider": {
     "last_used": "groandeck",
-    "last_used_at": 1794240384,
+    "last_used_at": 1794254752,
     "rotation_order": [
       "icanhazdadjoke",
       "jokeapi",
@@ -10,23 +10,23 @@
     ],
     "failures": {
       "icanhazdadjoke": {
-        "count": 163,
-        "last_failure_at": 1794240384,
+        "count": 164,
+        "last_failure_at": 1794254752,
         "last_error": "All 5 jokes from 'icanhazdadjoke' were rejected (5 duplicates, 0 too long)",
         "reason_counts": {
-          "duplicate": 613,
+          "duplicate": 618,
           "too_long": 2,
           "network_error": 1,
           "provider_error": 0
         }
       },
       "jokeapi": {
-        "count": 422,
-        "last_failure_at": 1794240384,
-        "last_error": "All 5 jokes from 'jokeapi' were rejected (5 duplicates, 0 too long)",
+        "count": 423,
+        "last_failure_at": 1794254752,
+        "last_error": "All 5 jokes from 'jokeapi' were rejected (4 duplicates, 1 too long)",
         "reason_counts": {
-          "duplicate": 1196,
-          "too_long": 19,
+          "duplicate": 1200,
+          "too_long": 20,
           "network_error": 1,
           "provider_error": 0
         }
@@ -54,11 +54,11 @@
         }
       }
     },
-    "last_started_primary": "syrsly",
-    "last_started_primary_at": 1794240384
+    "last_started_primary": "icanhazdadjoke",
+    "last_started_primary_at": 1794254752
   },
   "posting": {
-    "tag_offset": 9
+    "tag_offset": 10
   },
   "posted_jokes": [
     {
@@ -11671,6 +11671,18 @@
         "dadjoke",
         "humor",
         "mumjokes"
+      ]
+    },
+    {
+      "ts": 1794254752,
+      "b64": "SSBkcm9wcGVkIGEgcGVhciBpbiBteSBjYXIgdGhpcyBtb3JuaW5nLgoKWW91IHNob3VsZCBkcm9wIGFub3RoZXIgb25lLCB0aGVuIHlvdSB3b3VsZCBoYXZlIGEgcGFpci4=",
+      "provider": "groandeck",
+      "post_uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mzvpymc6nl2u",
+      "post_cid": "bafyreidrewnnxmcsdrtx5a6vfmawcpirsjsxdbwfiouc6yd2mvmrxeecau",
+      "hashtags": [
+        "dadjoke",
+        "jokes",
+        "humoursky"
       ]
     }
   ]
