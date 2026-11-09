@@ -1,7 +1,7 @@
 {
   "provider": {
     "last_used": "groandeck",
-    "last_used_at": 1794183430,
+    "last_used_at": 1794197262,
     "rotation_order": [
       "icanhazdadjoke",
       "jokeapi",
@@ -10,23 +10,23 @@
     ],
     "failures": {
       "icanhazdadjoke": {
-        "count": 161,
-        "last_failure_at": 1794183430,
-        "last_error": "All 5 jokes from 'icanhazdadjoke' were rejected (5 duplicates, 0 too long)",
+        "count": 162,
+        "last_failure_at": 1794197262,
+        "last_error": "All 5 jokes from 'icanhazdadjoke' were rejected (4 duplicates, 1 too long)",
         "reason_counts": {
-          "duplicate": 604,
-          "too_long": 1,
+          "duplicate": 608,
+          "too_long": 2,
           "network_error": 1,
           "provider_error": 0
         }
       },
       "jokeapi": {
-        "count": 419,
-        "last_failure_at": 1794183430,
-        "last_error": "All 5 jokes from 'jokeapi' were rejected (4 duplicates, 1 too long)",
+        "count": 420,
+        "last_failure_at": 1794197262,
+        "last_error": "All 5 jokes from 'jokeapi' were rejected (3 duplicates, 2 too long)",
         "reason_counts": {
-          "duplicate": 1183,
-          "too_long": 17,
+          "duplicate": 1186,
+          "too_long": 19,
           "network_error": 1,
           "provider_error": 0
         }
@@ -54,11 +54,11 @@
         }
       }
     },
-    "last_started_primary": "syrsly",
-    "last_started_primary_at": 1794183430
+    "last_started_primary": "icanhazdadjoke",
+    "last_started_primary_at": 1794197262
   },
   "posting": {
-    "tag_offset": 5
+    "tag_offset": 6
   },
   "posted_jokes": [
     {
@@ -11623,6 +11623,18 @@
         "dadjoke",
         "humor",
         "jokesky"
+      ]
+    },
+    {
+      "ts": 1794197262,
+      "b64": "V2h5IGRpZCB0aGUgbXVzaHJvb20gZ2V0IGludml0ZWQgdG8gdGhlIHBhcnR5PwoKQmVjYXVzZSBoZSB3YXMgYSBmdW5naS4=",
+      "provider": "groandeck",
+      "post_uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3mzu2hc7ldm24",
+      "post_cid": "bafyreiggkmkfjzxb5mdk4y6w3y6puk7pgu52ox6qgyg6ae55syjsxyu7mq",
+      "hashtags": [
+        "dadjoke",
+        "punny",
+        "humour"
       ]
     }
   ]
