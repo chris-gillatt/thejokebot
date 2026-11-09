@@ -66,6 +66,32 @@ def local_social_checkpoints(request, monkeypatch):
             "apply",
             lambda state, operation, **kwargs: operation(state),
         )
+    follow_classes = {
+        "FollowBackTests",
+        "FollowInteractorsTests",
+        "FollowFellowsMainTests",
+    }
+    if request.cls is not None and request.cls.__name__ in follow_classes:
+
+        def fake_follow(client, state, did, source):
+            client.follow(did)
+            if state is not None:
+                bot_state.record_acquisition(state, did, source)
+                grace_source = {
+                    "interaction": "interaction",
+                    "discovery": "follow_fellows",
+                }.get(source)
+                if grace_source is not None:
+                    bot_state.record_follow_grace(state, did, source=grace_source)
+            return True
+
+        for module in (follow_back_processing, follow_interactor_processing):
+            monkeypatch.setattr(module, "follow_account", fake_follow)
+            monkeypatch.setattr(module, "reconcile_pending_follows", lambda *args: None)
+        monkeypatch.setattr(bluesky_follow_fellows, "follow_account", fake_follow)
+        monkeypatch.setattr(
+            bluesky_follow_fellows, "reconcile_pending_follows", lambda *args: None
+        )
 
 
 class RuntimeControlTests(unittest.TestCase):
@@ -4186,8 +4212,8 @@ class FollowBackTests(unittest.TestCase):
         with (
             mock.patch.object(
                 follow_back_processing,
-                "retry_network_call",
-                side_effect=[requests.RequestException("offline"), None],
+                "follow_account",
+                side_effect=[requests.RequestException("offline"), True],
             ),
             mock.patch.object(follow_back_processing.time, "sleep") as sleep,
         ):
@@ -5142,7 +5168,7 @@ class AcquisitionCohortTests(unittest.TestCase):
 
 
 class FollowFellowsTagRotationTests(unittest.TestCase):
-    def test_persist_follow_fellows_state_records_discovery_acquisition(self):
+    def test_persist_follow_fellows_state_only_advances_rotation(self):
         state = bot_state._default_state()
 
         with mock.patch(
@@ -5153,10 +5179,8 @@ class FollowFellowsTagRotationTests(unittest.TestCase):
                 ["did:plc:discovered"], 1, 3
             )
 
-        member = next(
-            iter(bot_state.get_acquisition_cohorts(state)["members"].values())
-        )
-        self.assertEqual(member["source"], "discovery")
+        self.assertEqual(bot_state.get_follow_fellows_tag_offset(state), 1)
+        self.assertEqual(bot_state.get_acquisition_cohorts(state)["members"], {})
 
     def test_successful_tag_counts_excludes_failed_selections(self):
         selected = [
@@ -5928,14 +5952,23 @@ class StarterPackFollowSyncTests(unittest.TestCase):
     def test_follows_member_not_yet_followed(self):
         client = mock.Mock()
         client.me.did = "did:plc:bot"
+        state_snapshot = {}
 
         with mock.patch(
             "thejokebot.commands.manage_starter_pack.fetch_paginated_data",
             return_value=[SimpleNamespace(did="did:plc:a")],
         ):
-            with mock.patch(
-                "thejokebot.commands.manage_starter_pack.retry_network_call",
-                side_effect=lambda fn, description: fn(),
+            with (
+                mock.patch(
+                    "thejokebot.commands.manage_starter_pack.bot_state.load_state",
+                    return_value=state_snapshot,
+                ),
+                mock.patch(
+                    "thejokebot.commands.manage_starter_pack.reconcile_pending_follows"
+                ),
+                mock.patch(
+                    "thejokebot.commands.manage_starter_pack.follow_account"
+                ) as follow_account,
             ):
                 already, followed = (
                     bluesky_manage_starter_pack.ensure_following_list_members(
@@ -5947,7 +5980,10 @@ class StarterPackFollowSyncTests(unittest.TestCase):
                 )
 
         self.assertEqual(followed, 1)
-        client.follow.assert_called_once_with("did:plc:b")
+        follow_account.assert_called_once_with(
+            client, state_snapshot, "did:plc:b", "starter_pack"
+        )
+        client.follow.assert_not_called()
 
     def test_dry_run_does_not_call_follow(self):
         client = mock.Mock()
@@ -5975,9 +6011,14 @@ class StarterPackFollowSyncTests(unittest.TestCase):
             "thejokebot.commands.manage_starter_pack.fetch_paginated_data",
             return_value=[],
         ):
-            with mock.patch(
-                "thejokebot.commands.manage_starter_pack.retry_network_call",
-                side_effect=lambda fn, description: fn(),
+            with (
+                mock.patch(
+                    "thejokebot.commands.manage_starter_pack.bot_state.load_state",
+                    return_value={},
+                ),
+                mock.patch(
+                    "thejokebot.commands.manage_starter_pack.reconcile_pending_follows"
+                ),
             ):
                 _, followed = bluesky_manage_starter_pack.ensure_following_list_members(
                     client,
@@ -6000,14 +6041,23 @@ class StarterPackFollowSyncTests(unittest.TestCase):
                 SimpleNamespace(did="did:plc:b"),
             ],
         ):
-            already, followed = (
-                bluesky_manage_starter_pack.ensure_following_list_members(
-                    client,
-                    {"did:plc:a", "did:plc:b"},
-                    dry_run=False,
-                    action_delay_seconds=0,
+            with (
+                mock.patch(
+                    "thejokebot.commands.manage_starter_pack.bot_state.load_state",
+                    return_value={},
+                ),
+                mock.patch(
+                    "thejokebot.commands.manage_starter_pack.reconcile_pending_follows"
+                ),
+            ):
+                already, followed = (
+                    bluesky_manage_starter_pack.ensure_following_list_members(
+                        client,
+                        {"did:plc:a", "did:plc:b"},
+                        dry_run=False,
+                        action_delay_seconds=0,
+                    )
                 )
-            )
 
         self.assertEqual(followed, 0)
         self.assertEqual(already, 2)

@@ -6,6 +6,7 @@ import atproto_client.exceptions
 from thejokebot import config as runtime_config
 from thejokebot import state as bot_state
 from thejokebot.discovery_feeds import eligible_author_dids, fetch_saved_feed_users
+from thejokebot.follow_records import follow_account, reconcile_pending_follows
 from thejokebot.runtime import (
     get_runtime_controls,
     login_client,
@@ -56,13 +57,10 @@ def get_following(client):
     return {follow.did for follow in following}
 
 
-def follow(client, did: str):
+def follow(client, did: str, state: dict | None = None):
     masked_did = mask_sensitive(did)
     try:
-        retry_network_call(
-            lambda current_did=did: client.follow(current_did),
-            description=f"following {masked_did}",
-        )
+        follow_account(client, state, did, "discovery")
         return True
     except (
         requests.RequestException,
@@ -123,7 +121,9 @@ def _build_eligible_source_users(
     return candidates, next_feed_offset
 
 
-def _execute_follow_loop(client, selected_users, dry_run, action_delay_seconds):
+def _execute_follow_loop(
+    client, selected_users, dry_run, action_delay_seconds, state=None
+):
     """Follow selected_users; return the DIDs that need follow-grace records."""
     followed_dids = []
     for i, (tag, did) in enumerate(selected_users, start=1):
@@ -131,7 +131,7 @@ def _execute_follow_loop(client, selected_users, dry_run, action_delay_seconds):
         if dry_run:
             print(f"[DRY-RUN] Would follow {masked_did} (source={tag})")
         else:
-            if follow(client, did):
+            if follow(client, did, state):
                 followed_dids.append(did)
 
         if action_delay_seconds > 0 and i < len(selected_users):
@@ -153,14 +153,10 @@ def _persist_follow_fellows_state(
     followed_dids, rotation_step, total_tags, next_feed_offset=None
 ):
     def apply_follow_fellows_state_updates(latest_state):
-        for did in followed_dids:
-            bot_state.record_follow_grace(latest_state, did)
-            bot_state.record_acquisition(latest_state, did, "discovery")
         if followed_dids:
             bot_state.advance_follow_fellows_tag_offset(
                 latest_state, rotation_step, total_tags
             )
-            bot_state.prune_follow_grace(latest_state)
         if next_feed_offset is not None:
             latest_state["follow_fellows"]["feed_offset"] = next_feed_offset
 
@@ -183,8 +179,10 @@ def main():
     if action_delay_seconds > 0:
         print(f"Action delay enabled: {action_delay_seconds:.2f}s between actions.")
 
-    already_following = get_following(client)
     state = bot_state.load_state()
+    if not dry_run:
+        reconcile_pending_follows(client, state)
+    already_following = get_following(client)
     unfollowed_dids = bot_state.get_unfollowed_dids(state)
     tag_offset = bot_state.get_follow_fellows_tag_offset(state)
     rotated_hashtags = hashtags[tag_offset:] + hashtags[:tag_offset]
@@ -221,7 +219,7 @@ def main():
     print(f"Total users to follow: {len(selected_users)}\n")
 
     followed_dids = _execute_follow_loop(
-        client, selected_users, dry_run, action_delay_seconds
+        client, selected_users, dry_run, action_delay_seconds, state
     )
 
     if not dry_run and (followed_dids or next_feed_offset != feed_offset):

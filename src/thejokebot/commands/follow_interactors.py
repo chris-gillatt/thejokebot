@@ -10,6 +10,7 @@ from colorama import Fore, Style
 from thejokebot import config as runtime_config
 from thejokebot import state as bot_state
 from thejokebot import state_transactions
+from thejokebot.follow_records import follow_account, reconcile_pending_follows
 from thejokebot.followers import fetch_paginated_data
 from thejokebot.runtime import get_nested_value, mask_sensitive, retry_network_call
 
@@ -118,12 +119,8 @@ def _follow_did_list(client, state, to_follow, dry_run, action_delay_seconds):
             followed_count += 1
         else:
             try:
-                retry_network_call(
-                    lambda current_did=did: client.follow(current_did),
-                    description=f"following interactor {masked_did}",
-                )
+                follow_account(client, state, did, "interaction")
                 print(f"{Fore.GREEN}Followed interactor {masked_did}{Style.RESET_ALL}")
-                _checkpoint_follow(state, did)
                 followed_count += 1
             except (
                 requests.RequestException,
@@ -153,6 +150,8 @@ def follow_interactors(
     user_did = client.me.did
     if summary is None:
         summary = {}
+    if not dry_run:
+        reconcile_pending_follows(client, state)
     grace_dids = bot_state.get_follow_grace_dids(state)
     unfollowed_dids = bot_state.get_unfollowed_dids(state)
 

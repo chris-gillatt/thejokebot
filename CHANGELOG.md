@@ -2,6 +2,11 @@
 
 ## 2026-11-09
 
+- Prevented duplicate follow-record creates after ambiguous responses across
+  follow-back, interaction, discovery and starter-pack list follows. Persist a
+  valid deterministic TID and exact record intent before a single create,
+  reconcile accepted writes and checkpoint each confirmed follow once, including
+  callers without an in-memory state snapshot.
 - Verify restored Bluesky sessions against the configured account's canonical
   DID before exposing the client to commands. Mismatched caches are discarded
   and fall back to configured credentials; unresolved transient identity reads

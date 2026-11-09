@@ -9,6 +9,8 @@ import time
 import atproto_client.exceptions
 import requests
 
+from thejokebot import state as bot_state
+from thejokebot.follow_records import follow_account, reconcile_pending_follows
 from thejokebot.runtime import (
     get_runtime_controls,
     login_client,
@@ -343,6 +345,9 @@ def ensure_following_list_members(
         for did in list_member_dids
         if did not in already_following and did != client.me.did
     )
+    follow_state = bot_state.load_state() if not dry_run else None
+    if follow_state is not None:
+        reconcile_pending_follows(client, follow_state)
     if not missing:
         print("All source-list members are already followed.")
         return len(already_following.intersection(list_member_dids)), 0
@@ -354,10 +359,7 @@ def ensure_following_list_members(
             print(f"[DRY-RUN] Would follow list member {masked_did}")
             followed_now += 1
         else:
-            retry_network_call(
-                lambda current_did=did: client.follow(current_did),
-                description=f"following list member {masked_did}",
-            )
+            follow_account(client, follow_state, did, "starter_pack")
             print(f"Followed list member {masked_did} ({index}/{len(missing)})")
             followed_now += 1
 

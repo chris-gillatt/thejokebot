@@ -9,7 +9,8 @@ from colorama import Fore, Style
 from thejokebot import state as bot_state
 from thejokebot import state_transactions
 from thejokebot.followers import fetch_paginated_data
-from thejokebot.runtime import mask_sensitive, retry_network_call
+from thejokebot.follow_records import follow_account, reconcile_pending_follows
+from thejokebot.runtime import mask_sensitive
 
 PAGE_LIMIT = 100
 MAX_PAGES = 1000
@@ -39,18 +40,8 @@ def _follow_candidates(
             summary["follow_back_added"] += 1
         else:
             try:
-                retry_network_call(
-                    lambda current_did=did: client.follow(current_did),
-                    description=f"following back {masked_did}",
-                )
+                follow_account(client, state, did, "followback")
                 print(f"{Fore.GREEN}Followed {masked_did}{Style.RESET_ALL}")
-                if state is not None:
-                    state_transactions.apply(
-                        state,
-                        lambda latest, current_did=did: bot_state.record_acquisition(
-                            latest, current_did, "followback"
-                        ),
-                    )
                 summary["follow_back_added"] += 1
             except (
                 requests.RequestException,
@@ -77,6 +68,10 @@ def follow_back(
     if summary is None:
         summary = {}
     user_did = client.me.did
+    if not dry_run:
+        if state is None:
+            state = bot_state.load_state()
+        reconcile_pending_follows(client, state)
     print(
         f"{Fore.YELLOW}Fetching followers and following for account.{Style.RESET_ALL}"
     )

@@ -130,6 +130,15 @@ def test_main_combines_sources_with_one_cap_and_preserves_exclusions(
     monkeypatch.setattr(follow_fellows, "hashtags", ["jokes"])
     monkeypatch.setattr(follow_fellows, "soft_tag_limit", 1)
     monkeypatch.setattr(follow_fellows, "global_follow_limit", 3)
+
+    def fake_follow(client, working_state, did, source):
+        client.follow(did)
+        bot_state.record_acquisition(working_state, did, source)
+        bot_state.record_follow_grace(working_state, did, source="follow_fellows")
+        return True
+
+    monkeypatch.setattr(follow_fellows, "follow_account", fake_follow)
+    monkeypatch.setattr(follow_fellows, "reconcile_pending_follows", lambda *args: None)
     with (
         mock.patch.object(
             follow_fellows,

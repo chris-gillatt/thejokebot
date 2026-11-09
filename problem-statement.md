@@ -22,8 +22,22 @@ This is the operating brief for open work and lasting decisions. See the [README
 | Bluesky transport availability | Native SDK httpx transport passed authenticated local and independent hosted-runner checks on 2 November 2026. A prior block required an adapter, now removed. If a new block occurs, investigate and validate a replacement before changing the live path; do not assume the previous firewall cause still applies. |
 | Session-cache custody | Cached sessions must stay encrypted with `BLUESKY_SESSION_CACHE_KEY`; rotating it requires a fresh credential login. Restored sessions are returned only after their authenticated DID matches the configured account; mismatches discard the cache, and unresolved transient identity reads block account actions. |
 | Bluesky graph visibility | Profile counters may include hidden accounts that cannot be hydrated through follower/following queries; do not infer actionable accounts from totals. |
+| Ambiguous follow creates | Follow commands persist a valid TID-keyed intent, send one create, and verify any accepted write before checkpointing. Blocks, likes and server-keyed starter-pack creation remain separate retry/idempotency work; do not treat the follow fix as covering them. |
 
 ## Deferred Work
+
+### Other ambiguous social creates
+
+Follow records from follow-back, interaction, discovery and starter-pack list
+synchronisation now share a persisted intent and exact reconciliation path. The
+separate configured-block and interaction-like paths still retry creates, and
+starter-pack creation without a configured record key can request a new
+server-generated key on each attempt. These remain deferred as R03b; audit and
+fix them independently without widening the follow transaction change.
+
+Starter-pack acknowledgement publishing already saves a fixed-key intent,
+performs one create and reconciles the exact record on a later invocation; keep
+that distinct path unchanged unless new evidence contradicts its tests.
 
 ### CodeQL baseline
 
