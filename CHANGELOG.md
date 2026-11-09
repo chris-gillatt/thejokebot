@@ -2,6 +2,11 @@
 
 ## 2026-11-09
 
+- Verify restored Bluesky sessions against the configured account's canonical
+  DID before exposing the client to commands. Mismatched caches are discarded
+  and fall back to configured credentials; unresolved transient identity reads
+  cannot authorize account actions. Added coverage for account changes, DID
+  configuration, profile mismatches and bounded retries.
 - Made unfollow protections fail closed: unresolved protected handles, malformed
   enabled source-list settings, and incomplete or mismatched list reads now stop
   the run with a non-zero status before candidate reconciliation or unfollow

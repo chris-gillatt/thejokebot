@@ -210,7 +210,27 @@ def _remove_invalid_session_file(path):
         )
 
 
-def _retry_restored_session_profile(
+def _get_verified_restored_session_profile(client, username):
+    session = client.com.atproto.server.get_session()
+    authenticated_did = getattr(session, "did", None)
+    if not isinstance(authenticated_did, str) or not authenticated_did:
+        return None
+
+    if username[:4].casefold() == "did:":
+        configured_did = username
+    else:
+        identity = client.com.atproto.identity.resolve_handle({"handle": username})
+        configured_did = getattr(identity, "did", None)
+    if not isinstance(configured_did, str) or configured_did != authenticated_did:
+        return None
+
+    profile = client.get_profile(authenticated_did)
+    if getattr(profile, "did", None) != authenticated_did:
+        return None
+    return profile
+
+
+def _retry_restored_session_identity(
     client, username, session_file_path, max_attempts, retry_delay_seconds, exc
 ):
     delay_seconds = retry_delay_seconds
@@ -224,7 +244,15 @@ def _retry_restored_session_profile(
         if current_delay_seconds > 0:
             time.sleep(current_delay_seconds)
         try:
-            client.me = client.get_profile(username)
+            profile = _get_verified_restored_session_profile(client, username)
+            if profile is None:
+                _remove_invalid_session_file(session_file_path)
+                print(
+                    "Cached Bluesky session does not match the configured account; "
+                    "authenticating with the configured credential source."
+                )
+                return None
+            client.me = profile
             print("Bluesky session restore succeeded after a transient failure.")
             return client, username
         except Exception as retry_exc:
@@ -252,14 +280,23 @@ def _attempt_session_restore(
     """Try to restore a Bluesky session from a saved session string.
 
     Returns ``(client, username)`` on success, ``None`` if the session string
-    is missing or if login with it fails.
+    is missing, unusable, or does not match the configured account.
     """
     session_string = _load_session_string_from_file(session_file_path)
     if not session_string:
         return None
     print(f"Attempting Bluesky session restore from {session_file_path}.")
     try:
-        client.login(session_string=session_string)
+        client.login(session_string=session_string, fetch_bsky_profile=False)
+        profile = _get_verified_restored_session_profile(client, username)
+        if profile is None:
+            _remove_invalid_session_file(session_file_path)
+            print(
+                "Cached Bluesky session does not match the configured account; "
+                "authenticating with the configured credential source."
+            )
+            return None
+        client.me = profile
         print("Bluesky session restore succeeded.")
         if session_persist_enabled:
             _persist_session_string_to_file(client, session_file_path)
@@ -272,7 +309,7 @@ def _attempt_session_restore(
             )
             return None
         if _is_transient_network_error(exc):
-            return _retry_restored_session_profile(
+            return _retry_restored_session_identity(
                 client,
                 username,
                 session_file_path,
@@ -282,7 +319,7 @@ def _attempt_session_restore(
             )
         print(
             "Warning: cached Bluesky session is unusable; authenticating with the configured credential source "
-            f"({type(exc).__name__}: {exc})."
+            f"({type(exc).__name__})."
         )
         return None
 

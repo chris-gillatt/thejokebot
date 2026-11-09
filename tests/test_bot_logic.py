@@ -583,6 +583,14 @@ class LoginClientRetryTests(unittest.TestCase):
 
     def test_login_client_restores_session_when_enabled(self):
         mock_client = mock.Mock()
+        profile = SimpleNamespace(did="did:plc:configured")
+        mock_client.com.atproto.server.get_session.return_value = SimpleNamespace(
+            did="did:plc:configured"
+        )
+        mock_client.com.atproto.identity.resolve_handle.return_value = SimpleNamespace(
+            did="did:plc:configured"
+        )
+        mock_client.get_profile.return_value = profile
 
         with mock.patch.dict(
             os.environ,
@@ -605,7 +613,215 @@ class LoginClientRetryTests(unittest.TestCase):
 
         self.assertIs(client, mock_client)
         self.assertEqual(username, "thejokebot.bsky.social")
-        mock_client.login.assert_called_once_with(session_string="session-token")
+        mock_client.login.assert_called_once_with(
+            session_string="session-token", fetch_bsky_profile=False
+        )
+        mock_client.com.atproto.server.get_session.assert_called_once_with()
+        mock_client.com.atproto.identity.resolve_handle.assert_called_once_with(
+            {"handle": "thejokebot.bsky.social"}
+        )
+        mock_client.get_profile.assert_called_once_with("did:plc:configured")
+        self.assertIs(mock_client.me, profile)
+
+    def test_login_client_discards_restored_session_for_different_account(self):
+        mock_client = mock.Mock()
+        mock_client.me = None
+        mock_client.com.atproto.server.get_session.return_value = SimpleNamespace(
+            did="did:plc:cached"
+        )
+        mock_client.com.atproto.identity.resolve_handle.return_value = SimpleNamespace(
+            did="did:plc:configured"
+        )
+        mock_client.login.side_effect = [None, None]
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            session_path = pathlib.Path(temp_dir) / "bluesky_session.txt"
+            session_path.write_text("session-token\n", encoding="utf-8")
+            with mock.patch.dict(
+                os.environ,
+                {
+                    "BLUESKY_USERNAME": "thejokebot.bsky.social",
+                    "BLUESKY_APP_PASSWORD": "test-password",
+                    "BLUESKY_SESSION_RESTORE_ENABLED": "true",
+                    "BLUESKY_SESSION_PERSIST_ENABLED": "false",
+                    "BLUESKY_SESSION_FILE_PATH": str(session_path),
+                    "BLUESKY_LOGIN_RETRY_ATTEMPTS": "1",
+                },
+                clear=True,
+            ):
+                with mock.patch("thejokebot.runtime.Client", return_value=mock_client):
+                    client, username = runtime.login_client()
+
+            self.assertFalse(session_path.exists())
+
+        self.assertIs(client, mock_client)
+        self.assertEqual(username, "thejokebot.bsky.social")
+        self.assertEqual(
+            mock_client.login.call_args_list,
+            [
+                mock.call(session_string="session-token", fetch_bsky_profile=False),
+                mock.call("thejokebot.bsky.social", "test-password"),
+            ],
+        )
+        mock_client.get_profile.assert_not_called()
+        self.assertIsNone(mock_client.me)
+
+    def test_login_client_discards_mismatch_during_transient_recovery(self):
+        mock_client = mock.Mock()
+        mock_client.me = None
+        response = mock.Mock(status_code=503)
+        response.content = mock.Mock(error="NotEnoughResources")
+        mock_client.login.side_effect = [
+            atproto_client.exceptions.RequestException(response),
+            None,
+        ]
+        mock_client.com.atproto.server.get_session.return_value = SimpleNamespace(
+            did="did:plc:cached"
+        )
+        mock_client.com.atproto.identity.resolve_handle.return_value = SimpleNamespace(
+            did="did:plc:configured"
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            session_path = pathlib.Path(temp_dir) / "bluesky_session.txt"
+            session_path.write_text("session-token\n", encoding="utf-8")
+            with mock.patch.dict(
+                os.environ,
+                {
+                    "BLUESKY_USERNAME": "thejokebot.bsky.social",
+                    "BLUESKY_APP_PASSWORD": "test-password",
+                    "BLUESKY_SESSION_RESTORE_ENABLED": "true",
+                    "BLUESKY_SESSION_PERSIST_ENABLED": "false",
+                    "BLUESKY_SESSION_FILE_PATH": str(session_path),
+                    "BLUESKY_LOGIN_RETRY_ATTEMPTS": "2",
+                    "BLUESKY_LOGIN_RETRY_DELAY_SECONDS": "0",
+                },
+                clear=True,
+            ):
+                with mock.patch("thejokebot.runtime.Client", return_value=mock_client):
+                    client, username = runtime.login_client()
+
+            self.assertFalse(session_path.exists())
+
+        self.assertIs(client, mock_client)
+        self.assertEqual(username, "thejokebot.bsky.social")
+        self.assertEqual(
+            mock_client.login.call_args_list,
+            [
+                mock.call(session_string="session-token", fetch_bsky_profile=False),
+                mock.call("thejokebot.bsky.social", "test-password"),
+            ],
+        )
+        mock_client.get_profile.assert_not_called()
+        self.assertIsNone(mock_client.me)
+
+    def test_login_client_accepts_configured_handle_change_for_same_did(self):
+        mock_client = mock.Mock()
+        profile = SimpleNamespace(did="did:plc:configured", handle="new.handle")
+        mock_client.com.atproto.server.get_session.return_value = SimpleNamespace(
+            did="did:plc:configured", handle="old.handle"
+        )
+        mock_client.com.atproto.identity.resolve_handle.return_value = SimpleNamespace(
+            did="did:plc:configured"
+        )
+        mock_client.get_profile.return_value = profile
+
+        with mock.patch.dict(
+            os.environ,
+            {
+                "BLUESKY_USERNAME": "new.handle",
+                "BLUESKY_APP_PASSWORD": "test-password",
+                "BLUESKY_SESSION_RESTORE_ENABLED": "true",
+                "BLUESKY_SESSION_PERSIST_ENABLED": "false",
+                "BLUESKY_LOGIN_RETRY_ATTEMPTS": "1",
+                "BLUESKY_LOGIN_RETRY_DELAY_SECONDS": "0",
+            },
+            clear=True,
+        ):
+            with mock.patch("thejokebot.runtime.Client", return_value=mock_client):
+                with mock.patch(
+                    "thejokebot.runtime._load_session_string_from_file",
+                    return_value="session-token",
+                ):
+                    client, username = runtime.login_client()
+
+        self.assertIs(client, mock_client)
+        self.assertEqual(username, "new.handle")
+        mock_client.login.assert_called_once_with(
+            session_string="session-token", fetch_bsky_profile=False
+        )
+        self.assertIs(mock_client.me, profile)
+        mock_client.login.assert_called_once()
+
+    def test_login_client_accepts_configured_did_without_handle_resolution(self):
+        mock_client = mock.Mock()
+        profile = SimpleNamespace(did="did:plc:configured")
+        mock_client.com.atproto.server.get_session.return_value = SimpleNamespace(
+            did="did:plc:configured"
+        )
+        mock_client.get_profile.return_value = profile
+
+        with mock.patch.dict(
+            os.environ,
+            {
+                "BLUESKY_USERNAME": "did:plc:configured",
+                "BLUESKY_APP_PASSWORD": "test-password",
+                "BLUESKY_SESSION_RESTORE_ENABLED": "true",
+                "BLUESKY_SESSION_PERSIST_ENABLED": "false",
+                "BLUESKY_LOGIN_RETRY_ATTEMPTS": "1",
+                "BLUESKY_LOGIN_RETRY_DELAY_SECONDS": "0",
+            },
+            clear=True,
+        ):
+            with mock.patch("thejokebot.runtime.Client", return_value=mock_client):
+                with mock.patch(
+                    "thejokebot.runtime._load_session_string_from_file",
+                    return_value="session-token",
+                ):
+                    client, username = runtime.login_client()
+
+        self.assertIs(client, mock_client)
+        self.assertEqual(username, "did:plc:configured")
+        mock_client.com.atproto.identity.resolve_handle.assert_not_called()
+        mock_client.get_profile.assert_called_once_with("did:plc:configured")
+        self.assertIs(mock_client.me, profile)
+
+    def test_login_client_rejects_profile_for_different_authenticated_did(self):
+        mock_client = mock.Mock()
+        mock_client.me = None
+        mock_client.com.atproto.server.get_session.return_value = SimpleNamespace(
+            did="did:plc:configured"
+        )
+        mock_client.com.atproto.identity.resolve_handle.return_value = SimpleNamespace(
+            did="did:plc:configured"
+        )
+        mock_client.get_profile.return_value = SimpleNamespace(did="did:plc:other")
+        mock_client.login.side_effect = [None, None]
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            session_path = pathlib.Path(temp_dir) / "bluesky_session.txt"
+            session_path.write_text("session-token\n", encoding="utf-8")
+            with mock.patch.dict(
+                os.environ,
+                {
+                    "BLUESKY_USERNAME": "thejokebot.bsky.social",
+                    "BLUESKY_APP_PASSWORD": "test-password",
+                    "BLUESKY_SESSION_RESTORE_ENABLED": "true",
+                    "BLUESKY_SESSION_PERSIST_ENABLED": "false",
+                    "BLUESKY_SESSION_FILE_PATH": str(session_path),
+                    "BLUESKY_LOGIN_RETRY_ATTEMPTS": "1",
+                },
+                clear=True,
+            ):
+                with mock.patch("thejokebot.runtime.Client", return_value=mock_client):
+                    client, username = runtime.login_client()
+
+            self.assertFalse(session_path.exists())
+
+        self.assertIs(client, mock_client)
+        self.assertEqual(username, "thejokebot.bsky.social")
+        self.assertEqual(mock_client.login.call_count, 2)
+        self.assertIsNone(mock_client.me)
 
     def test_login_client_falls_back_to_credentials_when_restore_fails(self):
         mock_client = mock.Mock()
@@ -638,7 +854,10 @@ class LoginClientRetryTests(unittest.TestCase):
         self.assertEqual(mock_client.login.call_count, 2)
         first_call = mock_client.login.call_args_list[0]
         second_call = mock_client.login.call_args_list[1]
-        self.assertEqual(first_call, mock.call(session_string="session-token"))
+        self.assertEqual(
+            first_call,
+            mock.call(session_string="session-token", fetch_bsky_profile=False),
+        )
         self.assertEqual(
             second_call,
             mock.call("thejokebot.bsky.social", "test-password"),
@@ -651,7 +870,14 @@ class LoginClientRetryTests(unittest.TestCase):
         mock_client.login.side_effect = atproto_client.exceptions.RequestException(
             response
         )
-        mock_client.get_profile.return_value = mock.Mock()
+        profile = SimpleNamespace(did="did:plc:configured")
+        mock_client.com.atproto.server.get_session.return_value = SimpleNamespace(
+            did="did:plc:configured"
+        )
+        mock_client.com.atproto.identity.resolve_handle.return_value = SimpleNamespace(
+            did="did:plc:configured"
+        )
+        mock_client.get_profile.return_value = profile
 
         with mock.patch.dict(
             os.environ,
@@ -674,8 +900,53 @@ class LoginClientRetryTests(unittest.TestCase):
 
         self.assertIs(client, mock_client)
         self.assertEqual(username, "thejokebot.bsky.social")
-        mock_client.login.assert_called_once_with(session_string="session-token")
-        mock_client.get_profile.assert_called_once_with("thejokebot.bsky.social")
+        mock_client.login.assert_called_once_with(
+            session_string="session-token", fetch_bsky_profile=False
+        )
+        mock_client.get_profile.assert_called_once_with("did:plc:configured")
+        self.assertIs(mock_client.me, profile)
+
+    def test_login_client_does_not_use_restore_after_identity_retries_exhaust(self):
+        mock_client = mock.Mock()
+        mock_client.me = None
+        identity_error = requests.Timeout("private response body")
+        mock_client.com.atproto.server.get_session.side_effect = [
+            identity_error,
+            identity_error,
+        ]
+
+        with mock.patch.dict(
+            os.environ,
+            {
+                "BLUESKY_USERNAME": "thejokebot.bsky.social",
+                "BLUESKY_APP_PASSWORD": "test-password",
+                "BLUESKY_SESSION_RESTORE_ENABLED": "true",
+                "BLUESKY_SESSION_PERSIST_ENABLED": "false",
+                "BLUESKY_LOGIN_RETRY_ATTEMPTS": "2",
+                "BLUESKY_LOGIN_RETRY_DELAY_SECONDS": "0",
+            },
+            clear=True,
+        ):
+            with mock.patch("thejokebot.runtime.Client", return_value=mock_client):
+                with mock.patch(
+                    "thejokebot.runtime._load_session_string_from_file",
+                    return_value="session-token",
+                ):
+                    with mock.patch("builtins.print") as mock_print:
+                        with self.assertRaises(requests.Timeout):
+                            runtime.login_client()
+
+        mock_client.login.assert_called_once_with(
+            session_string="session-token", fetch_bsky_profile=False
+        )
+        self.assertEqual(mock_client.com.atproto.server.get_session.call_count, 2)
+        mock_client.com.atproto.identity.resolve_handle.assert_not_called()
+        mock_client.get_profile.assert_not_called()
+        self.assertIsNone(mock_client.me)
+        self.assertNotIn(
+            "private response body",
+            " ".join(str(call) for call in mock_print.call_args_list),
+        )
 
     def test_login_client_removes_revoked_session_before_credential_login(self):
         response = mock.Mock(status_code=400)

@@ -106,6 +106,15 @@ Follower totals are collection-time snapshots; missing historical follower total
 
 Copy `.env.example` to the ignored `.env` file for local use. Keep secrets out of `resources/jokebot_runtime_config.json`. Production workflows use `BLUESKY_USERNAME` and `BLUESKY_APP_PASSWORD` with `BLUESKY_PASSWORD_SOURCE=app_password`. Local use of the full account password requires an explicit `BLUESKY_PASSWORD_SOURCE=account_password` and `BLUESKY_PASSWORD`; credentials are never selected automatically. `BLUESKY_SESSION_CACHE_KEY` encrypts cached production sessions. `API_NINJAS_API_KEY` is optional for the backup provider.
 
+When session restore is enabled, the authenticated session DID is checked against
+the configured DID or the DID currently resolved from the configured handle
+before the client is returned to a command. The profile is loaded only for that
+verified DID. A mismatch removes the cached session and falls back to the
+configured credentials. Transient identity-read failures use the bounded login
+retry setting; if identity remains unverified, login fails rather than allowing
+account actions. Workflow session caches are not account-namespaced, so this
+runtime check is required when the configured account changes.
+
 The non-secret runtime config contains posting, follow-fellows, follows-and-likes, unfollow, reports and workflow schedule settings. Supported environment variables override these defaults. Validate config and schedule metadata with `thejokebot-validate-runtime-config` (or its installed `.venv/bin/` entry point).
 
 | Control | Use |

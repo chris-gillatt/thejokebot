@@ -20,7 +20,7 @@ This is the operating brief for open work and lasting decisions. See the [README
 | Posting, report and follow regressions | Test idempotency, pagination, provider fallback and safety caps at producer and collector boundaries. |
 | Unfollow protection reads | Verify every configured protected handle and completely read the enabled source list before candidate reconciliation; unreadable or incomplete protection data must abort with a non-zero result. |
 | Bluesky transport availability | Native SDK httpx transport passed authenticated local and independent hosted-runner checks on 2 November 2026. A prior block required an adapter, now removed. If a new block occurs, investigate and validate a replacement before changing the live path; do not assume the previous firewall cause still applies. |
-| Session-cache custody | Cached sessions must stay encrypted with `BLUESKY_SESSION_CACHE_KEY`; rotating it requires a fresh credential login. |
+| Session-cache custody | Cached sessions must stay encrypted with `BLUESKY_SESSION_CACHE_KEY`; rotating it requires a fresh credential login. Restored sessions are returned only after their authenticated DID matches the configured account; mismatches discard the cache, and unresolved transient identity reads block account actions. |
 | Bluesky graph visibility | Profile counters may include hidden accounts that cannot be hydrated through follower/following queries; do not infer actionable accounts from totals. |
 
 ## Deferred Work
