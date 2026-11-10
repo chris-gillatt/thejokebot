@@ -47,6 +47,7 @@ jobs:
         run: scripts/restore_bluesky_session.sh
 
       - name: Run bluesky_post_joke
+        id: post_joke
         env:
           BLUESKY_USERNAME: ${{ vars.BLUESKY_USERNAME }}
           BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
@@ -71,7 +72,9 @@ jobs:
           key: bluesky-session-v2-${{ github.ref_name }}-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Persist posting state
+        if: always() && (steps.post_joke.outcome == 'success' || steps.post_joke.outcome == 'failure')
         run: |
+          python -c 'import json; from pathlib import Path; payload = json.loads(Path("state/posting_state.json").read_text()); assert isinstance(payload, dict), "Posting state must be a JSON object"'
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           python scripts/persist_workflow_state.py \

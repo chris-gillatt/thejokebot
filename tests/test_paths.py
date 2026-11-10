@@ -57,6 +57,12 @@ class RepositoryPathTests(unittest.TestCase):
                 self.assertIn("python scripts/persist_workflow_state.py", workflow)
                 self.assertIn(declared_domain, workflow)
 
+        posting = workflows["bluesky_post_joke.yml"]
+        self.assertIn("id: post_joke", posting)
+        self.assertIn("steps.post_joke.outcome == 'success'", posting)
+        self.assertIn("steps.post_joke.outcome == 'failure'", posting)
+        self.assertIn('payload = json.loads(Path("state/posting_state.json")', posting)
+
         for name in (
             "bluesky_post_joke.yml",
             "bluesky_follows_and_likes.yml",

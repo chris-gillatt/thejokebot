@@ -143,23 +143,38 @@ def test_exhaustion_is_not_an_endpoint_error():
     assert counters == _counters(fetches=2, candidates=2, too_long=2, exhausted=1)
 
 
-@pytest.mark.parametrize("published", [True, False])
+@pytest.mark.parametrize(
+    "failure_stage", [None, "login", "send", "checkpoint", "send_checkpoint"]
+)
 def test_real_posting_to_parser_records_source_selection_and_publication_separately(
-    capsys, published
+    capsys, failure_stage
 ):
+    published = failure_stage in (None, "checkpoint")
     client = Mock()
     client.me.handle = "bot.bsky.social"
     client.send_post.return_value = {
         "uri": "at://did:bot/app.bsky.feed.post/joke",
         "cid": "cid",
     }
-    if not published:
+    if failure_stage in ("send", "send_checkpoint"):
         client.send_post.side_effect = requests.RequestException("posting failed")
+    login = (
+        patch.object(
+            post_joke, "login_client", side_effect=TimeoutError("login timed out")
+        )
+        if failure_stage == "login"
+        else patch.object(post_joke, "login_client", return_value=(client, None))
+    )
+    checkpoint = Mock(
+        side_effect=OSError("state checkpoint unavailable")
+        if failure_stage in ("checkpoint", "send_checkpoint")
+        else None
+    )
     state = bot_state._default_state()
     with (
         patch.object(post_joke.bot_state, "load_state", return_value=state),
-        patch.object(post_joke.bot_state, "update_state"),
-        patch.object(post_joke, "login_client", return_value=(client, None)),
+        patch.object(post_joke.bot_state, "update_state", checkpoint),
+        login,
         patch.object(
             post_joke,
             "_provider_order_for_run",
@@ -174,8 +189,31 @@ def test_real_posting_to_parser_records_source_selection_and_publication_separat
             },
         ),
     ):
-        post_joke.main()
-    counts = dashboard_workflows._provider_activity_counts(capsys.readouterr().out)
+        if published:
+            if failure_stage == "checkpoint":
+                with pytest.raises(OSError, match="checkpoint unavailable"):
+                    post_joke.main()
+            else:
+                post_joke.main()
+        else:
+            if failure_stage == "send_checkpoint":
+                with pytest.raises(OSError, match="checkpoint unavailable") as exc_info:
+                    post_joke.main()
+                assert isinstance(exc_info.value.__context__, requests.RequestException)
+            else:
+                expected_error = (
+                    TimeoutError
+                    if failure_stage == "login"
+                    else requests.RequestException
+                )
+                with pytest.raises(expected_error):
+                    post_joke.main()
+    checkpoint.assert_called_once()
+    if failure_stage != "checkpoint":
+        checkpoint.call_args.args[0](state)
+        assert len(state["posted_jokes"]) == int(published)
+    output = capsys.readouterr().out
+    counts = dashboard_workflows._provider_activity_counts(output)
     assert counts is not None
     details = counts["provider_candidates"]
     assert details == [
@@ -185,8 +223,13 @@ def test_real_posting_to_parser_records_source_selection_and_publication_separat
         ),
     ]
     assert counts["posted"] is published
-    assert client.send_post.call_count == 1
-    assert "Fresh test joke" in client.send_post.call_args.kwargs["text"]
+    if failure_stage == "checkpoint":
+        assert "posted=true." in output
+    if failure_stage == "send_checkpoint":
+        assert "Failed to post joke: posting failed" in output
+    assert client.send_post.call_count == int(failure_stage != "login")
+    if failure_stage != "login":
+        assert "Fresh test joke" in client.send_post.call_args.kwargs["text"]
 
 
 def test_static_fallback_is_a_publication_not_an_invented_candidate_fetch(capsys):

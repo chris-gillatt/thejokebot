@@ -18,6 +18,7 @@ This is the operating brief for open work and lasting decisions. See the [README
 |---|---|
 | Workflow/runtime drift | Preserve entry points, triggers, environment variables and state formats; validate schedule metadata with runtime configuration. |
 | Posting, report and follow regressions | Test idempotency, pagination, provider fallback and safety caps at producer and collector boundaries. |
+| Posting and checkpoint failures | Login/send failures exit non-zero; retain whether publication is confirmed in telemetry and attempt the posting checkpoint after an executed command. Never blindly retry an uncertain send. |
 | Unfollow protection reads | Verify every configured protected handle and completely read the enabled source list before candidate reconciliation; unreadable or incomplete protection data must abort with a non-zero result. |
 | Bluesky transport availability | Native SDK httpx transport passed authenticated local and independent hosted-runner checks on 2 November 2026. A prior block required an adapter, now removed. If a new block occurs, investigate and validate a replacement before changing the live path; do not assume the previous firewall cause still applies. |
 | Session-cache custody | Cached sessions must stay encrypted with `BLUESKY_SESSION_CACHE_KEY`; rotating it requires a fresh credential login. Restored sessions are returned only after their authenticated DID matches the configured account; mismatches discard the cache, and unresolved transient identity reads block account actions. |
@@ -117,6 +118,7 @@ the SDK's transitive backports remain dependency-owned.
 |---|---|
 | Require Python 3.14 and test CPython 3.14.10 only | The bot's local and GitHub runtimes already use 3.14.10. Drop 3.12/3.13 support, align analysis targets with 3.14 and retain one authoritative Sonar job. atproto 0.0.73 currently excludes Python 3.15. |
 | Separate production outcomes from CI and expose source-time investigation | Lead with observed delivery/checkpoints, preserve existing freshness tolerances, publish allowlisted failed-step/run receipts, and distinguish successful workflows from proven operational recovery or live queues. |
+| Preserve confirmed-post evidence across checkpoint failures | A confirmed external post with failed local state persistence must remain a failed workflow, retain `posted=true` telemetry and avoid an automatic send retry. |
 | Separate provider access, candidate supply and confirmed publication contribution | Preserve posting decisions and legacy telemetry, disclose detailed sample coverage, and use descriptive period/concentration changes without automatic rotation changes or new alert thresholds. |
 | Observe joke response in 24–30-hour and 168–174-hour bands | Keep the existing six-hour collector, freeze the first in-band reading, show mature publishing-cohort samples and misses, and never reconstruct earlier checkpoints from later totals. Retain public-post-only receipts for 400 days outside Pages. |
 | Use independent historical controls and complete UTC-day comparisons | Keep Audience and Operations periods separate; preserve explicit scopes for current counters and cohort checkpoints, and never turn missing history into zeroes or sum rolling delivery windows. |
@@ -131,10 +133,28 @@ the SDK's transitive backports remain dependency-owned.
 
 ## Dependency Exceptions
 
-Rechecked on 2 November 2026 against PyPI, npm and upstream GitHub Action releases/tags. No first-party version exceptions remain.
+Rechecked on 10 November 2026 against the Python package index, npm registry and
+current Dependabot results. No dependency upgrades were made as part of R04;
+keep them in a separate resolver-validated batch so this behaviour fix remains
+focused and the lock stays coherent. Review the deferred versions before the
+next dependency batch or sooner if an applicable advisory appears.
 
-- All 35 Python lock entries use the latest stable releases, resolved together with hashes. This includes AnyIO 4.16.0, atproto 0.0.73, pydantic 2.14.2/core 2.50.2, pytest 9.2.0 and urllib3 2.8.0. The SDK's new `tlds` dependency is included; Python 3.14 is the minimum.
-- Ruff is 0.17.3. Explicit rule selection (`E4`, `E7`, `E9`, `F`, plus `C901`) and file inclusion preserve the verified 0.15.13 quality policy rather than adopting unrelated new defaults.
-- npm Pyright is 1.1.414, including the local installation. The dashboard uses Chart.js 4.6.1 with a freshly calculated integrity hash.
-- All ten first-party GitHub Action repositories are pinned to their latest stable release commits, including setup-python 7.1.0 and Sonar scan 8.4.0. CodeQL uses Action v4.39.1, not a differently versioned bundle release.
-- Local lock-generation tools are pip-tools 7.6.2 and pip 26.2.2. Update transitive dependencies through the resolver, never by independently forcing incompatible pins. Recheck currency at the next coherent batch or immediately after an applicable advisory.
+- `requirements.lock` has these installed versions behind the package-index
+  latest: click 8.5.0 -> 8.5.1, coverage 7.17.0 -> 7.17.2, dnspython 2.9.1 ->
+  2.9.2, pydantic 2.14.2 -> 2.14.3, pydantic-core 2.50.2 -> 2.50.4, regex
+  2026.9.29 -> 2026.11.9, and typing-inspection 0.4.4 -> 0.4.5.
+- Local Python tooling has pip 26.2.2 -> 26.3 and Ruff 0.17.3 -> 0.17.4
+  available. pip-tools remains 7.6.2. Ruff's explicit rule selection (`E4`,
+  `E7`, `E9`, `F`, plus `C901`) and file inclusion preserve the verified quality
+  policy rather than adopting unrelated new defaults.
+- `npm outdated --json` reported no available npm updates. Pyright remains
+  1.1.414, and the dashboard uses Chart.js 4.6.1 with a freshly calculated
+  integrity hash.
+- Current first-party GitHub Action refs remain full-SHA pinned. Merged
+  Dependabot PRs #142 and #143 contain the CodeQL refresh and Sonar scan 8.4.1
+  update; the changed refs are present on this branch. The action-pin checker
+  validates SHA immutability, while Dependabot results provide release currency.
+- Update transitive Python dependencies through the resolver, never by
+  independently forcing incompatible pins. The 2 November lock refresh included
+  AnyIO 4.16.0, atproto 0.0.73, pytest 9.2.0 and urllib3 2.8.0; Python 3.14
+  remains the minimum.

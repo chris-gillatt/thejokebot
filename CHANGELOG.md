@@ -2,6 +2,11 @@
 
 ## 2026-11-10
 
+- Made posting login/send errors exit unsuccessfully while retaining failure
+  telemetry and attempting the posting checkpoint. Persist posting state after
+  an executed posting attempt, validate its JSON before publication, and retain
+  `posted=true` evidence when a confirmed post is followed by checkpoint
+  failure. Added producer-to-collector and workflow regression coverage.
 - Prevented duplicate configured-block and interaction-like records after
   ambiguous responses using deterministic TID keys and exact record
   reconciliation. Changed starter-pack creation without a configured key to a

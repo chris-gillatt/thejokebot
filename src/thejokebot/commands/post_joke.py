@@ -517,6 +517,7 @@ def main():
         atproto_client.exceptions.NetworkError,
     ) as exc:
         print(f"Failed to post joke: {exc}")
+        raise
     finally:
         print(
             _provider_summary_line(
