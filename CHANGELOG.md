@@ -1,7 +1,16 @@
 # Changelog
 
-## 2026-11-10
+Version headings are semantic-version-style changelog milestones, not claims of
+published releases or Git tags. The `1.0.0` entry records the verified package
+version; the pre-1.0.0 and subsequent milestone labels are retrospective and do
+not change package metadata.
 
+## 2.1.2 - 2026-11-10
+
+- Restored versioned headings for every dated milestone after `1.0.0`, retaining
+  historical dates and distinguishing milestone labels from package releases.
+  Updated agent guidance to continue the sequence, classify breaking changes
+  and reuse existing same-day sections rather than returning to date-only headings.
 - Indexed dashboard history by UTC day once per dataset, removing repeated
   whole-history scans from daily charts while preserving gaps, retry outcomes
   and provider calculations. Verified identical outputs and substantially
@@ -30,7 +39,7 @@
   deterministic-key upsert, so retries reuse the same record and preserve its
   original creation time. Added lost-response and stable-retry regression tests.
 
-## 2026-11-09
+## 2.1.1 - 2026-11-09
 
 - Prevented duplicate follow-record creates after ambiguous responses across
   follow-back, interaction, discovery and starter-pack list follows. Persist a
@@ -48,7 +57,7 @@
   actions. Added bounded pagination and regression coverage; an absent or
   explicitly disabled starter-pack config and a valid empty list remain allowed.
 
-## 2026-11-02
+## 2.1.0 - 2026-11-02
 
 - Restored weekly grouped Dependabot updates for the three read-only Bluesky
   reference submodules and allowed their exact paths through the existing
@@ -77,7 +86,7 @@
   regression checks for resolved annotations and deferred forward references.
   Bot behaviour, call signatures and dependency-owned backports are unchanged.
 
-## 2026-11-01
+## 2.0.0 - 2026-11-01
 
 - Added prospective approved-post removal timing to Operations: measure from the
   bot recording a valid report proposal to successful approved deletion, publish
@@ -130,7 +139,7 @@
   meaningful changes must update this log in the same substantive commit.
   ([7f3b39bb])
 
-## 2026-10-31
+## 1.3.0 - 2026-10-31
 
 - Added provider candidate, rejection and error counters, confirmed publication
   shares, sample-aware historical comparisons and concentration trends without
@@ -143,12 +152,12 @@
   labelled region, resolving the accessibility finding without suppressing it.
   ([67f81b42])
 
-## 2026-10-30
+## 1.2.1 - 2026-10-30
 
 - Extended the default do-not-unfollow protection list and its regression
   assertions. ([61a95264])
 
-## 2026-10-27
+## 1.2.0 - 2026-10-27
 
 - Distinguished completed outgoing follows from incoming audience growth,
   disclosed relationship-outcome numerators and sample sizes, and rendered the
@@ -188,7 +197,7 @@
   and enforce `safe.bareRepository=explicit` without weakening Git safety.
   ([e62e1490])
 
-## 2026-09-29
+## 1.1.0 - 2026-09-29
 
 - Used the bundled jokebook for tagged request replies, capped replies per
   requester and run, and kept reply selection separate from scheduled-post

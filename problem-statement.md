@@ -145,6 +145,7 @@ the SDK's transitive backports remain dependency-owned.
 
 | Decision | Reason |
 |---|---|
+| Keep every dated changelog milestone versioned | Continue semantic-version-style milestone numbers alongside actual commit dates, reuse same-day sections and classify breaking changes explicitly. Retrospective labels do not imply release tags or package metadata changes. |
 | Require Python 3.14 and test CPython 3.14.10 only | The bot's local and GitHub runtimes already use 3.14.10. Drop 3.12/3.13 support, align analysis targets with 3.14 and retain one authoritative Sonar job. atproto 0.0.73 currently excludes Python 3.15. |
 | Separate production outcomes from CI and expose source-time investigation | Lead with observed delivery/checkpoints, preserve existing freshness tolerances, publish allowlisted failed-step/run receipts, and distinguish successful workflows from proven operational recovery or live queues. |
 | Preserve confirmed-post evidence across checkpoint failures | A confirmed external post with failed local state persistence must remain a failed workflow, retain `posted=true` telemetry and avoid an automatic send retry. |
