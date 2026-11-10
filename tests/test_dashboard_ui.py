@@ -167,7 +167,16 @@ class DashboardUiTests(unittest.TestCase):
                     "created_at": "2026-10-27T07:00:00Z",
                 }
             ],
-            workflow_activity={"runs": [{"id": 42, "follows": 1}]},
+            workflow_activity={
+                "runs": [
+                    {
+                        "id": 42,
+                        "workflow": "bluesky_follows_and_likes",
+                        "attempt": 1,
+                        "follows": 1,
+                    }
+                ]
+            },
         )
         alerts.extend(
             [
@@ -210,7 +219,7 @@ class DashboardUiTests(unittest.TestCase):
                 "Python tests failed 6 consecutive completed runs; check the workflow logs",
                 "Follows and likes is overdue",
                 "Follows and likes failed most recently",
-                "Follows and likes run 42 failed after making changes; verify saved state against completed actions before retrying",
+                "Follows and likes run 42, attempt 1 failed after making changes; verify saved state against completed actions before retrying",
                 "Joke-request checking is overdue; check the Follows and likes workflow",
                 "1 configured provider needs attention",
                 "2 posting slots missed in 7 complete days",

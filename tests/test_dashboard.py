@@ -1084,6 +1084,23 @@ class DashboardCollectorTests(unittest.TestCase):
 
         self.assertEqual(logs, "Followed did:...safe")
 
+    def test_fetch_workflow_logs_uses_the_requested_attempt_endpoint(self):
+        session = Mock()
+        session.get.return_value.content = _log_archive("safe summary")
+        result = dashboard_workflows.fetch_workflow_run_logs(
+            session,
+            "owner/repository",
+            123,
+            None,
+            attempt=2,
+            retry_call=lambda call, **kwargs: call(),
+        )
+        self.assertEqual(result, "safe summary")
+        self.assertEqual(
+            session.get.call_args.args[0],
+            "https://api.github.com/repos/owner/repository/actions/runs/123/attempts/2/logs",
+        )
+
     def test_collector_workflow_wrappers_preserve_injected_seams(self):
         session = object()
         now = datetime(2026, 8, 22, 6, tzinfo=timezone.utc)
@@ -1130,6 +1147,7 @@ class DashboardCollectorTests(unittest.TestCase):
             "owner/repository",
             123,
             "token",
+            attempt=1,
             retry_call=dashboard_collector.retry_network_call,
         )
         collect_activity.assert_called_once_with(
@@ -1416,6 +1434,7 @@ class DashboardCollectorTests(unittest.TestCase):
                     "unfollows": 0,
                     "selected": 5,
                     "failed": 2,
+                    "conclusion": "success",
                 }
             ],
         )
@@ -2000,7 +2019,9 @@ class DashboardCollectorTests(unittest.TestCase):
                 "created_at": "2026-08-22T11:00:00Z",
             }
         ]
-        activity = {"runs": [{"id": 42, "follows": 1}]}
+        activity = {
+            "runs": [{"id": 42, "workflow": "bluesky_follows_and_likes", "follows": 1}]
+        }
 
         alerts = dashboard_workflows._operational_alerts(
             automation,
@@ -2027,6 +2048,7 @@ class DashboardCollectorTests(unittest.TestCase):
                 "kind": "mutation_persistence_uncertain",
                 "workflow": "bluesky_follows_and_likes",
                 "run_id": 42,
+                "attempt": 1,
             },
             alerts,
         )

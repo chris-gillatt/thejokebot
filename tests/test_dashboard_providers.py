@@ -223,6 +223,42 @@ def test_real_posting_to_parser_records_source_selection_and_publication_separat
         ),
     ]
     assert counts["posted"] is published
+    workflow_run = {
+        "id": 123,
+        "name": "bluesky_post_joke",
+        "run_attempt": 1,
+        "status": "completed",
+        "conclusion": "failure" if failure_stage else "success",
+        "created_at": NOW.isoformat(),
+    }
+    activity = dashboard_workflows.collect_workflow_activity(
+        Mock(),
+        "owner/repo",
+        None,
+        [workflow_run],
+        None,
+        NOW,
+        fetch_logs=Mock(return_value=output),
+    )
+    assert len(activity["runs"]) == 1
+    assert activity["runs"][0]["posted"] is published
+    assert activity["runs"][0]["conclusion"] == workflow_run["conclusion"]
+    alerts = dashboard_workflows._mutation_persistence_alerts(
+        [workflow_run], activity, NOW
+    )
+    assert bool(alerts) == (failure_stage == "checkpoint")
+    assert dashboard_workflows._workflow_metrics([workflow_run], NOW)[
+        "successful"
+    ] == int(failure_stage is None)
+    supply = _js(
+        "DashboardHistory.providerSupply(input.data,input.period)",
+        {
+            "data": {"activity_runs": activity["runs"]},
+            "period": {"start": "2026-10-31", "end": "2026-11-01", "days": 1},
+        },
+    )
+    assert supply["postingAttempts"] == 1
+    assert supply["published"] == int(published)
     if failure_stage == "checkpoint":
         assert "posted=true." in output
     if failure_stage == "send_checkpoint":
@@ -373,7 +409,7 @@ def test_malformed_details_report_a_collection_warning_instead_of_inventing_zero
         123,
         NOW,
         None,
-        fetch_logs=lambda *args: _log([{"name": "jokeapi"}]),
+        fetch_logs=lambda *args, **kwargs: _log([{"name": "jokeapi"}]),
     )
     assert result == (None, NOW, None)
     assert "could not collect activity from workflow run 123" in capsys.readouterr().out

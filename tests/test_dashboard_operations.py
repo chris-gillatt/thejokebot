@@ -35,6 +35,280 @@ def _run(
     }
 
 
+def test_failed_posting_attempt_retains_confirmed_publication_evidence():
+    run = _run(name="bluesky_post_joke")
+    fetch = Mock(
+        return_value=(
+            "Provider summary: attempts=1, starting_provider=jokeapi, "
+            "successful_source=jokeapi, fallthrough=false, static_fallback=false, "
+            "duplicate=0, too_long=0, network_error=0, provider_error=0, posted=true."
+        )
+    )
+    activity = dashboard_workflows.collect_workflow_activity(
+        Mock(), "owner/repo", None, [run], None, NOW, fetch_logs=fetch
+    )
+    assert len(activity["runs"]) == 1
+    assert activity["runs"][0]["posted"] is True
+    assert activity["runs"][0]["conclusion"] == "failure"
+    assert activity["runs"][0]["attempt"] == 1
+    assert dashboard_workflows._workflow_metrics([run], NOW)["successful"] == 0
+
+
+def test_retry_retains_separate_activity_history_and_original_failure_alert(tmp_path):
+    failed = _run(name="bluesky_post_joke", day="2026-10-31")
+    fetch = Mock(
+        return_value=(
+            "Provider summary: attempts=1, starting_provider=jokeapi, "
+            "successful_source=jokeapi, fallthrough=false, static_fallback=false, "
+            "duplicate=0, too_long=0, network_error=0, provider_error=0, posted=true."
+        )
+    )
+    first = dashboard_workflows.collect_workflow_activity(
+        Mock(), "owner/repo", None, [failed], None, NOW, fetch_logs=fetch
+    )
+    retry = {**failed, "run_attempt": 2, "conclusion": "success"}
+    fetch.return_value = fetch.return_value.replace("posted=true", "posted=false")
+    latest = dashboard_workflows.collect_workflow_activity(
+        Mock(),
+        "owner/repo",
+        None,
+        [retry],
+        {"workflow_activity": first},
+        NOW,
+        fetch_logs=fetch,
+    )
+    assert [run["attempt"] for run in latest["runs"]] == [1, 2]
+    assert [run["conclusion"] for run in latest["runs"]] == ["failure", "success"]
+    assert [call.kwargs["attempt"] for call in fetch.call_args_list] == [1, 2]
+    alerts = dashboard_workflows._mutation_persistence_alerts([retry], latest, NOW)
+    assert alerts == [
+        {
+            "level": "urgent",
+            "kind": "mutation_persistence_uncertain",
+            "workflow": "bluesky_post_joke",
+            "run_id": 1,
+            "attempt": 1,
+        }
+    ]
+    partition = dashboard_history._migrate_existing_history(
+        {"workflow_activity": latest}
+    )
+    cached = dashboard_history._collector_existing(None, partition, NOW, tmp_path)
+    assert [run["conclusion"] for run in cached["workflow_activity"]["runs"]] == [
+        "failure",
+        "success",
+    ]
+    fetch.reset_mock()
+    recovered = dashboard_workflows.collect_workflow_activity(
+        Mock(), "owner/repo", None, [retry], cached, NOW, fetch_logs=fetch
+    )
+    fetch.assert_not_called()
+    assert recovered["runs"] == latest["runs"]
+
+
+@pytest.mark.parametrize("field", ["approved_removals", "acknowledgements"])
+def test_failed_moderation_uses_actual_producer_counter_names(field):
+    run = _run(name="bluesky_process_reports", day="2026-10-31")
+    from thejokebot.commands import process_reports
+
+    log = process_reports._moderation_summary_line(
+        0, int(field == "acknowledgements"), int(field == "approved_removals"), 0
+    )
+    activity = dashboard_workflows.collect_workflow_activity(
+        Mock(), "owner/repo", None, [run], None, NOW, fetch_logs=Mock(return_value=log)
+    )
+    assert activity["runs"][0][field] == 1
+    assert (
+        dashboard_workflows._mutation_persistence_alerts([run], activity, NOW)[0][
+            "attempt"
+        ]
+        == 1
+    )
+
+
+@pytest.mark.parametrize(
+    "workflow,log,field",
+    [
+        (
+            "bluesky_unfollow",
+            "Summary: processed=2, unfollowed=1, failed=1, missing_uri=0.",
+            "unfollows",
+        ),
+        (
+            "bluesky_follow_fellows",
+            "Discovery summary: selected=2, followed=1, failed=1, dry_run=false.",
+            "follows",
+        ),
+        (
+            "bluesky_follows_and_likes",
+            "Social summary: follow_back_candidates=1, follow_back_added=0, protected=0, interaction_candidates=1, interaction_eligible=1, interaction_added=0, interactions_liked=1, joke_replies=1, failed=1, dry_run=false.",
+            "interactions_liked",
+        ),
+        ("bluesky_manage_starter_pack", "Followed list member did:private", "follows"),
+    ],
+)
+def test_failed_social_attempts_keep_only_measured_mutations(workflow, log, field):
+    run = _run(name=workflow, day="2026-10-31")
+    activity = dashboard_workflows.collect_workflow_activity(
+        Mock(), "owner/repo", None, [run], None, NOW, fetch_logs=Mock(return_value=log)
+    )
+    assert activity["runs"][0][field] == 1
+    assert (
+        len(dashboard_workflows._mutation_persistence_alerts([run], activity, NOW)) == 1
+    )
+    archived = dashboard_history._migrate_existing_history(
+        {"workflow_activity": activity}
+    )
+    assert "private" not in json.dumps(archived)
+
+
+@pytest.mark.parametrize(
+    "workflow",
+    [
+        "bluesky_follows_and_likes",
+        "bluesky_follow_fellows",
+        "bluesky_manage_starter_pack",
+        "bluesky_post_joke",
+        "bluesky_process_reports",
+        "bluesky_unfollow",
+    ],
+)
+def test_failed_attempt_without_summary_does_not_invent_zeroes(workflow):
+    run = _run(name=workflow, day="2026-10-31")
+    activity = dashboard_workflows.collect_workflow_activity(
+        Mock(),
+        "owner/repo",
+        None,
+        [run],
+        None,
+        NOW,
+        fetch_logs=Mock(
+            return_value="Total users to follow: 5\nprivate log without summary"
+        ),
+    )
+    assert activity["runs"] == []
+    assert dashboard_workflows._mutation_persistence_alerts([run], activity, NOW) == []
+    assert activity["coverage_start"] == NOW.isoformat()
+
+
+@pytest.mark.parametrize("http_code", [404, 410, 503])
+def test_missing_attempt_logs_remain_unavailable_without_mutation_claims(http_code):
+    response = Mock(status_code=http_code)
+    fetch = Mock(side_effect=requests.HTTPError("unavailable", response=response))
+    run = _run(name="bluesky_post_joke", day="2026-10-31")
+    activity = dashboard_workflows.collect_workflow_activity(
+        Mock(), "owner/repo", None, [run], None, NOW, fetch_logs=fetch
+    )
+    assert activity["runs"] == []
+    assert dashboard_workflows._mutation_persistence_alerts([run], activity, NOW) == []
+    assert (activity["expired_before"] is not None) == (http_code == 410)
+
+
+@pytest.mark.parametrize("status", ["queued", "in_progress"])
+def test_incomplete_attempts_never_collect_finished_telemetry(status):
+    fetch = Mock()
+    run = {**_run(name="bluesky_post_joke"), "status": status}
+    result = dashboard_workflows.collect_workflow_activity(
+        Mock(), "owner/repo", None, [run], None, NOW, fetch_logs=fetch
+    )
+    assert result["runs"] == []
+    fetch.assert_not_called()
+
+
+def test_failed_attempt_with_zero_confirmed_mutations_has_no_persistence_alert():
+    run = _run(name="bluesky_process_reports", day="2026-10-31")
+    activity = dashboard_workflows.collect_workflow_activity(
+        Mock(),
+        "owner/repo",
+        None,
+        [run],
+        None,
+        NOW,
+        fetch_logs=Mock(
+            return_value="Moderation summary: proposals=1, acknowledgements=0, approved_removals=0, unresolved=1."
+        ),
+    )
+    assert len(activity["runs"]) == 1
+    assert dashboard_workflows._mutation_persistence_alerts([run], activity, NOW) == []
+
+
+def test_legacy_history_never_fabricates_attempt_conclusions():
+    legacy = {
+        "id": 1,
+        "workflow": "bluesky_post_joke",
+        "created_at": "2026-10-30T12:00:00Z",
+        "posted": True,
+    }
+    archived = dashboard_history._migrate_existing_history(
+        {"workflow_activity": {"runs": [legacy]}}
+    )
+    assert "conclusion" not in archived["2026-10"]["activity_runs"][0]
+    assert (
+        dashboard_workflows._mutation_persistence_alerts([], {"runs": [legacy]}, NOW)
+        == []
+    )
+
+
+def test_daily_activity_combines_distinct_attempts_without_doubling_receipts():
+    run = {
+        "workflow": "bluesky_unfollow",
+        "id": 1,
+        "created_at": NOW.isoformat(),
+        "follows": 0,
+    }
+    activity = {
+        "runs": [
+            {**run, "attempt": 1, "conclusion": "failure", "unfollows": 2},
+            {**run, "attempt": 2, "conclusion": "success", "unfollows": 1},
+        ]
+    }
+    state = {"unfollow_history": {"entries": [{"unfollowed_at": NOW.timestamp()}]}}
+    assert dashboard_metrics._daily_activity(state, activity) == [
+        {"date": "2026-10-31", "joke_posts": 0, "follows": 0, "unfollows": 3}
+    ]
+    state["unfollow_history"]["entries"] *= 4
+    assert dashboard_metrics._daily_activity(state, activity)[0]["unfollows"] == 4
+
+
+def test_archived_retry_denominators_separate_workflow_success_and_publication():
+    failed = _run(name="bluesky_post_joke", day="2026-10-30")
+    retry = {**failed, "run_attempt": 2, "conclusion": "success"}
+    records = operations.public_runs([failed, retry], {"bluesky_post_joke"})
+    data = {
+        "automation_runs": records,
+        "snapshots": [],
+        "daily_activity": [],
+        "activity_runs": [
+            {
+                "id": 1,
+                "workflow": "bluesky_post_joke",
+                "attempt": 1,
+                "conclusion": "failure",
+                "created_at": failed["created_at"],
+                "posted": True,
+                "successful_source": "jokeapi",
+            },
+            {
+                "id": 1,
+                "workflow": "bluesky_post_joke",
+                "attempt": 2,
+                "conclusion": "success",
+                "created_at": failed["created_at"],
+                "posted": False,
+            },
+        ],
+    }
+    result = _js(
+        "({summary:DashboardHistory.summary(input.data,input.period),supply:DashboardHistory.providerSupply(input.data,input.period),incidents:DashboardHistory.incidents(input.data,input.period)})",
+        {"data": data, "period": PERIOD},
+    )
+    assert result["summary"]["completed"] == 2
+    assert result["summary"]["successRate"] == 50
+    assert result["supply"]["postingAttempts"] == 2
+    assert result["supply"]["published"] == 1
+    assert result["incidents"][0]["recovery"]["attempt"] == 2
+
+
 def _steps(name: object = "Run unit tests"):
     return [{"job_id": 999, "number": 7, "name": name}]
 

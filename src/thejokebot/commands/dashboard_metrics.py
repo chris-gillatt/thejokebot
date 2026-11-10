@@ -191,6 +191,7 @@ def _activity_by_day(
     posts = Counter()
     follows = Counter()
     unfollows = Counter()
+    observed_unfollows = Counter()
     for entry in state.get("posted_jokes", []):
         if entry.get("ts"):
             posts[
@@ -214,7 +215,9 @@ def _activity_by_day(
             .isoformat()
         )
         follows[day] += max(0, int(run.get("follows") or 0))
-        unfollows[day] = max(unfollows[day], max(0, int(run.get("unfollows") or 0)))
+        observed_unfollows[day] += max(0, int(run.get("unfollows") or 0))
+    for day, count in observed_unfollows.items():
+        unfollows[day] = max(unfollows[day], count)
     return posts, follows, unfollows
 
 

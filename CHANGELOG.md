@@ -2,6 +2,13 @@
 
 ## 2026-11-10
 
+- Retained measured activity from failed production attempts using exact
+  attempt log downloads and separate cache/history identities. Warn about
+  uncertain mutation persistence with the run and attempt, preserving earlier
+  failure evidence after retries and matching real moderation counters. Keep
+  workflow success, confirmed publication and daily receipt totals distinct;
+  unavailable logs never invent zero outcomes. Added producer-to-collector,
+  retry/history and desktop/mobile dashboard verification.
 - Completed jokebook report reviews with both bundled-entry removal and a
   source-post denylist instruction, so approved reports remove the public post
   and suppress the same text from every provider. Preserve partial work and

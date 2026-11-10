@@ -48,6 +48,7 @@ HISTORY_RECORD_FIELDS = {
         "id",
         "attempt",
         "workflow",
+        "conclusion",
         "created_at",
         "follows",
         "unfollows",

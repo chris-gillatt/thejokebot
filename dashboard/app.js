@@ -1169,7 +1169,8 @@ function operationalAlertText(alert) {
     return `${displayName(alert.workflow)} failed ${numberFormat.format(alert.count)} consecutive completed runs; check the workflow logs`;
   }
   if (alert.kind === "mutation_persistence_uncertain") {
-    return `${displayName(alert.workflow)} run ${alert.run_id} failed after making changes; verify saved state against completed actions before retrying`;
+    const attempt = Number.isSafeInteger(alert.attempt) ? `, attempt ${alert.attempt}` : "";
+    return `${displayName(alert.workflow)} run ${alert.run_id}${attempt} failed after making changes; verify saved state against completed actions before retrying`;
   }
   if (alert.kind === "joke_request_checkpoint_stale") {
     return "Joke-request checking is overdue; check the Follows and likes workflow";

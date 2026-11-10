@@ -97,11 +97,12 @@ def fetch_workflow_run_logs(
     run_id: int,
     token: str | None,
     *,
+    attempt: int = 1,
     retry_call=retry_network_call,
 ) -> str:
     def _request():
         response = session.get(
-            f"{GITHUB_API_BASE}/repos/{repository}/actions/runs/{run_id}/logs",
+            f"{GITHUB_API_BASE}/repos/{repository}/actions/runs/{run_id}/attempts/{attempt}/logs",
             headers=_github_headers(token),
             timeout=30,
         )
@@ -249,7 +250,24 @@ def _social_summary_counts(plain_text: str) -> dict:
     return values if required.issubset(values) else {}
 
 
-def _workflow_activity_counts(workflow_name: str, log_text: str) -> dict | None:
+def _social_activity_counts(plain_text: str, confirmed_only: bool) -> dict | None:
+    values = _social_summary_counts(plain_text)
+    if values:
+        return {
+            "follows": values["follow_back_added"] + values["interaction_added"],
+            "unfollows": 0,
+            "social_summary_observed": True,
+            **values,
+        }
+    follows = len(re.findall(r"\bFollowed (?:interactor )?did:[^\s]+", plain_text))
+    if confirmed_only and not follows:
+        return None
+    return {"follows": follows, "unfollows": 0, "social_summary_observed": False}
+
+
+def _workflow_activity_counts(
+    workflow_name: str, log_text: str, *, confirmed_only: bool = False
+) -> dict | None:
     plain_text = re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", log_text)
     if "Dry-run mode enabled" in plain_text:
         return {"follows": 0, "unfollows": 0}
@@ -261,20 +279,7 @@ def _workflow_activity_counts(workflow_name: str, log_text: str) -> dict | None:
     if specialised_parser:
         return specialised_parser(plain_text)
     if workflow_name == "bluesky_follows_and_likes":
-        values = _social_summary_counts(plain_text)
-        if values:
-            return {
-                "follows": values["follow_back_added"] + values["interaction_added"],
-                "unfollows": 0,
-                "social_summary_observed": True,
-                **values,
-            }
-        follows = len(re.findall(r"\bFollowed (?:interactor )?did:[^\s]+", plain_text))
-        return {
-            "follows": follows,
-            "unfollows": 0,
-            "social_summary_observed": False,
-        }
+        return _social_activity_counts(plain_text, confirmed_only)
     if workflow_name == "bluesky_follow_fellows":
         summaries = re.findall(
             r"Discovery summary: selected=(\d+), followed=(\d+), "
@@ -290,7 +295,7 @@ def _workflow_activity_counts(workflow_name: str, log_text: str) -> dict | None:
                 "failed": failed,
             }
         planned = re.findall(r"Total users to follow: (\d+)", plain_text)
-        if not planned:
+        if not planned or confirmed_only:
             return None
         failures = len(
             re.findall(r"Unexpected error trying to follow did:[^\s]+", plain_text)
@@ -304,6 +309,8 @@ def _workflow_activity_counts(workflow_name: str, log_text: str) -> dict | None:
         }
     if workflow_name == "bluesky_manage_starter_pack":
         follows = len(re.findall(r"\bFollowed list member did:[^\s]+", plain_text))
+        if confirmed_only and not follows:
+            return None
         return {"follows": follows, "unfollows": 0}
     return None
 
@@ -316,13 +323,18 @@ def _workflow_run_candidate(
     run_id = run.get("id")
     if (
         workflow_name not in ACTIVITY_WORKFLOWS
-        or run.get("conclusion") != "success"
+        or run.get("conclusion") not in {"success", "failure"}
+        or run.get("status", "completed") != "completed"
         or not created_at
         or run_id is None
     ):
         return None
     created = datetime.fromisoformat(created_at.replace("Z", _UTC_OFFSET))
-    if created < cutoff or (expired_before and created <= expired_before):
+    if created < cutoff or (
+        expired_before
+        and created <= expired_before
+        and int(run.get("run_attempt") or 1) == 1
+    ):
         return None
     return workflow_name, created_at, int(run_id), created
 
@@ -351,6 +363,8 @@ def _collect_run_activity(
     created,
     expired_before,
     *,
+    attempt=1,
+    conclusion="success",
     fetch_logs=None,
 ):
     if fetch_logs is None:
@@ -358,7 +372,8 @@ def _collect_run_activity(
     try:
         counts = _workflow_activity_counts(
             workflow_name,
-            fetch_logs(session, repository, run_id, token),
+            fetch_logs(session, repository, run_id, token, attempt=attempt),
+            confirmed_only=conclusion == "failure",
         )
     except (
         OSError,
@@ -390,7 +405,9 @@ def _previous_workflow_activity(existing: dict | None, cutoff: datetime) -> tupl
         else None
     )
     cached_runs = {
-        int(item["id"]): item
+        (item.get("workflow"), int(item["id"]), int(item.get("attempt") or 1)): dict(
+            item
+        )
         for item in previous_activity.get("runs", [])
         if item.get("id") is not None
         and item.get("created_at")
@@ -422,11 +439,10 @@ def collect_workflow_activity(
             continue
         workflow_name, created_at, run_id, created = candidate
         attempt = int(run.get("run_attempt") or 1)
-        cached = cached_runs.get(run_id)
-        cached_attempt_matches = cached and int(cached.get("attempt") or 1) == attempt
-        if cached_attempt_matches and _cached_workflow_run_complete(
-            cached, workflow_name
-        ):
+        identity = (workflow_name, run_id, attempt)
+        cached = cached_runs.get(identity)
+        if _cached_workflow_run_complete(cached, workflow_name):
+            cached["conclusion"] = run["conclusion"]
             continue
         counts, unavailable, expired_before = _collect_run_activity(
             session,
@@ -436,6 +452,8 @@ def collect_workflow_activity(
             run_id,
             created,
             expired_before,
+            attempt=attempt,
+            conclusion=run["conclusion"],
             fetch_logs=fetch_logs,
         )
         if unavailable is not None:
@@ -443,10 +461,13 @@ def collect_workflow_activity(
             continue
         if counts is None:
             continue
-        cached_runs[run_id] = {
+        cached_runs.pop((None, run_id, attempt), None)
+        cached_runs.pop(("legacy_activity", run_id, attempt), None)
+        cached_runs[identity] = {
             "id": run_id,
             "attempt": attempt,
             "workflow": workflow_name,
+            "conclusion": run["conclusion"],
             "created_at": created_at,
             **counts,
         }
@@ -459,7 +480,15 @@ def collect_workflow_activity(
         "window_days": WORKFLOW_WINDOW_DAYS,
         "coverage_start": coverage_start.isoformat(),
         "expired_before": expired_before.isoformat() if expired_before else None,
-        "runs": sorted(cached_runs.values(), key=lambda item: item["created_at"]),
+        "runs": sorted(
+            cached_runs.values(),
+            key=lambda item: (
+                item["created_at"],
+                str(item.get("workflow") or ""),
+                int(item["id"]),
+                int(item.get("attempt") or 1),
+            ),
+        ),
     }
 
 
@@ -613,7 +642,7 @@ def _mutation_persistence_alerts(
     workflow_runs: list[dict], workflow_activity: dict | None, now: datetime
 ) -> list[dict]:
     activity_by_id = {
-        int(item["id"]): item
+        (item.get("workflow"), int(item["id"]), int(item.get("attempt") or 1)): item
         for item in (workflow_activity or {}).get("runs", [])
         if item.get("id") is not None
     }
@@ -621,23 +650,45 @@ def _mutation_persistence_alerts(
         "posted",
         "follows",
         "unfollows",
-        "deleted",
-        "acknowledged",
+        "approved_removals",
+        "acknowledgements",
         "interactions_liked",
         "joke_replies",
     )
     alerts = []
     cutoff = now - timedelta(hours=24)
-    for run in workflow_runs:
+    observed_runs = {
+        (item.get("workflow"), int(item["id"]), int(item.get("attempt") or 1)): {
+            "id": item["id"],
+            "name": item.get("workflow"),
+            "run_attempt": item.get("attempt") or 1,
+            "created_at": item.get("created_at"),
+            "status": "completed",
+            "conclusion": item["conclusion"],
+        }
+        for item in (workflow_activity or {}).get("runs", [])
+        if item.get("conclusion") == "failure" and item.get("id") is not None
+    }
+    observed_runs.update(
+        (
+            (run.get("name"), int(run["id"]), int(run.get("run_attempt") or 1)),
+            run,
+        )
+        for run in workflow_runs
+        if run.get("id") is not None
+    )
+    for run in observed_runs.values():
         created_at = run.get("created_at")
         if (
             run.get("conclusion") != "failure"
+            or run.get("status", "completed") != "completed"
             or run.get("id") is None
             or not created_at
             or datetime.fromisoformat(created_at.replace("Z", _UTC_OFFSET)) < cutoff
         ):
             continue
-        activity = activity_by_id.get(int(run["id"]), {})
+        identity = (run.get("name"), int(run["id"]), int(run.get("run_attempt") or 1))
+        activity = activity_by_id.get(identity, {})
         if any(int(activity.get(field) or 0) > 0 for field in mutation_fields):
             alerts.append(
                 {
@@ -645,6 +696,7 @@ def _mutation_persistence_alerts(
                     "kind": "mutation_persistence_uncertain",
                     "workflow": run.get("name"),
                     "run_id": int(run["id"]),
+                    "attempt": identity[2],
                 }
             )
     return alerts

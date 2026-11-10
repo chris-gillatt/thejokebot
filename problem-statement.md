@@ -19,6 +19,7 @@ This is the operating brief for open work and lasting decisions. See the [README
 | Workflow/runtime drift | Preserve entry points, triggers, environment variables and state formats; validate schedule metadata with runtime configuration. |
 | Posting, report and follow regressions | Test idempotency, pagination, provider fallback and safety caps at producer and collector boundaries. |
 | Posting and checkpoint failures | Login/send failures exit non-zero; retain whether publication is confirmed in telemetry and attempt the posting checkpoint after an executed command. Never blindly retry an uncertain send. |
+| Failed-attempt observation | Read exact attempt logs and retain separate workflow/run/attempt identities with observed conclusions. Measured changes can warn of uncertain persistence, never prove lost state or turn failures into successful workflows; unavailable telemetry remains unknown. |
 | Approved jokebook reports | Review bundled-entry removal and the source-post denylist instruction together. Only approved resources authorise deletion; recover exact remaining resource changes, preserve unrelated exclusions and never recreate closed reviews. |
 | Unfollow protection reads | Verify every configured protected handle and completely read the enabled source list before candidate reconciliation; unreadable or incomplete protection data must abort with a non-zero result. |
 | Bluesky transport availability | Native SDK httpx transport passed authenticated local and independent hosted-runner checks on 2 November 2026. A prior block required an adapter, now removed. If a new block occurs, investigate and validate a replacement before changing the live path; do not assume the previous firewall cause still applies. |
@@ -135,7 +136,7 @@ the SDK's transitive backports remain dependency-owned.
 ## Dependency Exceptions
 
 Rechecked on 10 November 2026 against the Python package index, npm registry and
-current Dependabot results. No dependency upgrades were made as part of R04 or R05;
+current Dependabot results. No dependency upgrades were made as part of R04, R05 or R06;
 keep them in a separate resolver-validated batch so this behaviour fix remains
 focused and the lock stays coherent. Review the deferred versions before the
 next dependency batch or sooner if an applicable advisory appears.

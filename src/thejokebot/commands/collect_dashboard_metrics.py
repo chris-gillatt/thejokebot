@@ -80,13 +80,14 @@ def fetch_workflow_runs(
 
 
 def fetch_workflow_run_logs(
-    session, repository: str, run_id: int, token: str | None
+    session, repository: str, run_id: int, token: str | None, *, attempt: int = 1
 ) -> str:
     return dashboard_workflows.fetch_workflow_run_logs(
         session,
         repository,
         run_id,
         token,
+        attempt=attempt,
         retry_call=retry_network_call,
     )
 
