@@ -2,6 +2,12 @@
 
 ## 2026-11-10
 
+- Completed jokebook report reviews with both bundled-entry removal and a
+  source-post denylist instruction, so approved reports remove the public post
+  and suppress the same text from every provider. Preserve partial work and
+  existing exclusions, verify exact orphan resource changes, and retain closed
+  reviews without recreating them. Added real-Git approval, recovery, deletion
+  receipt and cross-provider suppression regressions.
 - Made posting login/send errors exit unsuccessfully while retaining failure
   telemetry and attempting the posting checkpoint. Persist posting state after
   an executed posting attempt, validate its JSON before publication, and retain

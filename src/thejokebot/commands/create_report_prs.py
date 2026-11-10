@@ -180,20 +180,40 @@ def _stage_jokebook_change(b64_value: str, joke_hash: str) -> bool:
 
 def _stage_denylist_change(proposal: dict, b64_value: str, joke_hash: str) -> bool:
     denylist = joke_denylist.load_denylist(DENYLIST_PATH)
-    added = joke_denylist.add_denylist_entry(
-        denylist,
+    if _has_denylist_instruction(denylist, {**proposal, "b64": b64_value}):
+        print(f"Skipping already denylisted joke hash {joke_hash}")
+        return False
+    addition = {"jokes": []}
+    joke_denylist.add_denylist_entry(
+        addition,
         b64=b64_value,
         source_post_uri=proposal.get("source_post_uri") or "",
         source_reply_uri=proposal.get("source_reply_uri") or "",
         reporter_did=proposal.get("reporter_did") or "unknown",
         reason=proposal.get("reason") or "user_reply_report",
     )
-    if not added:
-        print(f"Skipping already denylisted joke hash {joke_hash}")
-        return False
+    denylist.setdefault("jokes", []).extend(addition["jokes"])
     joke_denylist.save_denylist(denylist, DENYLIST_PATH)
     run_command(["git", "add", str(DENYLIST_PATH)])
     return True
+
+
+def _has_denylist_instruction(payload: dict, proposal: dict) -> bool:
+    return any(
+        entry.get("b64") == proposal["b64"]
+        and (
+            proposal_target(proposal) != "jokebook"
+            or entry.get("source_post_uri") == (proposal.get("source_post_uri") or "")
+        )
+        for entry in payload["jokes"]
+    )
+
+
+def _stage_proposal_changes(proposal: dict, b64_value: str, joke_hash: str) -> bool:
+    staged = False
+    if proposal_target(proposal) == "jokebook":
+        staged = _stage_jokebook_change(b64_value, joke_hash)
+    return _stage_denylist_change(proposal, b64_value, joke_hash) or staged
 
 
 def create_pr_for_proposal(proposal: dict) -> str | None:
@@ -215,20 +235,19 @@ def create_pr_for_proposal(proposal: dict) -> str | None:
     pr_body = build_pr_body(proposal, joke_hash)
 
     branch_created = False
-    target_path = JOKEBOOK_PATH if target == "jokebook" else DENYLIST_PATH
+    target_paths = (
+        [DENYLIST_PATH, JOKEBOOK_PATH] if target == "jokebook" else [DENYLIST_PATH]
+    )
     try:
         if has_remote_branch(branch_name):
-            _verify_orphan_branch(branch_name, proposal, target_path)
+            _verify_orphan_branch(branch_name, proposal, target_paths)
         else:
-            run_command(["git", "diff", "--exit-code", "HEAD", "--", str(target_path)])
+            run_command(
+                ["git", "diff", "--exit-code", "HEAD", "--", *map(str, target_paths)]
+            )
             run_command(["git", "checkout", "-b", branch_name])
             branch_created = True
-            staged = (
-                _stage_jokebook_change(b64_value, joke_hash)
-                if target == "jokebook"
-                else _stage_denylist_change(proposal, b64_value, joke_hash)
-            )
-            if not staged:
+            if not _stage_proposal_changes(proposal, b64_value, joke_hash):
                 raise RuntimeError(
                     "Report change is already applied but no review PR was verified"
                 )
@@ -263,7 +282,14 @@ def create_pr_for_proposal(proposal: dict) -> str | None:
         if branch_created:
             try:
                 run_command(
-                    ["git", "restore", "--staged", "--worktree", "--", str(target_path)]
+                    [
+                        "git",
+                        "restore",
+                        "--staged",
+                        "--worktree",
+                        "--",
+                        *map(str, target_paths),
+                    ]
                 )
                 _cleanup_local_branch(branch_name)
             except subprocess.CalledProcessError as exc:
@@ -272,46 +298,71 @@ def create_pr_for_proposal(proposal: dict) -> str | None:
                 ) from exc
 
 
-def _verify_orphan_branch(branch_name, proposal, target_path):
-    relative_path = target_path.relative_to(RESOURCES_DIR.parent).as_posix()
+def _verify_orphan_branch(branch_name, proposal, target_paths):
     run_command(["git", "fetch", "origin", branch_name])
     paths = run_command(
         ["git", "diff", "--name-only", "origin/main...FETCH_HEAD"]
     ).stdout.splitlines()
-    if paths != [relative_path]:
-        raise RuntimeError("Orphan report branch has unexpected changed files")
     base = run_command(
         ["git", "merge-base", "origin/main", "FETCH_HEAD"]
     ).stdout.strip()
-    original = json.loads(
-        run_command(["git", "show", f"{base}:{relative_path}"]).stdout
-    )
-    proposed = json.loads(
-        run_command(["git", "show", f"FETCH_HEAD:{relative_path}"]).stdout
-    )
-    b64_value = proposal["b64"]
-    if proposal_target(proposal) == "jokebook":
-        expected = {
-            **original,
-            "jokes": [joke for joke in original["jokes"] if joke != b64_value],
-        }
-        valid = proposed == expected and proposed != original
-    else:
-        added = [entry for entry in proposed["jokes"] if entry not in original["jokes"]]
-        valid = (
-            len(added) == 1
-            and added[0].get("b64") == b64_value
-            and added[0].get("source_post_uri")
-            == (proposal.get("source_post_uri") or "")
-            and added[0].get("source_reply_uri")
-            == (proposal.get("source_reply_uri") or "")
-            and all(entry in proposed["jokes"] for entry in original["jokes"])
-            and len(proposed["jokes"]) == len(original["jokes"]) + 1
-            and {k: v for k, v in proposed.items() if k != "jokes"}
-            == {k: v for k, v in original.items() if k != "jokes"}
+    expected_paths = []
+    for target_path in target_paths:
+        relative_path = target_path.relative_to(RESOURCES_DIR.parent).as_posix()
+        original = json.loads(
+            run_command(["git", "show", f"{base}:{relative_path}"]).stdout
         )
-    if not valid:
-        raise RuntimeError("Orphan report branch does not match the queued proposal")
+        proposed = json.loads(
+            run_command(["git", "show", f"FETCH_HEAD:{relative_path}"]).stdout
+        )
+        if target_path == JOKEBOOK_PATH:
+            expected = {
+                **original,
+                "jokes": [
+                    joke for joke in original["jokes"] if joke != proposal["b64"]
+                ],
+            }
+            changed = expected != original
+            valid = proposed == expected
+        else:
+            changed = not _has_denylist_instruction(original, proposal)
+            valid = (
+                _valid_denylist_addition(original, proposed, proposal)
+                if changed
+                else proposed == original
+            )
+        if changed:
+            expected_paths.append(relative_path)
+        if not valid:
+            raise RuntimeError(
+                "Orphan report branch does not match the queued proposal"
+            )
+    if not expected_paths or paths != sorted(expected_paths):
+        raise RuntimeError("Orphan report branch has unexpected changed files")
+
+
+def _valid_denylist_addition(original: dict, proposed: dict, proposal: dict) -> bool:
+    if len(proposed["jokes"]) != len(original["jokes"]) + 1:
+        return False
+    added = proposed["jokes"][-1]
+    timestamp = added.get("first_reported_at")
+    reporter_did = proposal.get("reporter_did") or added.get("reporter_did")
+    expected_entry = {
+        "b64": proposal["b64"],
+        "source_post_uri": proposal.get("source_post_uri") or "",
+        "source_reply_uri": proposal.get("source_reply_uri") or "",
+        "reporter_did": reporter_did,
+        "reason": proposal.get("reason") or "user_reply_report",
+        "first_reported_at": timestamp,
+    }
+    return (
+        type(timestamp) is int
+        and timestamp > 0
+        and isinstance(reporter_did, str)
+        and bool(reporter_did)
+        and added == expected_entry
+        and proposed == {**original, "jokes": [*original["jokes"], expected_entry]}
+    )
 
 
 def _with_fresh_evidence(queued, fresh):

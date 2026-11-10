@@ -248,6 +248,17 @@ Report processing checkpoints confirmed deletions immediately and replays notifi
 
 Report proposals enter a durable moderation outbox in the same transaction that marks their notifications processed. Delivery retries that outbox even if the temporary proposals file is absent or empty. Pending entries retain the encoded joke, provider, source links and reason; reporter identifiers and reply text are not copied into the outbox. A matching same-repository review PR targeting `main`, whether open, closed or merged, is required before clearing the entry. Closed reviews are respected without reopening or recreating them. If a report branch exists without a PR, its changed files and content are checked against the original branch base before creating the missing review PR; unrelated or mismatched changes require investigation. API and delivery failures retain the proposal and fail the workflow visibly. Verified delivery receipts are saved even after another proposal fails, with a `main` branch check preventing an unapproved report branch from being pushed as state. Delivery receipts retain the latest 5,000 proposal keys; older reports still check PR history before creating anything.
 
+Jokebook-origin report reviews propose both removal from the bundled jokebook
+and a denylist instruction for the reported source post. Neither resource change
+is approved merely by opening or closing the PR: deletion uses only the approved
+resources on `main`. Once merged, the next report run deletes the source post
+through the normal checkpointed deletion path, and the denylist suppresses the
+same joke from every provider. Existing exclusions for other source posts are
+preserved. If one resource change is already present, the review proposes only
+the remaining work; if both are present but no matching review can be verified,
+delivery stops for investigation rather than inventing approval. Orphan recovery
+requires the exact remaining resource changes and rejects altered or extra files.
+
 Approved-post removal timing is prospective. A newly persisted valid report proposal
 starts one timer per source post; a successful approved deletion finishes it in
 the same locked transaction as its deletion receipt. Retries preserve the start

@@ -6,8 +6,9 @@ from unittest import mock
 
 import pytest
 
-from thejokebot import report_transactions, state
+from thejokebot import denylist, report_transactions, state
 from thejokebot.commands import create_report_prs as delivery
+from thejokebot.commands import post_joke, process_reports
 
 PROPOSAL = {
     "b64": "dGVzdA==",
@@ -126,12 +127,16 @@ def test_recovery_keeps_queue_until_verified_and_never_changes_main_content(
     assert len(creates) == 1
 
 
+@pytest.mark.parametrize("provider", ["jokeapi", "jokebot_jokebook"])
 @pytest.mark.parametrize("status", ["OPEN", "CLOSED", "MERGED"])
 def test_existing_review_is_terminal_even_when_branch_was_deleted(
-    repository, monkeypatch, status
+    repository, monkeypatch, status, provider
 ):
-    queue(repository, PROPOSAL)
-    branch = delivery.branch_name_for_b64(PROPOSAL["b64"], "denylist")
+    proposal = {**PROPOSAL, "source_provider": provider}
+    queue(repository, proposal)
+    branch = delivery.branch_name_for_b64(
+        proposal["b64"], delivery.proposal_target(proposal)
+    )
     _, creates = github(
         monkeypatch,
         initial=[
@@ -148,7 +153,7 @@ def test_existing_review_is_terminal_even_when_branch_was_deleted(
     assert creates == []
     assert report_transactions.pending_proposals(state.load_state()) == {}
     proof = state.load_state()["reports"]["proposal_deliveries"][
-        report_transactions.proposal_key(PROPOSAL)
+        report_transactions.proposal_key(proposal)
     ]
     assert proof == {"number": 7, "state": status}
 
@@ -217,7 +222,8 @@ def test_scan_queues_proposal_atomically_without_persisting_reporter_text(reposi
     assert "at://reply/one" in state.get_processed_notification_uris(latest)
     assert len(report_transactions.pending_proposals(latest)) == 1
     text = (repository / "state/moderation_state.json").read_text()
-    assert "private-reporter" not in text and "private-text" not in text
+    assert "private-reporter" not in text
+    assert "private-text" not in text
 
 
 def test_receipt_failure_keeps_proposal_until_next_verified_lookup(
@@ -236,10 +242,11 @@ def test_receipt_failure_keeps_proposal_until_next_verified_lookup(
     assert report_transactions.pending_proposals(state.load_state()) == {}
 
 
+@pytest.mark.parametrize("provider", ["jokeapi", "jokebot_jokebook"])
 def test_orphan_recovery_uses_original_base_when_main_has_advanced(
-    repository, monkeypatch
+    repository, monkeypatch, provider
 ):
-    queue(repository, PROPOSAL)
+    queue(repository, {**PROPOSAL, "source_provider": provider})
     _, creates = github(monkeypatch, "after-push")
     with pytest.raises(RuntimeError):
         delivery.main()
@@ -252,6 +259,199 @@ def test_orphan_recovery_uses_original_base_when_main_has_advanced(
     delivery.main()
     assert len(creates) == 1
     assert json.loads(delivery.DENYLIST_PATH.read_text()) == original
+
+
+def test_jokebook_review_includes_source_post_denylist_entry(repository, monkeypatch):
+    proposal = {**PROPOSAL, "source_provider": "jokebot_jokebook"}
+    queue(repository, proposal)
+    github(monkeypatch)
+    delivery.main()
+    branch = delivery.branch_name_for_b64(proposal["b64"], "jokebook")
+    paths = git(repository, "diff", "--name-only", f"main...origin/{branch}")
+    assert paths.splitlines() == [
+        "resources/jokebot_denylist.json",
+        "resources/jokebot_jokebook.json",
+    ]
+    proposed = json.loads(
+        git(repository, "show", f"origin/{branch}:resources/jokebot_denylist.json")
+    )
+    assert len(proposed["jokes"]) == 1
+    assert proposed["jokes"][0]["b64"] == proposal["b64"]
+    assert proposed["jokes"][0]["source_post_uri"] == proposal["source_post_uri"]
+    assert json.loads(delivery.DENYLIST_PATH.read_text())["jokes"] == []
+    assert json.loads(delivery.JOKEBOOK_PATH.read_text())["jokes"] == [proposal["b64"]]
+
+
+@pytest.mark.parametrize("missing_joke", [False, True])
+@pytest.mark.parametrize("existing_uri", [None, "at://post/one", "at://post/other"])
+def test_partial_jokebook_resources_preserve_remaining_review_work(
+    repository, monkeypatch, missing_joke, existing_uri
+):
+    proposal = {**PROPOSAL, "source_provider": "jokebot_jokebook"}
+    if missing_joke:
+        delivery.JOKEBOOK_PATH.write_text(json.dumps({"jokes": []}))
+    if existing_uri:
+        payload = denylist.load_denylist(delivery.DENYLIST_PATH)
+        denylist.add_denylist_entry(
+            payload,
+            b64=proposal["b64"],
+            source_post_uri=existing_uri,
+            source_reply_uri="at://earlier-report",
+            reporter_did="unknown",
+        )
+        denylist.save_denylist(payload, delivery.DENYLIST_PATH)
+    git(repository, "add", "resources")
+    git(repository, "commit", "--allow-empty", "-m", "Partial approved resources")
+    git(repository, "push", "origin", "main")
+    queue(repository, proposal)
+    _, creates = github(monkeypatch, "after-push")
+    with pytest.raises(RuntimeError, match="delivery attempt"):
+        delivery.main()
+    if missing_joke and existing_uri == proposal["source_post_uri"]:
+        assert creates == []
+        assert len(report_transactions.pending_proposals(state.load_state())) == 1
+        return
+    delivery.main()
+    assert len(creates) == 1
+    branch = creates[0]
+    expected_paths = []
+    if existing_uri != proposal["source_post_uri"]:
+        expected_paths.append("resources/jokebot_denylist.json")
+    if not missing_joke:
+        expected_paths.append("resources/jokebot_jokebook.json")
+    assert (
+        git(repository, "diff", "--name-only", f"main...origin/{branch}").splitlines()
+        == expected_paths
+    )
+    proposed = json.loads(
+        git(repository, "show", f"origin/{branch}:resources/jokebot_denylist.json")
+    )
+    matching = [
+        entry
+        for entry in proposed["jokes"]
+        if entry["source_post_uri"] == proposal["source_post_uri"]
+    ]
+    assert len(matching) == 1
+    assert len(proposed["jokes"]) == (2 if existing_uri == "at://post/other" else 1)
+
+
+@pytest.mark.parametrize(
+    "tampering",
+    [
+        "missing-denylist",
+        "missing-jokebook",
+        "wrong-uri",
+        "extra-file",
+        "extra-entry",
+        "changed-reason",
+    ],
+)
+def test_jokebook_orphan_rejects_incomplete_or_unrelated_changes(
+    repository, monkeypatch, tampering
+):
+    proposal = {**PROPOSAL, "source_provider": "jokebot_jokebook"}
+    queue(repository, proposal)
+    _, creates = github(monkeypatch, "after-push")
+    with pytest.raises(RuntimeError, match="delivery attempt"):
+        delivery.main()
+    branch = delivery.branch_name_for_b64(proposal["b64"], "jokebook")
+    git(repository, "checkout", "-b", "alter-orphan", f"origin/{branch}")
+    if tampering.startswith("missing-"):
+        resource = "denylist" if tampering == "missing-denylist" else "jokebook"
+        git(repository, "checkout", "main", "--", f"resources/jokebot_{resource}.json")
+    elif tampering == "extra-file":
+        (repository / "unexpected.txt").write_text("unrelated")
+    else:
+        payload = denylist.load_denylist(delivery.DENYLIST_PATH)
+        if tampering == "extra-entry":
+            payload["jokes"].append({"b64": "unrelated"})
+        elif tampering == "changed-reason":
+            payload["jokes"][0]["reason"] = "different reason"
+        else:
+            payload["jokes"][0]["source_post_uri"] = "at://wrong-post"
+        denylist.save_denylist(payload, delivery.DENYLIST_PATH)
+    git(repository, "add", "resources")
+    if tampering == "extra-file":
+        git(repository, "add", "unexpected.txt")
+    git(repository, "commit", "-m", "Alter orphan branch")
+    git(repository, "push", "origin", f"HEAD:{branch}")
+    git(repository, "checkout", "main")
+    with pytest.raises(RuntimeError, match="delivery attempt"):
+        delivery.main()
+    assert creates == []
+    assert len(report_transactions.pending_proposals(state.load_state())) == 1
+
+
+def test_approved_jokebook_resources_delete_once_and_suppress_live_joke(
+    repository, monkeypatch
+):
+    proposal = {**PROPOSAL, "source_provider": "jokebot_jokebook"}
+    report_transactions.scan(
+        state.load_state(), {proposal["source_reply_uri"]}, {}, [proposal]
+    )
+    github(monkeypatch)
+    delivery.main()
+    branch = delivery.branch_name_for_b64(proposal["b64"], "jokebook")
+    with mock.patch.object(
+        process_reports, "_delete_post", return_value=(True, False)
+    ) as delete:
+        assert (
+            process_reports.delete_approved_report_posts(
+                mock.Mock(),
+                denylist.load_denylist(delivery.DENYLIST_PATH),
+                state.load_state(),
+            )
+            == 0
+        )
+        delete.assert_not_called()
+        git(repository, "merge", "--ff-only", f"origin/{branch}")
+        approved = denylist.load_denylist(delivery.DENYLIST_PATH)
+        assert (
+            process_reports.delete_approved_report_posts(
+                mock.Mock(), approved, state.load_state()
+            )
+            == 1
+        )
+        assert (
+            process_reports.delete_approved_report_posts(
+                mock.Mock(), approved, state.load_state()
+            )
+            == 0
+        )
+        delete.assert_called_once()
+    latest = state.load_state()
+    assert state.get_deleted_post_uris(latest) == {proposal["source_post_uri"]}
+    assert len(latest["reports"]["resolution"]["events"]) == 1
+    assert json.loads(delivery.JOKEBOOK_PATH.read_text())["jokes"] == []
+    for provider in post_joke.joke_providers.PROVIDERS:
+        with (
+            mock.patch.dict(
+                post_joke.joke_providers.PROVIDERS, {provider: lambda: "test"}
+            ),
+            pytest.raises(post_joke.JokeSelectionExhausted),
+        ):
+            post_joke.pick_joke(denylist.get_denylisted_b64s(approved), provider)
+
+
+def test_jokebook_orphan_recovers_after_temporary_reporter_evidence_disappears(
+    repository, monkeypatch, tmp_path
+):
+    proposal = {
+        **PROPOSAL,
+        "source_provider": "jokebot_jokebook",
+        "reporter_did": "did:plc:reporter",
+        "reply_text": "private report text",
+    }
+    artifact = tmp_path / "proposals.json"
+    artifact.write_text(json.dumps({"proposals": [proposal]}))
+    monkeypatch.setenv("BLUESKY_REPORT_OUTPUT", str(artifact))
+    _, creates = github(monkeypatch, "after-push")
+    with pytest.raises(RuntimeError, match="delivery attempt"):
+        delivery.main()
+    artifact.unlink()
+    delivery.main()
+    assert len(creates) == 1
+    assert report_transactions.pending_proposals(state.load_state()) == {}
 
 
 def test_fresh_evidence_cannot_replace_queued_identity():
