@@ -1,11 +1,14 @@
 """Like recent replies and reposts of the bot's posts."""
 
+import hashlib
 import re
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 import atproto_client.exceptions
 import requests
+from atproto import models
+from atproto_client.exceptions import BadRequestError
 from colorama import Fore, Style
 
 from thejokebot import config as runtime_config
@@ -19,6 +22,92 @@ _PAGE_LIMIT = _CONFIG["like_page_limit"]
 _WINDOW_SECONDS = 24 * 60 * 60
 _REASONS = ("reply", "repost")
 _UTC_OFFSET = "+00:00"
+_LIKE_COLLECTION = "app.bsky.feed.like"
+_TID_ALPHABET = "234567abcdefghijklmnopqrstuvwxyz"
+
+
+def _like_rkey(uri):
+    digest = hashlib.sha256(uri.encode("utf-8")).digest()
+    value = int.from_bytes(digest[:8], "big") & ((1 << 63) - 1)
+    encoded = ["2"] * 13
+    for index in range(12, -1, -1):
+        value, digit = divmod(value, len(_TID_ALPHABET))
+        encoded[index] = _TID_ALPHABET[digit]
+    return "".join(encoded)
+
+
+def _like_record_at_key(client, repo_did, rkey):
+    try:
+        return retry_network_call(
+            lambda: client.com.atproto.repo.get_record(
+                {"repo": repo_did, "collection": _LIKE_COLLECTION, "rkey": rkey}
+            ),
+            description="reconciling interaction like",
+        )
+    except BadRequestError as exc:
+        if (
+            get_nested_value(exc, "response", "status_code") == 400
+            and get_nested_value(exc, "response", "content", "error")
+            == "RecordNotFound"
+        ):
+            return None
+        raise
+
+
+def _verify_like_record(receipt, repo_did, rkey, uri, cid):
+    expected_uri = f"at://{repo_did}/{_LIKE_COLLECTION}/{rkey}"
+    if get_nested_value(receipt, "uri") != expected_uri:
+        raise ValueError("Like record receipt does not match its saved key")
+    value = get_nested_value(receipt, "value")
+    if value is None:
+        raise ValueError("Like record receipt has no record value")
+    model_dump = getattr(value, "model_dump", None)
+    if callable(model_dump):
+        value = model_dump(by_alias=True, exclude_none=True)
+    if not isinstance(value, dict):
+        raise ValueError("Like record receipt has an unexpected value")
+    subject = value.get("subject")
+    if (
+        value.get("$type") != _LIKE_COLLECTION
+        or not isinstance(subject, dict)
+        or subject.get("uri") != uri
+        or subject.get("cid") != cid
+    ):
+        raise ValueError("Like record receipt does not match its saved subject")
+
+
+def _create_or_reconcile_like(client, uri, cid):
+    repo_did = client.me.did
+    rkey = _like_rkey(uri)
+    existing = _like_record_at_key(client, repo_did, rkey)
+    if existing is not None:
+        _verify_like_record(existing, repo_did, rkey, uri, cid)
+        return
+
+    expected_uri = f"at://{repo_did}/{_LIKE_COLLECTION}/{rkey}"
+    record = models.AppBskyFeedLike.Record(
+        subject=models.ComAtprotoRepoStrongRef.Main(uri=uri, cid=cid),
+        created_at=datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+    )
+    try:
+        receipt = client.app.bsky.feed.like.create(
+            repo=repo_did,
+            record=record,
+            rkey=rkey,
+        )
+    except Exception as create_error:
+        try:
+            existing = _like_record_at_key(client, repo_did, rkey)
+        except Exception:
+            raise create_error
+        if existing is None:
+            raise
+        _verify_like_record(existing, repo_did, rkey, uri, cid)
+    else:
+        if get_nested_value(receipt, "uri") != expected_uri or not get_nested_value(
+            receipt, "cid"
+        ):
+            raise ValueError("Like record receipt does not match its saved key")
 
 
 def _parse_notification_epoch(notification):
@@ -60,10 +149,7 @@ def _like_notification(client, reason, uri, cid, dry_run, summary):
         )
         return True
     try:
-        retry_network_call(
-            lambda: client.like(uri=uri, cid=cid),
-            description=f"liking {reason} {masked_uri}",
-        )
+        _create_or_reconcile_like(client, uri, cid)
         print(f"{Fore.GREEN}Liked {reason}: {masked_uri}{Style.RESET_ALL}")
         return True
     except (

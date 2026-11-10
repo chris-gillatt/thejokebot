@@ -1,19 +1,98 @@
 """Maintain the bot's configured Bluesky account blocks."""
 
+import hashlib
 import os
 import re
 import time
 from datetime import datetime, timezone
 
 from atproto import models
+from atproto_client.exceptions import BadRequestError
 
-from thejokebot.runtime import mask_sensitive, retry_network_call
+from thejokebot.runtime import get_nested_value, mask_sensitive, retry_network_call
 
 BLOCK_DIDS_ENV = "BLUESKY_BLOCK_DIDS"
+_BLOCK_COLLECTION = "app.bsky.graph.block"
+_TID_ALPHABET = "234567abcdefghijklmnopqrstuvwxyz"
 _DID_PATTERN = re.compile(
     r"^did:[a-z0-9]+:(?:[A-Za-z0-9._-]|%[0-9A-Fa-f]{2})+"
     r"(?::(?:[A-Za-z0-9._-]|%[0-9A-Fa-f]{2})+)*$"
 )
+
+
+def _block_rkey(repo_did: str, did: str) -> str:
+    digest = hashlib.sha256(f"{repo_did}:{did}".encode("utf-8")).digest()
+    value = int.from_bytes(digest[:8], "big") & ((1 << 63) - 1)
+    encoded = ["2"] * 13
+    for index in range(12, -1, -1):
+        value, digit = divmod(value, len(_TID_ALPHABET))
+        encoded[index] = _TID_ALPHABET[digit]
+    return "".join(encoded)
+
+
+def _block_record_at_key(client, repo_did: str, rkey: str):
+    try:
+        return retry_network_call(
+            lambda: client.com.atproto.repo.get_record(
+                {"repo": repo_did, "collection": _BLOCK_COLLECTION, "rkey": rkey}
+            ),
+            description="reconciling configured block",
+        )
+    except BadRequestError as exc:
+        if (
+            get_nested_value(exc, "response", "status_code") == 400
+            and get_nested_value(exc, "response", "content", "error")
+            == "RecordNotFound"
+        ):
+            return None
+        raise
+
+
+def _verify_block_record(receipt, repo_did: str, did: str, rkey: str) -> None:
+    expected_uri = f"at://{repo_did}/{_BLOCK_COLLECTION}/{rkey}"
+    if get_nested_value(receipt, "uri") != expected_uri:
+        raise ValueError("Block record receipt does not match its saved key")
+    value = get_nested_value(receipt, "value")
+    model_dump = getattr(value, "model_dump", None)
+    if callable(model_dump):
+        value = model_dump(by_alias=True, exclude_none=True)
+    if not isinstance(value, dict):
+        raise ValueError("Block record receipt has no record value")
+    if value.get("$type") != _BLOCK_COLLECTION or value.get("subject") != did:
+        raise ValueError("Block record receipt does not match its saved subject")
+
+
+def _verify_block_response(response, repo_did: str, rkey: str) -> None:
+    expected_uri = f"at://{repo_did}/{_BLOCK_COLLECTION}/{rkey}"
+    if get_nested_value(response, "uri") != expected_uri or not get_nested_value(
+        response, "cid"
+    ):
+        raise ValueError("Block create receipt does not match its saved key")
+
+
+def _create_or_reconcile_block(client, repo_did: str, did: str, record) -> None:
+    rkey = _block_rkey(repo_did, did)
+    existing = _block_record_at_key(client, repo_did, rkey)
+    if existing is not None:
+        _verify_block_record(existing, repo_did, did, rkey)
+        return
+
+    try:
+        response = client.app.bsky.graph.block.create(
+            repo=repo_did,
+            record=record,
+            rkey=rkey,
+        )
+    except Exception as create_error:
+        try:
+            existing = _block_record_at_key(client, repo_did, rkey)
+        except Exception:
+            raise create_error
+        if existing is None:
+            raise
+        _verify_block_record(existing, repo_did, did, rkey)
+    else:
+        _verify_block_response(response, repo_did, rkey)
 
 
 def parse_block_dids(raw_value: str) -> set[str]:
@@ -95,13 +174,7 @@ def reconcile_blocks(
                 .isoformat()
                 .replace("+00:00", "Z"),
             )
-            retry_network_call(
-                lambda current_record=record: client.app.bsky.graph.block.create(
-                    repo=account_did,
-                    record=current_record,
-                ),
-                description=f"blocking configured account {masked_did}",
-            )
+            _create_or_reconcile_block(client, account_did, did, record)
             print(f"Blocked configured account {masked_did}")
 
         if action_delay_seconds > 0 and index < len(missing_dids):

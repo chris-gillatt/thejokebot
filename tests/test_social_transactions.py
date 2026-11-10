@@ -11,9 +11,13 @@ from atproto import models
 from atproto_client.exceptions import BadRequestError
 from atproto_client.request import Response
 
-from thejokebot import follow_records, state_transactions, state
+from thejokebot import blocks, follow_records, state_transactions, state
 from thejokebot.commands import follow_back, follow_interactors, interaction_likes
-from thejokebot.commands import joke_requests, starter_pack_attribution
+from thejokebot.commands import (
+    joke_requests,
+    manage_starter_pack,
+    starter_pack_attribution,
+)
 
 
 @pytest.fixture
@@ -23,6 +27,289 @@ def social_file(tmp_path, monkeypatch):
     for module in (interaction_likes, follow_records):
         monkeypatch.setattr(module, "retry_network_call", lambda fn, description: fn())
     return tmp_path / "state" / "social_state.json"
+
+
+def _api_error(status: int, error: str) -> BadRequestError:
+    return BadRequestError(Response(False, status, {"error": error}, {}))
+
+
+def test_block_lookup_only_swallows_record_not_found(monkeypatch):
+    client = mock.Mock()
+    monkeypatch.setattr(blocks, "retry_network_call", lambda call, description: call())
+    client.com.atproto.repo.get_record.side_effect = _api_error(400, "RecordNotFound")
+
+    assert blocks._block_record_at_key(client, "did:plc:bot", "2abc") is None
+
+    client.com.atproto.repo.get_record.side_effect = _api_error(400, "InvalidRequest")
+    with pytest.raises(BadRequestError):
+        blocks._block_record_at_key(client, "did:plc:bot", "2abc")
+
+
+def test_block_receipt_validation_accepts_typed_values_and_rejects_mismatches():
+    repo_did = "did:plc:bot"
+    did = "did:plc:subject"
+    rkey = blocks._block_rkey(repo_did, did)
+    uri = f"at://{repo_did}/app.bsky.graph.block/{rkey}"
+    record = models.AppBskyGraphBlock.Record(
+        subject=did,
+        created_at="2026-11-10T00:00:00Z",
+    )
+    blocks._verify_block_record({"uri": uri, "value": record}, repo_did, did, rkey)
+    blocks._verify_block_response({"uri": uri, "cid": "block-cid"}, repo_did, rkey)
+
+    for receipt in (
+        {"uri": "at://did:plc:other/app.bsky.graph.block/2abc", "value": record},
+        {"uri": uri, "value": None},
+        {
+            "uri": uri,
+            "value": models.AppBskyGraphBlock.Record(
+                subject="did:plc:other",
+                created_at="2026-11-10T00:00:00Z",
+            ),
+        },
+    ):
+        with pytest.raises(ValueError):
+            blocks._verify_block_record(receipt, repo_did, did, rkey)
+
+    with pytest.raises(ValueError):
+        blocks._verify_block_response({"uri": uri, "cid": ""}, repo_did, rkey)
+
+
+def test_block_create_short_circuits_when_exact_record_exists(monkeypatch):
+    client = mock.Mock()
+    repo_did = "did:plc:bot"
+    did = "did:plc:subject"
+    rkey = blocks._block_rkey(repo_did, did)
+    existing = {
+        "uri": f"at://{repo_did}/app.bsky.graph.block/{rkey}",
+        "value": models.AppBskyGraphBlock.Record(
+            subject=did,
+            created_at="2026-11-10T00:00:00Z",
+        ),
+    }
+    monkeypatch.setattr(blocks, "_block_record_at_key", lambda *args: existing)
+
+    blocks._create_or_reconcile_block(client, repo_did, did, mock.Mock())
+
+    client.app.bsky.graph.block.create.assert_not_called()
+
+
+@pytest.mark.parametrize("lookup_result", [RuntimeError("read failed"), None])
+def test_block_create_failure_is_preserved_when_reconciliation_is_uncertain(
+    monkeypatch, lookup_result
+):
+    client = mock.Mock()
+    repo_did = "did:plc:bot"
+    did = "did:plc:subject"
+    create_error = TimeoutError("create response lost")
+    client.app.bsky.graph.block.create.side_effect = create_error
+    lookup_side_effect: list[Exception | None] = [None]
+    if isinstance(lookup_result, Exception):
+        lookup_side_effect.append(lookup_result)
+    else:
+        lookup_side_effect.append(None)
+    monkeypatch.setattr(
+        blocks,
+        "_block_record_at_key",
+        mock.Mock(side_effect=lookup_side_effect),
+    )
+
+    with pytest.raises(TimeoutError) as raised:
+        blocks._create_or_reconcile_block(client, repo_did, did, mock.Mock())
+
+    assert raised.value is create_error
+
+
+def test_like_lookup_only_swallows_record_not_found(monkeypatch):
+    client = mock.Mock()
+    monkeypatch.setattr(
+        interaction_likes, "retry_network_call", lambda call, description: call()
+    )
+    client.com.atproto.repo.get_record.side_effect = _api_error(400, "RecordNotFound")
+
+    assert interaction_likes._like_record_at_key(client, "did:plc:bot", "2abc") is None
+
+    client.com.atproto.repo.get_record.side_effect = _api_error(400, "InvalidRequest")
+    with pytest.raises(BadRequestError):
+        interaction_likes._like_record_at_key(client, "did:plc:bot", "2abc")
+
+
+def test_like_receipt_validation_accepts_typed_values_and_rejects_mismatches():
+    repo_did = "did:plc:bot"
+    uri = "at://did:plc:subject/app.bsky.feed.post/3abc"
+    cid = "post-cid"
+    rkey = interaction_likes._like_rkey(uri)
+    like_uri = f"at://{repo_did}/app.bsky.feed.like/{rkey}"
+    record = models.AppBskyFeedLike.Record(
+        subject=models.ComAtprotoRepoStrongRef.Main(uri=uri, cid=cid),
+        created_at="2026-11-10T00:00:00Z",
+    )
+    interaction_likes._verify_like_record(
+        {"uri": like_uri, "value": record}, repo_did, rkey, uri, cid
+    )
+
+    for receipt in (
+        {"uri": "at://did:plc:other/app.bsky.feed.like/2abc", "value": record},
+        {"uri": like_uri, "value": None},
+        {"uri": like_uri, "value": "invalid"},
+        {
+            "uri": like_uri,
+            "value": {
+                "$type": "app.bsky.feed.like",
+                "subject": {
+                    "uri": "at://did:plc:other/app.bsky.feed.post/3abc",
+                    "cid": cid,
+                },
+            },
+        },
+    ):
+        with pytest.raises(ValueError):
+            interaction_likes._verify_like_record(receipt, repo_did, rkey, uri, cid)
+
+    with pytest.raises(ValueError):
+        interaction_likes._verify_like_record(
+            {"uri": like_uri}, repo_did, rkey, uri, cid
+        )
+
+
+def test_like_create_short_circuits_when_exact_record_exists(monkeypatch):
+    client = mock.Mock()
+    repo_did = "did:plc:bot"
+    uri = "at://did:plc:subject/app.bsky.feed.post/3abc"
+    cid = "post-cid"
+    rkey = interaction_likes._like_rkey(uri)
+    existing = {
+        "uri": f"at://{repo_did}/app.bsky.feed.like/{rkey}",
+        "value": models.AppBskyFeedLike.Record(
+            subject=models.ComAtprotoRepoStrongRef.Main(uri=uri, cid=cid),
+            created_at="2026-11-10T00:00:00Z",
+        ),
+    }
+    client.me.did = repo_did
+    monkeypatch.setattr(
+        interaction_likes, "_like_record_at_key", lambda *args: existing
+    )
+
+    interaction_likes._create_or_reconcile_like(client, uri, cid)
+
+    client.app.bsky.feed.like.create.assert_not_called()
+
+
+@pytest.mark.parametrize("lookup_result", [RuntimeError("read failed"), None])
+def test_like_create_failure_is_preserved_when_reconciliation_is_uncertain(
+    monkeypatch, lookup_result
+):
+    client = mock.Mock()
+    client.me.did = "did:plc:bot"
+    create_error = TimeoutError("create response lost")
+    client.app.bsky.feed.like.create.side_effect = create_error
+    lookup_side_effect: list[Exception | None] = [None]
+    if isinstance(lookup_result, Exception):
+        lookup_side_effect.append(lookup_result)
+    else:
+        lookup_side_effect.append(None)
+    monkeypatch.setattr(
+        interaction_likes,
+        "_like_record_at_key",
+        mock.Mock(side_effect=lookup_side_effect),
+    )
+
+    with pytest.raises(TimeoutError) as raised:
+        interaction_likes._create_or_reconcile_like(
+            client, "at://did:plc:subject/app.bsky.feed.post/3abc", "post-cid"
+        )
+
+    assert raised.value is create_error
+
+
+def test_like_create_rejects_mismatched_receipt(monkeypatch):
+    client = mock.Mock()
+    repo_did = "did:plc:bot"
+    uri = "at://did:plc:subject/app.bsky.feed.post/3abc"
+    client.me.did = repo_did
+    monkeypatch.setattr(interaction_likes, "_like_record_at_key", lambda *args: None)
+    client.app.bsky.feed.like.create.return_value = SimpleNamespace(
+        uri="at://did:plc:other/app.bsky.feed.like/2abc", cid="like-cid"
+    )
+
+    with pytest.raises(ValueError):
+        interaction_likes._create_or_reconcile_like(client, uri, "post-cid")
+
+
+def test_starter_pack_record_not_found_and_other_api_errors_are_distinguished(
+    monkeypatch,
+):
+    client = mock.Mock()
+    monkeypatch.setattr(
+        manage_starter_pack, "retry_network_call", lambda call, description: call()
+    )
+    client.com.atproto.repo.get_record.side_effect = _api_error(400, "RecordNotFound")
+
+    assert (
+        manage_starter_pack._fetch_existing_created_at(client, "did:plc:bot", "2abc")
+        is None
+    )
+
+    client.com.atproto.repo.get_record.side_effect = _api_error(400, "InvalidRequest")
+    with pytest.raises(BadRequestError):
+        manage_starter_pack._fetch_existing_created_at(client, "did:plc:bot", "2abc")
+
+
+def test_starter_pack_upsert_validates_dict_receipt_and_configured_key():
+    client = mock.Mock()
+    client.me.did = "did:plc:bot"
+    source_list_uri = "at://did:plc:bot/app.bsky.graph.list/3abc"
+    target_rkey = "3mkrjdntf7x2l"
+    target_uri = f"at://did:plc:bot/app.bsky.graph.starterpack/{target_rkey}"
+    client.com.atproto.repo.put_record.return_value = {
+        "uri": target_uri,
+        "cid": "starter-pack-cid",
+    }
+    client.com.atproto.repo.get_record.return_value = {
+        "value": {"createdAt": "2026-01-01T00:00:00Z"}
+    }
+
+    assert (
+        manage_starter_pack.upsert_starter_pack_record(
+            client,
+            {
+                "name": "Pack",
+                "description": "Desc",
+                "record_key": target_rkey,
+                "starter_pack_uri": "",
+            },
+            source_list_uri,
+            dry_run=False,
+        )
+        == target_uri
+    )
+
+    assert client.com.atproto.repo.put_record.call_args.args[0]["rkey"] == target_rkey
+
+
+def test_starter_pack_upsert_rejects_mismatched_receipt():
+    client = mock.Mock()
+    client.me.did = "did:plc:bot"
+    client.com.atproto.repo.get_record.return_value = {
+        "value": {"createdAt": "2026-01-01T00:00:00Z"}
+    }
+    client.com.atproto.repo.put_record.return_value = {
+        "uri": "at://did:plc:other/app.bsky.graph.starterpack/3abc",
+        "cid": "starter-pack-cid",
+    }
+
+    with pytest.raises(ValueError):
+        manage_starter_pack.upsert_starter_pack_record(
+            client,
+            {
+                "name": "Pack",
+                "description": "Desc",
+                "record_key": "3mkrjdntf7x2l",
+                "starter_pack_uri": "",
+            },
+            "at://did:plc:bot/app.bsky.graph.list/3abc",
+            dry_run=False,
+        )
 
 
 def test_like_checkpoint_merges_newer_receipts_and_unrelated_fields(social_file):
@@ -74,6 +361,8 @@ def test_request_checkpoints_never_regress(social_file, upper, expected, boundar
 
 def test_likes_survive_later_page_failure_and_duplicate_run(social_file):
     client = mock.Mock()
+    client.me.did = "did:plc:bot"
+    client.com.atproto.repo.get_record.return_value = None
     notification = {
         "reason": "reply",
         "uri": "our-like",
@@ -86,9 +375,17 @@ def test_likes_survive_later_page_failure_and_duplicate_run(social_file):
         page,
         requests.RequestException("offline"),
     ]
-    client.like.side_effect = lambda **kwargs: state.update_state(
-        lambda latest: latest["follow_fellows"].update(feed_offset=10), domains="social"
-    )
+
+    def create_like(*, repo, record, rkey):
+        state.update_state(
+            lambda latest: latest["follow_fellows"].update(feed_offset=10),
+            domains="social",
+        )
+        return SimpleNamespace(
+            uri=f"at://{repo}/app.bsky.feed.like/{rkey}", cid="like-cid"
+        )
+
+    client.app.bsky.feed.like.create.side_effect = create_like
     assert interaction_likes.like_replies(client, state.load_state(), False, 0) == 1
     assert state.get_liked_reply_uris(state.load_state()) == {"our-like"}
     assert state.get_likes_last_checked_at(state.load_state()) is None
@@ -97,7 +394,7 @@ def test_likes_survive_later_page_failure_and_duplicate_run(social_file):
         SimpleNamespace(notifications=[notification], cursor=None)
     ]
     assert interaction_likes.like_replies(client, state.load_state(), False, 0) == 0
-    client.like.assert_called_once()
+    client.app.bsky.feed.like.create.assert_called_once()
     assert state.get_likes_last_checked_at(state.load_state()) is not None
 
 

@@ -1612,6 +1612,10 @@ class StarterPackManagerTests(unittest.TestCase):
     def test_upsert_uses_put_record_for_valid_starter_pack_uri(self):
         client = mock.Mock()
         client.me.did = "did:plc:test"
+        target_uri = "at://did:plc:test/app.bsky.graph.starterpack/3mkrjdntf7x2l"
+        client.com.atproto.repo.put_record.return_value = SimpleNamespace(
+            uri=target_uri, cid="starter-pack-cid"
+        )
 
         with mock.patch(
             "thejokebot.commands.manage_starter_pack.retry_network_call",
@@ -1633,16 +1637,26 @@ class StarterPackManagerTests(unittest.TestCase):
 
         self.assertEqual(
             result,
-            "at://did:plc:test/app.bsky.graph.starterpack/3mkrjdntf7x2l",
+            target_uri,
         )
         client.com.atproto.repo.put_record.assert_called_once()
         client.com.atproto.repo.create_record.assert_not_called()
 
-    def test_upsert_uses_create_record_when_no_target_configured(self):
+    def test_upsert_uses_deterministic_key_when_no_target_configured(self):
         client = mock.Mock()
         client.me.did = "did:plc:test"
-        client.com.atproto.repo.create_record.return_value = SimpleNamespace(
-            uri="at://did:plc:test/app.bsky.graph.starterpack/3xyzxyzxyzxyz"
+        source_list_uri = "at://did:plc:test/app.bsky.graph.list/3abc"
+        target_rkey = bluesky_manage_starter_pack._starter_pack_rkey(
+            client.me.did, source_list_uri
+        )
+        target_uri = f"at://did:plc:test/app.bsky.graph.starterpack/{target_rkey}"
+        missing_response = mock.Mock(status_code=400)
+        missing_response.content = mock.Mock(error="RecordNotFound")
+        client.com.atproto.repo.get_record.side_effect = (
+            atproto_client.exceptions.BadRequestError(missing_response)
+        )
+        client.com.atproto.repo.put_record.return_value = SimpleNamespace(
+            uri=target_uri, cid="starter-pack-cid"
         )
 
         with mock.patch(
@@ -1657,16 +1671,70 @@ class StarterPackManagerTests(unittest.TestCase):
                     "starter_pack_uri": "",
                     "record_key": "",
                 },
-                source_list_uri="at://did:plc:test/app.bsky.graph.list/3abc",
+                source_list_uri=source_list_uri,
                 dry_run=False,
             )
 
-        self.assertEqual(
-            result,
-            "at://did:plc:test/app.bsky.graph.starterpack/3xyzxyzxyzxyz",
+        self.assertEqual(result, target_uri)
+        put_data = client.com.atproto.repo.put_record.call_args.args[0]
+        self.assertEqual(put_data["rkey"], target_rkey)
+        self.assertEqual(put_data["collection"], "app.bsky.graph.starterpack")
+        client.com.atproto.repo.create_record.assert_not_called()
+
+    def test_upsert_retries_lost_response_at_same_deterministic_key(self):
+        client = mock.Mock()
+        client.me.did = "did:plc:test"
+        source_list_uri = "at://did:plc:test/app.bsky.graph.list/3abc"
+        target_rkey = bluesky_manage_starter_pack._starter_pack_rkey(
+            client.me.did, source_list_uri
         )
-        client.com.atproto.repo.create_record.assert_called_once()
-        client.com.atproto.repo.put_record.assert_not_called()
+        target_uri = f"at://did:plc:test/app.bsky.graph.starterpack/{target_rkey}"
+        missing_response = mock.Mock(status_code=400)
+        missing_response.content = mock.Mock(error="RecordNotFound")
+        client.com.atproto.repo.get_record.side_effect = (
+            atproto_client.exceptions.BadRequestError(missing_response)
+        )
+        accepted_record = {}
+
+        def put_record(data):
+            if not accepted_record:
+                accepted_record.update(data)
+                raise TimeoutError("response lost after server accepted the upsert")
+            return SimpleNamespace(uri=target_uri, cid="starter-pack-cid")
+
+        client.com.atproto.repo.put_record.side_effect = put_record
+
+        def retry_same_key(call, description):
+            if description != "upserting starter-pack record":
+                return call()
+            try:
+                return call()
+            except TimeoutError:
+                return call()
+
+        with mock.patch(
+            "thejokebot.commands.manage_starter_pack.retry_network_call",
+            side_effect=retry_same_key,
+        ):
+            result = bluesky_manage_starter_pack.upsert_starter_pack_record(
+                client,
+                {
+                    "name": "Pack",
+                    "description": "Desc",
+                    "starter_pack_uri": "",
+                    "record_key": "",
+                },
+                source_list_uri=source_list_uri,
+                dry_run=False,
+            )
+
+        self.assertEqual(result, target_uri)
+        self.assertEqual(client.com.atproto.repo.put_record.call_count, 2)
+        first_write = client.com.atproto.repo.put_record.call_args_list[0].args[0]
+        second_write = client.com.atproto.repo.put_record.call_args_list[1].args[0]
+        self.assertEqual(first_write, second_write)
+        self.assertEqual(first_write["rkey"], target_rkey)
+        client.com.atproto.repo.create_record.assert_not_called()
 
     def test_upsert_dry_run_returns_target_uri_without_writing(self):
         client = mock.Mock()
@@ -3410,8 +3478,16 @@ class LikeRepliesTests(unittest.TestCase):
     def test_live_like_is_persisted_and_delayed(self):
         state = bot_state._default_state()
         client = mock.Mock()
+        client.me.did = "did:plc:bot"
         client.app.bsky.notification.list_notifications.return_value = SimpleNamespace(
             notifications=[self._notification()], cursor=None
+        )
+        client.com.atproto.repo.get_record.return_value = None
+        like_rkey = interaction_likes._like_rkey(
+            "at://did:plc:abc/app.bsky.feed.post/reply"
+        )
+        client.app.bsky.feed.like.create.return_value = SimpleNamespace(
+            uri=f"at://did:plc:bot/app.bsky.feed.like/{like_rkey}", cid="like-cid"
         )
 
         with (
@@ -3428,9 +3504,48 @@ class LikeRepliesTests(unittest.TestCase):
             )
 
         self.assertEqual(count, 1)
-        client.like.assert_called_once()
+        client.app.bsky.feed.like.create.assert_called_once()
         sleep.assert_called_once_with(0.5)
         save_state.assert_not_called()
+
+    def test_live_like_reconciles_lost_create_response_without_retry(self):
+        state = bot_state._default_state()
+        client = mock.Mock()
+        notification = self._notification()
+        client.me.did = "did:plc:bot"
+        uri = notification.uri
+        client.app.bsky.notification.list_notifications.return_value = SimpleNamespace(
+            notifications=[notification], cursor=None
+        )
+        client.com.atproto.repo.get_record.return_value = None
+
+        def lose_response_after_create(*, repo, record, rkey):
+            client.com.atproto.repo.get_record.return_value = {
+                "uri": f"at://{repo}/app.bsky.feed.like/{rkey}",
+                "cid": "like-cid",
+                "value": record,
+            }
+            raise TimeoutError("response lost after server accepted the like")
+
+        client.app.bsky.feed.like.create.side_effect = lose_response_after_create
+
+        with (
+            mock.patch.object(
+                interaction_likes,
+                "retry_network_call",
+                side_effect=lambda fn, description: fn(),
+            ),
+            mock.patch("thejokebot.state.save_state"),
+        ):
+            count = interaction_likes.like_replies(client, state, False, 0)
+
+        self.assertEqual(count, 1)
+        client.app.bsky.feed.like.create.assert_called_once()
+        self.assertEqual(
+            client.app.bsky.feed.like.create.call_args.kwargs["rkey"],
+            interaction_likes._like_rkey(uri),
+        )
+        self.assertEqual(client.com.atproto.repo.get_record.call_count, 2)
 
     def test_failed_like_increments_failure_summary(self):
         state = bot_state._default_state()
@@ -4126,6 +4241,12 @@ class BlockReconciliationTests(unittest.TestCase):
     def test_reconcile_blocks_creates_only_missing_blocks(self):
         client = mock.Mock()
         client.me.did = "did:plc:bot"
+        expected_rkey = blocks._block_rkey("did:plc:bot", "did:plc:new")
+        client.app.bsky.graph.block.create.return_value = SimpleNamespace(
+            uri=f"at://did:plc:bot/app.bsky.graph.block/{expected_rkey}",
+            cid="block-cid",
+        )
+        client.com.atproto.repo.get_record.return_value = None
 
         with mock.patch(
             "thejokebot.blocks.fetch_blocked_dids",
@@ -4147,7 +4268,41 @@ class BlockReconciliationTests(unittest.TestCase):
         _, kwargs = client.app.bsky.graph.block.create.call_args
         self.assertEqual(kwargs["repo"], "did:plc:bot")
         self.assertEqual(kwargs["record"].subject, "did:plc:new")
+        self.assertEqual(kwargs["rkey"], expected_rkey)
         client.app.bsky.graph.block.delete.assert_not_called()
+
+    def test_reconcile_blocks_recovers_lost_create_response_without_retry(self):
+        client = mock.Mock()
+        client.me.did = "did:plc:bot"
+        client.com.atproto.repo.get_record.return_value = None
+
+        def lose_response_after_create(*, repo, record, rkey):
+            client.com.atproto.repo.get_record.return_value = {
+                "uri": f"at://{repo}/app.bsky.graph.block/{rkey}",
+                "cid": "block-cid",
+                "value": record.model_dump(by_alias=True, exclude_none=True),
+            }
+            raise TimeoutError("response lost after server accepted the block")
+
+        client.app.bsky.graph.block.create.side_effect = lose_response_after_create
+
+        with (
+            mock.patch("thejokebot.blocks.fetch_blocked_dids", return_value=set()),
+            mock.patch(
+                "thejokebot.blocks.retry_network_call",
+                side_effect=lambda fn, description: fn(),
+            ),
+        ):
+            changed = blocks.reconcile_blocks(
+                client,
+                {"did:plc:new"},
+                dry_run=False,
+                action_delay_seconds=0,
+            )
+
+        self.assertEqual(changed, 1)
+        client.app.bsky.graph.block.create.assert_called_once()
+        self.assertEqual(client.com.atproto.repo.get_record.call_count, 2)
 
     def test_reconcile_blocks_dry_run_does_not_create_block(self):
         client = mock.Mock()
@@ -6078,7 +6233,8 @@ class StarterPackFollowSyncTests(unittest.TestCase):
         def capture_put(payload):
             captured_record.update(payload.get("record", {}))
             return SimpleNamespace(
-                uri="at://did:plc:test/app.bsky.graph.starterpack/3mkrjdntf7x2l"
+                uri="at://did:plc:test/app.bsky.graph.starterpack/3mkrjdntf7x2l",
+                cid="starter-pack-cid",
             )
 
         client.com.atproto.repo.get_record.return_value = existing_record

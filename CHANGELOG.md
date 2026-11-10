@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-11-10
+
+- Prevented duplicate configured-block and interaction-like records after
+  ambiguous responses using deterministic TID keys and exact record
+  reconciliation. Changed starter-pack creation without a configured key to a
+  deterministic-key upsert, so retries reuse the same record and preserve its
+  original creation time. Added lost-response and stable-retry regression tests.
+
 ## 2026-11-09
 
 - Prevented duplicate follow-record creates after ambiguous responses across

@@ -2,6 +2,7 @@
 
 import argparse
 import datetime as dt
+import hashlib
 import json
 import re
 import time
@@ -13,6 +14,7 @@ from thejokebot import state as bot_state
 from thejokebot.follow_records import follow_account, reconcile_pending_follows
 from thejokebot.runtime import (
     get_runtime_controls,
+    get_nested_value,
     login_client,
     mask_sensitive,
     retry_network_call,
@@ -26,6 +28,7 @@ from thejokebot.paths import RESOURCES_DIR
 
 _CONFIG_PATH = RESOURCES_DIR / "jokebot_starter_pack.json"
 _STARTERPACK_COLLECTION = "app.bsky.graph.starterpack"
+_TID_ALPHABET = "234567abcdefghijklmnopqrstuvwxyz"
 _AT_URI_PATTERN = re.compile(r"^at://([^/]+)/([^/]+)/([^/]+)$")
 
 
@@ -115,6 +118,16 @@ def _build_starter_pack_record(
     }
 
 
+def _starter_pack_rkey(repo_did: str, source_list_uri: str) -> str:
+    digest = hashlib.sha256(f"{repo_did}\0{source_list_uri}".encode("utf-8")).digest()
+    value = int.from_bytes(digest[:8], "big") & ((1 << 63) - 1)
+    encoded = ["2"] * 13
+    for index in range(12, -1, -1):
+        value, digit = divmod(value, len(_TID_ALPHABET))
+        encoded[index] = _TID_ALPHABET[digit]
+    return "".join(encoded)
+
+
 def _looks_like_tid(value: str) -> bool:
     # Starter-pack record keys are TIDs. This conservative pattern is enough
     # to distinguish from friendly slug-like keys.
@@ -147,10 +160,10 @@ def _extract_record_value(record_response) -> dict:
     return value
 
 
-def _resolve_upsert_target(configured_uri, configured_rkey, repo_did):
-    """Determine the rkey, full AT URI, and whether to use put_record vs create_record.
+def _resolve_upsert_target(configured_uri, configured_rkey, repo_did, source_list_uri):
+    """Determine the stable rkey and full AT URI for the starter-pack record.
 
-    Returns ``(target_rkey, target_uri, use_put_record)``.
+    Returns ``(target_rkey, target_uri)``.
     Raises ``ValueError`` for invalid or mismatched URIs.
     """
     if configured_uri:
@@ -163,11 +176,13 @@ def _resolve_upsert_target(configured_uri, configured_rkey, repo_did):
             )
         if parsed_uri["collection"] != _STARTERPACK_COLLECTION:
             raise ValueError("starter_pack_uri must target app.bsky.graph.starterpack.")
-        return parsed_uri["rkey"], configured_uri, True
+        return parsed_uri["rkey"], configured_uri
     if _looks_like_tid(configured_rkey):
         target_uri = f"at://{repo_did}/{_STARTERPACK_COLLECTION}/{configured_rkey}"
-        return configured_rkey, target_uri, True
-    return "", "", False
+        return configured_rkey, target_uri
+    target_rkey = _starter_pack_rkey(repo_did, source_list_uri)
+    target_uri = f"at://{repo_did}/{_STARTERPACK_COLLECTION}/{target_rkey}"
+    return target_rkey, target_uri
 
 
 def _fetch_existing_created_at(client, repo_did, target_rkey):
@@ -189,6 +204,14 @@ def _fetch_existing_created_at(client, repo_did, target_rkey):
         )
         ex_value = _extract_record_value(existing)
         return ex_value.get("createdAt") or ex_value.get("created_at")
+    except atproto_client.exceptions.BadRequestError as exc:
+        if (
+            get_nested_value(exc, "response", "status_code") == 400
+            and get_nested_value(exc, "response", "content", "error")
+            == "RecordNotFound"
+        ):
+            return None
+        raise
     except ValueError, AttributeError:
         # Permanent format error — record is unreadable; fall back to current time.
         return None
@@ -202,66 +225,44 @@ def upsert_starter_pack_record(
     configured_uri = str(starter_cfg.get("starter_pack_uri") or "").strip()
     configured_rkey = str(starter_cfg.get("record_key") or "").strip()
 
-    target_rkey, target_uri, use_put_record = _resolve_upsert_target(
-        configured_uri, configured_rkey, repo_did
+    target_rkey, target_uri = _resolve_upsert_target(
+        configured_uri, configured_rkey, repo_did, source_list_uri
     )
 
     if dry_run:
-        if use_put_record:
-            print(
-                f"[DRY-RUN] Would update starter-pack record: {mask_sensitive(target_uri)}"
-            )
-            return target_uri
-        print("[DRY-RUN] Would create starter-pack record (server-generated TID rkey).")
-        return ""
+        print(
+            f"[DRY-RUN] Would upsert starter-pack record: {mask_sensitive(target_uri)}"
+        )
+        return target_uri
 
     # Preserve the original createdAt timestamp when updating an existing record.
-    existing_created_at = None
-    if use_put_record:
-        existing_created_at = _fetch_existing_created_at(client, repo_did, target_rkey)
+    existing_created_at = _fetch_existing_created_at(client, repo_did, target_rkey)
 
     record = _build_starter_pack_record(
         starter_cfg, source_list_uri, created_at=existing_created_at
     )
 
-    if use_put_record:
-        resp = retry_network_call(
-            lambda: client.com.atproto.repo.put_record(
-                {
-                    "repo": repo_did,
-                    "collection": _STARTERPACK_COLLECTION,
-                    "rkey": target_rkey,
-                    "record": record,
-                }
-            ),
-            description="upserting starter-pack record",
-        )
-    else:
-        resp = retry_network_call(
-            lambda: client.com.atproto.repo.create_record(
-                {
-                    "repo": repo_did,
-                    "collection": _STARTERPACK_COLLECTION,
-                    "record": record,
-                }
-            ),
-            description="creating starter-pack record",
-        )
+    resp = retry_network_call(
+        lambda: client.com.atproto.repo.put_record(
+            {
+                "repo": repo_did,
+                "collection": _STARTERPACK_COLLECTION,
+                "rkey": target_rkey,
+                "record": record,
+            }
+        ),
+        description="upserting starter-pack record",
+    )
 
     created_uri = getattr(resp, "uri", None)
     if created_uri is None and isinstance(resp, dict):
         created_uri = resp.get("uri")
-
-    if use_put_record:
-        return target_uri
-
-    if created_uri and not use_put_record:
-        print(
-            "Created starter-pack record with generated URI. "
-            "Persist this as starter_pack_uri in resources/jokebot_starter_pack.json "
-            "for deterministic future updates."
-        )
-    return created_uri or target_uri
+    cid = getattr(resp, "cid", None)
+    if cid is None and isinstance(resp, dict):
+        cid = resp.get("cid")
+    if created_uri != target_uri or not isinstance(cid, str) or not cid:
+        raise ValueError("Starter-pack upsert receipt does not match its saved key")
+    return target_uri
 
 
 def pull_starter_pack_record(client, starter_cfg: dict) -> dict[str, str]:
