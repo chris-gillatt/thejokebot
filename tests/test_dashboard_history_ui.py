@@ -339,6 +339,93 @@ def test_rapid_history_selection_cannot_publish_an_outdated_response():
     assert actual == {"selection": "90", "days": 90}
 
 
+def test_daily_series_indexes_once_per_dataset_and_keeps_periods_independent():
+    actual = _javascript(
+        "(() => {const scans={automation_runs:0,activity_runs:0};"
+        "for(const family of Object.keys(scans)){"
+        "const iterate=input[family][Symbol.iterator].bind(input[family]);"
+        "input[family][Symbol.iterator]=function*(){scans[family]++;yield* iterate();};}"
+        "const period={start:'2026-10-25',end:'2026-10-28',days:3};"
+        "const first=DashboardHistory.series(input,period);"
+        "const selected=DashboardHistory.series(input,{start:'2026-10-27',end:'2026-10-28',days:1});"
+        "const repeated=DashboardHistory.series(input,period);"
+        "const replacement=DashboardHistory.series({...input,activity_runs:[],automation_runs:[]},period);"
+        "return {scans,first,selected,repeated,replacement};})()",
+        {
+            "snapshots": [
+                {"collected_at": "2026-10-25T00:00:00Z", "followers": 5},
+                {"collected_at": "2026-10-25T23:59:59Z", "followers": 0},
+            ],
+            "daily_activity": [{"date": "2026-10-25", "joke_posts": 0}],
+            "operational_observations": [],
+            "automation_runs": [
+                {
+                    "id": 1,
+                    "attempt": attempt,
+                    "workflow": "bluesky_post_joke",
+                    "created_at": created,
+                    "status": "completed",
+                    "conclusion": conclusion,
+                }
+                for attempt, created, conclusion in (
+                    (1, "2026-10-25T23:59:59Z", "failure"),
+                    (2, "2026-10-27T00:00:00Z", "success"),
+                )
+            ],
+            "activity_runs": [
+                {
+                    "id": 1,
+                    "attempt": attempt,
+                    "workflow": "bluesky_post_joke",
+                    "created_at": created,
+                    "posted": posted,
+                    "fallthrough": not posted,
+                    "successful_source": "jokeapi" if posted else None,
+                    "provider_candidates": [
+                        {
+                            "name": "jokeapi",
+                            "fetches": 2,
+                            "candidates": 3,
+                            "selected": 1,
+                            "published": int(posted),
+                            "duplicate": 1,
+                            "too_long": 1,
+                            "network_error": 0,
+                            "provider_error": 0,
+                            "exhausted": 0,
+                        }
+                    ]
+                    if posted
+                    else [],
+                }
+                for attempt, created, posted in (
+                    (1, "2026-10-25T23:59:59Z", True),
+                    (2, "2026-10-27T00:00:00Z", False),
+                )
+            ],
+        },
+    )
+    assert actual["scans"] == {"automation_runs": 1, "activity_runs": 1}
+    assert actual["repeated"] == actual["first"]
+    assert actual["selected"] == [actual["first"][2]]
+    assert [day["failures"] for day in actual["first"]] == [1, None, 0]
+    assert [day["fallthroughRate"] for day in actual["first"]] == [0, None, 100]
+    assert [day["providerLeadingShare"] for day in actual["first"]] == [
+        100,
+        None,
+        None,
+    ]
+    assert [day["joke_posts"] for day in actual["first"]] == [0, None, None]
+    assert [day["followers"] for day in actual["first"]] == [0, None, None]
+    assert actual["first"][0]["providerConcentration"] == 1
+    assert actual["first"][0]["providerRejectionRates"] == pytest.approx(
+        {"jokeapi": 200 / 3}
+    )
+    assert actual["first"][1]["providerRejectionRates"] == {}
+    assert all(day["failures"] is None for day in actual["replacement"])
+    assert all(day["providerLeadingShare"] is None for day in actual["replacement"])
+
+
 def test_source_history_weights_observed_samples_and_does_not_invent_missing_days():
     actual = _javascript(
         "DashboardHistory.series(input,{start:'2026-10-25',end:'2026-10-27',days:2})",

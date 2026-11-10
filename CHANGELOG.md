@@ -2,6 +2,10 @@
 
 ## 2026-11-10
 
+- Indexed dashboard history by UTC day once per dataset, removing repeated
+  whole-history scans from daily charts while preserving gaps, retry outcomes
+  and provider calculations. Verified identical outputs and substantially
+  shorter series-building times on realistic multi-year browser fixtures.
 - Retained measured activity from failed production attempts using exact
   attempt log downloads and separate cache/history identities. Warn about
   uncertain mutation persistence with the run and attempt, preserving earlier

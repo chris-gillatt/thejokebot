@@ -101,6 +101,33 @@ transport.
 
 Do not claim source-specific post engagement, impressions, sentiment, demographics or individual audience outcomes without appropriate, privacy-safe source data. Keep separate the dashboard's observed history and historical estimates.
 
+### Dashboard History Series
+
+Measured on 10 November 2026 in the VS Code Chromium 150 browser on macOS.
+Whole-array daily filtering scaled to roughly one second for three years and
+2.8 seconds for five years. A weakly held UTC-day index now groups each dataset
+once for reuse across rendering consumers and periods. Treat merged datasets
+as read-only; fresh history creates a replacement dataset and therefore a fresh
+index. No dependency or history-schema change is required.
+
+| Selection | Days | Workflow/activity records | Previous median | Indexed first call | Indexed repeat median |
+|---|---:|---:|---:|---:|---:|
+| Current all-history preview | 281 | 3,825 / 2,083 | 23.5 ms | 8.6 ms | 3.6 ms |
+| One-year projection | 365 | 13,140 / 8,760 | 111.9 ms | 15.2 ms | 7.7 ms |
+| Three-year projection | 1,096 | 39,456 / 26,304 | 1,017.6 ms | 40.2 ms | 23.1 ms |
+| Five-year projection | 1,826 | 65,736 / 43,824 | 2,833.5 ms | 31.3 ms | 10.3 ms |
+
+Synthetic projections use 36 workflow attempts, 24 activity records, four
+account snapshots and four operational observations per day. Timings exclude
+fixture construction and network/chart rendering, with warm-up before median
+samples. All-history, custom multi-year and adversarial gap/retry/partial-data
+fixtures produced exactly equal outputs. Desktop (1440x1000) and mobile-width
+(390x844) measurements used the same desktop CPU, not real mobile hardware.
+After forced garbage collection, one five-year result plus its index retained
+about 1.04 MiB versus 0.21 MiB previously: approximately 0.83 MiB additional
+heap for the material latency reduction. These are local samples, not a
+cross-device performance guarantee.
+
 ### Python 3.14 annotation simplification
 
 Completed on 2 November 2026: removed the 30 legacy
@@ -136,7 +163,7 @@ the SDK's transitive backports remain dependency-owned.
 ## Dependency Exceptions
 
 Rechecked on 10 November 2026 against the Python package index, npm registry and
-current Dependabot results. No dependency upgrades were made as part of R04, R05 or R06;
+current Dependabot results. No dependency upgrades were made as part of R04, R05, R06 or S01;
 keep them in a separate resolver-validated batch so this behaviour fix remains
 focused and the lock stays coherent. Review the deferred versions before the
 next dependency batch or sooner if an applicable advisory appears.

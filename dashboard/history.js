@@ -1,6 +1,7 @@
 const DashboardHistory = (() => {
   const DAY = 24 * 60 * 60 * 1000;
   const dateString = (value) => new Date(value).toISOString().slice(0, 10);
+  const seriesIndexes = new WeakMap();
 
   function utcDate(value) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new Error("Enter a valid UTC date.");
@@ -281,25 +282,42 @@ const DashboardHistory = (() => {
     );
   }
 
-  function series(data, period) {
-    const activity = new Map(data.daily_activity.map((item) => [item.date, item]));
-    const accounts = new Map();
-    const operational = new Map();
-    for (const item of data.snapshots) accounts.set(item.collected_at.slice(0, 10), item);
-    for (const item of data.operational_observations) {
-      operational.set(item.collected_at.slice(0, 10), item);
+  function runsByDay(runs) {
+    const groups = new Map();
+    for (const run of runs) {
+      const day = run.created_at?.slice(0, 10);
+      if (!groups.has(day)) groups.set(day, []);
+      groups.get(day).push(run);
     }
+    return groups;
+  }
+
+  function seriesIndex(data) {
+    if (!seriesIndexes.has(data)) {
+      seriesIndexes.set(data, {
+        activity: new Map(data.daily_activity.map((item) => [item.date, item])),
+        accounts: new Map(data.snapshots.map((item) => [item.collected_at.slice(0, 10), item])),
+        operational: new Map(data.operational_observations.map((item) => [item.collected_at.slice(0, 10), item])),
+        automationRuns: runsByDay(data.automation_runs),
+        activityRuns: runsByDay(data.activity_runs),
+      });
+    }
+    return seriesIndexes.get(data);
+  }
+
+  function series(data, period) {
+    const index = seriesIndex(data);
     return dates(period).map((date) => {
-      const daily = activity.get(date);
-      const account = accounts.get(date);
-      const runs = data.automation_runs.filter((run) =>
-        run.created_at?.slice(0, 10) === date && run.status === "completed",
+      const daily = index.activity.get(date);
+      const account = index.accounts.get(date);
+      const activityRuns = index.activityRuns.get(date) || [];
+      const runs = (index.automationRuns.get(date) || []).filter((run) =>
+        run.status === "completed",
       );
-      const posting = data.activity_runs.filter((run) =>
-        run.created_at?.slice(0, 10) === date &&
+      const posting = activityRuns.filter((run) =>
         run.workflow === "bluesky_post_joke" && typeof run.fallthrough === "boolean",
       );
-      const supply = providerSupply(data, { start: date, end: dateString(utcDate(date) + DAY), days: 1 });
+      const supply = providerSupply({ activity_runs: activityRuns }, { start: date, end: dateString(utcDate(date) + DAY), days: 1 });
       return {
         date,
         followers: account?.followers ?? null,
@@ -313,12 +331,12 @@ const DashboardHistory = (() => {
         fallthroughRate: posting.length
           ? posting.filter((run) => run.fallthrough).length * 100 / posting.length
           : null,
-        deliveryRate: operational.get(date)?.posting_delivery?.windows?.["7"]?.delivery_rate ?? null,
+        deliveryRate: index.operational.get(date)?.posting_delivery?.windows?.["7"]?.delivery_rate ?? null,
         providerLeadingShare: supply.leadingShare,
         providerConcentration: supply.concentration,
         providerRejectionRates: Object.fromEntries(supply.providers.map((item) => [item.name, item.rejectionRate])),
         sourceOutcomes: Object.fromEntries(["followback", "interaction", "discovery"].map((source) =>
-          [source, sourceOutcome(operational.get(date), source)],
+          [source, sourceOutcome(index.operational.get(date), source)],
         )),
       };
     });
