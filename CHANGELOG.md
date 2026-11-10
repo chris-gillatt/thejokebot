@@ -2,10 +2,6 @@
 
 ## 2.1.2 - 2026-11-10
 
-- Restored versioned headings for every dated milestone after `1.0.0`, retaining
-  historical dates and distinguishing milestone labels from package releases.
-  Updated agent guidance to continue the sequence, classify breaking changes
-  and reuse existing same-day sections rather than returning to date-only headings.
 - Indexed dashboard history by UTC day once per dataset, removing repeated
   whole-history scans from daily charts while preserving gaps, retry outcomes
   and provider calculations. Verified identical outputs and substantially
