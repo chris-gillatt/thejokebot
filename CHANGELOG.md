@@ -1,10 +1,5 @@
 # Changelog
 
-Version headings are semantic-version-style changelog milestones, not claims of
-published releases or Git tags. The `1.0.0` entry records the verified package
-version; the pre-1.0.0 and subsequent milestone labels are retrospective and do
-not change package metadata.
-
 ## 2.1.2 - 2026-11-10
 
 - Restored versioned headings for every dated milestone after `1.0.0`, retaining
