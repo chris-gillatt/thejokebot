@@ -9,7 +9,7 @@ from thejokebot.runtime import get_nested_value, retry_network_call
 
 _COLLECTIONS = ("app.bsky.feed.like", "app.bsky.feed.repost")
 _CONTENT_URI = re.compile(
-    r"at://(did:[a-z0-9]+:[^/\s?#]+)/app\.bsky\.feed\.(?:post|repost)/[^/\s?#]+"
+    r"at://(did:[a-z0-9]+:[^/\s?#]+)/app\.bsky\.feed\.(post|repost|generator)/[^/\s?#]+"
 )
 _MAX_PAGES = 100
 _MAX_RUNTIME_SECONDS = 120
@@ -37,7 +37,7 @@ def _check_deadline(deadline: float) -> None:
         raise IncompletePaginationError("Content-creator scan runtime limit reached")
 
 
-def _record_creator(record, repo_did: str, collection: str) -> str:
+def _record_creator(record, repo_did: str, collection: str) -> str | None:
     uri = get_nested_value(record, "uri")
     prefix = f"at://{repo_did}/{collection}/"
     if (
@@ -58,8 +58,13 @@ def _record_creator(record, repo_did: str, collection: str) -> str:
     match = (
         _CONTENT_URI.fullmatch(subject_uri) if isinstance(subject_uri, str) else None
     )
-    if match is None:
+    if match is None or (
+        match.group(2) == "generator" and collection != "app.bsky.feed.like"
+    ):
         raise ValueError("Content interaction has no canonical content subject URI")
+    if match.group(2) == "generator":
+        print("Skipped custom-feed like during content-creator scan.")
+        return None
     return match.group(1)
 
 
@@ -87,7 +92,7 @@ def _scan_collection(
             raise IncompletePaginationError("Unexpected content interaction page")
         for record in records:
             did = _record_creator(record, repo_did, collection)
-            if did != repo_did:
+            if did is not None and did != repo_did:
                 dids.add(did)
         cursor = get_nested_value(response, "cursor")
         if cursor is None or cursor == "":

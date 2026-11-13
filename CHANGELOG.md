@@ -2,6 +2,12 @@
 
 ## 2.2.0 - 2026-11-13
 
+- Corrected creator-follow review findings from #147: retain each confirmed
+  follow in aggregate telemetry if a later action fails, without swallowing
+  checkpoint failures; skip recently followed creators while graph reads lag;
+  honour list-based account blocks in SDK and raw-JSON profiles; and skip valid
+  custom-feed likes without weakening malformed-record checks. Added focused
+  stale-read, block-list, mixed-subject and partial-success regressions.
 - Follow creators whose content TJB likes or reposts, including manual actions
   and existing records, with a separate cap of 10 new creator follows per
   two-hour social run. Retain permanent unfollow protections beyond the

@@ -7,10 +7,11 @@ from unittest import mock
 import pytest
 import requests
 from atproto import models
-from atproto_client.exceptions import BadRequestError
+from atproto_client.exceptions import AtProtocolError, BadRequestError
 from atproto_client.request import Response
 
 from thejokebot import config, content_creators, follow_records, state
+from thejokebot.state_transactions import CheckpointError
 from thejokebot.commands import (
     dashboard_workflows,
     follow_interactors,
@@ -151,6 +152,47 @@ def test_mismatched_records_fail_closed(account, change):
     assert social_file.read_bytes() == before
 
 
+def test_mixed_post_and_custom_feed_likes_complete_without_following_feed_creators(
+    account, capsys
+):
+    client, _ = account
+    feed_like = interaction(
+        "did:plc:feed", key="feed", subject_collection="app.bsky.feed.generator"
+    )
+    typed_feed_like = SimpleNamespace(
+        uri=feed_like["uri"],
+        value=models.AppBskyFeedLike.Record.model_validate(feed_like["value"]),
+    )
+    client.com.atproto.repo.list_records.side_effect = [
+        {
+            "records": [
+                interaction("did:plc:post"),
+                feed_like,
+                typed_feed_like,
+                interaction("did:plc:reposter", subject_collection=REPOST),
+            ]
+        },
+        {"records": [interaction("did:plc:shared", REPOST)]},
+    ]
+    expected = {"did:plc:post", "did:plc:reposter", "did:plc:shared"}
+    assert (
+        content_creators.sync_protections(client, state.load_state(), False) == expected
+    )
+    assert content_creators.get_protected_dids(state.load_state()) == expected
+    assert "custom-feed" in capsys.readouterr().out
+
+
+def test_malformed_custom_feed_subject_still_fails_closed(account):
+    client, social_file = account
+    before = social_file.read_bytes()
+    malformed = interaction("did:plc:feed")
+    malformed["value"]["subject"]["uri"] = "at://did:plc:feed/app.bsky.feed.generator"
+    client.com.atproto.repo.list_records.return_value = {"records": [malformed]}
+    with pytest.raises(ValueError, match="subject URI"):
+        content_creators.sync_protections(client, state.load_state(), False)
+    assert social_file.read_bytes() == before
+
+
 @pytest.mark.parametrize("cursor", [1, "   "])
 def test_invalid_cursors_cannot_authorise_unfollows(account, cursor):
     client, _ = account
@@ -285,6 +327,139 @@ def test_follow_filter_respects_existing_follows_blocks_and_explicit_exclusions(
     assert set(client.get_profiles.call_args.args[0]) == {
         f"did:plc:{name}" for name in authors - {"existing", "manual"}
     }
+
+
+@pytest.mark.parametrize("response_format", ["sdk", "json"])
+def test_list_blocked_creators_are_never_followed(
+    account, monkeypatch, response_format
+):
+    client, _ = account
+    did = "did:plc:blocked"
+    block_list = {
+        "cid": "list-cid",
+        "name": "Blocked creators",
+        "purpose": "app.bsky.graph.defs#modlist",
+        "uri": "at://did:plc:owner/app.bsky.graph.list/list",
+    }
+    if response_format == "sdk":
+        profile = models.AppBskyActorDefs.ProfileViewDetailed(
+            did=did,
+            handle="creator.example",
+            viewer=models.AppBskyActorDefs.ViewerState(
+                blocking_by_list=models.AppBskyGraphDefs.ListViewBasic.model_validate(
+                    block_list
+                )
+            ),
+        )
+    else:
+        profile = {"did": did, "viewer": {"blockingByList": block_list}}
+    client.get_profiles.side_effect = None
+    client.get_profiles.return_value = {"profiles": [profile]}
+    client.com.atproto.repo.list_records.side_effect = [
+        {"records": [interaction(did)]},
+        {"records": []},
+    ]
+    follow = mock.Mock(return_value=True)
+    monkeypatch.setattr(follow_interactors, "follow_account", follow)
+    assert (
+        follow_interactors.follow_content_creators(
+            client, state.load_state(), False, 0, {}
+        )
+        == 0
+    )
+    client.app.bsky.graph.follow.create.assert_not_called()
+    follow.assert_not_called()
+    assert state.load_state()["follow_tracking"]["pending_follows"] == {}
+
+
+def test_recent_incoming_follow_is_not_recreated_when_both_graph_reads_lag(account):
+    client, _ = account
+    did = "did:plc:recent"
+    working = state.load_state()
+    follow_interactors._checkpoint_follow(working, did)
+    intent = follow_records._build_intent(BOT, did, "interaction")
+    intent["record"]["createdAt"] = "2026-11-12T00:00:00Z"
+    client.com.atproto.repo.get_record.return_value = {
+        "uri": intent["uri"],
+        "cid": "follow-cid",
+        "value": intent["record"],
+    }
+    client.com.atproto.repo.list_records.side_effect = [
+        {"records": [interaction(did)]},
+        {"records": []},
+    ]
+    assert (
+        follow_interactors.follow_content_creators(client, working, False, 0, {}) == 0
+    )
+    client.get_profiles.assert_not_called()
+    client.com.atproto.repo.get_record.assert_not_called()
+    client.app.bsky.graph.follow.create.assert_not_called()
+    assert state.load_state()["follow_tracking"]["pending_follows"] == {}
+
+
+@pytest.mark.parametrize(
+    "error", [ValueError("receipt mismatch"), AtProtocolError("rejected")]
+)
+def test_partial_creator_success_reaches_failed_run_dashboard_totals(
+    account, monkeypatch, capsys, error
+):
+    client, _ = account
+    client.com.atproto.repo.list_records.side_effect = [
+        {"records": [interaction(f"did:plc:author{i}", key=str(i)) for i in range(3)]},
+        {"records": []},
+    ]
+    monkeypatch.setattr(follows_and_likes, "login_client", lambda: (client, "bot"))
+    monkeypatch.setattr(
+        follows_and_likes,
+        "get_runtime_controls",
+        lambda: {"dry_run": False, "action_delay_seconds": 0},
+    )
+    monkeypatch.setattr(
+        follows_and_likes.blocks,
+        "reconcile_configured_blocks",
+        mock.Mock(return_value=0),
+    )
+
+    def follow_back(_client, _dry_run, _delay, summary, _state):
+        summary["follow_back_added"] = 2
+
+    monkeypatch.setattr(follows_and_likes, "follow_back", follow_back)
+    for phase in (
+        "follow_interactors",
+        "track_starter_pack_follows",
+        "reply_to_joke_requests",
+        "like_replies",
+    ):
+        monkeypatch.setattr(follows_and_likes, phase, mock.Mock(return_value=0))
+    follow = mock.Mock(side_effect=[True, error])
+    monkeypatch.setattr(follow_interactors, "follow_account", follow)
+    with pytest.raises(RuntimeError, match="1 failed action"):
+        follows_and_likes.main()
+    counts = dashboard_workflows._workflow_activity_counts(
+        "bluesky_follows_and_likes", capsys.readouterr().out
+    )
+    assert counts is not None
+    assert counts["interaction_added"] == 1
+    assert counts["follows"] == 3
+    assert counts["failed"] == 1
+    assert follow.call_count == 2
+
+
+def test_partial_success_does_not_swallow_checkpoint_failure(account, monkeypatch):
+    client, _ = account
+    client.com.atproto.repo.list_records.side_effect = [
+        {"records": [interaction(f"did:plc:author{i}", key=str(i)) for i in range(3)]},
+        {"records": []},
+    ]
+    follow = mock.Mock(side_effect=[True, CheckpointError("disk unavailable")])
+    monkeypatch.setattr(follow_interactors, "follow_account", follow)
+    summary = {"interaction_added": 2}
+    with pytest.raises(CheckpointError, match="disk unavailable"):
+        follow_interactors.follow_content_creators(
+            client, state.load_state(), False, 0, summary
+        )
+    assert summary["interaction_added"] == 3
+    assert follow.call_count == 2
 
 
 @pytest.mark.parametrize("profiles", [None, [{"did": "did:plc:wrong"}]])

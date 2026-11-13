@@ -104,7 +104,13 @@ def _checkpoint_follow(state, did):
     state_transactions.apply(state, record)
 
 
-def _follow_did_list(client, state, to_follow, dry_run, action_delay_seconds):
+def _follow_did_list(
+    client, state, to_follow, dry_run, action_delay_seconds, summary: dict | None = None
+):
+    if summary is None:
+        summary = {}
+    summary.setdefault("interaction_added", 0)
+    summary.setdefault("failed", 0)
     followed_count = 0
     for index, did in enumerate(to_follow, start=1):
         masked_did = mask_sensitive(did)
@@ -117,12 +123,10 @@ def _follow_did_list(client, state, to_follow, dry_run, action_delay_seconds):
                 f"{Fore.YELLOW}[DRY-RUN] Would follow interactor "
                 f"{masked_did}{Style.RESET_ALL}"
             )
-            followed_count += 1
         else:
             try:
                 follow_account(client, state, did, "interaction")
                 print(f"{Fore.GREEN}Followed interactor {masked_did}{Style.RESET_ALL}")
-                followed_count += 1
             except (
                 requests.RequestException,
                 TimeoutError,
@@ -132,8 +136,11 @@ def _follow_did_list(client, state, to_follow, dry_run, action_delay_seconds):
                     f"{Fore.RED}Failed to follow interactor {masked_did}: "
                     f"{exc}{Style.RESET_ALL}"
                 )
+                summary["failed"] = summary.get("failed", 0) + 1
                 continue
 
+        followed_count += 1
+        summary["interaction_added"] = summary.get("interaction_added", 0) + 1
         if action_delay_seconds > 0 and index < len(to_follow):
             time.sleep(action_delay_seconds)
 
@@ -190,10 +197,8 @@ def follow_interactors(
     )
 
     followed_count = _follow_did_list(
-        client, state, to_follow, dry_run, action_delay_seconds
+        client, state, to_follow, dry_run, action_delay_seconds, summary
     )
-    summary["interaction_added"] = followed_count
-    summary["failed"] = summary.get("failed", 0) + len(to_follow) - followed_count
 
     print(f"{Fore.GREEN}Interaction-follow completed.{Style.RESET_ALL}")
     return followed_count
@@ -222,6 +227,8 @@ def _available_creators(client, dids: set[str]) -> set[str]:
                 get_nested_value(viewer, field)
                 for field in (
                     "blocking",
+                    "blocking_by_list",
+                    "blockingByList",
                     "blocked_by",
                     "blockedBy",
                     "muted",
@@ -259,7 +266,12 @@ def follow_content_creators(
         for entry in state.get("unfollow_history", {}).get("entries", [])
         if entry.get("reason") != "not_following_back"
     }
-    candidates = creators - {profile.did for profile in following} - excluded
+    candidates = (
+        creators
+        - {profile.did for profile in following}
+        - bot_state.get_follow_grace_dids(state)
+        - excluded
+    )
     eligible = _available_creators(client, candidates)
     selected = sorted(eligible)[: _CONFIG["content_follow_max_actions"]]
     summary["interaction_candidates"] = summary.get("interaction_candidates", 0) + len(
@@ -268,9 +280,9 @@ def follow_content_creators(
     summary["interaction_eligible"] = summary.get("interaction_eligible", 0) + len(
         selected
     )
-    followed = _follow_did_list(client, state, selected, dry_run, action_delay_seconds)
-    summary["interaction_added"] = summary.get("interaction_added", 0) + followed
-    summary["failed"] = summary.get("failed", 0) + len(selected) - followed
+    followed = _follow_did_list(
+        client, state, selected, dry_run, action_delay_seconds, summary
+    )
     print(
         f"{Fore.GREEN}Content-creator follows: candidates={len(candidates)}, "
         f"selected={len(selected)}, followed={followed}.{Style.RESET_ALL}"

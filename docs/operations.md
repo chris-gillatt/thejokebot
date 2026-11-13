@@ -252,18 +252,25 @@ existing records on the first scan. Creator DIDs are retained permanently in
 90-day follow grace period. Unliking/removing a repost later does not remove a
 recorded protection. Historical interactions deleted before the first scan
 cannot be reconstructed. Quote posts are not repost records and are not
-included in this feature.
+included in this feature. Valid custom-feed likes are logged and skipped:
+liking a feed does not follow or protect its creator. Malformed subject URIs
+still stop the scan.
 
 After reply liking, each two-hour social run follows at most
 `follows_and_likes.content_follow_max_actions` creators (currently **10**).
 The cap applies to this additional phase only; follow-back and incoming
 interaction processing retain their existing behaviour. Already-followed,
-blocked, muted and unavailable accounts are skipped. Explicit unfollow-history
+grace-protected, directly/list-blocked, muted and unavailable accounts are
+skipped. Follow grace also prevents another create while following-list and
+profile reads lag behind a confirmed follow. Explicit unfollow-history
 exclusions (including `manual_block`) remain authoritative; an earlier automatic
 `not_following_back` unfollow does not prevent a creator follow. New follows use
 the existing deterministic record intents, action pacing, grace and checkpoints.
 Creator follows contribute to the existing interaction-led aggregate counters
 and cohorts; no creator identifiers are added to public dashboard metrics.
+Each confirmed follow updates the run's count immediately, so a later rejected
+action cannot erase earlier completed actions from a failed run's summary.
+Checkpoint persistence failures still propagate and stop the run.
 
 Each collection is bounded to 100 pages of 100 records, with a shared
 120-second scan budget checked before each request/retry and after each

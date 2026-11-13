@@ -26,7 +26,7 @@ This is the operating brief for open work and lasting decisions. See the [README
 | Session-cache custody | Cached sessions must stay encrypted with `BLUESKY_SESSION_CACHE_KEY`; rotating it requires a fresh credential login. Restored sessions are returned only after their authenticated DID matches the configured account; mismatches discard the cache, and unresolved transient identity reads block account actions. |
 | Bluesky graph visibility | Profile counters may include hidden accounts that cannot be hydrated through follower/following queries; do not infer actionable accounts from totals. |
 | Ambiguous social creates | Follow and block records use stable TID keys and exact reconciliation; interaction likes use stable record keys; starter-pack upserts use a deterministic key per account and source list. Never treat a retry with a new key as confirmation of an earlier write. |
-| Content-creator protection | Completely read the bot's own likes and reposts before unfollow candidate selection. Retain creator DIDs permanently, independently of follow grace; incomplete reads must stop unfollows. Follow existing and new creators gradually, at most 10 per social run, without overriding explicit exclusions or account blocks. |
+| Content-creator protection | Completely read the bot's own likes and reposts before unfollow candidate selection, explicitly skipping valid feed likes. Retain creator DIDs permanently; incomplete reads must stop unfollows. Follow at most 10 creators per social run, respecting grace during graph lag, explicit exclusions and direct/list blocks. Count each confirmed follow before another action can fail; checkpoint failures must still stop processing. |
 
 ## Deferred Work
 
