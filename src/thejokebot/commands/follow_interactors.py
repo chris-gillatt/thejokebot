@@ -8,6 +8,7 @@ import requests
 from colorama import Fore, Style
 
 from thejokebot import config as runtime_config
+from thejokebot import content_creators
 from thejokebot import state as bot_state
 from thejokebot import state_transactions
 from thejokebot.follow_records import follow_account, reconcile_pending_follows
@@ -196,3 +197,82 @@ def follow_interactors(
 
     print(f"{Fore.GREEN}Interaction-follow completed.{Style.RESET_ALL}")
     return followed_count
+
+
+def _available_creators(client, dids: set[str]) -> set[str]:
+    available: set[str] = set()
+    ordered = sorted(dids)
+    for offset in range(0, len(ordered), 25):
+        actors = ordered[offset : offset + 25]
+        response = retry_network_call(
+            lambda current=actors: client.get_profiles(current),
+            description="checking content-creator profiles",
+        )
+        profiles = get_nested_value(response, "profiles")
+        if not isinstance(profiles, list):
+            raise ValueError("Unexpected content-creator profile response")
+        seen: set[str] = set()
+        for profile in profiles:
+            did = get_nested_value(profile, "did")
+            if did not in actors or did in seen:
+                raise ValueError("Content-creator profile identity mismatch")
+            seen.add(did)
+            viewer = get_nested_value(profile, "viewer")
+            if not any(
+                get_nested_value(viewer, field)
+                for field in (
+                    "blocking",
+                    "blocked_by",
+                    "blockedBy",
+                    "muted",
+                    "following",
+                )
+            ):
+                available.add(did)
+        if set(actors) - seen:
+            print(
+                f"{Fore.YELLOW}Skipped {len(set(actors) - seen)} unavailable "
+                f"content-creator profile(s).{Style.RESET_ALL}"
+            )
+    return available
+
+
+def follow_content_creators(
+    client,
+    state: dict,
+    dry_run: bool,
+    action_delay_seconds: float,
+    summary: dict,
+) -> int:
+    """Follow at most the configured number of liked/reposted content creators."""
+    creators = content_creators.sync_protections(client, state, dry_run)
+    following = fetch_paginated_data(
+        client.get_follows,
+        actor=client.me.did,
+        limit=_FOLLOW_PAGE_LIMIT,
+        max_pages=_FOLLOW_MAX_PAGES,
+        max_runtime_seconds=_FOLLOW_MAX_RUNTIME_SECONDS,
+        require_complete=True,
+    )
+    excluded = {
+        entry["did"]
+        for entry in state.get("unfollow_history", {}).get("entries", [])
+        if entry.get("reason") != "not_following_back"
+    }
+    candidates = creators - {profile.did for profile in following} - excluded
+    eligible = _available_creators(client, candidates)
+    selected = sorted(eligible)[: _CONFIG["content_follow_max_actions"]]
+    summary["interaction_candidates"] = summary.get("interaction_candidates", 0) + len(
+        candidates
+    )
+    summary["interaction_eligible"] = summary.get("interaction_eligible", 0) + len(
+        selected
+    )
+    followed = _follow_did_list(client, state, selected, dry_run, action_delay_seconds)
+    summary["interaction_added"] = summary.get("interaction_added", 0) + followed
+    summary["failed"] = summary.get("failed", 0) + len(selected) - followed
+    print(
+        f"{Fore.GREEN}Content-creator follows: candidates={len(candidates)}, "
+        f"selected={len(selected)}, followed={followed}.{Style.RESET_ALL}"
+    )
+    return followed

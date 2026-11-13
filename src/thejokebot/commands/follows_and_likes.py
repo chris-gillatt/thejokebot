@@ -11,6 +11,7 @@ from thejokebot.commands import follow_interactors as follow_interactor_processi
 from thejokebot.commands import interaction_likes
 from thejokebot.commands import joke_requests
 from thejokebot.commands import starter_pack_attribution
+from thejokebot.followers import IncompletePaginationError
 from thejokebot.runtime import (
     get_runtime_controls,
     login_client,
@@ -244,14 +245,21 @@ def main() -> None:
             f"{Fore.GREEN}Liked {liked} new interaction"
             f"{'s' if liked != 1 else ''}.{Style.RESET_ALL}"
         )
+        follow_interactor_processing.follow_content_creators(
+            client, state, dry_run, action_delay_seconds, social_summary
+        )
     except (
+        IncompletePaginationError,
         ValueError,
         requests.RequestException,
         TimeoutError,
-        atproto_client.exceptions.NetworkError,
+        atproto_client.exceptions.AtProtocolError,
     ) as exc:
         social_summary["failed"] += 1
-        print(f"{Fore.RED}Interaction liking failed: {exc}{Style.RESET_ALL}")
+        print(
+            f"{Fore.RED}Interaction liking/content-creator follow failed: "
+            f"{exc}{Style.RESET_ALL}"
+        )
 
     print(_social_summary_line(social_summary, dry_run))
     if social_summary["failed"]:

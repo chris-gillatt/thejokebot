@@ -898,11 +898,16 @@ class SocialCommandMainCoverageTests(unittest.TestCase):
                 follows_and_likes, "reply_to_joke_requests", return_value=1
             ) as reply,
             mock.patch.object(follows_and_likes, "like_replies", return_value=1),
+            mock.patch.object(
+                follows_and_likes.follow_interactor_processing,
+                "follow_content_creators",
+            ) as creators,
             mock.patch.object(follows_and_likes.bot_state, "save_state") as save,
         ):
             follows_and_likes.main()
 
         reply.assert_called_once()
+        creators.assert_called_once()
         save.assert_not_called()
 
     def test_main_counts_joke_reply_failure_as_failed_social_action(self):
@@ -934,6 +939,11 @@ class SocialCommandMainCoverageTests(unittest.TestCase):
                 side_effect=requests.RequestException("offline"),
             ),
             mock.patch.object(follows_and_likes, "like_replies", return_value=0),
+            mock.patch.object(
+                follows_and_likes.follow_interactor_processing,
+                "follow_content_creators",
+                side_effect=ValueError("incomplete content scan"),
+            ),
             mock.patch.object(follows_and_likes.bot_state, "save_state"),
             self.assertRaises(RuntimeError),
         ):

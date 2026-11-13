@@ -151,6 +151,7 @@ def test_enabled_source_list_is_used_before_candidate_selection(
 ):
     client = mock.Mock()
     client.me.did = "did:plc:bot"
+    client.com.atproto.repo.list_records.return_value = {"records": []}
     following = [
         mock.Mock(
             did="did:plc:protected",

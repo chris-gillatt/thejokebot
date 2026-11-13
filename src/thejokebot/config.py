@@ -176,6 +176,7 @@ _DEFAULT_CONFIG = {
         "like_page_limit": 100,
         "interaction_follow_max_pages": 5,
         "interaction_follow_page_limit": 100,
+        "content_follow_max_actions": 10,
         "joke_requests": {
             "enabled": True,
             "phrases": ["tell me a joke"],
@@ -459,6 +460,11 @@ def _validate_config(payload):
         )
     follows_and_likes["joke_requests"] = _validate_joke_request_config(
         follows_and_likes.get("joke_requests", {})
+    )
+    follows_and_likes["content_follow_max_actions"] = _ensure_int(
+        follows_and_likes.get("content_follow_max_actions", 10),
+        minimum=1,
+        field_name="follows_and_likes.content_follow_max_actions",
     )
     cfg["follows_and_likes"] = follows_and_likes
 

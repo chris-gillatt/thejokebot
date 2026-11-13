@@ -26,6 +26,7 @@ This is the operating brief for open work and lasting decisions. See the [README
 | Session-cache custody | Cached sessions must stay encrypted with `BLUESKY_SESSION_CACHE_KEY`; rotating it requires a fresh credential login. Restored sessions are returned only after their authenticated DID matches the configured account; mismatches discard the cache, and unresolved transient identity reads block account actions. |
 | Bluesky graph visibility | Profile counters may include hidden accounts that cannot be hydrated through follower/following queries; do not infer actionable accounts from totals. |
 | Ambiguous social creates | Follow and block records use stable TID keys and exact reconciliation; interaction likes use stable record keys; starter-pack upserts use a deterministic key per account and source list. Never treat a retry with a new key as confirmation of an earlier write. |
+| Content-creator protection | Completely read the bot's own likes and reposts before unfollow candidate selection. Retain creator DIDs permanently, independently of follow grace; incomplete reads must stop unfollows. Follow existing and new creators gradually, at most 10 per social run, without overriding explicit exclusions or account blocks. |
 
 ## Deferred Work
 
@@ -163,17 +164,18 @@ the SDK's transitive backports remain dependency-owned.
 
 ## Dependency Exceptions
 
-Rechecked on 10 November 2026 against the Python package index, npm registry and
-current Dependabot results. No dependency upgrades were made as part of R04, R05, R06 or S01;
+Rechecked on 13 November 2026 against the Python package index, npm registry,
+upstream Action releases and current Dependabot results. No dependency upgrades
+were made as part of #145, R04, R05, R06 or S01;
 keep them in a separate resolver-validated batch so this behaviour fix remains
 focused and the lock stays coherent. Review the deferred versions before the
 next dependency batch or sooner if an applicable advisory appears.
 
 - `requirements.lock` has these installed versions behind the package-index
-  latest: click 8.5.0 -> 8.5.1, coverage 7.17.0 -> 7.17.2, dnspython 2.9.1 ->
+  latest: atproto 0.0.73 -> 0.0.74, click 8.5.0 -> 8.5.1, coverage 7.17.0 -> 7.17.3, dnspython 2.9.1 ->
   2.9.2, pydantic 2.14.2 -> 2.14.3, pydantic-core 2.50.2 -> 2.50.4, regex
   2026.9.29 -> 2026.11.9, and typing-inspection 0.4.4 -> 0.4.5.
-- Local Python tooling has pip 26.2.2 -> 26.3 and Ruff 0.17.3 -> 0.17.4
+- Local Python tooling has pip 26.2.2 -> 26.3 and Ruff 0.17.3 -> 0.17.5
   available. pip-tools remains 7.6.2. Ruff's explicit rule selection (`E4`,
   `E7`, `E9`, `F`, plus `C901`) and file inclusion preserve the verified quality
   policy rather than adopting unrelated new defaults.
@@ -184,6 +186,12 @@ next dependency batch or sooner if an applicable advisory appears.
   Dependabot PRs #142 and #143 contain the CodeQL refresh and Sonar scan 8.4.1
   update; the changed refs are present on this branch. The action-pin checker
   validates SHA immutability, while Dependabot results provide release currency.
+- The Sonar scan Action remains at 8.4.1 while upstream stable is 8.5.0.
+  Defer this CI-tool upgrade to a separate analysis-validated dependency change,
+  rather than mixing it into #145. Review at the next dependency batch or sooner
+  for an applicable advisory. The other nine Action repositories match current
+  stable releases, including CodeQL Action 4.39.3 (its separate bundle releases
+  are not Action versions). No open Dependabot vulnerability alerts were reported.
 - Update transitive Python dependencies through the resolver, never by
   independently forcing incompatible pins. The 2 November lock refresh included
   AnyIO 4.16.0, atproto 0.0.73, pytest 9.2.0 and urllib3 2.8.0; Python 3.14

@@ -1486,6 +1486,7 @@ class UnfollowIgnoreValidationTests(unittest.TestCase):
         followed_did = "did:plc:manual"
         client = mock.Mock()
         client.me.did = "did:plc:test"
+        client.com.atproto.repo.list_records.return_value = {"records": []}
 
         followers = []
         following = [
