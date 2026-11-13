@@ -5,6 +5,7 @@ import re
 import requests
 import atproto_client.exceptions
 from thejokebot import config as runtime_config
+from thejokebot import content_creators
 from colorama import Fore, Style
 from thejokebot.followers import (
     IncompletePaginationError,
@@ -214,6 +215,7 @@ def _select_unfollow_from_state(
         )
 
     follow_grace_dids = _state.get_follow_grace_dids(state)
+    ignorable_dids |= content_creators.get_protected_dids(state)
     if follow_grace_dids:
         ignorable_dids |= follow_grace_dids
         print(
@@ -419,6 +421,10 @@ def unfollow_users():
                 f"{Fore.GREEN}Loaded {len(protected_list_dids)} protected DID(s) "
                 f"from source list {mask_sensitive(source_list_uri)}.{Style.RESET_ALL}"
             )
+
+        ignorable_dids |= content_creators.sync_protections(
+            client, _state.load_state(), dry_run
+        )
 
         state, to_unfollow_all, to_unfollow = _prepare_unfollow_candidates(
             following_map,

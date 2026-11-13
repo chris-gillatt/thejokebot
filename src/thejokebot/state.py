@@ -136,6 +136,7 @@ def _default_state() -> dict:
         },
         "follow_tracking": {
             "following_snapshot_dids": [],
+            "content_creator_dids": [],
             "pending_follows": {},
             "acquisition_cohorts": {
                 "schema_version": ACQUISITION_COHORT_SCHEMA_VERSION,
@@ -241,6 +242,7 @@ def _normalise_state(state: dict) -> dict:
 
     follow_tracking = state.setdefault("follow_tracking", {})
     follow_tracking.setdefault("following_snapshot_dids", [])
+    follow_tracking.setdefault("content_creator_dids", [])
     follow_tracking.setdefault("pending_follows", {})
     acquisition_cohorts = follow_tracking.setdefault("acquisition_cohorts", {})
     acquisition_cohorts.setdefault("schema_version", ACQUISITION_COHORT_SCHEMA_VERSION)

@@ -141,7 +141,7 @@ Installed entry points are available under `.venv/bin/`:
 | Command | Purpose |
 |---|---|
 | `thejokebot-post-joke` | Post a joke using provider rotation, duplicate checks and hashtag rotation. |
-| `thejokebot-follows-and-likes` | Follow back, respond to interactions and explicit tagged joke requests, and like replies. |
+| `thejokebot-follows-and-likes` | Follow back, respond to interactions and explicit tagged joke requests, like replies and follow liked/reposted content creators. |
 | `thejokebot-follow-fellows` | Discover accounts through rotating search tags. |
 | `thejokebot-unfollow` | Remove non-reciprocal follows subject to grace and protection rules. |
 | `thejokebot-process-reports`, `thejokebot-create-report-prs` | Process `#report` replies and propose denylist changes. |
@@ -243,6 +243,38 @@ Fellow discovery reads TJB's saved custom feeds from its Bluesky preferences bef
 Each run samples one page of up to `follow_fellows.search_limit` posts (at most 100) from up to 10 saved custom feeds. When there are more than 10, a persisted offset rotates through the saved feeds after each successful live scan, even if it finds no accounts to follow. Failed reads and dry runs do not advance that offset. Candidates are the original post authors, including when a feed entry is a repost; blocked or muted authors are excluded. Feeds and hashtags share the existing `global_follow_limit` (currently 150), per-source initial allocation (`per_tag_limit`, currently 12), duplicate filtering, unfollow-history exclusions, follow grace and action pacing. Saved feeds are allocated first; this does not increase the run's total follow allowance or its schedule.
 
 Discovery requires a complete following-list read and successful saved-preference/feed reads before following anyone. A failed or truncated prerequisite read aborts the run without follow actions. No saved custom feeds is a valid result and leaves hashtag discovery active. Dispatch `bluesky_follow_fellows` with `dry_run=true` to preview candidates without following accounts or changing social state; local runs can use `BLUESKY_DRY_RUN=true`.
+
+Both social and unfollow runs completely read the authenticated account's
+`app.bsky.feed.like` and `app.bsky.feed.repost` repository collections. This
+covers manual actions in Bluesky as well as automated actions, including
+existing records on the first scan. Creator DIDs are retained permanently in
+`follow_tracking.content_creator_dids` in social state, independently of the
+90-day follow grace period. Unliking/removing a repost later does not remove a
+recorded protection. Historical interactions deleted before the first scan
+cannot be reconstructed. Quote posts are not repost records and are not
+included in this feature.
+
+After reply liking, each two-hour social run follows at most
+`follows_and_likes.content_follow_max_actions` creators (currently **10**).
+The cap applies to this additional phase only; follow-back and incoming
+interaction processing retain their existing behaviour. Already-followed,
+blocked, muted and unavailable accounts are skipped. Explicit unfollow-history
+exclusions (including `manual_block`) remain authoritative; an earlier automatic
+`not_following_back` unfollow does not prevent a creator follow. New follows use
+the existing deterministic record intents, action pacing, grace and checkpoints.
+Creator follows contribute to the existing interaction-led aggregate counters
+and cohorts; no creator identifiers are added to public dashboard metrics.
+
+Each collection is bounded to 100 pages of 100 records, with a shared
+120-second scan budget checked before each request/retry and after each
+response. Invalid records, repeated cursors, API errors or incomplete reads
+fail the scan rather than treating missing creators as unprotected. Neither
+collection is checkpointed unless both reads complete. Unfollow runs refresh
+these protections before selecting any candidate and fail without unfollowing
+if that refresh fails. Dry runs preview the same protections and follow cap
+without state writes or account actions. These are full scans, not timestamp
+watermarks: automated likes have deterministic keys that need not sort by
+creation time.
 
 Unfollow runs commit grace reconciliation and candidate selection against fresh social state in a locked transaction before making changes to Bluesky. Each confirmed unfollow is checkpointed immediately in a fresh transaction; a later failure or throttle cannot discard earlier confirmed history or overwrite newer unrelated social fields. A checkpoint persistence failure stops the run. The workflow attempts to publish valid checkpoint JSON even when the command fails; invalid JSON is never committed by that step. Dry runs preview reconciliation without saving social state. Existing workflow concurrency still serialises social jobs; local file locks do not replace that control.
 

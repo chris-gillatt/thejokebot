@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.2.0 - 2026-11-13
+
+- Follow creators whose content TJB likes or reposts, including manual actions
+  and existing records, with a separate cap of 10 new creator follows per
+  two-hour social run. Retain permanent unfollow protections beyond the
+  90-day grace period, respect explicit exclusions and account blocks, and
+  reuse deterministic follow receipts and existing aggregate telemetry.
+  Refresh both complete interaction collections before unfollow selection;
+  failed or incomplete reads stop unfollows without discarding protections.
+  Dry runs leave account actions and saved state unchanged. Resolves #145.
+
 ## 2.1.2 - 2026-11-10
 
 - Indexed dashboard history by UTC day once per dataset, removing repeated
