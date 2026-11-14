@@ -46,8 +46,9 @@ def github_api(path: str, method: str = "GET", payload: dict | None = None) -> d
                 "api",
                 "--method",
                 method,
-                path,
                 *(["--input", "-"] if payload else []),
+                "--",
+                path,
             ],
             input=json.dumps(payload) if payload else None,
             capture_output=True,
@@ -220,13 +221,17 @@ def expire_reviews(state: dict, now=None) -> None:
         print("Expired a repost review without an account action.")
 
 
-def _validate_repository(event: dict) -> None:
+def _validate_event(event: dict) -> int:
     repository = event.get("repository", {})
     if (
         repository.get("id") != REPOSITORY_ID
         or repository.get("full_name") != REPOSITORY
     ):
         raise ValueError("Repost review event belongs to another repository")
+    number = event.get("issue", {}).get("number")
+    if not isinstance(number, int) or isinstance(number, bool) or number <= 0:
+        raise ValueError("Repost review event needs a positive integer issue number")
+    return int(number)
 
 
 def _authorise(event: dict, issue: dict, candidate: dict) -> None:
@@ -250,10 +255,13 @@ def _authorise(event: dict, issue: dict, candidate: dict) -> None:
 
 
 def _report_uri(client, body: str) -> str:
-    field = re.search(r"(?m)^### Original Bluesky post\s*\n+\s*(\S+)", body)
+    field = re.search(r"(?m)^### Original Bluesky post[ \t]*\r?$", body)
     if field is None:
         raise ValueError("Repost report has no original post field")
-    value = field.group(1)
+    following = body[field.end() :].split(maxsplit=1)
+    if not following:
+        raise ValueError("Repost report has no original post value")
+    value = following[0]
     if reviews.POST_URI.fullmatch(value):
         return value
     parsed = urlsplit(value)
@@ -365,9 +373,9 @@ def _notify_outcome(state: dict, candidate: dict) -> None:
 
 def handle_event(client, state: dict, event: dict, now=None) -> None:
     reviews.require_live()
-    _validate_repository(event)
+    number = _validate_event(event)
     incoming = event["issue"]
-    issue = github_api(f"/repos/{REPOSITORY}/issues/{incoming['number']}")
+    issue = github_api(f"/repos/{REPOSITORY}/issues/{number}")
     if issue.get("id") != incoming.get("id"):
         raise ValueError("GitHub issue identity does not match the review event")
     if event["action"] == "opened" and issue.get("title", "").startswith(REPORT_PREFIX):

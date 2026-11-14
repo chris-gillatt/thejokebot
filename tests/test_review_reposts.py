@@ -466,6 +466,9 @@ def test_github_transport_surfaces_errors_and_preserves_json_requests(
             "id": 123
         }
         assert json.loads(run.call_args.kwargs["input"])["body"] == "untrusted; $(text)"
+        arguments = run.call_args.args[0]
+        assert arguments[-2:] == ["--", "/test"]
+        assert arguments.index("--input") < arguments.index("--")
     else:
         with pytest.raises((RuntimeError, ValueError)):
             command.github_api("/test")
@@ -590,3 +593,30 @@ def test_rejection_cannot_disguise_a_previous_uncertain_account_action(
     )
     account.repost.assert_not_called()
     account.delete_repost.assert_not_called()
+
+
+@pytest.mark.parametrize("number", ["123/../../user", "-XDELETE", 0, True, 1.5, None])
+def test_invalid_issue_numbers_are_rejected_before_any_github_request(
+    account, github, number
+):
+    payload = event({"id": 1234, "number": number})
+    with pytest.raises(ValueError, match="positive integer"):
+        command.handle_event(account, state.load_state(), payload, NOW)
+    github.assert_not_called()
+    account.repost.assert_not_called()
+    account.delete_repost.assert_not_called()
+
+
+@pytest.mark.parametrize("newline", ["\n", "\r\n"])
+def test_report_field_accepts_line_endings_and_long_horizontal_spacing(
+    account, newline
+):
+    body = "### Original Bluesky post" + " " * 4096 + newline * 2 + post()["uri"]
+    assert command._report_uri(account, body) == post()["uri"]
+    account.com.atproto.identity.resolve_handle.assert_not_called()
+
+
+def test_report_field_without_value_rejects_long_blank_input(account):
+    body = "### Original Bluesky post" + "\n" * 30_000
+    with pytest.raises(ValueError, match="no original post value"):
+        command._report_uri(account, body)
