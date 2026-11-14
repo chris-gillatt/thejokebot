@@ -852,7 +852,7 @@
     },
     {
       "period_start": "2026-11-14T06:00:00+00:00",
-      "collected_at": "2026-11-14T10:38:21.325851+00:00",
+      "collected_at": "2026-11-14T10:46:22.118544+00:00",
       "followers": 7109,
       "following": 10920,
       "profile_posts": 2849,
@@ -14418,27 +14418,35 @@
       "attempt": 1,
       "workflow": "bluesky_dashboard",
       "created_at": "2026-11-14T10:37:50Z",
-      "updated_at": "2026-11-14T10:37:53Z",
-      "status": "in_progress",
-      "conclusion": null
+      "updated_at": "2026-11-14T10:39:18Z",
+      "status": "completed",
+      "conclusion": "success"
     },
     {
       "id": 43586190483,
       "attempt": 1,
       "workflow": "codeql",
       "created_at": "2026-11-14T10:37:50Z",
-      "updated_at": "2026-11-14T10:37:53Z",
-      "status": "in_progress",
-      "conclusion": null
+      "updated_at": "2026-11-14T10:39:25Z",
+      "status": "completed",
+      "conclusion": "success"
     },
     {
       "id": 43586190450,
       "attempt": 1,
       "workflow": "python_tests",
       "created_at": "2026-11-14T10:37:50Z",
-      "updated_at": "2026-11-14T10:37:54Z",
-      "status": "in_progress",
-      "conclusion": null
+      "updated_at": "2026-11-14T10:39:53Z",
+      "status": "completed",
+      "conclusion": "failure",
+      "failure_metadata": "available",
+      "failed_steps": [
+        {
+          "number": 13,
+          "job_id": 132421064589,
+          "name": "Run SonarQube Cloud analysis"
+        }
+      ]
     },
     {
       "id": 43586190563,
@@ -14455,6 +14463,51 @@
       "workflow": "validate_runtime_config",
       "created_at": "2026-11-14T10:37:50Z",
       "updated_at": "2026-11-14T10:38:14Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 43586808054,
+      "attempt": 1,
+      "workflow": "bluesky_dashboard",
+      "created_at": "2026-11-14T10:45:52Z",
+      "updated_at": "2026-11-14T10:45:56Z",
+      "status": "in_progress",
+      "conclusion": null
+    },
+    {
+      "id": 43586807979,
+      "attempt": 1,
+      "workflow": "codeql",
+      "created_at": "2026-11-14T10:45:52Z",
+      "updated_at": "2026-11-14T10:45:56Z",
+      "status": "in_progress",
+      "conclusion": null
+    },
+    {
+      "id": 43586808004,
+      "attempt": 1,
+      "workflow": "python_tests",
+      "created_at": "2026-11-14T10:45:52Z",
+      "updated_at": "2026-11-14T10:45:56Z",
+      "status": "in_progress",
+      "conclusion": null
+    },
+    {
+      "id": 43586808083,
+      "attempt": 1,
+      "workflow": "ruff_quality",
+      "created_at": "2026-11-14T10:45:52Z",
+      "updated_at": "2026-11-14T10:46:14Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 43586808057,
+      "attempt": 1,
+      "workflow": "validate_runtime_config",
+      "created_at": "2026-11-14T10:45:52Z",
+      "updated_at": "2026-11-14T10:46:20Z",
       "status": "completed",
       "conclusion": "success"
     }
@@ -33881,7 +33934,7 @@
     },
     {
       "period_start": "2026-11-14T06:00:00+00:00",
-      "collected_at": "2026-11-14T10:38:21.325851+00:00",
+      "collected_at": "2026-11-14T10:46:22.118544+00:00",
       "providers": [
         {
           "name": "icanhazdadjoke",
