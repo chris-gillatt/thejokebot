@@ -35,7 +35,7 @@ process guidance, do not run tests, preflight, builds, code lint/type checks,
 coverage, CodeQL, Sonar or dependency audits. Do not install validation tools,
 manually dispatch full CI or wait for full test/analysis gates solely for docs.
 Review wording, links and formatting, confirm that only documentation changed,
-run `git diff --check`, update the changelog, then rebase and push. Existing
+run `git diff --check`, omit changelog entries, then rebase and push. Existing
 automatic docs-only CI skips are sufficient.
 
 Executable code, runtime configuration, workflows, dependency manifests/locks
@@ -45,10 +45,13 @@ changes still require their normal relevant validation.
 **Changelog completion gate**
 
 Update [CHANGELOG.md](../CHANGELOG.md) in the same substantive commit as each
-meaningful feature, fix, configuration, workflow, dependency, documentation or
-project-process change. Before committing, check that its entry describes the
-delivered effect and any breaking change; before completing work, confirm the
-log is current alongside the applicable validation and remote-check results.
+meaningful non-documentation feature, fix, configuration, workflow or dependency
+change. Omit documentation-only updates, planning notes and prose-only
+agent/process guidance. Mixed-change entries describe delivered effects, not
+accompanying documentation edits. Before committing, check that applicable
+entries describe the delivered effect and any breaking change; before completing
+work, confirm the log is current alongside applicable validation and remote-check
+results.
 Group delivered changes by actual commit date, newest first; never create or
 restore an `Unreleased` section. Preserve the retrospective pre-1.0.0 milestone
 numbers, explicitly distinguished from original release tags and package

@@ -6,9 +6,9 @@ This is the operating brief for open work and lasting decisions. See the [README
 
 - Preserve existing posting, moderation and follow behaviour unless a change explicitly calls for it. Keep changes focused and reversible.
 - Keep credentials and audience identifiers out of published data and source control. Use British English in documentation and Conventional Commits with a reason for every change.
-- Update [CHANGELOG.md](CHANGELOG.md) in the same substantive commit as every meaningful first-party change, using actual commit dates, newest first. Never create or restore an `Unreleased` section. Preserve the retrospective pre-1.0.0 milestone numbers without claiming they were original releases. Check it before committing and completing work; omit routine automated state/metrics refreshes, not substantive agent or dependency changes.
+- Update [CHANGELOG.md](CHANGELOG.md) in the same substantive commit as every meaningful non-documentation first-party change, using actual commit dates, newest first. Keep entries focused on delivered effects; omit documentation-only updates, planning notes, prose-only agent/process guidance and accompanying documentation edits in mixed changes. Never create or restore an `Unreleased` section. Preserve the retrospective pre-1.0.0 milestone numbers without claiming they were original releases. Check applicable entries before committing and completing work; omit routine automated state/metrics refreshes, not substantive non-documentation agent or dependency changes.
 - Before non-documentation pushes, run `./scripts/preflight-local.sh` separately, then sync with `git pull --rebase`, then push. Do not use a pre-push hook. The gate includes Ruff, Pyright, workflow lint, tests, coverage and local CodeQL; a passing test suite alone is insufficient.
-- For docs-only changes, including prose-only agent/process guidance, skip tests, preflight, builds, code lint/type checks, coverage, CodeQL/Sonar, dependency audits and manually dispatched full CI. Review the documentation and links, confirm the diff is docs-only, run `git diff --check`, update the changelog, then rebase/push without waiting for full validation gates. Mixed code/configuration/workflow/dependency changes retain normal validation.
+- For docs-only changes, including prose-only agent/process guidance, skip tests, preflight, builds, code lint/type checks, coverage, CodeQL/Sonar, dependency audits and manually dispatched full CI. Review the documentation and links, confirm the diff is docs-only, run `git diff --check`, omit changelog entries, then rebase/push without waiting for full validation gates. Mixed code/configuration/workflow/dependency changes retain normal validation.
 - Maintain at least 90% overall first-party Python coverage and 95% on changed executable lines, with focused tests for material failure paths and safety limits. Sonar analysis must pass its gate **and** report zero unresolved issues.
 - Check current first-party Python, npm and GitHub Actions dependency versions before closing a non-documentation work batch; skip these audits for docs-only work. Handle upgrades separately; record a deliberate exception with current and latest stable versions, reason and review trigger below. Keep `references/` content read-only; weekly Dependabot PRs refresh only the three registered upstream pins and auto-merge after their applicable checks. Reference-only PRs skip Python tests, coverage and Sonar; mixed first-party changes retain full validation.
 
@@ -27,6 +27,61 @@ This is the operating brief for open work and lasting decisions. See the [README
 | Bluesky graph visibility | Profile counters may include hidden accounts that cannot be hydrated through follower/following queries; do not infer actionable accounts from totals. |
 | Ambiguous social creates | Follow and block records use stable TID keys and exact reconciliation; interaction likes use stable record keys; starter-pack upserts use a deterministic key per account and source list. Never treat a retry with a new key as confirmation of an earlier write. |
 | Content-creator protection | Completely read the bot's own likes and reposts before unfollow candidate selection, explicitly skipping valid feed likes. Retain creator DIDs permanently; incomplete reads must stop unfollows. Follow at most 10 creators per social run, respecting grace during graph lag, explicit exclusions and direct/list blocks. Count each confirmed follow before another action can fail; checkpoint failures must still stop processing. |
+
+## Reposts with review (#146)
+
+Planning only; no automated reposting is enabled. Manual approval remains the
+gate for every proposed repost. GitHub issue reviews and discovery from
+previously reposted authors are the preferred starting options, subject to the
+remaining decisions below. Implementation stays directly on `main`.
+
+The read-only investigation on 14 November 2026 sampled 300 recent feed entries:
+64 reposts from 27 authors, comprising 37 text posts and 27 image posts.
+Fourteen reposts were replies; 26 image posts had no alt text and 11 had no post
+text. Five authors accounted for 38 reposts. These are sample observations,
+not complete historical totals or evidence that text-only moderation is adequate.
+
+### Implementation tasks
+
+- [ ] Agree the initial source accounts, discovery bounds, review queue limits,
+  candidate expiry and publishing cadence/cap before enabling account actions.
+  Start with an explicitly approved selection of previously reposted authors
+  and allow manual URL submissions; saved-feed discovery can follow later.
+- [ ] Exclude already-reposted posts with a simple authenticated API check of
+  the post viewer's repost status. Recheck immediately before publication.
+  Failed checks must surface an error rather than make a candidate eligible.
+  Do not build a separate duplicate-prevention ledger or framework; verify
+  uncertain write outcomes before retrying instead of blindly resubmitting.
+- [ ] Build the review surface with original-post links, text, image previews
+  and relevant reply context. The proposed GitHub issue convention is
+  authorised closure as completed to approve and closure as not planned to
+  reject. Confirm that public reviews are acceptable. Bind approval to the
+  exact URI/CID rather than trusting editable issue text; changed or unavailable
+  content must not publish. Confirm actual publication separately from approval.
+- [ ] Extend reporting to identify a reviewed repost, notify the maintainer and
+  remove TJB's repost record after the appropriate approval, never the original
+  author's post. Support image-only posts and an explicit reporting route:
+  replies to another author's original do not reliably notify TJB. GitHub email
+  delivery depends on the maintainer's notification settings.
+- [ ] **Deliver repost statistics on the stats page as part of this feature, not
+  as an optional follow-up.** Track repost totals, distinct authors, authors
+  ranked by how often TJB reposts them, their counts and shares, activity over
+  time, and text/image and reply breakdowns where supported by source data.
+  Display public author handles/profile links, with stable author identity
+  internally. Define period and counting semantics so reruns do not inflate
+  totals and approved/skipped/failed candidates are not counted as reposts.
+  Distinguish current repost inventory from confirmed publication history;
+  disclose incomplete historical coverage and unknown manual/automated
+  provenance. Do not attribute an original's engagement to TJB's repost.
+- [ ] Treat action telemetry, persisted state, metrics collection and stats-page
+  rendering as one delivery contract. Add focused duplicate-check, approval,
+  reporting and producer-to-collector regressions; verify desktop/mobile
+  rendering, top-author ordering, period filtering, empty and partial-data
+  states. Preserve existing posting/follow behaviour and creator protections.
+
+Fully autonomous content selection/publication and a separately hosted private
+review application remain outside the initial pilot. Do not enable live reposts
+until the outstanding policy decisions and review flow are explicitly approved.
 
 ## Deferred Work
 
