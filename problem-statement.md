@@ -30,8 +30,9 @@ This is the operating brief for open work and lasting decisions. See the [README
 
 ## Reposts with review (#146)
 
-The agreed pilot uses public GitHub issues and authors from TJB's existing
-repost history. At 09:15 UTC daily, discover up to five candidates across
+The agreed pilot uses public GitHub issues, authors from TJB's existing
+repost history and the shared follow-fellows humour tags. At 09:15 UTC daily,
+discover up to five candidates across
 reruns, with seven-day expiry. An authorised completed closure approves immediate
 publication after final checks; a not-planned closure rejects. Implementation
 stays directly on `main`. The maintainer authorised queue activation on
@@ -50,16 +51,27 @@ The authenticated inventory preview subsequently read 504 retained subjects
 from 180 authors; 27 originals were unavailable. Inventory statistics describe
 retained reposts, not an all-time publication ledger.
 Broad historical-author discovery also surfaced unrelated artwork, personal
-updates and context-only replies. It is not a humour classifier: inspect each
-review, and consider an approved source shortlist or recency
-rules as a separate policy decision rather than silently adding filters.
+updates and context-only replies. Following maintainer feedback, discovery now
+requires standalone originals with shared humour tags, defaults to a seven-day
+age limit, and ranks by retained author history, engagement and freshness.
+Explicit no-repost requests are excluded. This remains a relevance heuristic,
+not a humour/image classifier: inspect each review. A manually curated author
+shortlist and any semantic/image classifier remain separate policy decisions.
 
 ### Implementation tasks
 
 - [x] Agree discovery and approval policy. Rotate through up to 50 historical
   authors per run and sample up to 20 feed entries each, within a shared
   180-second read budget. Select at most one candidate per visited author;
-  start with text and images, including verifiable reply context.
+  start with standalone text and images. Previously saved reply reviews retain
+  verifiable context.
+- [x] Improve relevance before creating more issues: reuse
+  `follow_fellows.hashtags`, add `meme`/`memes` there, exclude the generic
+  `followback` signal, and search recent tagged originals as well as historical
+  authors. Rank eligible posts instead of taking the first eligible feed item.
+  Permit fewer than five candidates; preserve one review per post, one selected
+  post per author and the live daily budget. Verify a read-only replacement
+  preview without generating issues or changing saved state.
 - [x] Exclude already-reposted posts with a simple authenticated API check of
   the post viewer's repost status. Recheck immediately before publication.
   Failed checks must surface an error rather than make a candidate eligible.

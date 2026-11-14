@@ -216,18 +216,35 @@ Start with `thejokebot-review-reposts --mode preview`, or manually dispatch the
 workflow with its default `preview=true`. Inspect
 `.agent-tmp/repost_preview.html` and `.json`; the workflow uploads both as a
 seven-day artifact. Preview does not create issues, repost, remove content or
-save social state. Images and reply context are included alongside original
+save social state. Images and any saved reply context are included alongside original
 links. Inspect the preview and obtain explicit maintainer approval before
 enabling the queue. Queue activation does not authorise publication or removal;
 each account action requires its own approved review.
 
 After activation, daily discovery rotates through at most 50 historical repost
-authors, reading at most 20 feed entries each within a 180-second read budget.
-Up to five candidates are queued per UTC day across reruns, one per visited
-author, with seven-day expiry. Text and image originals, including verifiable
-replies, are supported; quotes, video and external embeds are not initial
-candidate formats. Existing reposts are excluded through authenticated viewer
-status and checked again immediately before publication.
+authors, ordered by retained repost count, reading at most 20 feed entries each.
+It also searches up to 20 top posts per humour tag within the same 180-second
+read budget. Both follow-fellows and repost discovery use
+`follow_fellows.hashtags` in the runtime configuration, including `meme` and
+`memes`; the generic `followback` tag is not a humour signal.
+
+New candidates must be standalone text/image originals matching a shared humour
+tag and no older than `repost_reviews.max_post_age_days` (default seven days)
+at discovery. Tags in text, rich-text facets and record tags are recognised
+case-insensitively. Replies, future-dated posts, quotes, video and external embeds
+are excluded, as are explicit no-repost requests in text, image alt text or tags.
+Confirmed missing/blocked historical profiles are logged and skipped; other API
+failures still abort discovery.
+
+Eligible posts are ranked by the author's retained repost count, then likes plus
+reposts, then original creation time. This is a relevance heuristic, not a humour
+or image-content classifier. Up to five candidates are queued per UTC day across
+reruns, at most one per author, with seven-day review expiry; fewer are fine.
+Read-only previews can show replacements even after the day's budget is spent,
+but do not reset it or create issues. Existing reposts and previously reviewed
+subjects remain excluded. Authenticated viewer status is checked again
+immediately before publication. Previously saved reply reviews retain their
+exact context checks.
 
 Reviews are **public GitHub issues**, assigned to the maintainer. A user with
 verified write/maintain/admin permission closes one as **completed** to approve

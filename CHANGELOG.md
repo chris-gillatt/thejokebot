@@ -2,6 +2,13 @@
 
 ## 2.3.0 - 2026-11-14
 
+- Improve repost relevance using the shared follow-fellows humour tags, including
+  meme tags, and rank eligible posts by retained author history, engagement and
+  freshness. Search tags as well as historical authors; require standalone
+  originals no older than seven days and exclude explicit no-repost requests.
+  Keep individual approvals and the daily cap; allow read-only replacement
+  previews after that cap is spent. Skip confirmed unavailable/blocked source
+  profiles without concealing other API failures.
 - Activate daily reviewed-repost discovery after maintainer approval and deliver
   the first five public review issues. Individual completed closures remain
   mandatory before any repost.

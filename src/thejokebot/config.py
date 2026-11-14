@@ -153,8 +153,11 @@ _DEFAULT_CONFIG = {
             "punny",
             "divertido",
             "funny",
+            "meme",
+            "memes",
         ],
     },
+    "repost_reviews": {"max_post_age_days": 7},
     "unfollow": {
         "max_actions": DERIVED_UNFOLLOW_MAX_ACTIONS,
         "batch_size": 50,
@@ -414,6 +417,14 @@ def _validate_config(payload):
     follow_fellows["hashtags"] = normalised_follow_hashtags
     cfg["follow_fellows"] = follow_fellows
 
+    repost_reviews = cfg.get("repost_reviews", {})
+    repost_reviews["max_post_age_days"] = _ensure_int(
+        repost_reviews.get("max_post_age_days", 7),
+        minimum=1,
+        field_name="repost_reviews.max_post_age_days",
+    )
+    cfg["repost_reviews"] = repost_reviews
+
     unfollow = cfg.get("unfollow", {})
     unfollow["max_actions"] = _normalise_unfollow_max_actions(
         unfollow.get("max_actions", DERIVED_UNFOLLOW_MAX_ACTIONS)
@@ -615,6 +626,10 @@ def get_posting_tag_runtime_config():
 
 def get_follow_fellows_config():
     return get_runtime_config()["follow_fellows"]
+
+
+def get_repost_reviews_config():
+    return get_runtime_config()["repost_reviews"]
 
 
 def get_unfollow_config():

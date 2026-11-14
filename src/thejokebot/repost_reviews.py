@@ -5,13 +5,14 @@ import hashlib
 import os
 import re
 import time
+from collections import Counter
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urlsplit
 
 import requests
 from atproto_client.exceptions import AtProtocolError, BadRequestError
 
-from thejokebot import content_creators, state_transactions
+from thejokebot import config, content_creators, state_transactions
 from thejokebot.runtime import (
     get_nested_value,
     get_runtime_controls,
@@ -29,6 +30,11 @@ POST_URI = re.compile(
     r"at://(did:[a-z0-9]+:[^/\s?#]+)/app\.bsky\.feed\.post/([A-Za-z0-9._~:-]+)"
 )
 HANDLE = re.compile(r"[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+")
+HASHTAG = re.compile(r"(?<![\w/#])#(\w+)")
+DO_NOT_REPOST = re.compile(
+    r"(?<!\w)(?:do[\s_-]*not|don['\u2019]?t|no)[\s_-]*repost(?:s|ing)?(?!\w)",
+    re.IGNORECASE,
+)
 
 
 class UnavailableContextError(ValueError):
@@ -216,8 +222,42 @@ def read_inventory(client, now: datetime | None = None, *, deadline=None) -> dic
     }
 
 
-def _candidate(client, post: dict, now: datetime, deadline: float) -> dict | None:
+def _post_tags(record: dict) -> set[str]:
+    tags = set(HASHTAG.findall(record["text"]))
+    tags.update(record.get("tags") or [])
+    for facet in record.get("facets") or []:
+        tags.update(
+            feature["tag"]
+            for feature in facet["features"]
+            if feature.get("$type") == "app.bsky.richtext.facet#tag"
+        )
+    return {tag.casefold() for tag in tags}
+
+
+def _relevant(post: dict, preview: dict, now, tags, max_age_days) -> bool:
+    record = post["record"]
+    created_at = timestamp(record["createdAt"])
+    post_tags = _post_tags(record)
+    searchable = "\n".join(
+        [record["text"]]
+        + [image["alt"] for image in preview["images"]]
+        + list(post_tags)
+    )
+    if (
+        preview["is_reply"]
+        or not now - timedelta(days=max_age_days) <= created_at <= now
+        or not post_tags.intersection(tags)
+        or DO_NOT_REPOST.search(searchable)
+    ):
+        print("Repost candidate skipped: age, reply, humour tags or no-repost request.")
+        return False
+    return True
+
+
+def _candidate(client, post, now, deadline, tags, max_age_days) -> dict | None:
     preview = preview_post(post)
+    if not _relevant(post, preview, now, tags, max_age_days):
+        return None
     if not _available(post) or preview["kind"] == "unsupported":
         print("Repost candidate skipped: ineligible or unsupported format.")
         return None
@@ -237,35 +277,115 @@ def _candidate(client, post: dict, now: datetime, deadline: float) -> dict | Non
     }
 
 
-def _author_candidate(client, author, excluded, now, deadline):
-    response = _read(
-        lambda: client.get_author_feed(
-            actor=author,
-            filter="posts_with_replies",
-            limit=SOURCE_FEED_LIMIT,
-            include_pins=False,
-        ),
-        deadline,
-        "reading a repost source",
-    )
+def _author_posts(client, author, deadline):
+    try:
+        response = _read(
+            lambda: client.get_author_feed(
+                actor=author,
+                filter="posts_no_replies",
+                limit=SOURCE_FEED_LIMIT,
+                include_pins=False,
+            ),
+            deadline,
+            "reading a repost source",
+        )
+    except BadRequestError as exc:
+        error = get_nested_value(exc, "response", "content", "error")
+        missing = (
+            error == "InvalidRequest"
+            and get_nested_value(exc, "response", "content", "message")
+            == "Profile not found"
+        )
+        if get_nested_value(exc, "response", "status_code") != 400 or (
+            error not in {"BlockedActor", "BlockedByActor"} and not missing
+        ):
+            raise
+        print(
+            "Repost source skipped: Bluesky reports an unavailable or blocked profile."
+        )
+        return []
     feed = get_nested_value(response, "feed")
     if not isinstance(feed, list):
         raise ValueError("Repost source response has no feed list")
+    posts = []
     for raw in feed:
         item = as_dict(raw)
         post = item.get("post", {})
-        if item.get("reason") or post.get("uri") in excluded:
+        if item.get("reason"):
             continue
         if post.get("author", {}).get("did") != author:
             raise ValueError("Repost source feed returned another author's original")
-        candidate = _candidate(client, post, now, deadline)
+        posts.append(post)
+    return posts
+
+
+def _tag_posts(client, tag, now, max_age_days, deadline):
+    response = _read(
+        lambda: client.app.bsky.feed.search_posts(
+            {
+                "q": f"#{tag}",
+                "tag": [tag],
+                "sort": "top",
+                "since": (now - timedelta(days=max_age_days)).isoformat(),
+                "limit": SOURCE_FEED_LIMIT,
+            }
+        ),
+        deadline,
+        f"searching repost candidates for #{tag}",
+    )
+    posts = get_nested_value(response, "posts")
+    if not isinstance(posts, list):
+        raise ValueError("Repost tag search has no posts list")
+    return [as_dict(post) for post in posts]
+
+
+def _humour_tags() -> set[str]:
+    tags = {
+        tag.casefold()
+        for tag in config.get_follow_fellows_config()["hashtags"]
+        if tag.casefold() != "followback"
+    }
+    if not tags:
+        raise ValueError("Repost discovery requires follow-fellows humour tags")
+    return tags
+
+
+def _ranked_candidates(client, posts, counts, excluded, now, deadline, budget):
+    tags = _humour_tags()
+    max_age_days = config.get_repost_reviews_config()["max_post_age_days"]
+    for tag in sorted(tags):
+        posts.extend(_tag_posts(client, tag, now, max_age_days, deadline))
+    pool = {}
+    for post in posts:
+        if (
+            post.get("uri") in excluded
+            or post.get("author", {}).get("did") == client.me.did
+        ):
+            continue
+        candidate = _candidate(client, post, now, deadline, tags, max_age_days)
         if candidate is not None:
-            return candidate
-    print("Repost source has no eligible candidate in the sampled page.")
-    return None
+            rank = (
+                counts[candidate["post"]["author_did"]],
+                post.get("likeCount", 0) + post.get("repostCount", 0),
+                timestamp(post["record"]["createdAt"]),
+                candidate["key"],
+            )
+            pool[candidate["key"]] = (rank, candidate)
+    selected = []
+    authors = set()
+    for _, candidate in sorted(pool.values(), key=lambda item: item[0], reverse=True):
+        author = candidate["post"]["author_did"]
+        if author not in authors:
+            authors.add(author)
+            selected.append(candidate)
+            if len(selected) == budget:
+                break
+    return selected
 
 
-def discover(client, state: dict, now: datetime | None = None) -> dict:
+def discover(
+    client, state: dict, now: datetime | None = None, *, preview: bool = False
+) -> dict:
     deadline = time.monotonic() + MAX_RUNTIME_SECONDS
     inventory = read_inventory(client, now, deadline=deadline)
     now = utc_now(now)
@@ -273,32 +393,33 @@ def discover(client, state: dict, now: datetime | None = None) -> dict:
     previous = saved.get("candidates", {})
     excluded = {entry["post_uri"] for entry in inventory["entries"]}
     excluded.update(entry["post"]["uri"] for entry in previous.values())
+    counts = Counter(entry["author_did"] for entry in inventory["entries"])
     authors = sorted(
         (
             set(saved.get("source_dids", []))
             | {entry["author_did"] for entry in inventory["entries"]}
         )
-        - {client.me.did}
+        - {client.me.did},
+        key=lambda did: (-counts[did], did),
     )
     queued_today = sum(
         entry["action"] == "repost"
         and timestamp(entry["queued_at"]).date() == now.date()
         for entry in previous.values()
     )
-    budget = max(0, MAX_CANDIDATES - queued_today)
+    budget = MAX_CANDIDATES if preview else max(0, MAX_CANDIDATES - queued_today)
     offset = saved.get("source_offset", 0)
-    candidates = []
+    posts = []
     visited = 0
-    while (
-        authors
-        and visited < min(len(authors), MAX_SOURCE_ACCOUNTS)
-        and len(candidates) < budget
-    ):
+    while authors and visited < min(len(authors), MAX_SOURCE_ACCOUNTS) and budget > 0:
         author = authors[(offset + visited) % len(authors)]
         visited += 1
-        candidate = _author_candidate(client, author, excluded, now, deadline)
-        if candidate is not None:
-            candidates.append(candidate)
+        posts.extend(_author_posts(client, author, deadline))
+    candidates = (
+        _ranked_candidates(client, posts, counts, excluded, now, deadline, budget)
+        if budget
+        else []
+    )
     return {
         "inventory": inventory,
         "candidates": candidates,

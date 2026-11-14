@@ -497,7 +497,7 @@ def main() -> None:
         handle_event(client, state, event)
         return
     now = reviews.utc_now()
-    report = reviews.discover(client, state)
+    report = reviews.discover(client, state, preview=args.mode == "preview")
     if args.mode == "preview":
         _write_preview(report, state, now)
         return

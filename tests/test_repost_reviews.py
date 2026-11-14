@@ -25,7 +25,7 @@ def post(author=AUTHOR, key="joke", **changes):
         "author": {"did": author, "handle": f"{author.rsplit(':', 1)[-1]}.test"},
         "record": {
             "$type": "app.bsky.feed.post",
-            "text": "Test fixture",
+            "text": "Test fixture #jokes",
             "createdAt": NOW.isoformat(),
         },
         "viewer": {},
@@ -60,6 +60,7 @@ def account(tmp_path, monkeypatch):
         "posts": [post(key=uri.rsplit("/", 1)[-1]) for uri in uris]
     }
     client.get_author_feed.return_value = {"feed": [{"post": post(key="new")}]}
+    client.app.bsky.feed.search_posts.return_value = {"posts": []}
     client.repost.return_value = {
         "uri": f"at://{BOT}/{COLLECTION}/confirmed",
         "cid": "cid-confirmed",
@@ -133,8 +134,7 @@ def test_daily_cap_rotation_and_persisted_rejections(account):
     }
 
 
-def test_image_only_reply_retains_parent_context(account):
-    parent = post(key="parent")
+def test_image_only_post_with_shared_record_tag_is_discovered(account):
     image = post(
         key="new",
         embed={
@@ -143,15 +143,12 @@ def test_image_only_reply_retains_parent_context(account):
         },
     )
     image["record"]["text"] = ""
-    image["record"]["reply"] = {
-        "root": {"uri": parent["uri"], "cid": parent["cid"]},
-        "parent": {"uri": parent["uri"], "cid": parent["cid"]},
-    }
+    image["record"]["tags"] = ["memes"]
     account.get_author_feed.return_value = {"feed": [{"post": image}]}
     candidate = proposal(account)
     assert candidate["post"]["kind"] == "image"
-    assert candidate["post"]["is_reply"] is True
-    assert candidate["context"][0]["uri"] == parent["uri"]
+    assert candidate["post"]["is_reply"] is False
+    assert candidate["context"] == []
     assert candidate["post"]["images"][0]["alt"] == ""
 
 
@@ -231,10 +228,8 @@ def test_sdk_reply_models_preserve_thread_context(account):
         "parent": {"uri": post()["uri"], "cid": post()["cid"]},
     }
     typed = models.AppBskyFeedDefs.PostView.model_validate(child)
-    account.get_author_feed.return_value = {
-        "feed": [models.AppBskyFeedDefs.FeedViewPost(post=typed)]
-    }
-    assert proposal(account)["context"][0]["uri"] == post()["uri"]
+    context = reviews._context(account, reviews.as_dict(typed), float("inf"))
+    assert context[0]["uri"] == post()["uri"]
 
 
 def test_sdk_strong_reference_receipt_confirms_publication(account):
@@ -552,10 +547,7 @@ def test_removal_never_confuses_unverified_outcomes_with_success(account, failur
         )
 
 
-@pytest.mark.parametrize("context", ["missing", "changed", "moderated"])
-def test_unavailable_reply_context_skips_candidate_without_blocking_other_originals(
-    account, context
-):
+def test_replies_are_excluded_without_blocking_standalone_originals(account):
     parent = post(key="parent")
     ref = {"uri": parent["uri"], "cid": parent["cid"]}
     child = post(
@@ -564,19 +556,208 @@ def test_unavailable_reply_context_skips_candidate_without_blocking_other_origin
     account.get_author_feed.return_value = {
         "feed": [{"post": child}, {"post": post(key="safe")}]
     }
-    if context == "changed":
-        parent["cid"] = "changed"
-    elif context == "moderated":
-        parent["labels"] = [{"val": "sexual"}]
-    account.get_posts.side_effect = lambda uris: {
-        "posts": ([] if context == "missing" else [parent])
-        if uris == [parent["uri"]]
-        else [post(key=uri.rsplit("/", 1)[-1]) for uri in uris]
-    }
     report = reviews.discover(account, state.load_state(), NOW)
     assert [candidate["post"]["uri"] for candidate in report["candidates"]] == [
         post(key="safe")["uri"]
     ]
+    account.repost.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Personal update",
+        "#jokesaboutpolitics",
+        "#followback",
+        "Artwork #jokes #DoNotRepost",
+        "Artwork #jokes; do not repost",
+        "Artwork #jokes; don't repost",
+        "Artwork #jokes; don\u2019t repost",
+        "Artwork #jokes; NO_REPOSTS",
+    ],
+)
+def test_unrelated_or_explicitly_excluded_posts_do_not_fill_the_queue(account, text):
+    item = post(key="new")
+    item["record"]["text"] = text
+    account.get_author_feed.return_value = {"feed": [{"post": item}]}
+    assert reviews.discover(account, state.load_state(), NOW)["candidates"] == []
+
+
+@pytest.mark.parametrize(
+    "age_seconds,eligible", [(172800, True), (172801, False), (-1, False)]
+)
+def test_candidate_age_uses_configured_limit_and_rejects_future_posts(
+    account, monkeypatch, age_seconds, eligible
+):
+    monkeypatch.setattr(
+        reviews.config, "get_repost_reviews_config", lambda: {"max_post_age_days": 2}
+    )
+    item = post(key="new")
+    item["record"]["createdAt"] = (NOW - timedelta(seconds=age_seconds)).isoformat()
+    account.get_author_feed.return_value = {"feed": [{"post": item}]}
+    assert (
+        bool(reviews.discover(account, state.load_state(), NOW)["candidates"])
+        is eligible
+    )
+
+
+def test_shared_tag_search_surfaces_new_authors_and_ranks_best_post_per_author(
+    account, monkeypatch
+):
+    monkeypatch.setattr(
+        reviews.config,
+        "get_follow_fellows_config",
+        lambda: {"hashtags": ["customcomedy", "followback"]},
+    )
+    low = post(key="low", likeCount=1)
+    high = post(key="high", likeCount=10)
+    newcomer = post(author="did:plc:newcomer", key="meme", likeCount=1000)
+    for item in (low, high, newcomer):
+        item["record"]["text"] = "A standalone joke (#CustomComedy)"
+    account.get_author_feed.return_value = {"feed": [{"post": low}, {"post": high}]}
+    account.app.bsky.feed.search_posts.return_value = {"posts": [high, newcomer]}
+    report = reviews.discover(account, state.load_state(), NOW)
+    assert [item["post"]["uri"] for item in report["candidates"]] == [
+        high["uri"],
+        newcomer["uri"],
+    ]
+    account.app.bsky.feed.search_posts.assert_called_once_with(
+        {
+            "q": "#customcomedy",
+            "tag": ["customcomedy"],
+            "sort": "top",
+            "since": (NOW - timedelta(days=7)).isoformat(),
+            "limit": 20,
+        }
+    )
+    assert account.get_author_feed.call_args.kwargs["filter"] == "posts_no_replies"
+    account.repost.assert_not_called()
+
+
+def test_repeatedly_reposted_authors_rank_above_one_off_sources(account):
+    other = "did:plc:other"
+    subjects = [post(key="one"), post(key="two"), post(author=other)]
+    account.com.atproto.repo.list_records.return_value = {
+        "records": [record(item, key=str(i)) for i, item in enumerate(subjects)]
+    }
+    account.get_posts.side_effect = lambda uris: {
+        "posts": [item for item in subjects if item["uri"] in uris]
+    }
+    account.get_author_feed.side_effect = lambda actor, **_: {
+        "feed": [
+            {
+                "post": post(
+                    author=actor, key="new", likeCount=1000 if actor == other else 1
+                )
+            }
+        ]
+    }
+    report = reviews.discover(account, state.load_state(), NOW)
+    assert [item["post"]["author_did"] for item in report["candidates"]] == [
+        AUTHOR,
+        other,
+    ]
+
+
+def test_read_only_preview_can_show_replacements_without_resetting_daily_budget(
+    account,
+):
+    candidate = proposal(account)
+    saved = state.load_state()
+    saved["repost_reviews"]["candidates"] = {
+        str(i): {**candidate, "status": "rejected"} for i in range(5)
+    }
+    account.get_author_feed.return_value = {"feed": [{"post": post(key="replacement")}]}
+    before = copy.deepcopy(saved)
+    assert reviews.discover(account, saved, NOW)["candidates"] == []
+    preview = reviews.discover(account, saved, NOW, preview=True)
+    assert [item["post"]["uri"] for item in preview["candidates"]] == [
+        post(key="replacement")["uri"]
+    ]
+    assert saved == before
+    account.repost.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "failure",
+    ["malformed-search", "network", "empty-tags", "no-repost-tag", "no-repost-alt"],
+)
+def test_tag_search_and_author_requests_fail_closed(account, monkeypatch, failure):
+    if failure == "malformed-search":
+        account.app.bsky.feed.search_posts.return_value = {"posts": None}
+    elif failure == "network":
+        account.app.bsky.feed.search_posts.side_effect = requests.Timeout("unavailable")
+    elif failure == "empty-tags":
+        monkeypatch.setattr(
+            reviews.config,
+            "get_follow_fellows_config",
+            lambda: {"hashtags": ["followback"]},
+        )
+    else:
+        item = post(key="new")
+        if failure == "no-repost-tag":
+            item["record"]["tags"] = ["DoNotRepost"]
+        else:
+            item["embed"] = {
+                "$type": "app.bsky.embed.images#view",
+                "images": [
+                    {
+                        "fullsize": "https://cdn.bsky.app/img/test.jpg",
+                        "alt": "Do not repost",
+                    }
+                ],
+            }
+        account.get_author_feed.return_value = {"feed": [{"post": item}]}
+        assert reviews.discover(account, state.load_state(), NOW)["candidates"] == []
+        return
+    with pytest.raises((ValueError, requests.Timeout)):
+        reviews.discover(account, state.load_state(), NOW)
+    account.repost.assert_not_called()
+
+
+@pytest.mark.parametrize("days", [0, -1, True])
+def test_invalid_repost_age_is_rejected_by_runtime_config(days):
+    config = copy.deepcopy(reviews.config.get_runtime_config())
+    config["repost_reviews"]["max_post_age_days"] = days
+    with pytest.raises(ValueError, match="repost_reviews.max_post_age_days"):
+        reviews.config._validate_config(config)
+
+
+def test_facet_tags_are_shared_signals_but_self_posts_are_not_candidates(account):
+    item = post(key="new")
+    item["record"]["text"] = "An image caption"
+    item["record"]["facets"] = [
+        {"features": [{"$type": "app.bsky.richtext.facet#tag", "tag": "DaDJoKeS"}]}
+    ]
+    account.get_author_feed.return_value = {"feed": [{"post": item}]}
+    account.app.bsky.feed.search_posts.return_value = {
+        "posts": [post(author=BOT, key="own")]
+    }
+    assert proposal(account)["post"]["uri"] == item["uri"]
+
+
+@pytest.mark.parametrize(
+    "error,message,status,skip",
+    [
+        ("InvalidRequest", "Profile not found", 400, True),
+        ("BlockedActor", "Blocked", 400, True),
+        ("BlockedByActor", "Blocked", 400, True),
+        ("InvalidRequest", "Other invalid request", 400, False),
+        ("InvalidRequest", "Profile not found", 500, False),
+    ],
+)
+def test_unavailable_historical_profiles_are_skipped_but_unknown_errors_propagate(
+    account, error, message, status, skip, capsys
+):
+    account.get_author_feed.side_effect = BadRequestError(
+        Response(False, status, {"error": error, "message": message}, {})
+    )
+    if skip:
+        assert reviews.discover(account, state.load_state(), NOW)["candidates"] == []
+        assert "unavailable or blocked profile" in capsys.readouterr().out
+    else:
+        with pytest.raises(BadRequestError):
+            reviews.discover(account, state.load_state(), NOW)
     account.repost.assert_not_called()
 
 
