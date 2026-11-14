@@ -24,6 +24,7 @@ TRACKED_WORKFLOWS = {
     "bluesky_manage_starter_pack",
     "bluesky_post_joke",
     "bluesky_process_reports",
+    "bluesky_review_reposts",
     "bluesky_unfollow",
     "bluesky_validate_unfollow_ignore",
     "codeql",

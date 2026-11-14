@@ -318,6 +318,52 @@
         </div>
       </section>
 
+      <section class="dashboard-section social-section" aria-labelledby="repost-heading">
+        <div class="section-inner">
+          <div class="section-heading">
+            <div><p class="eyebrow">Sharing other creators</p><h2 id="repost-heading">Reposts and their authors</h2></div>
+            <div class="range-control" role="group" aria-label="Repost creation period">
+              <button type="button" data-repost-range="7" aria-pressed="false">7 days</button>
+              <button type="button" class="active" data-repost-range="30" aria-pressed="true">30 days</button>
+              <button type="button" data-repost-range="all" aria-pressed="false">All retained</button>
+            </div>
+          </div>
+          <p id="repost-coverage" class="growth-explanation" aria-live="polite">Collecting repost inventory</p>
+          <div class="growth-summary">
+            <div class="growth-stat"><span>Retained reposts</span><strong id="repost-total">--</strong></div>
+            <div class="growth-stat"><span>Distinct authors</span><strong id="repost-authors">--</strong></div>
+            <div class="growth-stat"><span>Image posts</span><strong id="repost-images">--</strong></div>
+            <div class="growth-stat"><span>Replies reposted</span><strong id="repost-replies">--</strong></div>
+          </div>
+          <p id="repost-format-note" class="growth-explanation"></p>
+          <p class="growth-explanation">Rolling periods end at the inventory scan and use TJB's repost creation time. Rankings and daily counts include only reposts still retained at that scan, not all reposts ever made. Removed history and manual/automated provenance cannot be reconstructed. Original-post engagement is not attributed to TJB.</p>
+          <p id="repost-outcomes" class="growth-explanation"></p>
+          <div class="social-layout repost-layout">
+            <article class="social-block">
+              <h3>Most-reposted authors</h3>
+              <div class="table-scroll repost-author-scroll">
+                <table id="repost-author-table">
+                  <thead><tr><th>Author</th><th>Reposts</th><th>Share of selected reposts</th></tr></thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+              <p id="repost-empty" class="growth-explanation">No retained reposts observed for this period, or inventory has not yet been collected.</p>
+            </article>
+            <article class="social-block">
+              <h3>Retained reposts by creation date</h3>
+              <div id="repost-chart-frame" class="chart-frame chart-frame-short audience-chart-frame">
+                <canvas id="repost-chart" role="img" aria-label="Retained repost counts by UTC creation date"></canvas>
+                <p id="repost-chart-empty" class="growth-explanation">No daily repost counts available for this period.</p>
+              </div>
+              <details><summary>View daily repost counts</summary>
+                <div class="table-scroll"><table id="repost-daily-table"><thead><tr><th>UTC date</th><th>Retained reposts</th></tr></thead><tbody></tbody></table></div>
+              </details>
+            </article>
+          </div>
+          <p class="growth-explanation"><a href="https://github.com/chris-gillatt/thejokebot/issues/new?template=repost_report.yml" target="_blank" rel="noreferrer">Report an unsuitable repost</a> for maintainer review. Reports are public; do not include private information.</p>
+        </div>
+      </section>
+
       <section class="dashboard-section" aria-labelledby="performance-heading">
         <div class="section-inner">
           <div class="section-heading">

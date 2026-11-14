@@ -128,6 +128,12 @@ def _default_state() -> dict:
             "baseline_at": None,
             "packs": {},
         },
+        "repost_reviews": {
+            "candidates": {},
+            "inventory": None,
+            "source_dids": [],
+            "source_offset": 0,
+        },
         "unfollow_history": {
             "entries": [],
         },
@@ -233,6 +239,12 @@ def _normalise_state(state: dict) -> dict:
     acknowledgements = state.setdefault("starter_pack_acknowledgements", {})
     acknowledgements.setdefault("baseline_at", None)
     acknowledgements.setdefault("packs", {})
+
+    repost_reviews = state.setdefault("repost_reviews", {})
+    repost_reviews.setdefault("candidates", {})
+    repost_reviews.setdefault("inventory", None)
+    repost_reviews.setdefault("source_dids", [])
+    repost_reviews.setdefault("source_offset", 0)
 
     unfollow_history = state.setdefault("unfollow_history", {})
     unfollow_history.setdefault("entries", [])
@@ -341,6 +353,7 @@ def _domain_payload(state: dict, domain: str) -> dict:
                 "liked_replies",
                 "joke_requests",
                 "starter_pack_acknowledgements",
+                "repost_reviews",
                 "unfollow_history",
                 "follow_grace",
                 "follow_tracking",

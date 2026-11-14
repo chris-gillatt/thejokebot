@@ -11,6 +11,7 @@ WORKFLOW_FILES = {
     "bluesky_follow_fellows": ".github/workflows/bluesky_follow_fellows.yml",
     "bluesky_unfollow": ".github/workflows/bluesky_unfollow.yml",
     "bluesky_process_reports": ".github/workflows/bluesky_process_reports.yml",
+    "bluesky_review_reposts": ".github/workflows/bluesky_review_reposts.yml",
     "bluesky_validate_unfollow_ignore": ".github/workflows/bluesky_validate_unfollow_ignore.yml",
 }
 

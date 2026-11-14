@@ -149,6 +149,39 @@ class DashboardCollectorTests(unittest.TestCase):
             },
         }
 
+    def test_repost_inventory_reaches_compact_published_metrics(self):
+        now = datetime(2026, 11, 14, tzinfo=timezone.utc)
+        self.state["repost_reviews"] = {
+            "inventory": {
+                "collected_at": now.isoformat(),
+                "entries": [
+                    {
+                        "post_uri": "at://did:plc:creator/app.bsky.feed.post/joke",
+                        "author_did": "did:plc:creator",
+                        "handle": "creator.test",
+                        "created_at": "2026-11-13T00:00:00Z",
+                        "kind": "image",
+                        "is_reply": False,
+                    }
+                ],
+            },
+            "candidates": {},
+        }
+        metrics = dashboard.collect_metrics(
+            "thejokebot.bsky.social",
+            self.state,
+            now=now,
+            fetch_profile_call=lambda *_: self.profile,
+            fetch_post_call=lambda *_: self.latest_post,
+            fetch_original_posts_call=lambda *_: [self.latest_post],
+        )
+        published = dashboard_history._compact_metrics(metrics, now)["reposts"]
+        self.assertEqual(
+            published["windows"]["all"]["authors"][0]["handle"], "creator.test"
+        )
+        self.assertEqual(published["windows"]["all"]["image"], 1)
+        self.assertNotIn("did:plc:creator", json.dumps(published))
+
     def test_bluesky_fetchers_reject_malformed_payloads(self):
         response = _Response([])
         session = Mock()

@@ -5,7 +5,11 @@ from datetime import datetime, timezone
 from html.parser import HTMLParser
 from pathlib import Path
 
-from thejokebot.commands import dashboard_metrics, dashboard_workflows
+from thejokebot.commands import (
+    dashboard_metrics,
+    dashboard_reposts,
+    dashboard_workflows,
+)
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -101,6 +105,7 @@ class DashboardUiTests(unittest.TestCase):
             ("data-operations-range", 6),
             ("data-top-range", 3),
             ("data-performance-age", 2),
+            ("data-repost-range", 3),
         ):
             buttons = [node for node in self.nodes if attribute in node.attributes]
             self.assertEqual(len(buttons), count)
@@ -389,6 +394,133 @@ class DashboardUiTests(unittest.TestCase):
             check=True,
             capture_output=True,
             text=True,
+        )
+        return json.loads(result.stdout)
+
+    def test_repost_rankings_change_with_period_and_keep_safe_profile_links(self):
+        now = datetime(2026, 11, 14, tzinfo=timezone.utc)
+        common = {
+            "author_did": "did:plc:author",
+            "handle": "author.test",
+            "created_at": "2026-11-13T00:00:00Z",
+            "kind": "text",
+            "is_reply": False,
+        }
+        data = dashboard_reposts.collect(
+            {
+                "repost_reviews": {
+                    "inventory": {
+                        "collected_at": now.isoformat(),
+                        "entries": [
+                            {**common, "post_uri": "first"},
+                            {**common, "post_uri": "second"},
+                            {
+                                **common,
+                                "post_uri": "third",
+                                "author_did": "did:plc:other",
+                                "handle": "other.test",
+                                "created_at": "2026-11-04T00:00:00Z",
+                                "kind": "image",
+                            },
+                        ],
+                    },
+                }
+            },
+            now,
+        )
+        recent = self._render_reposts(data, "7")
+        month = self._render_reposts(data, "30")
+        self.assertEqual(recent["values"]["repost-total"], "2")
+        self.assertEqual(month["values"]["repost-total"], "3")
+        self.assertEqual(recent["rows"][0], ["@author.test", "2", "100%"])
+        self.assertEqual(month["rows"][0], ["@author.test", "2", "66.7%"])
+        self.assertEqual(month["links"][0], "https://bsky.app/profile/author.test")
+
+    def test_repost_missing_inventory_differs_from_confirmed_empty_inventory(self):
+        now = datetime(2026, 11, 14, tzinfo=timezone.utc)
+        missing = self._render_reposts(dashboard_reposts.collect({}, now), "30")
+        empty = self._render_reposts(
+            dashboard_reposts.collect(
+                {
+                    "repost_reviews": {
+                        "inventory": {"collected_at": now.isoformat(), "entries": []},
+                    }
+                },
+                now,
+            ),
+            "30",
+        )
+        self.assertEqual(missing["values"]["repost-total"], "--")
+        self.assertTrue(missing["chartHidden"])
+        self.assertEqual(empty["values"]["repost-total"], "0")
+        self.assertNotIn("NaN", json.dumps(empty))
+
+    def test_repost_unknown_subject_keeps_count_without_inventing_author_or_format(
+        self,
+    ):
+        now = datetime(2026, 11, 14, tzinfo=timezone.utc)
+        data = dashboard_reposts.collect(
+            {
+                "repost_reviews": {
+                    "inventory": {
+                        "collected_at": now.isoformat(),
+                        "entries": [
+                            {
+                                "post_uri": "unknown",
+                                "author_did": "did:plc:author",
+                                "handle": None,
+                                "created_at": now.isoformat(),
+                                "kind": "unknown",
+                                "is_reply": None,
+                            }
+                        ],
+                    }
+                }
+            },
+            now,
+        )
+        rendered = self._render_reposts(data, "30")
+        self.assertEqual(rendered["values"]["repost-total"], "1")
+        self.assertEqual(rendered["rows"][0][0], "Unavailable author")
+        self.assertIsNone(rendered["links"][0])
+        self.assertIn(
+            "1 with unknown reply status", rendered["values"]["repost-format-note"]
+        )
+
+    @staticmethod
+    def _render_reposts(data, period):
+        javascript = DASHBOARD_JS.read_text()
+        renderer = javascript[
+            javascript.index("function renderReposts(") : javascript.index(
+                "function renderTable("
+            )
+        ]
+        result = subprocess.run(
+            [
+                "node",
+                "-e",
+                'const fs=require("node:fs"); const input=JSON.parse(fs.readFileSync(0,"utf8"));'
+                "const metrics={reposts:input.data};const selectedRepostRange=input.period;"
+                "const values={};const nodes={};const charts={};const colours=['','','green'];"
+                "const numberFormat=new Intl.NumberFormat('en-GB');"
+                "const percentageFormat=new Intl.NumberFormat('en-GB',{maximumFractionDigits:1});"
+                "const dateTimeFormat=new Intl.DateTimeFormat('en-GB');"
+                "class Element{constructor(){this.children=[];this.classList={toggle(){}};}"
+                "append(...children){this.children.push(...children);}replaceChildren(){this.children=[];}}"
+                "const node=id=>nodes[id]??=new Element();"
+                "const document={getElementById:node,querySelector:node,createElement:()=>new Element()};"
+                "const setText=(id,value)=>{values[id]=value;};"
+                "const metricText=value=>value==null?'--':numberFormat.format(value);"
+                "const renderTable=()=>{};const baseOptions=()=>({scales:{y:{}}});const replaceChart=()=>{};"
+                + renderer
+                + "renderReposts();const rows=node('#repost-author-table tbody').children;"
+                "console.log(JSON.stringify({values,rows:rows.map(row=>row.children.map(cell=>cell.textContent??cell.children[0]?.textContent)),"
+                "links:rows.map(row=>row.children[0].children[0]?.href),chartHidden:node('repost-chart').hidden}));",
+            ],
+            input=json.dumps({"data": data, "period": period}),
+            capture_output=True,
+            text=True,
+            check=True,
         )
         return json.loads(result.stdout)
 

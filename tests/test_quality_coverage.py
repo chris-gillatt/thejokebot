@@ -230,7 +230,10 @@ class RuntimeConfigCoverageTests(unittest.TestCase):
             mock.patch.object(
                 validate_runtime_config,
                 "_extract_cron_with_fallback",
-                side_effect=[(None, "missing"), *[("actual", "path")] * 5],
+                side_effect=[
+                    (None, "missing"),
+                    *[("actual", "path")] * (len(schedules) - 1),
+                ],
             ),
             mock.patch.object(
                 validate_runtime_config, "_validate_guard_rails", return_value=[]

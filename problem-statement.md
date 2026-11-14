@@ -30,40 +30,50 @@ This is the operating brief for open work and lasting decisions. See the [README
 
 ## Reposts with review (#146)
 
-Planning only; no automated reposting is enabled. Manual approval remains the
-gate for every proposed repost. GitHub issue reviews and discovery from
-previously reposted authors are the preferred starting options, subject to the
-remaining decisions below. Implementation stays directly on `main`.
+The agreed pilot uses public GitHub issues and authors from TJB's existing
+repost history. At 09:15 UTC daily, discover up to five candidates across
+reruns, with seven-day expiry. An authorised completed closure approves immediate
+publication after final checks; a not-planned closure rejects. Implementation
+stays directly on `main`. Live discovery, reviews and account actions remain
+disabled until `BLUESKY_REPOSTS_ENABLED=true`; daily inventory-only refreshes and
+dashboard statistics do not require activation.
 
 The read-only investigation on 14 November 2026 sampled 300 recent feed entries:
 64 reposts from 27 authors, comprising 37 text posts and 27 image posts.
 Fourteen reposts were replies; 26 image posts had no alt text and 11 had no post
 text. Five authors accounted for 38 reposts. These are sample observations,
 not complete historical totals or evidence that text-only moderation is adequate.
+The authenticated inventory preview subsequently read 504 retained subjects
+from 180 authors; 27 originals were unavailable. Inventory statistics describe
+retained reposts, not an all-time publication ledger.
+Broad historical-author discovery also surfaced unrelated artwork, personal
+updates and context-only replies. It is not a humour classifier: inspect this
+preview before activation, and consider an approved source shortlist or recency
+rules as a separate policy decision rather than silently adding filters.
 
 ### Implementation tasks
 
-- [ ] Agree the initial source accounts, discovery bounds, review queue limits,
-  candidate expiry and publishing cadence/cap before enabling account actions.
-  Start with an explicitly approved selection of previously reposted authors
-  and allow manual URL submissions; saved-feed discovery can follow later.
-- [ ] Exclude already-reposted posts with a simple authenticated API check of
+- [x] Agree discovery and approval policy. Rotate through up to 50 historical
+  authors per run and sample up to 20 feed entries each, within a shared
+  180-second read budget. Select at most one candidate per visited author;
+  start with text and images, including verifiable reply context.
+- [x] Exclude already-reposted posts with a simple authenticated API check of
   the post viewer's repost status. Recheck immediately before publication.
   Failed checks must surface an error rather than make a candidate eligible.
   Do not build a separate duplicate-prevention ledger or framework; verify
   uncertain write outcomes before retrying instead of blindly resubmitting.
-- [ ] Build the review surface with original-post links, text, image previews
-  and relevant reply context. The proposed GitHub issue convention is
+- [x] Build the review surface with original-post links, text, image previews
+  and relevant reply context. The agreed GitHub issue convention is
   authorised closure as completed to approve and closure as not planned to
-  reject. Confirm that public reviews are acceptable. Bind approval to the
+  reject. Public reviews are approved. Bind approval to the
   exact URI/CID rather than trusting editable issue text; changed or unavailable
   content must not publish. Confirm actual publication separately from approval.
-- [ ] Extend reporting to identify a reviewed repost, notify the maintainer and
+- [x] Extend reporting to identify a current repost, notify the maintainer and
   remove TJB's repost record after the appropriate approval, never the original
   author's post. Support image-only posts and an explicit reporting route:
   replies to another author's original do not reliably notify TJB. GitHub email
   delivery depends on the maintainer's notification settings.
-- [ ] **Deliver repost statistics on the stats page as part of this feature, not
+- [x] **Deliver repost statistics on the stats page as part of this feature, not
   as an optional follow-up.** Track repost totals, distinct authors, authors
   ranked by how often TJB reposts them, their counts and shares, activity over
   time, and text/image and reply breakdowns where supported by source data.
@@ -73,15 +83,18 @@ not complete historical totals or evidence that text-only moderation is adequate
   Distinguish current repost inventory from confirmed publication history;
   disclose incomplete historical coverage and unknown manual/automated
   provenance. Do not attribute an original's engagement to TJB's repost.
-- [ ] Treat action telemetry, persisted state, metrics collection and stats-page
+- [x] Treat action telemetry, persisted state, metrics collection and stats-page
   rendering as one delivery contract. Add focused duplicate-check, approval,
   reporting and producer-to-collector regressions; verify desktop/mobile
   rendering, top-author ordering, period filtering, empty and partial-data
   states. Preserve existing posting/follow behaviour and creator protections.
+- [ ] Approve the read-only preview and verify one controlled live review,
+  publication and removal before activating the pilot. Do not treat local
+  fixtures or a successful workflow as proof of a real account action.
 
-Fully autonomous content selection/publication and a separately hosted private
-review application remain outside the initial pilot. Do not enable live reposts
-until the outstanding policy decisions and review flow are explicitly approved.
+Fully autonomous publication, manual candidate URL submissions, saved-feed
+discovery and a separately hosted private review application remain deferred.
+Do not enable live reposts without approval of the preview and live review flow.
 
 ## Deferred Work
 
@@ -219,15 +232,15 @@ the SDK's transitive backports remain dependency-owned.
 
 ## Dependency Exceptions
 
-Rechecked on 13 November 2026 against the Python package index, npm registry,
+Rechecked on 14 November 2026 against the Python package index, npm registry,
 upstream Action releases and current Dependabot results. No dependency upgrades
-were made as part of #145, R04, R05, R06 or S01;
+were made as part of #146, #145, R04, R05, R06 or S01;
 keep them in a separate resolver-validated batch so this behaviour fix remains
 focused and the lock stays coherent. Review the deferred versions before the
 next dependency batch or sooner if an applicable advisory appears.
 
 - `requirements.lock` has these installed versions behind the package-index
-  latest: atproto 0.0.73 -> 0.0.74, click 8.5.0 -> 8.5.1, coverage 7.17.0 -> 7.17.3, dnspython 2.9.1 ->
+  latest: atproto 0.0.73 -> 0.0.75, click 8.5.0 -> 8.5.1, coverage 7.17.0 -> 7.17.3, dnspython 2.9.1 ->
   2.9.2, pydantic 2.14.2 -> 2.14.3, pydantic-core 2.50.2 -> 2.50.4, regex
   2026.9.29 -> 2026.11.9, and typing-inspection 0.4.4 -> 0.4.5.
 - Local Python tooling has pip 26.2.2 -> 26.3 and Ruff 0.17.3 -> 0.17.5
@@ -243,10 +256,11 @@ next dependency batch or sooner if an applicable advisory appears.
   validates SHA immutability, while Dependabot results provide release currency.
 - The Sonar scan Action remains at 8.4.1 while upstream stable is 8.5.0.
   Defer this CI-tool upgrade to a separate analysis-validated dependency change,
-  rather than mixing it into #145. Review at the next dependency batch or sooner
-  for an applicable advisory. The other nine Action repositories match current
+  rather than mixing it into #146/#145. Review at the next dependency batch or sooner
+  for an applicable advisory. The other ten Action repositories match current
   stable releases, including CodeQL Action 4.39.3 (its separate bundle releases
-  are not Action versions). No open Dependabot vulnerability alerts were reported.
+  are not Action versions) and the newly used upload-artifact 7.0.2.
+  No open Dependabot vulnerability alerts were reported.
 - Update transitive Python dependencies through the resolver, never by
   independently forcing incompatible pins. The 2 November lock refresh included
   AnyIO 4.16.0, atproto 0.0.73, pytest 9.2.0 and urllib3 2.8.0; Python 3.14

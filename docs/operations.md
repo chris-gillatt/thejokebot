@@ -199,6 +199,67 @@ The prototype checks at most 20 candidate packs, 10 list pages per pack and 100 
 
 Current canonical schemas are maintained in [bluesky-social/bsky](https://github.com/bluesky-social/bsky/tree/main/lexicons/app/bsky/graph). [`getStarterPacksWithMembership`](https://github.com/bluesky-social/bsky/blob/main/lexicons/app/bsky/graph/getStarterPacksWithMembership.json) enumerates packs created by the session user, so it cannot provide a global reverse lookup. Known-candidate verification uses [`getStarterPack`](https://github.com/bluesky-social/bsky/blob/main/lexicons/app/bsky/graph/getStarterPack.json) and its underlying list.
 
+### Reviewed repost pilot (#146)
+
+The `bluesky_review_reposts` workflow runs at **09:15 UTC daily**. Until the
+repository variable `BLUESKY_REPOSTS_ENABLED` is exactly `true`, scheduled runs
+only refresh retained-repost inventory for the stats page; they do not discover
+candidates, create review issues or change the Bluesky account.
+
+Start with `thejokebot-review-reposts --mode preview`, or manually dispatch the
+workflow with its default `preview=true`. Inspect
+`.agent-tmp/repost_preview.html` and `.json`; the workflow uploads both as a
+seven-day artifact. Preview does not create issues, repost, remove content or
+save social state. Images and reply context are included alongside original
+links. Do not activate the pilot until this preview and a controlled live
+review are explicitly approved.
+
+After activation, daily discovery rotates through at most 50 historical repost
+authors, reading at most 20 feed entries each within a 180-second read budget.
+Up to five candidates are queued per UTC day across reruns, one per visited
+author, with seven-day expiry. Text and image originals, including verifiable
+replies, are supported; quotes, video and external embeds are not initial
+candidate formats. Existing reposts are excluded through authenticated viewer
+status and checked again immediately before publication.
+
+Reviews are **public GitHub issues**, assigned to the maintainer. A user with
+verified write/maintain/admin permission closes one as **completed** to approve
+immediate publication, or **not planned** to reject. The saved URI/CID and thread
+context, not editable issue text, control approval. Expired, changed,
+unavailable, blocked, muted or labelled content cannot publish. Wait for the
+bot's confirmation comment: closing an issue is approval, not proof of success.
+GitHub email delivery depends on notification settings.
+
+Use the [repost report form](https://github.com/chris-gillatt/thejokebot/issues/new?template=repost_report.yml)
+with the original post link or canonical AT URI. The activated pilot identifies
+TJB's current repost and adds a removal review to that issue; authorised
+completed closure removes only TJB's repost record, never the original author's
+post. Image-only posts are supported. A deleted or changed original does not
+prevent review of the exact retained repost record. Replies to another author's
+original do not reliably notify TJB; reports are public, so omit private data.
+
+Review outcomes live in social state. A failed write is not blindly retried:
+known receipts can be verified without another create; an unknown outcome
+requires investigation. Preserve `publishing`/`removing`/`uncertain` entries and ambiguous
+GitHub delivery markers. Rerunning the same failed issue workflow can recover
+a missing confirmation comment without repeating a confirmed account action.
+State persistence is attempted even after live failures.
+
+For an inventory-only local refresh, use
+`thejokebot-review-reposts --mode inventory`; it saves social state but performs
+no account actions and does not require pilot activation. Global dry-run mode
+forbids this checkpoint. Commit/persist refreshed state before a later workflow
+uses it.
+
+The stats page shows retained reposts, distinct authors, ranked public handles,
+counts/shares, daily activity and text/image/reply breakdowns. Seven-day and
+30-day rolling periods end at the last complete inventory scan; “all retained”
+is not “all reposts ever made”. Missing originals remain unknown, not invented
+text posts or known non-replies. Removed history and manual/automated provenance
+cannot be reconstructed. Confirmed pilot publications/removals, pending reviews
+and uncertain outcomes are separate; an original's engagement is not attributed
+to TJB's repost.
+
 ### Starter-pack acknowledgement pilot (#115)
 
 The pilot uses retained attributed-follow packs and explicit pack URIs only.

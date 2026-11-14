@@ -14,6 +14,7 @@ from thejokebot.commands import dashboard_engagement
 from thejokebot.commands import dashboard_history
 from thejokebot.commands import dashboard_provider_telemetry
 from thejokebot.commands import dashboard_operations
+from thejokebot.commands import dashboard_reposts
 from thejokebot.commands import dashboard_workflows
 
 PUBLIC_API_BASE = "https://public.api.bsky.app/xrpc"
@@ -1136,6 +1137,7 @@ def collect_metrics(
             state, snapshots, discovery_activity, social_activity, now
         ),
         "starter_pack_attribution": _starter_pack_attribution_metrics(state, now),
+        "reposts": dashboard_reposts.collect(state, now),
         "moderation_activity": _moderation_metrics(workflow_activity),
         "report_resolution": _report_resolution_metrics(state, now),
         "engagement_momentum": _engagement_momentum(snapshots, now),

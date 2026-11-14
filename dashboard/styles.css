@@ -682,6 +682,22 @@ summary:focus-visible {
   min-width: 0;
 }
 
+.repost-layout {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+}
+
+.repost-author-scroll {
+  max-height: 26rem;
+  overflow: auto;
+}
+
+.repost-author-scroll th {
+  position: sticky;
+  top: 0;
+  background: var(--white);
+}
+
 .starter-pack-block {
   grid-column: 1 / -1;
   padding-top: 10px;

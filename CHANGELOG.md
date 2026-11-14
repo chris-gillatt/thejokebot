@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.3.0 - 2026-11-14
+
+- Add a default-disabled reviewed-repost pilot: discover up to five candidates
+  daily from previously reposted authors, preview images and reply context in
+  public GitHub issues, and publish only after an authorised completed closure
+  and fresh content/moderation checks. Expire reviews after seven days, exclude
+  existing reposts through the authenticated API and preserve uncertain outcomes
+  without blind retries. Add approved reporting/removal of TJB's repost records.
+- Refresh retained-repost inventory daily independently of pilot activation.
+  Add stats-page author rankings, counts, shares, daily activity and format/reply
+  breakdowns for seven-day, 30-day and all-retained views, with explicit missing
+  history and unknown-data semantics. Keep confirmed pilot outcomes separate
+  from approvals and current inventory. Refs #146.
+
 ## 2.2.0 - 2026-11-13
 
 - Corrected creator-follow review findings from #147: retain each confirmed

@@ -6,6 +6,7 @@ const charts = {};
 let metrics;
 let selectedTopRange = "30";
 let selectedPerformanceAge = "24";
+let selectedRepostRange = "30";
 let blueskyEmbedLoad;
 const dashboardViews = ["audience", "operations"];
 const historicalViews = {
@@ -826,6 +827,76 @@ function renderSocialActivity() {
   );
 }
 
+function renderReposts() {
+  const reposts = metrics.reposts || {};
+  const summary = reposts.windows?.[selectedRepostRange];
+  setText("repost-total", metricText(summary?.total));
+  setText("repost-authors", metricText(summary?.distinct_authors));
+  setText("repost-images", metricText(summary?.image));
+  setText("repost-replies", metricText(summary?.replies));
+  setText(
+    "repost-coverage",
+    reposts.collected_at
+      ? `Retained reposts as of ${dateTimeFormat.format(new Date(reposts.collected_at))}; refreshed by the daily inventory scan.`
+      : "Collecting repost inventory; no complete scan is available yet.",
+  );
+  setText(
+    "repost-outcomes",
+    `${metricText(reposts.confirmed_publications)} confirmed pilot publications · ${metricText(reposts.confirmed_removals)} removals · ${metricText(reposts.pending_reviews)} awaiting review · ${metricText(reposts.uncertain_outcomes)} uncertain outcomes`,
+  );
+  setText(
+    "repost-format-note",
+    summary
+      ? `${numberFormat.format(summary.text)} text posts · ${numberFormat.format(summary.unknown_format)} unknown/other formats · ${numberFormat.format(summary.unknown_reply)} with unknown reply status`
+      : "Format and reply breakdowns require a complete inventory scan.",
+  );
+  const body = document.querySelector("#repost-author-table tbody");
+  body.replaceChildren();
+  (summary?.authors || []).forEach((author) => {
+    const row = document.createElement("tr");
+    const name = document.createElement("td");
+    if (author.handle) {
+      const link = document.createElement("a");
+      link.href = `https://bsky.app/profile/${encodeURIComponent(author.handle)}`;
+      link.textContent = `@${author.handle}`;
+      link.target = "_blank";
+      link.rel = "noreferrer";
+      name.append(link);
+    } else {
+      name.textContent = "Unavailable author";
+    }
+    row.append(name);
+    [numberFormat.format(author.count), `${percentageFormat.format(author.share * 100)}%`].forEach((value) => {
+      const cell = document.createElement("td");
+      cell.textContent = value;
+      row.append(cell);
+    });
+    body.append(row);
+  });
+  document.getElementById("repost-empty").hidden = Boolean(summary?.total);
+  const daily = summary?.daily || [];
+  renderTable("repost-daily-table", daily.map((day) => [day.date, day.count]));
+  const canvas = document.getElementById("repost-chart");
+  canvas.hidden = daily.length === 0;
+  document.getElementById("repost-chart-empty").hidden = daily.length > 0;
+  document.getElementById("repost-chart-frame").classList.toggle("is-empty", daily.length === 0);
+  if (daily.length) {
+    const options = baseOptions();
+    options.scales.y.beginAtZero = true;
+    replaceChart("reposts", canvas, {
+      type: "bar",
+      data: {
+        labels: daily.map((day) => day.date),
+        datasets: [{ label: "Retained reposts", data: daily.map((day) => day.count), backgroundColor: colours[2] }],
+      },
+      options,
+    });
+  } else {
+    charts.reposts?.destroy();
+    delete charts.reposts;
+  }
+}
+
 function renderTable(id, rows) {
   const body = document.querySelector(`#${id} tbody`);
   body.replaceChildren();
@@ -1378,11 +1449,23 @@ function renderCharts() {
   renderActivityChart();
   renderAudienceGrowth();
   renderSocialActivity();
+  renderReposts();
   renderEngagement();
   renderJokePerformance();
 }
 
 function bindRangeControls() {
+  document.querySelectorAll("[data-repost-range]").forEach((button) => {
+    button.addEventListener("click", () => {
+      selectedRepostRange = button.dataset.repostRange;
+      document.querySelectorAll("[data-repost-range]").forEach((item) => {
+        const selected = item === button;
+        item.classList.toggle("active", selected);
+        item.setAttribute("aria-pressed", String(selected));
+      });
+      renderReposts();
+    });
+  });
   document.getElementById("slot-exceptions-inspect").addEventListener("click", () => {
     document.getElementById("slot-exceptions-region").focus();
   });

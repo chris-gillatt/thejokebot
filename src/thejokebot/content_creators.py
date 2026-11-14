@@ -2,6 +2,7 @@
 
 import re
 import time
+from collections.abc import Iterator
 
 from thejokebot import state_transactions
 from thejokebot.followers import IncompletePaginationError
@@ -27,7 +28,7 @@ def get_protected_dids(state: dict) -> set[str]:
     return set(dids)
 
 
-def _record_creators(state: dict, dids: set[str]) -> None:
+def record_protections(state: dict, dids: set[str]) -> None:
     protected = get_protected_dids(state) | dids
     state.setdefault("follow_tracking", {})["content_creator_dids"] = sorted(protected)
 
@@ -68,10 +69,9 @@ def _record_creator(record, repo_did: str, collection: str) -> str | None:
     return match.group(1)
 
 
-def _scan_collection(
+def iter_interactions(
     client, repo_did: str, collection: str, deadline: float
-) -> set[str]:
-    dids: set[str] = set()
+) -> Iterator[tuple[object, str | None]]:
     cursor = None
     seen_cursors: set[str] = set()
     for page in range(_MAX_PAGES):
@@ -92,17 +92,26 @@ def _scan_collection(
             raise IncompletePaginationError("Unexpected content interaction page")
         for record in records:
             did = _record_creator(record, repo_did, collection)
-            if did is not None and did != repo_did:
-                dids.add(did)
+            yield record, did
         cursor = get_nested_value(response, "cursor")
         if cursor is None or cursor == "":
-            return dids
+            return
         if not isinstance(cursor, str) or not cursor.strip() or cursor in seen_cursors:
             raise IncompletePaginationError(
                 "Invalid or repeated content interaction cursor"
             )
         seen_cursors.add(cursor)
     raise IncompletePaginationError("Content-creator scan page limit reached")
+
+
+def _scan_collection(
+    client, repo_did: str, collection: str, deadline: float
+) -> set[str]:
+    return {
+        did
+        for _, did in iter_interactions(client, repo_did, collection, deadline)
+        if did is not None and did != repo_did
+    }
 
 
 def sync_protections(client, state: dict, dry_run: bool) -> set[str]:
@@ -115,7 +124,7 @@ def sync_protections(client, state: dict, dry_run: bool) -> set[str]:
         dids.update(_scan_collection(client, repo_did, collection, deadline))
 
     def record(latest):
-        _record_creators(latest, dids)
+        record_protections(latest, dids)
 
     if dry_run:
         record(state)
