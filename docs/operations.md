@@ -238,10 +238,16 @@ failures still abort discovery.
 
 Eligible posts are ranked by the author's retained repost count, then likes plus
 reposts, then original creation time. This is a relevance heuristic, not a humour
-or image-content classifier. Up to five candidates are queued per UTC day across
-reruns, at most one per author, with seven-day review expiry; fewer are fine.
-Read-only previews can show replacements even after the day's budget is spent,
-but do not reset it or create issues. Existing reposts and previously reviewed
+or image-content classifier. At most five automatic suggestion issues may be
+created in any rolling seven days, including closed or rejected reviews.
+Actual issue creation times control the allowance; pending proposals reserve
+capacity and uncertain delivery attempts retain it until reconciled. The limit
+is rechecked immediately before issue creation, so retries and delayed delivery
+cannot bypass it. Daily inventory and expiry checks continue. Select at most one
+post per author per run; fewer than five suggestions are fine.
+Read-only previews can show replacements even after the weekly budget is spent,
+but do not reset it or create issues. Removal reports do not consume the
+automatic suggestion allowance. Existing reposts and previously reviewed
 subjects remain excluded. Authenticated viewer status is checked again
 immediately before publication. Previously saved reply reviews retain their
 exact context checks.
@@ -253,6 +259,19 @@ context, not editable issue text, control approval. Expired, changed,
 unavailable, blocked, muted or labelled content cannot publish. Wait for the
 bot's confirmation comment: closing an issue is approval, not proof of success.
 GitHub email delivery depends on notification settings.
+
+New suggestion issues have the `repost-review` label. After seven days, automatic
+housekeeping closes only labelled, bot-owned issues whose immutable ID, number
+and exact review title match saved repost proposals. It adds an explanatory
+comment and uses **not planned**, never completed. Ordinary bugs, feature
+requests and all unrelated issues are strictly outside this housekeeping, even
+if someone adds the label to them.
+
+Add `keep-open` to exempt a suggestion from automatic closure. Its seven-day
+approval deadline still expires: an issue remaining open is not permission to
+publish stale content. Removing the exemption allows the next successful daily
+run to close the expired review. Exempt issues can therefore increase the open
+issue count beyond five.
 
 Use the [repost report form](https://github.com/chris-gillatt/thejokebot/issues/new?template=repost_report.yml)
 with the original post link or canonical AT URI. The activated pilot identifies

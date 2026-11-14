@@ -32,8 +32,9 @@ This is the operating brief for open work and lasting decisions. See the [README
 
 The agreed pilot uses public GitHub issues, authors from TJB's existing
 repost history and the shared follow-fellows humour tags. At 09:15 UTC daily,
-discover up to five candidates across
-reruns, with seven-day expiry. An authorised completed closure approves immediate
+create at most five suggestion issues across any rolling seven days,
+including reruns and closed/rejected reviews, with seven-day expiry.
+An authorised completed closure approves immediate
 publication after final checks; a not-planned closure rejects. Implementation
 stays directly on `main`. The maintainer authorised queue activation on
 14 November 2026: `BLUESKY_REPOSTS_ENABLED=true`, and the
@@ -70,8 +71,16 @@ shortlist and any semantic/image classifier remain separate policy decisions.
   `followback` signal, and search recent tagged originals as well as historical
   authors. Rank eligible posts instead of taking the first eligible feed item.
   Permit fewer than five candidates; preserve one review per post, one selected
-  post per author and the live daily budget. Verify a read-only replacement
+  post per author and the live rolling seven-day budget. Verify a read-only replacement
   preview without generating issues or changing saved state.
+- [x] Reduce the trial to five automatically created suggestion issues in any
+  rolling seven days. Count actual issue creation times, reserve pending or
+  uncertain deliveries, and recheck before creating an issue. Keep daily
+  inventory/expiry runs and read-only previews.
+- [x] Label suggestion issues `repost-review`; restrict automatic expiry closure
+  to verified, labelled, bot-owned saved suggestions. Add an expiry comment and
+  a `keep-open` exemption without extending approval expiry. Never apply this
+  housekeeping to ordinary bugs, feature requests or unrelated issues.
 - [x] Exclude already-reposted posts with a simple authenticated API check of
   the post viewer's repost status. Recheck immediately before publication.
   Failed checks must surface an error rather than make a candidate eligible.
@@ -115,6 +124,17 @@ discovery and a separately hosted private review application remain deferred.
 Do not publish or remove a repost without its individual authorised review.
 
 ## Deferred Work
+
+### Repost review event reconciliation
+
+The issue-event runs
+[43592908204](https://github.com/chris-gillatt/thejokebot/actions/runs/43592908204)
+and [43592952392](https://github.com/chris-gillatt/thejokebot/actions/runs/43592952392)
+were cancelled. Reviews #151 and #154 are closed as not planned on GitHub but
+still proposed in saved state. Investigate event delivery/reconciliation in a
+separate focused change; do not infer publication approval or replay account
+actions from this observation. The rolling quota counts these bound issues
+regardless of status, so this does not free extra trial capacity.
 
 ### CodeQL baseline
 

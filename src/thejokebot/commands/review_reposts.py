@@ -28,6 +28,8 @@ REPOSITORY = "chris-gillatt/thejokebot"
 REPOSITORY_ID = 901122902
 ACTIONS_BOT_ID = 41898282
 REPORT_PREFIX = "[Repost report]"
+REVIEW_LABEL = "repost-review"
+KEEP_OPEN_LABEL = "keep-open"
 TERMINAL_STATUSES = {
     "published",
     "already_reposted",
@@ -185,6 +187,9 @@ def deliver_reviews(state: dict, now=None) -> None:
                 raise ValueError(
                     "Previous review creation is uncertain; verify GitHub before retrying"
                 )
+            if not reviews.remaining_review_budget(state, now, reserve_pending=False):
+                print("Rolling seven-day repost issue limit reached; no new issue.")
+                continue
             reviews.update_review(state, candidate["key"], delivery_attempted=True)
             issue = github_api(
                 f"/repos/{REPOSITORY}/issues",
@@ -193,6 +198,7 @@ def deliver_reviews(state: dict, now=None) -> None:
                     "title": review_title(candidate),
                     "body": review_body(candidate),
                     "assignees": [REPOSITORY.split("/")[0]],
+                    "labels": [REVIEW_LABEL],
                 },
             )
         _bind_issue(state, candidate, issue)
@@ -200,27 +206,81 @@ def deliver_reviews(state: dict, now=None) -> None:
     print(f"Repost review delivery: {delivered} proposals delivered or recovered.")
 
 
+def _close_expired_issue(number: int) -> None:
+    github_api(
+        f"/repos/{REPOSITORY}/issues/{number}",
+        "PATCH",
+        {"state": "closed", "state_reason": "not_planned"},
+    )
+
+
+def _expire_repost_issue(state: dict, candidate: dict) -> None:
+    number = candidate["issue_number"]
+    issue = github_api(f"/repos/{REPOSITORY}/issues/{number}")
+    if (
+        issue.get("id") != candidate["issue_id"]
+        or issue.get("number") != number
+        or issue.get("user", {}).get("id") != ACTIONS_BOT_ID
+        or issue.get("title") != review_title(candidate)
+    ):
+        raise ValueError("Expired issue does not match the saved bot repost review")
+    if issue["state"] == "closed":
+        reviews.update_review(state, candidate["key"], expiry_closed=True)
+        return
+    labels = issue.get("labels")
+    if not isinstance(labels, list):
+        raise ValueError("Expired review issue labels could not be verified")
+    names = {label["name"] for label in labels}
+    if REVIEW_LABEL not in names or KEEP_OPEN_LABEL in names:
+        print("Expired repost review left open: review label absent or keep-open set.")
+        return
+    if issue["state"] != "open":
+        raise ValueError("Unexpected expired review issue state")
+    if not candidate.get("expiry_comment_id"):
+        comment = github_api(
+            f"/repos/{REPOSITORY}/issues/{number}/comments",
+            "POST",
+            {
+                "body": "This repost review has expired after seven days. Closing "
+                "automatically as **not planned**; no repost is approved. "
+                "The `keep-open` label exempts a review from automatic closure, "
+                "but does not extend its approval deadline."
+            },
+        )
+        if not isinstance(comment.get("id"), int):
+            raise ValueError("GitHub did not confirm the expiry comment")
+        reviews.update_review(state, candidate["key"], expiry_comment_id=comment["id"])
+    _close_expired_issue(number)
+    reviews.update_review(state, candidate["key"], expiry_closed=True)
+
+
+def _expire_candidate(state: dict, candidate: dict) -> None:
+    if candidate["action"] == "repost":
+        if candidate["status"] != "expired":
+            candidate = reviews.update_review(state, candidate["key"], status="expired")
+        if candidate.get("issue_number"):
+            _expire_repost_issue(state, candidate)
+    elif candidate["status"] != "expired":
+        if candidate.get("issue_number"):
+            _close_expired_issue(candidate["issue_number"])
+        reviews.update_review(state, candidate["key"], status="expired")
+    print("Expired a repost review without an account action.")
+
+
 def expire_reviews(state: dict, now=None) -> None:
     reviews.require_live()
+    skipped = (TERMINAL_STATUSES - {"expired"}) | reviews.UNCERTAIN_STATUSES
     for candidate in list(state["repost_reviews"]["candidates"].values()):
-        if (
-            candidate["status"] in TERMINAL_STATUSES
-            or candidate["status"] in reviews.UNCERTAIN_STATUSES
+        if candidate["status"] in skipped:
+            continue
+        if candidate["status"] == "expired" and (
+            candidate["action"] != "repost"
+            or not candidate.get("issue_number")
+            or candidate.get("expiry_closed")
         ):
             continue
-        if reviews.timestamp(candidate["expires_at"]) > reviews.utc_now(now):
-            continue
-        if candidate.get("issue_number"):
-            github_api(
-                f"/repos/{REPOSITORY}/issues/{candidate['issue_number']}",
-                "PATCH",
-                {
-                    "state": "closed",
-                    "state_reason": "not_planned",
-                },
-            )
-        reviews.update_review(state, candidate["key"], status="expired")
-        print("Expired a repost review without an account action.")
+        if reviews.timestamp(candidate["expires_at"]) <= reviews.utc_now(now):
+            _expire_candidate(state, candidate)
 
 
 def _validate_event(event: dict) -> int:

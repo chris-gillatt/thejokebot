@@ -34,6 +34,7 @@ def issue(candidate, **changes):
         "state": "closed",
         "state_reason": "completed",
         "closed_by": {"id": 42, "login": "maintainer"},
+        "labels": [{"name": command.REVIEW_LABEL}],
         **changes,
     }
 
@@ -313,12 +314,17 @@ def test_new_review_is_created_and_bound_before_it_can_publish(account, github):
     assert saved["status"] == "proposed"
     assert saved["issue_id"] == 1234
     assert github.call_args.args[1] == "POST"
+    assert github.call_args.args[2]["labels"] == [command.REVIEW_LABEL]
     account.repost.assert_not_called()
 
 
 def test_expired_reviews_close_without_touching_account(account, github):
     candidate = bind(proposal(account))
-    github.return_value = {"id": 1234}
+    github.side_effect = [
+        issue(candidate, state="open"),
+        {"id": 99},
+        {"id": 1234},
+    ]
     command.expire_reviews(state.load_state(), NOW + timedelta(days=7))
     assert github.call_args.args[2] == {
         "state": "closed",
@@ -329,8 +335,94 @@ def test_expired_reviews_close_without_touching_account(account, github):
         == "expired"
     )
     command.expire_reviews(state.load_state(), NOW + timedelta(days=8))
-    assert github.call_count == 1
+    assert github.call_count == 3
     account.repost.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "labels", [[], [{"name": command.REVIEW_LABEL}, {"name": command.KEEP_OPEN_LABEL}]]
+)
+def test_expiry_exemptions_leave_issue_open_without_extending_approval(
+    account, github, labels
+):
+    candidate = bind(proposal(account))
+    github.return_value = issue(candidate, state="open", labels=labels)
+    command.expire_reviews(state.load_state(), NOW + timedelta(days=7))
+    assert github.call_count == 1
+    assert (
+        state.load_state()["repost_reviews"]["candidates"][candidate["key"]]["status"]
+        == "expired"
+    )
+    closed = issue(candidate)
+    github.side_effect = [closed, {"permission": "admin", "user": {"id": 42}}]
+    command.handle_event(
+        account, state.load_state(), event(closed), NOW + timedelta(days=7)
+    )
+    account.repost.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "change",
+    [{"id": 999}, {"number": 999}, {"user": {"id": 42}}, {"title": "Ordinary bug"}],
+)
+def test_label_does_not_authorise_closing_an_unbound_or_ordinary_issue(
+    account, github, change
+):
+    candidate = bind(proposal(account))
+    github.return_value = issue(candidate, state="open", **change)
+    with pytest.raises(ValueError, match="saved bot repost review"):
+        command.expire_reviews(state.load_state(), NOW + timedelta(days=7))
+    assert github.call_count == 1
+
+
+def test_removing_keep_open_later_allows_expiry_and_does_not_repeat_comments(
+    account, github
+):
+    candidate = bind(proposal(account))
+    github.return_value = issue(
+        candidate,
+        state="open",
+        labels=[{"name": command.REVIEW_LABEL}, {"name": command.KEEP_OPEN_LABEL}],
+    )
+    command.expire_reviews(state.load_state(), NOW + timedelta(days=7))
+    github.side_effect = [
+        issue(candidate, state="open"),
+        {"id": 99},
+        RuntimeError("close failed"),
+    ]
+    with pytest.raises(RuntimeError, match="close failed"):
+        command.expire_reviews(state.load_state(), NOW + timedelta(days=8))
+    github.side_effect = [issue(candidate, state="open"), {}]
+    command.expire_reviews(state.load_state(), NOW + timedelta(days=9))
+    assert sum(call.args[1:2] == ("POST",) for call in github.call_args_list) == 1
+    assert github.call_args.args[2] == {
+        "state": "closed",
+        "state_reason": "not_planned",
+    }
+
+
+def test_delivery_cannot_create_an_extra_issue_when_weekly_quota_is_full(
+    account, github
+):
+    candidate = proposal(account)
+    candidates = {
+        str(i): {
+            **candidate,
+            "key": str(i),
+            "status": "rejected",
+            "issue_id": i + 1,
+            "review_ready_at": NOW.isoformat(),
+        }
+        for i in range(5)
+    }
+    candidates[candidate["key"]] = candidate
+    state.update_state(
+        lambda latest: latest["repost_reviews"]["candidates"].update(candidates),
+        domains="social",
+    )
+    github.return_value = {"total_count": 0, "incomplete_results": False, "items": []}
+    command.deliver_reviews(state.load_state(), NOW + timedelta(days=1))
+    assert all(call.args[1:2] != ("POST",) for call in github.call_args_list)
 
 
 def test_expired_undelivered_review_does_not_create_issue(account, github):
@@ -339,6 +431,42 @@ def test_expired_undelivered_review_does_not_create_issue(account, github):
     reviews.update_review(state.load_state(), candidate["key"], status="proposed")
     command.deliver_reviews(state.load_state(), NOW + timedelta(days=7))
     github.assert_not_called()
+    command.expire_reviews(state.load_state(), NOW + timedelta(days=8))
+    github.assert_not_called()
+
+
+@pytest.mark.parametrize("failure", ["labels", "state", "comment"])
+def test_unverifiable_expiry_responses_do_not_close_issues(account, github, failure):
+    candidate = bind(proposal(account))
+    current = issue(candidate, state="open")
+    if failure == "labels":
+        current["labels"] = None
+    elif failure == "state":
+        current["state"] = "unexpected"
+    github.side_effect = [current, {}]
+    with pytest.raises(ValueError):
+        command.expire_reviews(state.load_state(), NOW + timedelta(days=7))
+    assert all(call.args[1:2] != ("PATCH",) for call in github.call_args_list)
+
+
+def test_already_closed_expired_review_is_not_rewritten_or_rechecked(account, github):
+    candidate = bind(proposal(account))
+    github.return_value = issue(candidate)
+    command.expire_reviews(state.load_state(), NOW + timedelta(days=7))
+    command.expire_reviews(state.load_state(), NOW + timedelta(days=8))
+    assert github.call_count == 1
+
+
+def test_existing_removal_review_expiry_is_unchanged(account, github):
+    candidate = bind(proposal(account))
+    reviews.update_review(state.load_state(), candidate["key"], action="remove")
+    github.return_value = {}
+    command.expire_reviews(state.load_state(), NOW + timedelta(days=7))
+    assert github.call_args.args[2] == {
+        "state": "closed",
+        "state_reason": "not_planned",
+    }
+    account.delete_repost.assert_not_called()
 
 
 @pytest.mark.parametrize(

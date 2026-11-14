@@ -2,11 +2,17 @@
 
 ## 2.3.0 - 2026-11-14
 
+- Limit the repost trial to five automatic suggestion issues per rolling seven
+  days, including closed/rejected reviews, with a second quota check before
+  issue creation. Label suggestions `repost-review`; after seven days, close
+  only verified, labelled bot reviews as not planned with an expiry comment.
+  Honour `keep-open` without extending approval expiry. Ordinary bugs, feature
+  requests and other unrelated issues are never included in this housekeeping.
 - Improve repost relevance using the shared follow-fellows humour tags, including
   meme tags, and rank eligible posts by retained author history, engagement and
   freshness. Search tags as well as historical authors; require standalone
   originals no older than seven days and exclude explicit no-repost requests.
-  Keep individual approvals and the daily cap; allow read-only replacement
+  Keep individual approvals and the rolling weekly cap; allow read-only replacement
   previews after that cap is spent. Skip confirmed unavailable/blocked source
   profiles without concealing other API failures.
 - Activate daily reviewed-repost discovery after maintainer approval and deliver
@@ -18,7 +24,7 @@
   Parse public report fields without overlapping whitespace matching, while
   retaining CRLF and blank-line support.
 - Add a default-disabled reviewed-repost pilot: discover up to five candidates
-  daily from previously reposted authors, preview images and reply context in
+  per rolling seven days, preview images and reply context in
   public GitHub issues, and publish only after an authorised completed closure
   and fresh content/moderation checks. Expire reviews after seven days, exclude
   existing reposts through the authenticated API and preserve uncertain outcomes

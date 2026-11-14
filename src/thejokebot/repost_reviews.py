@@ -21,6 +21,7 @@ from thejokebot.runtime import (
 
 COLLECTION = "app.bsky.feed.repost"
 MAX_CANDIDATES = 5
+REVIEW_WINDOW_DAYS = 7
 REVIEW_EXPIRY_DAYS = 7
 MAX_SOURCE_ACCOUNTS = 50
 SOURCE_FEED_LIMIT = 20
@@ -383,6 +384,23 @@ def _ranked_candidates(client, posts, counts, excluded, now, deadline, budget):
     return selected
 
 
+def remaining_review_budget(state: dict, now=None, *, reserve_pending=True) -> int:
+    cutoff = utc_now(now) - timedelta(days=REVIEW_WINDOW_DAYS)
+    used = 0
+    for candidate in state.get("repost_reviews", {}).get("candidates", {}).values():
+        if candidate["action"] != "repost":
+            continue
+        if candidate.get("issue_id"):
+            counted = timestamp(candidate["review_ready_at"]) > cutoff
+        elif candidate.get("delivery_attempted"):
+            # An unbound attempt may already have created an issue.
+            counted = True
+        else:
+            counted = reserve_pending and timestamp(candidate["queued_at"]) > cutoff
+        used += bool(counted)
+    return max(0, MAX_CANDIDATES - used)
+
+
 def discover(
     client, state: dict, now: datetime | None = None, *, preview: bool = False
 ) -> dict:
@@ -402,12 +420,7 @@ def discover(
         - {client.me.did},
         key=lambda did: (-counts[did], did),
     )
-    queued_today = sum(
-        entry["action"] == "repost"
-        and timestamp(entry["queued_at"]).date() == now.date()
-        for entry in previous.values()
-    )
-    budget = MAX_CANDIDATES if preview else max(0, MAX_CANDIDATES - queued_today)
+    budget = MAX_CANDIDATES if preview else remaining_review_budget(state, now)
     offset = saved.get("source_offset", 0)
     posts = []
     visited = 0

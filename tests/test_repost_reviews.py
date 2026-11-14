@@ -107,7 +107,7 @@ def test_discovery_is_read_only_and_excludes_already_reposted_posts(account):
     account.repost.assert_not_called()
 
 
-def test_daily_cap_rotation_and_persisted_rejections(account):
+def test_rolling_weekly_cap_rotation_and_persisted_rejections(account):
     authors = [f"did:plc:author{i}" for i in range(8)]
     account.com.atproto.repo.list_records.return_value = {
         "records": [
@@ -127,9 +127,30 @@ def test_daily_cap_rotation_and_persisted_rejections(account):
     reviews.checkpoint_discovery(state.load_state(), report)
     again = reviews.discover(account, state.load_state(), NOW)
     assert again["candidates"] == []
-    tomorrow = reviews.discover(account, state.load_state(), NOW + timedelta(days=1))
-    assert tomorrow["candidates"]
-    assert not {item["post"]["uri"] for item in tomorrow["candidates"]} & {
+    for days in (1, 2, 6):
+        assert (
+            reviews.discover(account, state.load_state(), NOW + timedelta(days=days))[
+                "candidates"
+            ]
+            == []
+        )
+    account.get_author_feed.side_effect = lambda actor, **_: {
+        "feed": [
+            {
+                "post": post(
+                    author=actor,
+                    key="next-week",
+                    record={
+                        **post()["record"],
+                        "createdAt": (NOW + timedelta(days=7)).isoformat(),
+                    },
+                )
+            }
+        ]
+    }
+    next_week = reviews.discover(account, state.load_state(), NOW + timedelta(days=7))
+    assert next_week["candidates"]
+    assert not {item["post"]["uri"] for item in next_week["candidates"]} & {
         item["post"]["uri"] for item in report["candidates"]
     }
 
@@ -659,7 +680,7 @@ def test_repeatedly_reposted_authors_rank_above_one_off_sources(account):
     ]
 
 
-def test_read_only_preview_can_show_replacements_without_resetting_daily_budget(
+def test_read_only_preview_can_show_replacements_without_resetting_weekly_budget(
     account,
 ):
     candidate = proposal(account)
@@ -676,6 +697,53 @@ def test_read_only_preview_can_show_replacements_without_resetting_daily_budget(
     ]
     assert saved == before
     account.repost.assert_not_called()
+
+
+@pytest.mark.parametrize("seconds,expected", [(604799, 0), (604800, 5)])
+def test_rolling_quota_uses_actual_issue_creation_even_for_closed_reviews(
+    account, seconds, expected
+):
+    candidate = proposal(account)
+    saved = {
+        "repost_reviews": {
+            "candidates": {
+                str(i): {
+                    **candidate,
+                    "status": "rejected",
+                    "queued_at": (NOW - timedelta(days=6)).isoformat(),
+                    "issue_id": i + 1,
+                    "review_ready_at": NOW.isoformat(),
+                }
+                for i in range(5)
+            }
+        }
+    }
+    assert (
+        reviews.remaining_review_budget(saved, NOW + timedelta(seconds=seconds))
+        == expected
+    )
+
+
+def test_removal_reviews_do_not_consume_the_suggestion_quota(account):
+    candidate = proposal(account)
+    saved = {
+        "repost_reviews": {
+            "candidates": {str(i): {**candidate, "action": "remove"} for i in range(8)}
+        }
+    }
+    assert reviews.remaining_review_budget(saved, NOW) == 5
+
+
+def test_uncertain_issue_creation_reserves_capacity_until_reconciled(account):
+    candidate = proposal(account)
+    saved = {
+        "repost_reviews": {
+            "candidates": {
+                str(i): {**candidate, "delivery_attempted": True} for i in range(5)
+            }
+        }
+    }
+    assert reviews.remaining_review_budget(saved, NOW + timedelta(days=8)) == 0
 
 
 @pytest.mark.parametrize(
