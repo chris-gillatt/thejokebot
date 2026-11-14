@@ -2,6 +2,9 @@
 
 ## 2.3.0 - 2026-11-14
 
+- Activate daily reviewed-repost discovery after maintainer approval and deliver
+  the first five public review issues. Individual completed closures remain
+  mandatory before any repost.
 - Validate review issue numbers before GitHub requests and delimit CLI endpoint
   arguments from options. Restrict endpoint syntax and use the live issue
   closer's canonical account for permission checks, not event-supplied names.

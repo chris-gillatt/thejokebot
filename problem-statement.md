@@ -34,9 +34,12 @@ The agreed pilot uses public GitHub issues and authors from TJB's existing
 repost history. At 09:15 UTC daily, discover up to five candidates across
 reruns, with seven-day expiry. An authorised completed closure approves immediate
 publication after final checks; a not-planned closure rejects. Implementation
-stays directly on `main`. Live discovery, reviews and account actions remain
-disabled until `BLUESKY_REPOSTS_ENABLED=true`; daily inventory-only refreshes and
-dashboard statistics do not require activation.
+stays directly on `main`. The maintainer authorised queue activation on
+14 November 2026: `BLUESKY_REPOSTS_ENABLED=true`, and the
+[first discovery run](https://github.com/chris-gillatt/thejokebot/actions/runs/43592478351)
+created five public review issues. Activation does not approve any repost;
+individual completed closures remain required. Daily inventory-only refreshes
+and dashboard statistics do not require activation.
 
 The read-only investigation on 14 November 2026 sampled 300 recent feed entries:
 64 reposts from 27 authors, comprising 37 text posts and 27 image posts.
@@ -47,8 +50,8 @@ The authenticated inventory preview subsequently read 504 retained subjects
 from 180 authors; 27 originals were unavailable. Inventory statistics describe
 retained reposts, not an all-time publication ledger.
 Broad historical-author discovery also surfaced unrelated artwork, personal
-updates and context-only replies. It is not a humour classifier: inspect this
-preview before activation, and consider an approved source shortlist or recency
+updates and context-only replies. It is not a humour classifier: inspect each
+review, and consider an approved source shortlist or recency
 rules as a separate policy decision rather than silently adding filters.
 
 ### Implementation tasks
@@ -88,13 +91,16 @@ rules as a separate policy decision rather than silently adding filters.
   reporting and producer-to-collector regressions; verify desktop/mobile
   rendering, top-author ordering, period filtering, empty and partial-data
   states. Preserve existing posting/follow behaviour and creator protections.
-- [ ] Approve the read-only preview and verify one controlled live review,
-  publication and removal before activating the pilot. Do not treat local
-  fixtures or a successful workflow as proof of a real account action.
+- [x] Inspect the read-only preview and obtain maintainer approval to activate
+  the review queue. Create and persist the first five public reviews without
+  approving any account action.
+- [ ] Verify one controlled publication and removal through separately approved
+  review issues. Do not treat local fixtures or a successful discovery workflow
+  as proof of a real account action.
 
 Fully autonomous publication, manual candidate URL submissions, saved-feed
 discovery and a separately hosted private review application remain deferred.
-Do not enable live reposts without approval of the preview and live review flow.
+Do not publish or remove a repost without its individual authorised review.
 
 ## Deferred Work
 

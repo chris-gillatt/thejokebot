@@ -206,13 +206,20 @@ repository variable `BLUESKY_REPOSTS_ENABLED` is exactly `true`, scheduled runs
 only refresh retained-repost inventory for the stats page; they do not discover
 candidates, create review issues or change the Bluesky account.
 
+The production queue was enabled with maintainer approval on 14 November 2026.
+The [first discovery run](https://github.com/chris-gillatt/thejokebot/actions/runs/43592478351)
+created and persisted five public reviews without approving any repost.
+The first controlled publication and removal still require separate approvals
+and live verification.
+
 Start with `thejokebot-review-reposts --mode preview`, or manually dispatch the
 workflow with its default `preview=true`. Inspect
 `.agent-tmp/repost_preview.html` and `.json`; the workflow uploads both as a
 seven-day artifact. Preview does not create issues, repost, remove content or
 save social state. Images and reply context are included alongside original
-links. Do not activate the pilot until this preview and a controlled live
-review are explicitly approved.
+links. Inspect the preview and obtain explicit maintainer approval before
+enabling the queue. Queue activation does not authorise publication or removal;
+each account action requires its own approved review.
 
 After activation, daily discovery rotates through at most 50 historical repost
 authors, reading at most 20 feed entries each within a 180-second read budget.
