@@ -3,8 +3,10 @@
 ## 2.3.0 - 2026-11-14
 
 - Validate review issue numbers before GitHub requests and delimit CLI endpoint
-  arguments from options. Parse public report fields without overlapping
-  whitespace matching, while retaining CRLF and blank-line support.
+  arguments from options. Restrict endpoint syntax and use the live issue
+  closer's canonical account for permission checks, not event-supplied names.
+  Parse public report fields without overlapping whitespace matching, while
+  retaining CRLF and blank-line support.
 - Add a default-disabled reviewed-repost pilot: discover up to five candidates
   daily from previously reposted authors, preview images and reply context in
   public GitHub issues, and publish only after an authorised completed closure

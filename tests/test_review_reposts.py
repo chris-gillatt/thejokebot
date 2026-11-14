@@ -33,7 +33,7 @@ def issue(candidate, **changes):
         "updated_at": NOW.isoformat(),
         "state": "closed",
         "state_reason": "completed",
-        "closed_by": {"id": 42},
+        "closed_by": {"id": 42, "login": "maintainer"},
         **changes,
     }
 
@@ -620,3 +620,41 @@ def test_report_field_without_value_rejects_long_blank_input(account):
     body = "### Original Bluesky post" + "\n" * 30_000
     with pytest.raises(ValueError, match="no original post value"):
         command._report_uri(account, body)
+
+
+@pytest.mark.parametrize(
+    "endpoint",
+    [
+        "-XDELETE",
+        "/path\n--method=DELETE",
+        "/path?value=$(command)",
+        "https://api.github.com/user",
+    ],
+)
+def test_github_transport_rejects_noncanonical_endpoints_before_starting_process(
+    monkeypatch, endpoint
+):
+    run = Mock()
+    monkeypatch.setattr(command.subprocess, "run", run)
+    with pytest.raises(ValueError, match="Invalid GitHub API endpoint"):
+        command.github_api(endpoint)
+    run.assert_not_called()
+
+
+def test_permission_lookup_uses_live_closer_identity_not_event_login(account, github):
+    candidate = bind(proposal(account))
+    review_issue = issue(candidate)
+    payload = event(review_issue)
+    payload["sender"]["login"] = "untrusted-event-name"
+    github.side_effect = [
+        review_issue,
+        {"permission": "admin", "user": {"id": 42}},
+        {"id": 99},
+    ]
+    command.handle_event(account, state.load_state(), payload, NOW)
+    assert (
+        github.call_args_list[1]
+        .args[0]
+        .endswith("/collaborators/maintainer/permission")
+    )
+    account.repost.assert_called_once()

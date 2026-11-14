@@ -39,6 +39,8 @@ TERMINAL_STATUSES = {
 
 
 def github_api(path: str, method: str = "GET", payload: dict | None = None) -> dict:
+    if not re.fullmatch(r"/[A-Za-z0-9._~?&=%:+/-]*", path):
+        raise ValueError("Invalid GitHub API endpoint")
     try:
         result = subprocess.run(
             [
@@ -246,7 +248,7 @@ def _authorise(event: dict, issue: dict, candidate: dict) -> None:
     ):
         raise ValueError("Stale, premature or unauthorised repost review decision")
     permission = github_api(
-        f"/repos/{REPOSITORY}/collaborators/{quote(actor['login'], safe='')}/permission"
+        f"/repos/{REPOSITORY}/collaborators/{quote(issue['closed_by']['login'], safe='')}/permission"
     )
     if permission.get("user", {}).get("id") != actor.get("id") or permission.get(
         "permission"
