@@ -33,7 +33,10 @@ This is the operating brief for open work and lasting decisions. See the [README
 The [runner-log review register](docs/log-review-register.md) is the decision
 record for accepted observations, expected behaviour, upstream watch items,
 unresolved warnings and fixed findings. Future reviews must consult it before
-proposing new work. Duplicate joke candidates and successful fall-through are
+proposing new work and update it as a required part of each run, including
+coverage, new evidence and changed dispositions. Invoking the review skill
+authorises register documentation maintenance, not implementation or account
+changes. Duplicate joke candidates and successful fall-through are
 normal bot operation, explicitly accepted by the maintainer; do not present
 them as concerns or optimisation work without separate evidence of a fault.
 
@@ -61,7 +64,7 @@ establish the intended behaviour.
 | Incomplete or stale evidence produces a false diagnosis | Identify the exact run attempt and commit; mark unavailable, truncated or partial logs explicitly. Absence of a warning is not proof of absence of a problem. |
 | Repeated or benign warnings create issue noise | Check existing issues and documented exceptions; group repeated observations without assuming a new incident or fix is required. |
 | A warning is mistaken for an exploitable vulnerability | Separate observed output from a verified diagnosis. Security observations require appropriate verification before a vulnerability claim or remediation. |
-| Agent fixes or merging bypass human intent | Require distinct approval for issue creation, agent assignment, change scope and any branch/PR/merge arrangement. No automatic account actions or repository writes in v1. |
+| Agent fixes or merging bypass human intent | Require distinct approval for issue creation, agent assignment, change scope and any branch/PR/merge arrangement. Review runs maintain the evidence register; no automatic account actions or implementation changes. |
 
 ### Proposed read-only v1
 
@@ -85,8 +88,9 @@ establish the intended behaviour.
   exception/issue links and a proposed next step. Distinguish observed facts,
   inferred causes and unverified suggestions. Verify upstream claims before
   recommending a replacement dependency or project.
-- Return a concise human-readable review. Issue text may be drafted for review,
-  but do not create issues, assign agents, edit files, open PRs or merge.
+- Return a concise human-readable review and update the review register. Issue
+  text may be drafted for review, but do not create issues, assign agents,
+  change other files, open PRs or merge without separate instructions.
   Follow the global rule excluding routine successful validation summaries
   from GitHub issues and comments.
 
@@ -105,9 +109,9 @@ establish the intended behaviour.
 
 Remaining decision owner: the repository maintainer. Trigger: review the first
 read-only report before authorising concrete issue creation, agent assignment
-or any fix/merge chain. The skill may draft issues, but the collector and default
-review cannot create them or change repository/account state. Earlier rerun
-attempts and older runs rerun during the window are explicitly outside this
+or any fix/merge chain. The skill may draft issues and maintain the register;
+the collector remains read-only, with no issue creation or account actions.
+Earlier rerun attempts and older runs rerun during the window are outside this
 initial sample. No automated issue/fix/merge chain is enabled.
 
 ### Log-review follow-ups — 15 November 2026

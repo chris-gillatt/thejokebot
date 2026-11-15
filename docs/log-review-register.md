@@ -33,10 +33,20 @@ watch items. Summarise unchanged watch items/limitations once in a small section
 or link here. Do not reframe expected behaviour as an optimisation opportunity.
 Always report material coverage gaps, including capped or unavailable evidence.
 
-Do not infer maintainer acceptance for a new observation. A review can suggest a
-disposition, but recording acceptance or changing this register requires an
-authorised documentation/update task. Any security or operational change outside
-an entry's stated scope must be assessed on its own evidence.
+Every requested use of the runner-log-review skill must read and update this
+register. Maintain a latest-review summary with its timestamp, scope, coverage
+and limitations; refresh entry evidence/last-observed dates and record new
+observations, changed impact, triggered watch items and verified repairs. Keep
+stable LR identifiers and avoid duplicate entries or repeated unchanged prose.
+Distinguish not observed in the sample from not assessed or resolved. Invoking
+the skill authorises this documentation maintenance and its docs-only delivery.
+
+Do not infer maintainer acceptance for a new observation. Record it as unresolved
+or actionable as supported, with an owner and concrete review trigger. Preserve
+existing decisions unless the maintainer explicitly changes them; record new
+explicit decisions with their date and rationale. Register maintenance does not
+authorise fixes, account changes or automatic issue creation. Any security or
+operational change outside an entry's scope needs its own assessment.
 
 ## LR-001 — Duplicate joke candidates
 
