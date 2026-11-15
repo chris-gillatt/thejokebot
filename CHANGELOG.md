@@ -2,6 +2,11 @@
 
 ## 2.4.0 - 2026-11-15
 
+- Document a read-only runner-log review proposal, evidence categories,
+  privacy and untrusted-log safeguards, and separate maintainer approval gates
+  for issue creation, agent work and any merging. Keep skill implementation
+  and automated repository changes pending scope approval. Refs #148.
+
 - Record credential-free HTTP attempts from shared Bluesky and dashboard
   clients, preserving native SDK transport, retries and login behaviour.
   Incrementally report all workflow runs, rerun attempts and executed job
