@@ -1,6 +1,8 @@
 import json
 import io
 import zipfile
+import subprocess
+import sys
 from contextlib import nullcontext
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
@@ -17,6 +19,24 @@ from thejokebot import api_usage
 from thejokebot.commands import api_usage_report as report
 
 NOW = datetime(2026, 11, 15, 5, 30, tzinfo=UTC)
+
+
+def test_interpreter_exit_does_not_publish_opted_out_synthetic_traffic():
+    script = (
+        "import io, os\n"
+        "from contextlib import redirect_stdout\n"
+        "from thejokebot import api_usage\n"
+        "os.environ['THEJOKEBOT_API_USAGE_ENABLED'] = 'true'\n"
+        "os.environ.pop('GITHUB_RUN_ID', None)\n"
+        "with redirect_stdout(io.StringIO()):\n"
+        "    api_usage.get_recorder()\n"
+        "os.environ['THEJOKEBOT_API_USAGE_ENABLED'] = 'false'\n"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", script], capture_output=True, text=True, check=True
+    )
+    assert result.stdout == ""
+    assert report.parse_logs(result.stdout, 42, 1) == ([], "unavailable")
 
 
 def observed_events(monkeypatch, attempt=1):
@@ -486,7 +506,11 @@ def test_inventory_and_job_pagination_are_bounded_and_invalid_metadata_fails(
 
     def get(session, repository, path, headers, params):
         fetched.append(params["page"])
-        return {"workflow_runs": [{}] * 100, "jobs": [{}] * 100, "total_count": 201}
+        return {
+            "workflow_runs": [{"id": params["page"] * 100 + n} for n in range(100)],
+            "jobs": [{}] * 100,
+            "total_count": 201,
+        }
 
     monkeypatch.setattr(report, "_json_get", get)
     monkeypatch.setattr(report, "MAX_PAGES", 2)
@@ -511,14 +535,98 @@ def test_github_filtered_search_truncation_does_not_claim_complete_inventory(
     def get(session, repository, path, headers, params):
         return {
             "total_count": 1009 if params["page"] <= 10 else 0,
-            "workflow_runs": [{}] * 100 if params["page"] <= 10 else [],
+            "workflow_runs": [{"id": n} for n in range(100)]
+            if params["page"] <= 10
+            else [],
         }
 
     monkeypatch.setattr(report, "_json_get", get)
     runs, complete = report.inventory(None, "owner/repo", {}, NOW)
-    assert len(runs) == 1000
+    assert len(runs) == 100
     assert complete is False
     assert "incomplete" in capsys.readouterr().out
+
+
+def test_inventory_splits_capped_window_and_deduplicates_boundary_runs(monkeypatch):
+    calls = []
+    midpoint = NOW - timedelta(days=15)
+
+    def get(session, repository, path, headers, params):
+        calls.append(params)
+        if len(calls) == 1:
+            return {"total_count": 3, "workflow_runs": [{"id": 1}]}
+        start, end = params["created"].split("..")
+        if start == midpoint.isoformat():
+            return {"total_count": 2, "workflow_runs": [{"id": 1}, {"id": 2}]}
+        assert end == midpoint.isoformat()
+        return {"total_count": 2, "workflow_runs": [{"id": 2}, {"id": 3}]}
+
+    monkeypatch.setattr(report, "_json_get", get)
+    monkeypatch.setattr(report, "FILTERED_RUN_LIMIT", 2)
+    rows, complete = report.inventory(None, "owner/repo", {}, NOW)
+    assert complete and {row["id"] for row in rows} == {1, 2, 3}
+    assert len(calls) == 3
+    assert report._split_inventory_window(NOW, NOW) == []
+    assert report._split_inventory_window(NOW, NOW + timedelta(microseconds=1)) == []
+
+
+def test_partitioned_inventory_retains_newest_first_backfill_order(monkeypatch):
+    payloads = iter(
+        [
+            {
+                "total_count": 3,
+                "workflow_runs": [{"id": 1, "created_at": "2026-11-01T00:00:00Z"}],
+            },
+            {
+                "total_count": 2,
+                "workflow_runs": [
+                    {"id": 1, "created_at": "2026-11-01T00:00:00Z"},
+                    {"id": 2, "created_at": "2026-11-15T00:00:00Z"},
+                ],
+            },
+            {
+                "total_count": 1,
+                "workflow_runs": [{"id": 3, "created_at": "2026-11-10T00:00:00Z"}],
+            },
+        ]
+    )
+    monkeypatch.setattr(report, "_json_get", lambda *a: next(payloads))
+    monkeypatch.setattr(report, "FILTERED_RUN_LIMIT", 2)
+    rows, complete = report.inventory(None, "owner/repo", {}, NOW)
+    assert complete and [row["id"] for row in rows] == [2, 3, 1]
+    assert report._period_report(rows, [], [], NOW)["30"]["workflow_runs"] == 3
+
+
+def test_inventory_full_page_at_exact_count_needs_no_extra_request(monkeypatch):
+    def get(*args):
+        return {"total_count": 100, "workflow_runs": [{"id": n} for n in range(100)]}
+
+    monkeypatch.setattr(report, "_json_get", get)
+    monkeypatch.setattr(report, "MAX_PAGES", 1)
+    rows, complete = report.inventory(None, "owner/repo", {}, NOW)
+    assert len(rows) == 100 and complete
+
+
+def test_inventory_short_page_below_matched_total_remains_incomplete(monkeypatch):
+    monkeypatch.setattr(
+        report,
+        "_json_get",
+        lambda *a: {"total_count": 10, "workflow_runs": [{"id": 1}]},
+    )
+    assert report.inventory(None, "owner/repo", {}, NOW)[1] is False
+
+
+def test_inventory_does_not_forget_parent_total_after_splitting(monkeypatch):
+    count = 0
+
+    def get(*args):
+        nonlocal count
+        count += 1
+        return {"total_count": 3 if count == 1 else 1, "workflow_runs": [{"id": 1}]}
+
+    monkeypatch.setattr(report, "_json_get", get)
+    monkeypatch.setattr(report, "FILTERED_RUN_LIMIT", 2)
+    assert report.inventory(None, "owner/repo", {}, NOW)[1] is False
 
 
 def test_missing_job_and_log_observations_stay_unavailable(monkeypatch, capsys):

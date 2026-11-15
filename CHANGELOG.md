@@ -2,6 +2,12 @@
 
 ## 2.4.0 - 2026-11-15
 
+- Split capped API-usage inventory searches into smaller date windows within
+  the existing query budget, deduplicate boundary runs and preserve incomplete
+  coverage when totals cannot be reconciled. Honour telemetry opt-out at process
+  exit so synthetic test summaries cannot contaminate workflow usage reports.
+  Refs #148, #149.
+
 - Prevent successful API telemetry from filling the runner-log review allowance.
   Prioritise warnings, failures and unknown telemetry formats, retain explicit
   omission counts and bound retained evidence while scanning each archive file.

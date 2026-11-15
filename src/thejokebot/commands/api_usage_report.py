@@ -23,6 +23,7 @@ CACHE_FILE = STATE_DIR / "api_usage.json"
 REPORT_FILE = DASHBOARD_DIR / "data" / "api_usage.json"
 API_BASE = "https://api.github.com"
 MAX_PAGES = 20
+FILTERED_RUN_LIMIT = 1000
 MAX_NEW_ATTEMPTS = 64
 DOC_URLS = {
     "bluesky": "https://bsky.network/docs/rate-limits/",
@@ -276,34 +277,56 @@ def _json_get(session, repository: str, path: str, headers: dict, params=None) -
 def inventory(
     session, repository: str, headers: dict, now: datetime
 ) -> tuple[list[dict], bool]:
-    runs = []
-    matched = 0
-    for page in range(1, MAX_PAGES + 1):
+    runs = {}
+    pending = [(now - timedelta(days=30), now, 1, 0, set())]
+    complete = True
+    calls = 0
+    expected = 0
+    while pending and calls < MAX_PAGES:
+        start, end, page, matched, seen = pending.pop(0)
         payload = _json_get(
             session,
             repository,
             "actions/runs",
             headers,
             {
-                "created": f">={(now - timedelta(days=30)).isoformat()}",
+                "created": f"{start.isoformat()}..{end.isoformat()}",
                 "per_page": 100,
                 "page": page,
             },
         )
+        calls += 1
         rows = payload.get("workflow_runs")
         if not isinstance(rows, list):
             raise ValueError("GitHub usage inventory has no workflow_runs")
         matched = max(matched, _integer(payload.get("total_count")))
-        runs.extend(rows)
-        if len(rows) < 100:
-            complete = len(runs) >= matched
-            if not complete:
-                print(
-                    "Warning: GitHub capped the matched run inventory; totals are incomplete."
-                )
-            return runs, complete
-    print("Warning: API usage inventory hit its page limit; totals are incomplete.")
-    return runs, False
+        expected = max(expected, matched)
+        for row in rows:
+            identity = _integer(row.get("id"))
+            runs[identity] = row
+            seen.add(identity)
+        if matched > FILTERED_RUN_LIMIT:
+            windows = _split_inventory_window(start, end)
+            pending.extend(windows)
+            complete = complete and bool(windows)
+        elif len(rows) < 100:
+            complete = complete and len(seen) >= matched
+        elif len(seen) < matched:
+            pending.append((start, end, page + 1, matched, seen))
+    complete = complete and not pending and len(runs) >= expected
+    if not complete:
+        print("Warning: API usage inventory is incomplete within its query budget.")
+    return sorted(
+        runs.values(), key=lambda run: run.get("created_at", ""), reverse=True
+    ), complete
+
+
+def _split_inventory_window(start: datetime, end: datetime) -> list[tuple]:
+    """Split capped searches without gaps; boundary duplicates are deduplicated."""
+    midpoint = (start + (end - start) / 2).replace(microsecond=0)
+    if midpoint <= start or midpoint >= end:
+        return []
+    return [(midpoint, end, 1, 0, set()), (start, midpoint, 1, 0, set())]
 
 
 def _jobs(

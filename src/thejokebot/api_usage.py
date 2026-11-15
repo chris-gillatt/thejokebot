@@ -208,7 +208,10 @@ def native_hooks() -> dict:
 
 
 def _finish() -> None:
-    if _recorder is not None:
+    if (
+        _recorder is not None
+        and os.getenv("THEJOKEBOT_API_USAGE_ENABLED", "true").casefold() == "true"
+    ):
         _recorder.summary()
 
 

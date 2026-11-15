@@ -128,6 +128,27 @@ settings were changed during this investigation. The maintainer, `chris-gillatt`
 owns deciding whether to allow that host and confirming any expected exclusion
 policy before the next Copilot review which requires live GitHub API access.
 
+The next bounded review at 08:14 UTC inventoried 399 runs and sampled 20 latest
+attempts across 16 workflows (19 archives available, one empty). It established
+two further first-party fixes: respect telemetry opt-out at interpreter exit,
+and split capped usage-inventory searches into smaller date windows without
+increasing the 20-query budget. The shutdown regression reproduces the orphan
+summary emitted after test capture ends; strict workflow/attempt identity
+validation remains unchanged. A read-only live partitioned inventory returned
+1,057 unique runs with complete coverage in 12 queries. Boundary duplicates
+are removed, and parent totals remain a lower bound when checking completeness.
+
+The Pages Action remains at upstream latest stable v5.0.1; the maintainer's
+implementing agent will recheck its punycode fix at the 29 November dependency
+check or when a stable upstream fix is announced. No warning suppression or
+unreleased Action pin was introduced. Copilot's supported GraphQL settings
+expose review effort, severity, custom instructions and MCP, but no firewall
+allowlist. MCP is enabled here; no unsupported account-setting mutation was
+attempted. The maintainer's existing decision trigger for that host remains.
+The dashboard browser host was unavailable for the local desktop/mobile visual
+check; the telemetry-to-dashboard contract tests passed and no frontend assets
+or public data schema changed.
+
 ## API call insight (#149)
 
 Agreed on 15 November 2026: measure and warn at 80% of applicable known
@@ -162,10 +183,12 @@ Actions; server quota headers remain authoritative for their token/resource.
 The dashboard marks stale reports, expired quota snapshots and incomplete
 inventory/coverage explicitly. Job minutes sum execution across parallel
 jobs and separate attempts, never workflow queue/wait duration.
-GitHub additionally caps filtered run searches at 1,000 results; compare the
-returned count with its matched total and mark truncated inventory incomplete,
-even when a following page is empty. Retain the largest matched total across
-pages: GitHub reports zero on the empty page beyond its filtered-search cap.
+GitHub additionally caps each filtered run search at 1,000 results. Split an
+oversized date window and paginate its children within the same total 20-query
+budget, deduplicating inclusive boundary runs. Compare unique returned runs with
+matched totals and retain parent totals; exhausted budgets, unsplittable windows
+or unreconciled totals remain incomplete. Retain the largest matched total
+across pages: GitHub can report zero on an empty page beyond its search cap.
 Queued reporting jobs explicitly check out the latest `main` when they start,
 not the dispatch/schedule event's older commit, before reading the shared
 incremental cache. The shared writer group serialises reporting and collection.
