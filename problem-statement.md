@@ -49,8 +49,11 @@ collection. Each invocation inventories at most 2,000 runs from the preceding
 older data. Successful legacy logs without instrumentation are labelled as
 such; unavailable or truncated telemetry is retried after one day. Official
 documentation fingerprints are checked daily; changes require human review,
-not automatic quota edits. Cache raw observations privately in
+not automatic quota edits. Cache sanitised observations in
 `state/api_usage.json`, compacted by UTC minute with exact request/429 counts.
+The cache is tracked in this public repository, not private storage; it is
+excluded from Pages and public metrics. Credentials, bodies and account
+identifiers are excluded from both telemetry logs and the cache.
 Rolling-window estimates include an extra minute to avoid understating possible
 peaks; unreadable write batches remain unknown. The public aggregate is
 `dashboard/data/api_usage.json`, embedded in the regular dashboard metrics.

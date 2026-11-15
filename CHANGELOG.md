@@ -12,7 +12,8 @@
   run-search truncation rather than claiming complete inventory, retaining
   matched totals even when its final empty page reports zero. Queued reporters
   load the latest `main` so preceding cache updates do not cause persistence
-  conflicts. Refs #149.
+  conflicts. Keep the sanitised repository cache distinct from Pages aggregates;
+  do not describe this public-repository cache as private storage. Refs #149.
 
 - Retain up to 100 waiting shared-state workflows instead of replacing older
   pending issue events. Reconcile missed review closures from authoritative
