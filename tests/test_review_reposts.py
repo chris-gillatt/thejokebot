@@ -33,7 +33,7 @@ def issue(candidate, **changes):
         "updated_at": NOW.isoformat(),
         "state": "closed",
         "state_reason": "completed",
-        "closed_by": {"id": 42, "login": "maintainer"},
+        "closed_by": {"id": 42, "login": "maintainer", "type": "User"},
         "labels": [{"name": command.REVIEW_LABEL}],
         **changes,
     }
@@ -66,6 +66,201 @@ def github(monkeypatch):
     api = Mock()
     monkeypatch.setattr(command, "github_api", api)
     return api
+
+
+def test_reconciliation_recovers_a_missed_rejection_after_issue_metadata_changes(
+    account, github
+):
+    candidate = bind(proposal(account))
+    current = issue(
+        candidate,
+        state_reason="not_planned",
+        updated_at=(NOW + timedelta(hours=1)).isoformat(),
+    )
+    github.side_effect = [
+        current,
+        current,
+        {"permission": "admin", "user": {"id": 42}},
+        {"id": 99},
+    ]
+    command.reconcile_reviews(account, state.load_state(), NOW)
+    saved = state.load_state()["repost_reviews"]["candidates"][candidate["key"]]
+    assert saved["status"] == "rejected"
+    assert saved["confirmation_comment_id"] == 99
+    assert reviews.remaining_review_budget(state.load_state(), NOW) == 4
+    account.repost.assert_not_called()
+
+
+def test_recovered_approval_and_stale_duplicate_do_not_repeat_publication(
+    account, github
+):
+    candidate = bind(proposal(account))
+    original = issue(candidate)
+    github.side_effect = [
+        original,
+        original,
+        {"permission": "write", "user": {"id": 42}},
+        {"id": 99},
+    ]
+    command.reconcile_reviews(account, state.load_state(), NOW)
+    calls = github.call_count
+    command.reconcile_reviews(account, state.load_state(), NOW)
+    assert github.call_count == calls
+    github.side_effect = None
+    github.return_value = issue(
+        candidate, updated_at=(NOW + timedelta(hours=1)).isoformat()
+    )
+    command.handle_event(account, state.load_state(), event(original), NOW)
+    account.repost.assert_called_once()
+    assert (
+        state.load_state()["repost_reviews"]["candidates"][candidate["key"]]["status"]
+        == "published"
+    )
+    assert sum(call.args[1:2] == ("POST",) for call in github.call_args_list) == 1
+
+
+@pytest.mark.parametrize(
+    "failure",
+    ["binding", "permission", "reopened", "changed-closer", "changed-timestamp"],
+)
+def test_reconciliation_revalidates_live_identity_permissions_and_decision(
+    account, github, failure
+):
+    candidate = bind(proposal(account))
+    snapshot = issue(candidate)
+    current = copy.deepcopy(snapshot)
+    permission = {"permission": "admin", "user": {"id": 42}}
+    if failure == "binding":
+        snapshot["id"] = 999
+    elif failure == "permission":
+        permission["permission"] = "read"
+    elif failure == "reopened":
+        current["state"] = "open"
+    elif failure == "changed-closer":
+        current["closed_by"]["id"] = 999
+    else:
+        current["updated_at"] = (NOW + timedelta(seconds=1)).isoformat()
+    github.side_effect = [snapshot, current, permission]
+    with pytest.raises(ValueError):
+        command.reconcile_reviews(account, state.load_state(), NOW)
+    account.repost.assert_not_called()
+    assert all(call.args[1:2] != ("POST",) for call in github.call_args_list)
+
+
+@pytest.mark.parametrize("action", ["repost", "remove"])
+def test_missed_expired_approval_does_not_start_an_account_action(
+    account, github, action
+):
+    candidate = proposal(account)
+    if action == "remove":
+        candidate.update(
+            action="remove", repost_uri=record()["uri"], repost_cid=record()["cid"]
+        )
+    candidate = bind(candidate)
+    current = issue(candidate)
+    github.side_effect = [current, current, {"permission": "admin", "user": {"id": 42}}]
+    command.reconcile_reviews(account, state.load_state(), NOW + timedelta(days=7))
+    assert (
+        state.load_state()["repost_reviews"]["candidates"][candidate["key"]]["status"]
+        == "expired"
+    )
+    account.repost.assert_not_called()
+    account.delete_repost.assert_not_called()
+
+
+def test_reconciliation_can_confirm_a_known_receipt_after_expiry_without_creating(
+    account, github
+):
+    candidate = bind(proposal(account))
+    reviews.update_review(
+        state.load_state(),
+        candidate["key"],
+        status="publishing",
+        repost_uri=f"at://{BOT}/{reviews.COLLECTION}/confirmed",
+        repost_cid="cid-confirmed",
+    )
+    current = issue(candidate)
+    github.side_effect = [
+        current,
+        current,
+        {"permission": "admin", "user": {"id": 42}},
+        {"id": 99},
+    ]
+    command.reconcile_reviews(account, state.load_state(), NOW + timedelta(days=8))
+    assert (
+        state.load_state()["repost_reviews"]["candidates"][candidate["key"]]["status"]
+        == "published"
+    )
+    account.repost.assert_not_called()
+
+
+def test_reconciliation_recovers_a_missing_outcome_comment_without_an_account_action(
+    account, github
+):
+    candidate = bind(proposal(account))
+    reviews.update_review(state.load_state(), candidate["key"], status="rejected")
+    current = issue(candidate, state_reason="not_planned")
+    github.side_effect = [
+        current,
+        current,
+        {"permission": "maintain", "user": {"id": 42}},
+        {"id": 99},
+    ]
+    command.reconcile_reviews(account, state.load_state(), NOW)
+    assert (
+        state.load_state()["repost_reviews"]["candidates"][candidate["key"]][
+            "confirmation_comment_id"
+        ]
+        == 99
+    )
+    account.repost.assert_not_called()
+
+
+@pytest.mark.parametrize("decision", ["open", "bot", "missing-closer", "invalid-state"])
+def test_reconciliation_does_not_invent_a_human_approval(account, github, decision):
+    candidate = bind(proposal(account))
+    current = issue(candidate)
+    if decision == "open":
+        current["state"] = "open"
+    elif decision == "bot":
+        current["closed_by"]["type"] = "Bot"
+    elif decision == "missing-closer":
+        current["closed_by"] = None
+    else:
+        current["state"] = "unexpected"
+    github.return_value = current
+    if decision in ("missing-closer", "invalid-state"):
+        with pytest.raises(ValueError):
+            command.reconcile_reviews(account, state.load_state(), NOW)
+    else:
+        command.reconcile_reviews(account, state.load_state(), NOW)
+    assert github.call_count == 1
+    account.repost.assert_not_called()
+
+
+def test_discovery_recovers_decisions_before_an_inventory_failure(
+    account, github, monkeypatch
+):
+    candidate = bind(proposal(account))
+    current = issue(candidate, state_reason="not_planned")
+    github.side_effect = [
+        current,
+        current,
+        {"permission": "admin", "user": {"id": 42}},
+        {"id": 99},
+    ]
+    monkeypatch.setattr("sys.argv", ["review-reposts", "--mode", "discover"])
+    monkeypatch.setattr(command, "login_client", lambda: (account, None))
+    monkeypatch.setattr(
+        reviews, "discover", Mock(side_effect=RuntimeError("inventory failed"))
+    )
+    with pytest.raises(RuntimeError, match="inventory failed"):
+        command.main()
+    assert (
+        state.load_state()["repost_reviews"]["candidates"][candidate["key"]]["status"]
+        == "rejected"
+    )
+    account.repost.assert_not_called()
 
 
 def test_authorised_completed_review_publishes_and_confirms_in_issue(account, github):

@@ -115,6 +115,10 @@ shortlist and any semantic/image classifier remain separate policy decisions.
 - [x] Inspect the read-only preview and obtain maintainer approval to activate
   the review queue. Create and persist the first five public reviews without
   approving any account action.
+- [x] Queue shared-state writers without replacing older pending issue events
+  and recover saved review decisions from authoritative live closures.
+- [ ] Verify production recovery of the cancelled rejections for #151 and #154,
+  without publication or additional suggestion issues.
 - [ ] Verify one controlled publication and removal through separately approved
   review issues. Do not treat local fixtures or a successful discovery workflow
   as proof of a real account action.
@@ -125,16 +129,18 @@ Do not publish or remove a repost without its individual authorised review.
 
 ## Deferred Work
 
-### Repost review event reconciliation
+### Repost review event recovery
 
 The issue-event runs
 [43592908204](https://github.com/chris-gillatt/thejokebot/actions/runs/43592908204)
 and [43592952392](https://github.com/chris-gillatt/thejokebot/actions/runs/43592952392)
 were cancelled. Reviews #151 and #154 are closed as not planned on GitHub but
-still proposed in saved state. Investigate event delivery/reconciliation in a
-separate focused change; do not infer publication approval or replay account
-actions from this observation. The rolling quota counts these bound issues
-regardless of status, so this does not free extra trial capacity.
+still proposed in saved state. Recovery now queues all seven shared writers
+with `queue: max` and rechecks live closures during issue processing and daily
+discovery. Production reconciliation remains to be verified; do not infer
+publication approval or replay account actions from this observation. The
+rolling quota counts these bound issues regardless of status, so this does not
+free extra trial capacity.
 
 ### CodeQL baseline
 
@@ -270,7 +276,7 @@ the SDK's transitive backports remain dependency-owned.
 
 ## Dependency Exceptions
 
-Rechecked on 14 November 2026 against the Python package index, npm registry,
+Rechecked on 15 November 2026 against the Python package index, npm registry,
 upstream Action releases and current Dependabot results. No dependency upgrades
 were made as part of #146, #145, R04, R05, R06 or S01;
 keep them in a separate resolver-validated batch so this behaviour fix remains
@@ -285,6 +291,15 @@ next dependency batch or sooner if an applicable advisory appears.
   available. pip-tools remains 7.6.2. Ruff's explicit rule selection (`E4`,
   `E7`, `E9`, `F`, plus `C901`) and file inclusion preserve the verified quality
   policy rather than adopting unrelated new defaults.
+- Installed and latest stable actionlint are both 1.7.12, but its parser rejects
+  GitHub's supported concurrency `queue` field
+  ([rhysd/actionlint#657](https://github.com/rhysd/actionlint/issues/657),
+  [support PR](https://github.com/rhysd/actionlint/pull/654)).
+  The lint wrapper accepts only that exact diagnostic on the repository's
+  literal shared-group, `queue: max`, `cancel-in-progress: false` block; all
+  other actionlint and ShellCheck diagnostics remain failures. Local and Docker
+  paths use the same validation. Remove this compatibility exception when a
+  stable actionlint release supports queues; review at the next tooling update.
 - `npm outdated --json` reported no available npm updates. Pyright remains
   1.1.414, and the dashboard uses Chart.js 4.6.1 with a freshly calculated
   integrity hash.

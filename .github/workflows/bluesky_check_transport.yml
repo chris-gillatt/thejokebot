@@ -8,6 +8,7 @@ permissions:
 
 concurrency:
   group: joke_and_social_state_writer
+  queue: max
   cancel-in-progress: false
 
 jobs:

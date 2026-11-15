@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.3.1 - 2026-11-15
+
+- Retain up to 100 waiting shared-state workflows instead of replacing older
+  pending issue events. Reconcile missed review closures from authoritative
+  GitHub issue state before live discovery, retaining maintainer checks and
+  native-action receipt safeguards. Expire unstarted stale approvals without
+  account actions and make confirmed outcomes safe against late duplicate
+  events. Recover missing outcome comments without repeating publication.
+  Refs #146.
+
 ## 2.3.0 - 2026-11-14
 
 - Limit the repost trial to five automatic suggestion issues per rolling seven

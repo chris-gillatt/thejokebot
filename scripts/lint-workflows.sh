@@ -9,13 +9,13 @@ echo "==> Workflow lint (actionlint)"
 python3 scripts/check_action_pins.py
 
 if command -v actionlint >/dev/null 2>&1; then
-  actionlint -color
+  python3 scripts/lint_action_workflows.py
   exit 0
 fi
 
 if command -v docker >/dev/null 2>&1; then
   # Use the official actionlint image when local binary is unavailable.
-  docker run --rm -v "$REPO_ROOT:/repo" -w /repo rhysd/actionlint:latest -color
+  python3 scripts/lint_action_workflows.py --docker
   exit 0
 fi
 

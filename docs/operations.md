@@ -260,6 +260,25 @@ unavailable, blocked, muted or labelled content cannot publish. Wait for the
 bot's confirmation comment: closing an issue is approval, not proof of success.
 GitHub email delivery depends on notification settings.
 
+All seven workflows sharing the social/posting state lock use `queue: max`,
+retaining up to 100 waiting runs without cancelling a running writer. GitHub's
+default single pending slot otherwise replaces older waiting issue events;
+runs beyond the 100-slot limit can still be cancelled.
+
+Live issue processing and daily discovery also reconcile closed, saved review
+bindings before discovery or inventory reads. They use the current GitHub issue
+and its actual closer, then independently recheck identity, timestamps and
+current write/maintain/admin permission. Bot closures are not human approvals;
+binding, permission or concurrent-edit mismatches fail explicitly. No ordinary
+issues are enumerated or modified. Preview and inventory-only modes never
+reconcile approval decisions.
+
+An expired approval whose account action has not started expires without
+publishing or removing anything. Known receipts retain read-only reconciliation;
+uncertain actions are never blindly repeated. Confirmed terminal outcomes and
+late duplicate events cannot create another repost or confirmation comment.
+Unconfirmed outcome comments can be recovered through the authorised decision.
+
 New suggestion issues have the `repost-review` label. After seven days, automatic
 housekeeping closes only labelled, bot-owned issues whose immutable ID, number
 and exact review title match saved repost proposals. It adds an explanatory

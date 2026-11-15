@@ -433,6 +433,41 @@ def _notify_outcome(state: dict, candidate: dict) -> None:
     )
 
 
+def _apply_review_decision(client, state, event, issue, candidate, now):
+    if candidate["status"] == "expired":
+        print("Repost review has expired; no repeated action.")
+        return
+    if candidate["status"] in TERMINAL_STATUSES:
+        _notify_outcome(state, candidate)
+        return
+    if issue.get("state_reason") != "completed":
+        if candidate["status"] in reviews.UNCERTAIN_STATUSES:
+            raise ValueError(
+                "Uncertain account action must be reconciled before changing the review decision"
+            )
+        candidate = reviews.update_review(state, candidate["key"], status="rejected")
+    else:
+        if (
+            candidate["status"] in ("proposed", "approved")
+            and reviews.timestamp(candidate["expires_at"]) <= reviews.utc_now(now)
+            and (candidate["action"] == "remove" or not candidate.get("repost_uri"))
+        ):
+            reviews.update_review(state, candidate["key"], status="expired")
+            print("Missed approval has expired; no account action.")
+            return
+        if candidate["status"] == "proposed":
+            reviews.update_review(
+                state,
+                candidate["key"],
+                status="approved",
+                approved_at=issue["closed_at"],
+                approver_id=event["sender"]["id"],
+            )
+        action = reviews.remove if candidate["action"] == "remove" else reviews.publish
+        candidate = action(client, state, candidate["key"], now)
+    _notify_outcome(state, candidate)
+
+
 def handle_event(client, state: dict, event: dict, now=None) -> None:
     reviews.require_live()
     number = _validate_event(event)
@@ -457,31 +492,56 @@ def handle_event(client, state: dict, event: dict, now=None) -> None:
     if candidate is None:
         print("Closed issue is not a saved repost review; no action.")
         return
+    if candidate["status"] in TERMINAL_STATUSES and candidate.get(
+        "confirmation_comment_id"
+    ):
+        print("Review outcome already recorded; no repeated account action.")
+        return
     _authorise(event, issue, candidate)
-    if candidate["status"] == "expired":
-        print("Repost review has expired; no repeated action.")
-        return
-    if candidate["status"] in TERMINAL_STATUSES:
-        _notify_outcome(state, candidate)
-        return
-    if issue.get("state_reason") != "completed":
-        if candidate["status"] in reviews.UNCERTAIN_STATUSES:
-            raise ValueError(
-                "Uncertain account action must be reconciled before changing the review decision"
+    _apply_review_decision(client, state, event, issue, candidate, now)
+
+
+def _closed_review_event(candidate: dict) -> dict | None:
+    repository = {"id": REPOSITORY_ID, "full_name": REPOSITORY}
+    number = _validate_event(
+        {"repository": repository, "issue": {"number": candidate.get("issue_number")}}
+    )
+    issue = github_api(f"/repos/{REPOSITORY}/issues/{number}")
+    if issue.get("id") != candidate["issue_id"] or issue.get("number") != number:
+        raise ValueError("Live issue does not match the saved review binding")
+    if issue.get("state") == "open":
+        return None
+    if issue.get("state") != "closed":
+        raise ValueError("Unexpected live review state")
+    actor = issue.get("closed_by")
+    if not isinstance(actor, dict):
+        raise ValueError("Closed review has no authoritative closer")
+    if actor.get("type") == "Bot":
+        print("Bot closure is not maintainer approval; left for expiry handling.")
+        return None
+    return {
+        "repository": repository,
+        "action": "closed",
+        "issue": issue,
+        "sender": actor,
+    }
+
+
+def reconcile_reviews(client, state: dict, now=None) -> None:
+    reviews.require_live()
+    for candidate in list(state["repost_reviews"]["candidates"].values()):
+        if (
+            not candidate.get("issue_id")
+            or candidate["status"] == "expired"
+            or (
+                candidate["status"] in TERMINAL_STATUSES
+                and candidate.get("confirmation_comment_id")
             )
-        candidate = reviews.update_review(state, candidate["key"], status="rejected")
-    else:
-        if candidate["status"] == "proposed":
-            reviews.update_review(
-                state,
-                candidate["key"],
-                status="approved",
-                approved_at=issue["closed_at"],
-                approver_id=event["sender"]["id"],
-            )
-        action = reviews.remove if candidate["action"] == "remove" else reviews.publish
-        candidate = action(client, state, candidate["key"], now)
-    _notify_outcome(state, candidate)
+        ):
+            continue
+        event = _closed_review_event(candidate)
+        if event is not None:
+            handle_event(client, state, event, now)
 
 
 def _preview_post_html(post: dict) -> str:
@@ -555,7 +615,10 @@ def main() -> None:
             Path(os.environ["GITHUB_EVENT_PATH"]).read_text(encoding="utf-8")
         )
         handle_event(client, state, event)
+        reconcile_reviews(client, state)
         return
+    if args.mode == "discover":
+        reconcile_reviews(client, state)
     now = reviews.utc_now()
     report = reviews.discover(client, state, preview=args.mode == "preview")
     if args.mode == "preview":

@@ -68,9 +68,19 @@ class RepositoryPathTests(unittest.TestCase):
             "bluesky_follows_and_likes.yml",
             "bluesky_follow_fellows.yml",
             "bluesky_unfollow.yml",
+            "bluesky_review_reposts.yml",
+            "bluesky_check_transport.yml",
+            "bluesky_acknowledge_starter_packs.yml",
         ):
             with self.subTest(concurrency_workflow=name):
-                self.assertIn("  group: joke_and_social_state_writer", workflows[name])
+                workflow = (workflow_dir / name).read_text(encoding="utf-8")
+                self.assertIn(
+                    "concurrency:\n"
+                    "  group: joke_and_social_state_writer\n"
+                    "  queue: max\n"
+                    "  cancel-in-progress: false",
+                    workflow,
+                )
 
     def test_first_party_code_does_not_import_deleted_root_modules(self):
         repository_root = Path(__file__).resolve().parents[1]
