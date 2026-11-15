@@ -117,7 +117,7 @@ shortlist and any semantic/image classifier remain separate policy decisions.
   approving any account action.
 - [x] Queue shared-state writers without replacing older pending issue events
   and recover saved review decisions from authoritative live closures.
-- [ ] Verify production recovery of the cancelled rejections for #151 and #154,
+- [x] Verify production recovery of the cancelled rejections for #151 and #154,
   without publication or additional suggestion issues.
 - [ ] Verify one controlled publication and removal through separately approved
   review issues. Do not treat local fixtures or a successful discovery workflow
@@ -127,20 +127,16 @@ Fully autonomous publication, manual candidate URL submissions, saved-feed
 discovery and a separately hosted private review application remain deferred.
 Do not publish or remove a repost without its individual authorised review.
 
+On 15 November 2026, the
+[live recovery run](https://github.com/chris-gillatt/thejokebot/actions/runs/43679565226)
+reconciled the cancelled rejections for #151 and #154 and saved their bot
+confirmation-comment receipts. All five initial reviews are now rejected;
+no repost was published and no additional suggestion was created. Closed
+reviews still consume the rolling allowance, leaving zero available slots.
+All seven shared writers now queue up to 100 pending runs, and live issue
+processing and daily discovery recover saved decisions from current closures.
+
 ## Deferred Work
-
-### Repost review event recovery
-
-The issue-event runs
-[43592908204](https://github.com/chris-gillatt/thejokebot/actions/runs/43592908204)
-and [43592952392](https://github.com/chris-gillatt/thejokebot/actions/runs/43592952392)
-were cancelled. Reviews #151 and #154 are closed as not planned on GitHub but
-still proposed in saved state. Recovery now queues all seven shared writers
-with `queue: max` and rechecks live closures during issue processing and daily
-discovery. Production reconciliation remains to be verified; do not infer
-publication approval or replay account actions from this observation. The
-rolling quota counts these bound issues regardless of status, so this does not
-free extra trial capacity.
 
 ### CodeQL baseline
 
