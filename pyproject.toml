@@ -11,6 +11,7 @@ requires-python = ">=3.14"
 dependencies = [
     "atproto>=0.0.73,<1",
     "colorama>=0.4.6,<1",
+    "httpx>=0.28.1,<1",
     "python-dotenv>=1.2.4,<2",
     "regex>=2026.9.29,<2027",
     "requests>=2.34.2,<3",
@@ -24,6 +25,7 @@ dev = [
 ]
 
 [project.scripts]
+thejokebot-api-usage-report = "thejokebot.commands.api_usage_report:main"
 thejokebot-collect-dashboard-metrics = "thejokebot.commands.collect_dashboard_metrics:main"
 thejokebot-create-report-prs = "thejokebot.commands.create_report_prs:main"
 thejokebot-follow-fellows = "thejokebot.commands.follow_fellows:main"

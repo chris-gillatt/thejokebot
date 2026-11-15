@@ -28,6 +28,38 @@ This is the operating brief for open work and lasting decisions. See the [README
 | Ambiguous social creates | Follow and block records use stable TID keys and exact reconciliation; interaction likes use stable record keys; starter-pack upserts use a deterministic key per account and source list. Never treat a retry with a new key as confirmation of an earlier write. |
 | Content-creator protection | Completely read the bot's own likes and reposts before unfollow candidate selection, explicitly skipping valid feed likes. Retain creator DIDs permanently; incomplete reads must stop unfollows. Follow at most 10 creators per social run, respecting grace during graph lag, explicit exclusions and direct/list blocks. Count each confirmed follow before another action can fail; checkpoint failures must still stop processing. |
 
+## API call insight (#149)
+
+Agreed on 15 November 2026: measure and warn at 80% of applicable known
+quotas, leaving a 20% cushion; do not pause bot actions. Count native HTTP
+attempts, including login, clones, failures and retries, without publishing
+credentials, request bodies, account identifiers or query strings.
+
+Use a separate bounded reporter for all workflow runs and individual job
+execution time, excluding queue time and retaining rerun-attempt identity.
+Standard hosted-runner compute is free for this public repository; measured
+job minutes are not billing statements. Monitor official limit documentation,
+retain review/freshness evidence, and never invent quotas for the public
+AppView or turn missing telemetry into zero usage. Repository observations
+cannot prove quotas unused by other clients or shared runner IPs.
+
+The reporter runs at 00:10, 06:10, 12:10 and 18:10 UTC, ahead of dashboard
+collection. Each invocation inventories at most 2,000 runs from the preceding
+30 days and fetches at most 64 new/retry attempts, incrementally backfilling
+older data. Successful legacy logs without instrumentation are labelled as
+such; unavailable or truncated telemetry is retried after one day. Official
+documentation fingerprints are checked daily; changes require human review,
+not automatic quota edits. Cache raw observations privately in
+`state/api_usage.json`, compacted by UTC minute with exact request/429 counts.
+Rolling-window estimates include an extra minute to avoid understating possible
+peaks; unreadable write batches remain unknown. The public aggregate is
+`dashboard/data/api_usage.json`, embedded in the regular dashboard metrics.
+Request totals cover shared Python clients, not `gh` CLI or third-party
+Actions; server quota headers remain authoritative for their token/resource.
+The dashboard marks stale reports, expired quota snapshots and incomplete
+inventory/coverage explicitly. Job minutes sum execution across parallel
+jobs and separate attempts, never workflow queue/wait duration.
+
 ## Reposts with review (#146)
 
 The agreed pilot uses public GitHub issues, authors from TJB's existing
@@ -274,7 +306,7 @@ the SDK's transitive backports remain dependency-owned.
 
 Rechecked on 15 November 2026 against the Python package index, npm registry,
 upstream Action releases and current Dependabot results. No dependency upgrades
-were made as part of #146, #145, R04, R05, R06 or S01;
+were made as part of #149, #146, #145, R04, R05, R06 or S01;
 keep them in a separate resolver-validated batch so this behaviour fix remains
 focused and the lock stays coherent. Review the deferred versions before the
 next dependency batch or sooner if an applicable advisory appears.
@@ -303,6 +335,11 @@ next dependency batch or sooner if an applicable advisory appears.
   Dependabot PRs #142 and #143 contain the CodeQL refresh and Sonar scan 8.4.1
   update; the changed refs are present on this branch. The action-pin checker
   validates SHA immutability, while Dependabot results provide release currency.
+- API insight explicitly depends on the verified latest HTTPX 0.28.1 and uses
+  GitHub REST version `2026-03-10` for new metadata requests. The shared existing
+  workflow-log reader retains supported `2022-11-28` (supported until
+  10 March 2028) to avoid changing unrelated consumers; review during the next
+  API-version migration, before that retirement date.
 - The Sonar scan Action remains at 8.4.1 while upstream stable is 8.5.0.
   Defer this CI-tool upgrade to a separate analysis-validated dependency change,
   rather than mixing it into #146/#145. Review at the next dependency batch or sooner

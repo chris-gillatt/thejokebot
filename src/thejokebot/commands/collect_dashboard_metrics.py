@@ -4,10 +4,10 @@ import json
 import os
 from datetime import datetime, timezone
 
-import requests
-
 from thejokebot import state as bot_state
+from thejokebot import api_usage
 from thejokebot.commands import dashboard_engagement
+from thejokebot.commands import api_usage_report
 from thejokebot.commands import dashboard_operations
 from thejokebot.commands import dashboard_metrics
 from thejokebot.commands import dashboard_history
@@ -163,7 +163,7 @@ def main() -> None:
     if not actor:
         raise ValueError("BLUESKY_USERNAME is required to collect dashboard metrics")
     now = datetime.now(timezone.utc)
-    session = requests.Session()
+    session = api_usage.session()
     repository = os.getenv("GITHUB_REPOSITORY", "chris-gillatt/thejokebot").strip()
     workflow_runs = fetch_workflow_runs(
         session,
@@ -205,6 +205,15 @@ def main() -> None:
         workflow_runs=workflow_runs,
         workflow_activity=workflow_activity,
     )
+    metrics["api_usage"] = api_usage_report.public_report()
+    if metrics["api_usage"].get("warnings"):
+        metrics["automation"]["alerts"].append(
+            {
+                "kind": "api_usage",
+                "level": "attention",
+                "count": len(metrics["api_usage"]["warnings"]),
+            }
+        )
     history = dashboard_history._merge_history_partitions(
         history, dashboard_history._history_from_collection(metrics, workflow_runs)
     )

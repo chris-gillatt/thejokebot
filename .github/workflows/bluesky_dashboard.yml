@@ -15,6 +15,7 @@ on:
       - "src/thejokebot/commands/dashboard_provider_telemetry.py"
       - "src/thejokebot/commands/dashboard_metrics.py"
       - "src/thejokebot/commands/dashboard_history.py"
+      - "src/thejokebot/commands/api_usage_report.py"
       - ".github/workflows/bluesky_dashboard.yml"
 
 concurrency:

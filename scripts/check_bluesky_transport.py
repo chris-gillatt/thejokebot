@@ -11,6 +11,7 @@ from atproto_client import exceptions
 from atproto_client.request import Request
 
 from thejokebot import runtime
+from thejokebot import api_usage
 
 PROFILE_READS = 3
 
@@ -71,7 +72,9 @@ def main() -> int:
             file=sys.stderr,
         )
         return 2
-    result = probe_transport(Request(timeout=30.0), username, password)
+    result = probe_transport(
+        Request(timeout=30.0, event_hooks=api_usage.native_hooks()), username, password
+    )
     successful = result["success"]
     print(
         json.dumps(

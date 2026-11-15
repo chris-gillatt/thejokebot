@@ -1,6 +1,14 @@
 # Changelog
 
-## 2.3.1 - 2026-11-15
+## 2.4.0 - 2026-11-15
+
+- Record credential-free HTTP attempts from shared Bluesky and dashboard
+  clients, preserving native SDK transport, retries and login behaviour.
+  Incrementally report all workflow runs, rerun attempts and executed job
+  minutes in Operations; distinguish missing observations from zero usage.
+  Warn at 80% of published quotas without pausing account actions, retain
+  authoritative GitHub quota snapshots, and flag changed or unavailable
+  official limit documentation for manual review. Refs #149.
 
 - Retain up to 100 waiting shared-state workflows instead of replacing older
   pending issue events. Reconcile missed review closures from authoritative

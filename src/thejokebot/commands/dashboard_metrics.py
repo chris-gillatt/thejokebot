@@ -6,9 +6,9 @@ from collections import Counter
 from datetime import datetime, timedelta, timezone
 from statistics import median
 
-import requests
 
 from thejokebot import config as runtime_config
+from thejokebot import api_usage
 from thejokebot import state as bot_state
 from thejokebot.commands import dashboard_engagement
 from thejokebot.commands import dashboard_history
@@ -1025,7 +1025,7 @@ def collect_metrics(
     fetch_post_call=None,
     fetch_original_posts_call=None,
 ) -> dict:
-    session = session or requests.Session()
+    session = session or api_usage.session()
     now = now or datetime.now(timezone.utc)
     if now.tzinfo is None:
         raise ValueError("Dashboard collection time must include a timezone")

@@ -148,7 +148,7 @@ def test_native_check_has_no_automatic_fallback(
     check.assert_called_once_with(
         request_factory.return_value, "private-user", "private-password"
     )
-    request_factory.assert_called_once_with(timeout=30.0)
+    request_factory.assert_called_once_with(timeout=30.0, event_hooks={})
     assert "private" not in captured.out + captured.err
     assert bool(captured.err) == bool(expected)
 
@@ -165,7 +165,7 @@ def test_production_login_uses_native_sdk_request_with_existing_timeout(monkeypa
     monkeypatch.setattr(runtime, "_AtprotoRequest", request_factory)
     monkeypatch.setattr(runtime, "Client", client_factory)
     client, username = runtime.login_client()
-    request_factory.assert_called_once_with(timeout=30.0)
+    request_factory.assert_called_once_with(timeout=30.0, event_hooks={})
     client_factory.assert_called_once_with(request=request_factory.return_value)
     client.login.assert_called_once_with("user", "password")
     client.on_session_change.assert_not_called()

@@ -480,6 +480,34 @@
             </div>
           </div>
 
+          <section class="chart-card" aria-labelledby="api-usage-heading">
+            <div class="chart-heading">
+              <h3 id="api-usage-heading">API and Actions usage</h3>
+              <p>Latest rolling 30-day observations, independent of the historical period below</p>
+            </div>
+            <div class="operations-summary" aria-label="Observed API usage">
+              <div class="operation-stat"><span>7-day Bluesky HTTP attempts</span><strong id="api-bluesky">--</strong><small>Retries and failed attempts included</small></div>
+              <div class="operation-stat"><span>30-day workflow runs</span><strong id="api-runs">--</strong><small>All discovered workflows, not a fixed list</small></div>
+              <div class="operation-stat"><span>Observed job minutes</span><strong id="api-minutes">--</strong><small>Queue time excluded; not billed minutes</small></div>
+              <div class="operation-stat"><span>Last GitHub quota remaining</span><strong id="api-github-quota">--</strong><small id="api-github-observed">Server observation unavailable</small></div>
+            </div>
+            <p id="api-usage-status" class="section-note" role="status">API usage has not been observed yet.</p>
+            <div class="table-scroll operations-table-scroll">
+              <table class="operations-table" id="api-quota-table">
+                <thead><tr><th>Published quota</th><th>Conservative rolling peak</th><th>Limit</th><th>Observation</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+            <p id="api-usage-scope" class="section-note"></p>
+            <p class="section-note">Official sources:
+              <a href="https://bsky.network/docs/rate-limits/">Bluesky limits</a>,
+              <a href="https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api">GitHub API limits</a>,
+              <a href="https://docs.github.com/en/actions/reference/limits">Actions limits</a> and
+              <a href="https://docs.github.com/en/billing/concepts/product-billing/github-actions">compute billing</a>.
+              Documentation changes require review; numeric limits are not silently updated.
+            </p>
+          </section>
+
           <div class="operational-pulse" aria-live="polite" aria-label="Current operational alerts">
             <strong>Production pulse</strong>
             <div id="operational-pulse"></div>

@@ -1233,6 +1233,9 @@ function renderModerationActivity() {
 }
 
 function operationalAlertText(alert) {
+  if (alert.kind === "api_usage") {
+    return `${numberFormat.format(alert.count)} API usage warning${alert.count === 1 ? "" : "s"}; inspect the API usage panel`;
+  }
   if (alert.kind === "stale_dashboard") return "Dashboard collection is overdue";
   if (alert.kind === "workflow_failure") return `${displayName(alert.workflow)} failed most recently`;
   if (alert.kind === "workflow_overdue") return `${displayName(alert.workflow)} is overdue`;
@@ -1286,6 +1289,53 @@ function renderOperationalPulse(automation) {
   renderComponentFreshness();
 }
 
+function renderApiUsage() {
+  const usage = metrics.api_usage;
+  const body = document.querySelector("#api-quota-table tbody");
+  body.replaceChildren();
+  ["api-bluesky", "api-runs", "api-minutes", "api-github-quota"].forEach((id) => setText(id, "--"));
+  setText("api-usage-scope", "");
+  setText("api-github-observed", "Server observation unavailable");
+  if (!usage?.generated_at) {
+    setText("api-usage-status", "API usage has not been collected yet; missing observations are not zero usage.");
+    return;
+  }
+  const month = usage.periods["30"];
+  const week = usage.periods["7"];
+  const observed = (value) => Number.isFinite(value) ? numberFormat.format(value) : "--";
+  setText("api-bluesky", observed(week.bluesky_requests));
+  setText("api-runs", observed(month.workflow_runs));
+  setText("api-minutes", observed(month.observed_job_minutes));
+  const quota = usage.github_quota;
+  const expired = quota && new Date(quota.reset_at).getTime() <= Date.now();
+  setText("api-github-quota", quota && !expired ? `${observed(quota.remaining)} / ${observed(quota.limit)}` : "--");
+  setText("api-github-observed", quota
+    ? `Observed ${new Date(quota.observed_at).toLocaleString("en-GB")}; ${expired ? "window expired" : quota.resource}`
+    : "Server observation unavailable");
+  usage.quotas.forEach((quotaRow) => {
+    const row = document.createElement("tr");
+    appendCell(row, quotaRow.label);
+    appendCell(row, observed(quotaRow.observed_peak));
+    appendCell(row, observed(quotaRow.limit));
+    const state = quotaRow.observed_peak === null ? "No observations"
+      : quotaRow.warning ? `At least ${usage.warning_percent}% of published quota`
+        : "Recorded sample below warning level";
+    appendCell(row, `${state}; documentation ${quotaRow.limit_status}`, quotaRow.warning ? "failure-count" : "");
+    body.append(row);
+  });
+  const stale = Date.now() - new Date(usage.generated_at).getTime() > 8 * 60 * 60 * 1000;
+  const coverage = usage.coverage;
+  const warnings = usage.warnings.filter((warning) => !expired || warning !== "GitHub API quota near its limit");
+  setText("api-usage-status",
+    `${stale ? "Stale report. " : ""}Collected ${new Date(usage.generated_at).toLocaleString("en-GB")}. `
+    + `${coverage.inventory_runs} workflow runs inventoried. `
+    + `${coverage.telemetry_observed}/${coverage.cached_attempts} cached attempts have complete API telemetry; `
+    + `${month.attempts_with_job_time}/${month.attempts} cached attempts have job-time observations. `
+    + `${usage.inventory_complete ? "" : "Run inventory is incomplete. "}`
+    + (warnings.length ? `Attention: ${warnings.join("; ")}.` : "No quota warning in the recorded sample."));
+  setText("api-usage-scope", usage.scope);
+}
+
 function renderWorkflowTable(workflows) {
   const body = document.querySelector("#workflow-table tbody");
   body.replaceChildren();
@@ -1337,6 +1387,7 @@ function renderAutomation() {
   renderModerationActivity();
   renderPostingDelivery();
   renderOperationalPulse(automation);
+  renderApiUsage();
   renderWorkflowTable(automation.workflows);
 }
 

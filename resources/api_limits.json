@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "verified_at": "2026-11-15",
+  "warning_percent": 80,
+  "documents": {
+    "bluesky": "82619ec0dbf2e1fe1915fa76ae26d09573c9d117b94b744be1237bb8e83c57da",
+    "github_api": "830ab3f6fab2417df47dccebe7c81a1b99d181fd5a4ae45a2fecbaf40627b531",
+    "github_actions": "0a36c9381372a90997a8da2093cd0390272c9b6e9fc00ef8b0cdb0a191f20f0b",
+    "github_billing": "9b11f4660744f1eb152c970119fa49445f57bfe0ec1ed412cd277147e8f76c19"
+  },
+  "limits": [
+    {"label": "Hosted PDS requests / IP / 5 minutes", "measure": "requests", "seconds": 300, "limit": 3000},
+    {"label": "Login requests / account / 5 minutes", "measure": "logins", "seconds": 300, "limit": 30},
+    {"label": "Login requests / account / day", "measure": "logins", "seconds": 86400, "limit": 300},
+    {"label": "Write points / account / hour", "measure": "write_points", "seconds": 3600, "limit": 5000},
+    {"label": "Write points / account / day", "measure": "write_points", "seconds": 86400, "limit": 35000}
+  ]
+}

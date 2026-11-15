@@ -10,6 +10,7 @@ import requests
 from atproto import Client
 from atproto_client.request import Request as _AtprotoRequest
 from dotenv import load_dotenv
+from thejokebot import api_usage
 from thejokebot.paths import AGENT_TMP_DIR, ENV_FILE
 
 DEFAULT_LOGIN_RETRY_ATTEMPTS = 3
@@ -382,7 +383,9 @@ def login_client():
     )
     session_file_path = _get_session_file_path()
 
-    client = Client(request=_AtprotoRequest(timeout=30.0))
+    client = Client(
+        request=_AtprotoRequest(timeout=30.0, event_hooks=api_usage.native_hooks())
+    )
     if session_persist_enabled:
         _register_session_persistence_callback(client, session_file_path)
 

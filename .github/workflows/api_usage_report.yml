@@ -1,0 +1,40 @@
+name: api_usage_report
+
+on:
+  schedule:
+    - cron: "10 0,6,12,18 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: dashboard_metrics_writer
+  cancel-in-progress: false
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.14.10"
+          cache: pip
+      - name: Install dependencies
+        run: |
+          python -m pip install --require-hashes --only-binary=:all: -r requirements.lock
+          python -m pip install --no-deps --no-build-isolation --editable .
+      - name: Report API and Actions usage
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: thejokebot-api-usage-report
+      - name: Persist usage observations
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          python scripts/persist_workflow_state.py \
+            --commit-message "chore(metrics): refresh API usage observations" \
+            state/api_usage.json dashboard/data/api_usage.json
