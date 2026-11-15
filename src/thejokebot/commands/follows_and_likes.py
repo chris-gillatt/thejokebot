@@ -2,6 +2,7 @@
 
 import requests
 import atproto_client.exceptions
+from atproto_core.exceptions import AtProtocolError
 from colorama import Fore, Style
 
 from thejokebot import blocks as blocks
@@ -253,7 +254,7 @@ def main() -> None:
         ValueError,
         requests.RequestException,
         TimeoutError,
-        atproto_client.exceptions.AtProtocolError,
+        AtProtocolError,
     ) as exc:
         social_summary["failed"] += 1
         print(

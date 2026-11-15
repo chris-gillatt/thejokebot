@@ -2,6 +2,10 @@
 
 ## 2.4.0 - 2026-11-15
 
+- Refresh the resolved Python dependencies and upgrade the Sonar scan Action
+  to 8.5.0, retaining hashed Python installs and immutable Action pins.
+  Use the SDK core exception import required by the atproto update.
+
 - Document a read-only runner-log review proposal, evidence categories,
   privacy and untrusted-log safeguards, and separate maintainer approval gates
   for issue creation, agent work and any merging. Keep skill implementation

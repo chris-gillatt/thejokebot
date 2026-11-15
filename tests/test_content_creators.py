@@ -7,7 +7,8 @@ from unittest import mock
 import pytest
 import requests
 from atproto import models
-from atproto_client.exceptions import AtProtocolError, BadRequestError
+from atproto_client.exceptions import BadRequestError
+from atproto_core.exceptions import AtProtocolError
 from atproto_client.request import Response
 
 from thejokebot import config, content_creators, follow_records, state

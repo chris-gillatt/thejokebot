@@ -4,7 +4,7 @@ import re
 import time
 from datetime import datetime, timezone
 
-import atproto_client.exceptions
+from atproto_core.exceptions import AtProtocolError
 import requests
 
 from thejokebot.runtime import get_nested_value, retry_network_call
@@ -111,7 +111,7 @@ def _inspect_pack(client, uri, actor_did, deadline):
     except (
         requests.RequestException,
         TimeoutError,
-        atproto_client.exceptions.AtProtocolError,
+        AtProtocolError,
         ValueError,
     ) as exc:
         result["reason"] = f"read_failed:{type(exc).__name__}"

@@ -7,6 +7,7 @@ from typing import TypedDict
 
 import httpx
 from atproto import Client
+from atproto_core.exceptions import AtProtocolError
 from atproto_client import exceptions
 from atproto_client.request import Request
 
@@ -51,7 +52,7 @@ def probe_transport(request: Request, username: str, password: str) -> ProbeResu
         result["success"] = True
         result["phase"] = "complete"
     except (
-        exceptions.AtProtocolError,
+        AtProtocolError,
         httpx.HTTPError,
         ValueError,
     ) as exc:

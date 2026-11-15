@@ -10,7 +10,8 @@ from datetime import datetime, timedelta, timezone
 from urllib.parse import urlsplit
 
 import requests
-from atproto_client.exceptions import AtProtocolError, BadRequestError
+from atproto_client.exceptions import BadRequestError
+from atproto_core.exceptions import AtProtocolError
 
 from thejokebot import config, content_creators, state_transactions
 from thejokebot.runtime import (

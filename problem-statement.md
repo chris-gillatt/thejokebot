@@ -386,21 +386,13 @@ the SDK's transitive backports remain dependency-owned.
 
 ## Dependency Exceptions
 
-Rechecked on 15 November 2026 against the Python package index, npm registry,
-upstream Action releases and current Dependabot results. No dependency upgrades
-were made as part of #149, #146, #145, R04, R05, R06 or S01;
-keep them in a separate resolver-validated batch so this behaviour fix remains
-focused and the lock stays coherent. Review the deferred versions before the
-next dependency batch or sooner if an applicable advisory appears.
+Rechecked and upgraded on 15 November 2026 against PyPI, npm and upstream
+Action releases. The resolver upgraded atproto to 0.0.75, click to 8.5.1,
+coverage to 7.17.3, dnspython to 2.9.2, pydantic to 2.14.3, pydantic-core to
+2.50.4, regex to 2026.11.9 and typing-inspection to 0.4.5. Local pip is
+26.3 and Ruff is 0.17.5; pip-tools remains 7.6.2. No Python or npm version
+upgrade is deferred.
 
-- `requirements.lock` has these installed versions behind the package-index
-  latest: atproto 0.0.73 -> 0.0.75, click 8.5.0 -> 8.5.1, coverage 7.17.0 -> 7.17.3, dnspython 2.9.1 ->
-  2.9.2, pydantic 2.14.2 -> 2.14.3, pydantic-core 2.50.2 -> 2.50.4, regex
-  2026.9.29 -> 2026.11.9, and typing-inspection 0.4.4 -> 0.4.5.
-- Local Python tooling has pip 26.2.2 -> 26.3 and Ruff 0.17.3 -> 0.17.5
-  available. pip-tools remains 7.6.2. Ruff's explicit rule selection (`E4`,
-  `E7`, `E9`, `F`, plus `C901`) and file inclusion preserve the verified quality
-  policy rather than adopting unrelated new defaults.
 - Installed and latest stable actionlint are both 1.7.12, but its parser rejects
   GitHub's supported concurrency `queue` field
   ([rhysd/actionlint#657](https://github.com/rhysd/actionlint/issues/657),
@@ -422,13 +414,9 @@ next dependency batch or sooner if an applicable advisory appears.
   workflow-log reader retains supported `2022-11-28` (supported until
   10 March 2028) to avoid changing unrelated consumers; review during the next
   API-version migration, before that retirement date.
-- The Sonar scan Action remains at 8.4.1 while upstream stable is 8.5.0.
-  Defer this CI-tool upgrade to a separate analysis-validated dependency change,
-  rather than mixing it into #146/#145. Review at the next dependency batch or sooner
-  for an applicable advisory. The other ten Action repositories match current
-  stable releases, including CodeQL Action 4.39.3 (its separate bundle releases
-  are not Action versions) and the newly used upload-artifact 7.0.2.
-  No open Dependabot vulnerability alerts were reported.
+- The Sonar scan Action is upgraded to 8.5.0 using its verified immutable
+  release commit. The other ten Action repositories match current stable
+  releases, including CodeQL Action 4.39.3; CLI bundle releases are separate.
 - Update transitive Python dependencies through the resolver, never by
   independently forcing incompatible pins. The 2 November lock refresh included
   AnyIO 4.16.0, atproto 0.0.73, pytest 9.2.0 and urllib3 2.8.0; Python 3.14
