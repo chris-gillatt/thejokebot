@@ -10,7 +10,7 @@ This is the operating brief for open work and lasting decisions. See the [README
 - Before non-documentation pushes, run `./scripts/preflight-local.sh` separately, then sync with `git pull --rebase`, then push. Do not use a pre-push hook. The gate includes Ruff, Pyright, workflow lint, tests, coverage and local CodeQL; a passing test suite alone is insufficient.
 - For docs-only changes, including prose-only agent/process guidance, skip tests, preflight, builds, code lint/type checks, coverage, CodeQL/Sonar, dependency audits and manually dispatched full CI. Review the documentation and links, confirm the diff is docs-only, run `git diff --check`, omit changelog entries, then rebase/push without waiting for full validation gates. Mixed code/configuration/workflow/dependency changes retain normal validation.
 - Maintain at least 90% overall first-party Python coverage and 95% on changed executable lines, with focused tests for material failure paths and safety limits. Sonar analysis must pass its gate **and** report zero unresolved issues.
-- Check current first-party Python, npm and GitHub Actions dependency versions before closing a non-documentation work batch; skip these audits for docs-only work. Handle upgrades separately; record a deliberate exception with current and latest stable versions, reason and review trigger below. Keep `references/` content read-only; weekly Dependabot PRs refresh only the three registered upstream pins and auto-merge after their applicable checks. Reference-only PRs skip Python tests, coverage and Sonar; mixed first-party changes retain full validation.
+- Reuse a recorded completed first-party Python, npm and GitHub Actions dependency check for 14 days across task starts and completion gates; when missing or at least 14 days old, follow AGENTS.md's opening decision. Skip these audits for docs-only work. Newly introduced dependencies/tools still need current version checks, and applicable advisories or concrete compatibility failures need targeted investigation. Handle upgrades separately; record a deliberate exception with current and latest stable versions, reason, owner and review trigger below. Keep `references/` content read-only; weekly Dependabot PRs refresh only the three registered upstream pins and auto-merge after their applicable checks. Reference-only PRs skip Python tests, coverage and Sonar; mixed first-party changes retain full validation.
 
 ## Operational Risks
 
@@ -388,6 +388,14 @@ the SDK's transitive backports remain dependency-owned.
 | Do not integrate HumorAPI | Content use and storage terms are unsuitable. |
 
 ## Dependency Exceptions
+
+Last completed broad dependency check: **15 November 2026** (Asia/Singapore).
+Scope: Python manifest/lock and local validation tools, npm/Chart.js, and all
+first-party GitHub Action repositories. Upgrades and validation were delivered
+in `c111c8d5d21323350b2b17917fde70f0a9b9f434`; local and hosted gates passed.
+The next routine check is due **29 November 2026**, owned by the repository's
+implementing agent at the first non-documentation task on or after that date.
+Until then, reuse this check without another broad audit or opening prompt.
 
 Rechecked and upgraded on 15 November 2026 against PyPI, npm and upstream
 Action releases. The resolver upgraded atproto to 0.0.75, click to 8.5.1,

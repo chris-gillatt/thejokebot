@@ -3,6 +3,14 @@
 - Use British English where possible, except where it would interfere with syntax.
 - For GitHub issues, pull requests and repository metadata, use the GitHub API or `gh` CLI. Do not use a browser for these tasks. If API access fails, retry or report the access problem.
 
+## Dependency check cadence
+
+- For non-documentation implementation, first read the last completed dependency-check record in `problem-statement.md`. A completed check is reusable for 14 days; while it is current, do not ask again or rerun the broad audit merely because a new task starts or completes.
+- If no completed check is recorded or it is 14 days old or older, ask "Shall we do a dependency check first?" and wait for the user's decision before investigation, planning or implementation. An agreed check includes applying compatible upgrades as a separate validated change, using [the dependency-check skill](.github/skills/dependency-check/SKILL.md).
+- Record completion date, scope, evidence and exceptions. An attempted or partial audit does not reset the date. For date-only records, use Asia/Singapore calendar dates; a check dated 15 November is next due on 29 November.
+- Still verify newly introduced dependencies, Actions, SDKs and tooling at implementation time. Investigate applicable security advisories and concrete compatibility failures when discovered; these targeted checks do not require restarting the broad audit.
+- Agree an explicit owner and a concrete review date or named work trigger for any deferred check or upgrade. Documentation-only work remains exempt from dependency audits and executable validation.
+
 ## Completing any change
 
 - Update [CHANGELOG.md](CHANGELOG.md) in the same substantive commit as every meaningful non-documentation first-party change. Omit documentation-only updates, planning notes and prose-only agent/process guidance; mixed-change entries should describe the delivered effect, not accompanying documentation edits. Use actual commit dates, newest first; never create or restore an `Unreleased` section. Preserve the pre-1.0.0 retrospective milestone numbers without claiming they were original releases. Verify applicable entries before committing and completing the task; follow the [changelog policy](.github/copilot-instructions.md#changelog-policy) for grouping, dates and automation exclusions.
