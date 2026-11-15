@@ -916,19 +916,19 @@
     },
     {
       "period_start": "2026-11-15T06:00:00+00:00",
-      "collected_at": "2026-11-15T06:37:01.537709+00:00",
-      "followers": 7112,
-      "following": 11029,
-      "profile_posts": 2854,
-      "joke_posts": 1186,
+      "collected_at": "2026-11-15T08:29:30.409900+00:00",
+      "followers": 7114,
+      "following": 11040,
+      "profile_posts": 2855,
+      "joke_posts": 1187,
       "engagement": {
-        "likes": 5630,
+        "likes": 5635,
         "replies": 408,
-        "reposts": 462,
+        "reposts": 463,
         "quotes": 47,
         "bookmarks": 75
       },
-      "engagement_total": 6622
+      "engagement_total": 6628
     }
   ],
   "activity_runs": [
@@ -9844,6 +9844,72 @@
       "starter_pack_follows": 0,
       "starter_pack_scan_complete": 1,
       "protected": 22
+    },
+    {
+      "id": 43692994634,
+      "attempt": 1,
+      "workflow": "bluesky_post_joke",
+      "conclusion": "success",
+      "created_at": "2026-11-15T08:07:03Z",
+      "follows": 0,
+      "unfollows": 0,
+      "provider_attempts": 2,
+      "provider_candidates": [
+        {
+          "name": "jokeapi",
+          "fetches": 5,
+          "candidates": 5,
+          "selected": 0,
+          "published": 0,
+          "duplicate": 5,
+          "too_long": 0,
+          "network_error": 0,
+          "provider_error": 0,
+          "exhausted": 1
+        },
+        {
+          "name": "groandeck",
+          "fetches": 4,
+          "candidates": 4,
+          "selected": 1,
+          "published": 1,
+          "duplicate": 3,
+          "too_long": 0,
+          "network_error": 0,
+          "provider_error": 0,
+          "exhausted": 0
+        }
+      ],
+      "starting_provider": "jokeapi",
+      "successful_source": "groandeck",
+      "fallthrough": true,
+      "static_fallback": false,
+      "duplicate": 5,
+      "too_long": 0,
+      "network_error": 0,
+      "provider_error": 0,
+      "posted": true
+    },
+    {
+      "id": 43694300674,
+      "attempt": 1,
+      "workflow": "bluesky_follows_and_likes",
+      "conclusion": "success",
+      "created_at": "2026-11-15T08:23:46Z",
+      "follows": 11,
+      "unfollows": 0,
+      "failed": 0,
+      "social_summary_observed": true,
+      "follow_back_candidates": 1,
+      "follow_back_added": 1,
+      "interaction_candidates": 424,
+      "interaction_eligible": 10,
+      "interaction_added": 10,
+      "interactions_liked": 1,
+      "joke_replies": 0,
+      "starter_pack_follows": 0,
+      "starter_pack_scan_complete": 1,
+      "protected": 22
     }
   ],
   "automation_runs": [
@@ -15817,9 +15883,324 @@
       "attempt": 1,
       "workflow": "bluesky_dashboard",
       "created_at": "2026-11-15T06:36:28Z",
-      "updated_at": "2026-11-15T06:36:32Z",
+      "updated_at": "2026-11-15T06:37:46Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 43686272987,
+      "attempt": 1,
+      "workflow": "codeql",
+      "created_at": "2026-11-15T06:37:15Z",
+      "updated_at": "2026-11-15T06:38:29Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 43686272975,
+      "attempt": 1,
+      "workflow": "python_tests",
+      "created_at": "2026-11-15T06:37:15Z",
+      "updated_at": "2026-11-15T06:37:35Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 43686272981,
+      "attempt": 1,
+      "workflow": "ruff_quality",
+      "created_at": "2026-11-15T06:37:15Z",
+      "updated_at": "2026-11-15T06:37:42Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 43686272953,
+      "attempt": 1,
+      "workflow": "validate_runtime_config",
+      "created_at": "2026-11-15T06:37:15Z",
+      "updated_at": "2026-11-15T06:37:37Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 43687414251,
+      "attempt": 1,
+      "workflow": "codeql",
+      "created_at": "2026-11-15T06:52:38Z",
+      "updated_at": "2026-11-15T06:53:56Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 43687414253,
+      "attempt": 1,
+      "workflow": "python_tests",
+      "created_at": "2026-11-15T06:52:38Z",
+      "updated_at": "2026-11-15T06:52:58Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 43687414249,
+      "attempt": 1,
+      "workflow": "ruff_quality",
+      "created_at": "2026-11-15T06:52:38Z",
+      "updated_at": "2026-11-15T06:53:06Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 43687414203,
+      "attempt": 1,
+      "workflow": "validate_runtime_config",
+      "created_at": "2026-11-15T06:52:38Z",
+      "updated_at": "2026-11-15T06:52:54Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 43689664655,
+      "attempt": 1,
+      "workflow": "codeql",
+      "created_at": "2026-11-15T07:22:30Z",
+      "updated_at": "2026-11-15T07:23:44Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 43689664627,
+      "attempt": 1,
+      "workflow": "python_tests",
+      "created_at": "2026-11-15T07:22:30Z",
+      "updated_at": "2026-11-15T07:24:41Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 43689664612,
+      "attempt": 1,
+      "workflow": "ruff_quality",
+      "created_at": "2026-11-15T07:22:30Z",
+      "updated_at": "2026-11-15T07:22:54Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 43689664654,
+      "attempt": 1,
+      "workflow": "validate_runtime_config",
+      "created_at": "2026-11-15T07:22:30Z",
+      "updated_at": "2026-11-15T07:22:56Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 43690346929,
+      "attempt": 1,
+      "workflow": "bluesky_review_reposts",
+      "created_at": "2026-11-15T07:31:48Z",
+      "updated_at": "2026-11-15T07:31:56Z",
+      "status": "completed",
+      "conclusion": "skipped"
+    },
+    {
+      "id": 43690678639,
+      "attempt": 1,
+      "workflow": "codeql",
+      "created_at": "2026-11-15T07:36:09Z",
+      "updated_at": "2026-11-15T07:37:29Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 43690678600,
+      "attempt": 1,
+      "workflow": "python_tests",
+      "created_at": "2026-11-15T07:36:09Z",
+      "updated_at": "2026-11-15T07:38:04Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 43690678650,
+      "attempt": 1,
+      "workflow": "ruff_quality",
+      "created_at": "2026-11-15T07:36:09Z",
+      "updated_at": "2026-11-15T07:36:30Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 43690678589,
+      "attempt": 1,
+      "workflow": "validate_runtime_config",
+      "created_at": "2026-11-15T07:36:09Z",
+      "updated_at": "2026-11-15T07:36:30Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 43690679812,
+      "attempt": 1,
+      "workflow": "bluesky_review_reposts",
+      "created_at": "2026-11-15T07:36:10Z",
+      "updated_at": "2026-11-15T07:36:20Z",
+      "status": "completed",
+      "conclusion": "skipped"
+    },
+    {
+      "id": 43691298831,
+      "attempt": 1,
+      "workflow": "pr_auto_merge",
+      "created_at": "2026-11-15T07:44:44Z",
+      "updated_at": "2026-11-15T07:44:52Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 43692718879,
+      "attempt": 1,
+      "workflow": "codeql",
+      "created_at": "2026-11-15T08:03:33Z",
+      "updated_at": "2026-11-15T08:04:54Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 43692718876,
+      "attempt": 1,
+      "workflow": "python_tests",
+      "created_at": "2026-11-15T08:03:33Z",
+      "updated_at": "2026-11-15T08:03:49Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 43692718884,
+      "attempt": 1,
+      "workflow": "ruff_quality",
+      "created_at": "2026-11-15T08:03:33Z",
+      "updated_at": "2026-11-15T08:03:54Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 43692718918,
+      "attempt": 1,
+      "workflow": "validate_runtime_config",
+      "created_at": "2026-11-15T08:03:33Z",
+      "updated_at": "2026-11-15T08:03:58Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 43692994634,
+      "attempt": 1,
+      "workflow": "bluesky_post_joke",
+      "created_at": "2026-11-15T08:07:03Z",
+      "updated_at": "2026-11-15T08:07:34Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 43693182653,
+      "attempt": 1,
+      "workflow": "codeql",
+      "created_at": "2026-11-15T08:09:31Z",
+      "updated_at": "2026-11-15T08:10:56Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 43693182748,
+      "attempt": 1,
+      "workflow": "python_tests",
+      "created_at": "2026-11-15T08:09:31Z",
+      "updated_at": "2026-11-15T08:11:51Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 43693182615,
+      "attempt": 1,
+      "workflow": "ruff_quality",
+      "created_at": "2026-11-15T08:09:31Z",
+      "updated_at": "2026-11-15T08:09:52Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 43693182667,
+      "attempt": 1,
+      "workflow": "validate_runtime_config",
+      "created_at": "2026-11-15T08:09:31Z",
+      "updated_at": "2026-11-15T08:09:54Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 43693268532,
+      "attempt": 1,
+      "workflow": "provider_health_check",
+      "created_at": "2026-11-15T08:10:36Z",
+      "updated_at": "2026-11-15T08:11:03Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 43694300674,
+      "attempt": 1,
+      "workflow": "bluesky_follows_and_likes",
+      "created_at": "2026-11-15T08:23:46Z",
+      "updated_at": "2026-11-15T08:26:15Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 43694701512,
+      "attempt": 1,
+      "workflow": "bluesky_dashboard",
+      "created_at": "2026-11-15T08:28:56Z",
+      "updated_at": "2026-11-15T08:29:00Z",
       "status": "in_progress",
       "conclusion": null
+    },
+    {
+      "id": 43694701558,
+      "attempt": 1,
+      "workflow": "codeql",
+      "created_at": "2026-11-15T08:28:56Z",
+      "updated_at": "2026-11-15T08:29:00Z",
+      "status": "in_progress",
+      "conclusion": null
+    },
+    {
+      "id": 43694701532,
+      "attempt": 1,
+      "workflow": "python_tests",
+      "created_at": "2026-11-15T08:28:56Z",
+      "updated_at": "2026-11-15T08:29:00Z",
+      "status": "in_progress",
+      "conclusion": null
+    },
+    {
+      "id": 43694701494,
+      "attempt": 1,
+      "workflow": "ruff_quality",
+      "created_at": "2026-11-15T08:28:56Z",
+      "updated_at": "2026-11-15T08:29:23Z",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 43694701553,
+      "attempt": 1,
+      "workflow": "validate_runtime_config",
+      "created_at": "2026-11-15T08:28:56Z",
+      "updated_at": "2026-11-15T08:29:22Z",
+      "status": "completed",
+      "conclusion": "success"
     }
   ],
   "daily_activity": [
@@ -15909,8 +16290,8 @@
     },
     {
       "date": "2026-11-15",
-      "joke_posts": 2,
-      "follows": 48,
+      "joke_posts": 3,
+      "follows": 59,
       "unfollows": 0
     }
   ],
@@ -36714,7 +37095,7 @@
     },
     {
       "period_start": "2026-11-15T06:00:00+00:00",
-      "collected_at": "2026-11-15T06:37:01.537709+00:00",
+      "collected_at": "2026-11-15T08:29:30.409900+00:00",
       "providers": [
         {
           "name": "icanhazdadjoke",
@@ -36730,13 +37111,13 @@
           },
           "healthy": true,
           "configured": true,
-          "last_health_check_at": 1794643815,
+          "last_health_check_at": 1794730257,
           "consecutive_health_failures": 0
         },
         {
           "name": "groandeck",
-          "published": 559,
-          "visible_posts": 556,
+          "published": 560,
+          "visible_posts": 557,
           "average_interactions": 4.66,
           "fallthroughs": 2,
           "rejection_counts": {
@@ -36747,7 +37128,7 @@
           },
           "healthy": true,
           "configured": true,
-          "last_health_check_at": 1794643815,
+          "last_health_check_at": 1794730258,
           "consecutive_health_failures": 0
         },
         {
@@ -36755,16 +37136,16 @@
           "published": 175,
           "visible_posts": 171,
           "average_interactions": 6.56,
-          "fallthroughs": 443,
+          "fallthroughs": 444,
           "rejection_counts": {
-            "duplicate": 1299,
+            "duplicate": 1304,
             "too_long": 21,
             "network_error": 1,
             "provider_error": 0
           },
           "healthy": true,
           "configured": true,
-          "last_health_check_at": 1794643815,
+          "last_health_check_at": 1794730257,
           "consecutive_health_failures": 0
         },
         {
@@ -36781,7 +37162,7 @@
           },
           "healthy": true,
           "configured": true,
-          "last_health_check_at": 1794643815,
+          "last_health_check_at": 1794730258,
           "consecutive_health_failures": 0
         },
         {
@@ -36798,7 +37179,7 @@
           },
           "healthy": true,
           "configured": true,
-          "last_health_check_at": 1794643816,
+          "last_health_check_at": 1794730259,
           "consecutive_health_failures": 0
         }
       ],
@@ -36825,10 +37206,10 @@
         "window_days": 30,
         "response_window": {
           "days": 90,
-          "active": 3420,
+          "active": 3430,
           "by_source": {
             "discovery": 2216,
-            "interaction": 273,
+            "interaction": 283,
             "other": 931
           }
         },
@@ -36846,20 +37227,20 @@
       "audience_growth": {
         "window_days": 30,
         "net_followers": {
-          "7": 55,
-          "30": 207
+          "7": 57,
+          "30": 203
         },
         "sources": {
           "followback": {
             "denominator": "candidates",
-            "considered": 107,
-            "acquired": 107,
+            "considered": 108,
+            "acquired": 108,
             "success_rate": 100.0
           },
           "interaction": {
             "denominator": "eligible",
-            "considered": 230,
-            "acquired": 230,
+            "considered": 240,
+            "acquired": 240,
             "success_rate": 100.0
           },
           "discovery": {
@@ -36993,7 +37374,7 @@
             {
               "month": "2026-11",
               "source": "followback",
-              "acquired": 58,
+              "acquired": 59,
               "checkpoints": {
                 "30": {
                   "observed": 0,
@@ -37012,7 +37393,7 @@
             {
               "month": "2026-11",
               "source": "interaction",
-              "acquired": 226,
+              "acquired": 236,
               "checkpoints": {
                 "30": {
                   "observed": 0,
@@ -37050,14 +37431,14 @@
           ]
         },
         "coverage": {
-          "social_started_at": "2026-10-16T06:46:30Z",
+          "social_started_at": "2026-10-16T08:37:14Z",
           "discovery_started_at": "2026-10-21T01:31:24Z"
         }
       },
       "starter_pack_attribution": {
         "window_days": 30,
         "coverage_started_at": "2026-08-01T14:31:28.650280Z",
-        "last_checked_at": "2026-11-15T06:30:36.692870Z",
+        "last_checked_at": "2026-11-15T08:25:42.074908Z",
         "total_follows": 1,
         "windows": {
           "7": 0,
