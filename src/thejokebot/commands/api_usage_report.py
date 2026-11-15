@@ -294,7 +294,12 @@ def inventory(
             raise ValueError("GitHub usage inventory has no workflow_runs")
         runs.extend(rows)
         if len(rows) < 100:
-            return runs, True
+            complete = len(runs) >= _integer(payload.get("total_count"))
+            if not complete:
+                print(
+                    "Warning: GitHub capped the matched run inventory; totals are incomplete."
+                )
+            return runs, complete
     print("Warning: API usage inventory hit its page limit; totals are incomplete.")
     return runs, False
 
@@ -435,7 +440,11 @@ def check_documents(session, config: dict, previous: dict, now: datetime) -> dic
     for key, expected in config["documents"].items():
         old = previous.get(key)
         if old and now - _date(old["checked_at"]) < timedelta(days=1):
-            results[key] = old
+            results[key] = dict(old)
+            if "sha256" in old:
+                results[key]["status"] = (
+                    "unchanged" if old["sha256"] == expected else "changed"
+                )
         else:
             results[key] = _document(session, key, expected, now)
     return results

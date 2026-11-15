@@ -386,7 +386,7 @@ def report_response(url, kwargs, source_events, run, response):
         return response()
     assert kwargs["headers"]["Authorization"] == "Bearer private-token"
     if url.endswith("actions/runs"):
-        return response({"workflow_runs": [run]})
+        return response({"workflow_runs": [run], "total_count": 1})
     if url.endswith("/jobs"):
         return response(
             {
@@ -505,6 +505,22 @@ def test_inventory_and_job_pagination_are_bounded_and_invalid_metadata_fails(
         report._jobs(None, "owner/repo", 42, 1, {})
 
 
+def test_github_filtered_search_truncation_does_not_claim_complete_inventory(
+    monkeypatch, capsys
+):
+    def get(session, repository, path, headers, params):
+        return {
+            "total_count": 1009,
+            "workflow_runs": [{}] * 100 if params["page"] <= 10 else [],
+        }
+
+    monkeypatch.setattr(report, "_json_get", get)
+    runs, complete = report.inventory(None, "owner/repo", {}, NOW)
+    assert len(runs) == 1000
+    assert complete is False
+    assert "incomplete" in capsys.readouterr().out
+
+
 def test_missing_job_and_log_observations_stay_unavailable(monkeypatch, capsys):
     def unavailable(*args, **kwargs):
         raise requests.ConnectionError("private request details")
@@ -547,6 +563,21 @@ def test_document_checks_ignore_scripts_and_fail_explicitly_on_oversized_pages(c
     result = report._document(session, "bluesky", "expected", NOW)
     assert result["status"] == "unavailable"
     assert "documentation unavailable" in capsys.readouterr().out
+
+
+def test_reviewed_document_fingerprint_updates_cached_status_without_refetching():
+    cached = {
+        "bluesky": {
+            "sha256": "reviewed",
+            "status": "changed",
+            "checked_at": NOW.isoformat(),
+        }
+    }
+    result = report.check_documents(
+        None, {"documents": {"bluesky": "reviewed"}}, cached, NOW
+    )
+    assert result["bluesky"]["status"] == "unchanged"
+    assert cached["bluesky"]["status"] == "changed"
 
 
 @pytest.mark.parametrize(

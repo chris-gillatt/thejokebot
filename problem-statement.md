@@ -59,6 +59,9 @@ Actions; server quota headers remain authoritative for their token/resource.
 The dashboard marks stale reports, expired quota snapshots and incomplete
 inventory/coverage explicitly. Job minutes sum execution across parallel
 jobs and separate attempts, never workflow queue/wait duration.
+GitHub additionally caps filtered run searches at 1,000 results; compare the
+returned count with its matched total and mark truncated inventory incomplete,
+even when a following page is empty.
 
 ## Reposts with review (#146)
 
