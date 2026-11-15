@@ -2,6 +2,11 @@
 
 ## 2.4.0 - 2026-11-15
 
+- Prevent successful API telemetry from filling the runner-log review allowance.
+  Prioritise warnings, failures and unknown telemetry formats, retain explicit
+  omission counts and bound retained evidence while scanning each archive file.
+  Refs #148.
+
 - Add an opt-in GitHub Actions log-review skill and bounded read-only evidence
   collector, preserving exact attempts and source filenames, omitting potentially
   sensitive excerpts and reporting incomplete coverage. Refs #148.

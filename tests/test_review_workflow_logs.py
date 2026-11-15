@@ -57,6 +57,62 @@ def test_redaction_omits_sensitive_lines_and_preserves_locations():
     assert result["omitted_signal_lines"] == 10
 
 
+@pytest.mark.parametrize("kind", ["request", "summary"])
+def test_routine_telemetry_does_not_use_evidence_allowance(kind):
+    event = json.dumps({"version": 1, "kind": kind, "endpoint": "rate_limit"})
+    assert review.signal_priority("API_USAGE " + event) is None
+
+
+@pytest.mark.parametrize("status", [200, 302])
+def test_successful_telemetry_does_not_hide_later_warning(status):
+    event = json.dumps(
+        {"version": 1, "kind": "response", "status": status, "error": None}
+    )
+    log = ("2026-11-15T07:00:00.123Z API_USAGE " + event + "\n") * 200
+    log += "Warning: missing activity summary\n"
+    result = review.evidence_files({"job.txt": log})[0]
+    assert result["signal_lines"] == 1
+    assert result["suppressed_telemetry_lines"] == 200
+    assert result["excerpts"] == [
+        {"line": 201, "text": "Warning: missing activity summary"}
+    ]
+    assert result["omitted_signal_lines"] == 0
+
+
+@pytest.mark.parametrize(
+    "event",
+    [
+        "not JSON",
+        "[]",
+        "{}",
+        '{"version":true}',
+        '{"version":2}',
+        '{"version":1,"kind":[]}',
+        '{"version":1,"kind":"response","status":200}',
+        '{"version":1,"kind":"response","status":200,"error":"TimeoutError"}',
+        '{"version":1,"kind":"response","status":429,"error":null}',
+        '{"version":1,"kind":"response","status":500,"error":null}',
+        '{"version":1,"kind":"response","status":"200","error":null}',
+        '{"version":1,"kind":"response","status":null,"error":null}',
+    ],
+)
+def test_failed_or_unknown_telemetry_remains_priority_evidence(event):
+    assert review.signal_priority("API_USAGE " + event) == 0
+
+
+def test_priority_evidence_survives_earlier_keyword_noise_and_stays_redacted():
+    log = "test_failed_request PASSED\n" * 100
+    log += "##[warning] deprecated API\nError: token=private\nAPI_USAGE broken\n"
+    result = review.evidence_files({"job.txt": log})[0]
+    assert result["priority_signal_lines"] == 3
+    assert result["omitted_signal_lines"] == 23
+    assert len(result["excerpts"]) == 80
+    assert [x["line"] for x in result["excerpts"]][-3:] == [101, 102, 103]
+    assert "private" not in json.dumps(result)
+    assert result["excerpts"][-2]["text"] == "[omitted: potentially sensitive content]"
+    assert review.evidence_files({"empty": ""})[0]["lines"] == 0
+
+
 def test_inventory_tracks_api_truncation_and_deduplicates(monkeypatch):
     monkeypatch.setattr(review, "PAGE_LIMIT", 2)
     responses = iter(

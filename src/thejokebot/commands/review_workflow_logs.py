@@ -1,6 +1,7 @@
 """Collect bounded, read-only evidence for the GitHub Actions review skill."""
 
 import json
+import io
 import re
 import subprocess
 import zipfile
@@ -30,6 +31,52 @@ SENSITIVE = re.compile(
     re.IGNORECASE,
 )
 ANSI = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
+TIMESTAMP = re.compile(r"^\d{4}-\d{2}-\d{2}T[\d:.]+Z\s+")
+PRIORITY_SIGNAL = re.compile(
+    r"(?:^|\s)(?:warning|error|fatal):|::(?:warning|error)|"
+    r"##\[(?:warning|error)\]|DeprecationWarning|\bfailed\b|"
+    r"\bvulnerab|\btimed? out\b|\bunavailable\b",
+    re.IGNORECASE,
+)
+
+
+def signal_priority(line: str) -> int | None:
+    """Suppress verified routine telemetry; retain failures and unknown formats."""
+    text = TIMESTAMP.sub("", ANSI.sub("", line)).strip()
+    if text.startswith("API_USAGE "):
+        return _telemetry_priority(text.removeprefix("API_USAGE "))
+    if not SIGNAL.search(text):
+        return None
+    if PRIORITY_SIGNAL.search(text) and not re.search(r"\bPASSED\b", text):
+        return 0
+    return 1
+
+
+def _telemetry_priority(text: str) -> int | None:
+    try:
+        event = json.loads(text)
+    except ValueError:
+        return 0
+    if (
+        not isinstance(event, dict)
+        or type(event.get("version")) is not int
+        or event.get("version") != 1
+    ):
+        return 0
+    if event.get("error") is not None:
+        return 0
+    kind = event.get("kind")
+    if kind in ("request", "summary"):
+        return None
+    status = event.get("status")
+    if (
+        kind == "response"
+        and "error" in event
+        and type(status) is int
+        and 100 <= status < 400
+    ):
+        return None
+    return 0
 
 
 def safe_text(value: object) -> str:
@@ -59,18 +106,32 @@ def evidence_files(files: dict[str, str]) -> list[dict]:
     """Retain locations and counts without emitting full raw logs."""
     result = []
     for filename, content in files.items():
-        matches = [
-            {"line": number, "text": safe_text(line)}
-            for number, line in enumerate(content.splitlines(), 1)
-            if SIGNAL.search(line)
-        ]
+        retained: list[list[dict]] = [[], []]
+        counts = [0, 0]
+        suppressed = 0
+        number = 0
+        for number, line in enumerate(io.StringIO(content), 1):
+            priority = signal_priority(line)
+            if priority is None:
+                if "API_USAGE " in line:
+                    suppressed += 1
+                continue
+            counts[priority] += 1
+            if len(retained[priority]) < LINE_LIMIT:
+                retained[priority].append({"line": number, "text": safe_text(line)})
+        excerpts = sorted(
+            (retained[0] + retained[1])[:LINE_LIMIT], key=lambda x: x["line"]
+        )
+        signal_count = sum(counts)
         result.append(
             {
                 "source_file": safe_text(filename),
-                "lines": len(content.splitlines()),
-                "signal_lines": len(matches),
-                "omitted_signal_lines": max(0, len(matches) - LINE_LIMIT),
-                "excerpts": matches[:LINE_LIMIT],
+                "lines": number,
+                "signal_lines": signal_count,
+                "priority_signal_lines": counts[0],
+                "suppressed_telemetry_lines": suppressed,
+                "omitted_signal_lines": max(0, signal_count - len(excerpts)),
+                "excerpts": excerpts,
             }
         )
     return result

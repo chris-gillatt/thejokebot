@@ -29,7 +29,11 @@ that workflows absent from the returned inventory have not been reviewed.
 
 Matching is a triage aid, not a classifier or complete audit. Per archive file,
 at most 80 signal lines are retained with their original line numbers and omitted
-counts. No matching line does not mean no problem. If the sample is insufficient,
+counts. Valid successful API_USAGE responses and routine request/summary records
+are excluded and counted separately. Failed or unknown telemetry formats remain
+priority evidence. Explicit warnings/errors take precedence over broad keyword
+matches, with selected excerpts returned in original line order. No matching
+line does not mean no problem. If the sample is insufficient,
 report that limitation and propose a targeted follow-up rather than silently
 expanding the bounds. The archive reader caps compressed/uncompressed content at
 25/50 MiB. Missing, empty, cancelled, unavailable and truncated evidence must stay

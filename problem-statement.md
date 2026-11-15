@@ -103,6 +103,31 @@ review cannot create them or change repository/account state. Earlier rerun
 attempts and older runs rerun during the window are explicitly outside this
 initial sample. No automated issue/fix/merge chain is enabled.
 
+### Log-review follow-ups — 15 November 2026
+
+Exclude valid successful API telemetry from evidence selection and count these
+routine records separately. Prioritise explicit warnings/errors over broad
+keyword matches; retain failed and unrecognised telemetry, original line numbers
+and omission counts. Bound retained excerpts during scanning rather than building
+an unbounded list of matching lines.
+
+The Copilot investigation inspected exact attempt 43420637746/1 at
+`3a170b3ae4cd950ede58e9374dd3914e4963c6f5`. Its GitHub-managed workflow reported
+`api.github.com` blocked by the agent firewall, but successfully reported review
+results and posted four findings on PR #147. This establishes restricted access,
+not a failed review or proof of complete review coverage. A separate content
+exclusion lookup returned 404; neither the account's configured exclusion policy
+nor the reason for that response was established. Do not call it a bypass or
+claim files were exposed.
+
+GitHub's [MCP configuration guidance](https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/configure-mcp-servers)
+specifically recommends adding `api.github.com` to the custom allowlist when
+that host is blocked. [Firewall settings](https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/customize-the-firewall)
+for code review are separate from cloud-agent settings. No firewall or exclusion
+settings were changed during this investigation. The maintainer, `chris-gillatt`,
+owns deciding whether to allow that host and confirming any expected exclusion
+policy before the next Copilot review which requires live GitHub API access.
+
 ## API call insight (#149)
 
 Agreed on 15 November 2026: measure and warn at 80% of applicable known
