@@ -1,6 +1,6 @@
 {
   "schema_version": 11,
-  "generated_at": "2026-11-15T08:29:30.409900+00:00",
+  "generated_at": "2026-11-15T08:34:24.759915+00:00",
   "account": {
     "handle": "thejokebot.bsky.social",
     "display_name": "The Joke Bot",
@@ -2881,7 +2881,7 @@
     },
     {
       "period_start": "2026-11-15T06:00:00+00:00",
-      "collected_at": "2026-11-15T08:29:30.409900+00:00",
+      "collected_at": "2026-11-15T08:34:24.759915+00:00",
       "followers": 7114,
       "following": 11040,
       "profile_posts": 2855,
@@ -19862,23 +19862,23 @@
   },
   "automation": {
     "window_days": 30,
-    "collected_at": "2026-11-15T08:29:30.409900+00:00",
-    "runs": 963,
-    "successful": 945,
+    "collected_at": "2026-11-15T08:34:24.759915+00:00",
+    "runs": 962,
+    "successful": 946,
     "failed": 9,
     "cancelled": 3,
     "success_rate": 99.1,
     "workflows": [
       {
         "name": "bluesky_dashboard",
-        "runs": 97,
-        "successful": 95,
+        "runs": 98,
+        "successful": 96,
         "failed": 0,
         "cancelled": 1,
-        "last_run_at": "2026-11-15T08:28:56Z",
+        "last_run_at": "2026-11-15T08:33:51Z",
         "last_status": "in_progress",
         "last_conclusion": null,
-        "last_success_at": "2026-11-15T06:37:46Z",
+        "last_success_at": "2026-11-15T08:30:16Z",
         "latest_duration_seconds": null,
         "median_duration_seconds": 91,
         "expected_interval_hours": 6.0,
@@ -19901,8 +19901,8 @@
       },
       {
         "name": "bluesky_follows_and_likes",
-        "runs": 242,
-        "successful": 239,
+        "runs": 241,
+        "successful": 238,
         "failed": 3,
         "cancelled": 0,
         "last_run_at": "2026-11-15T08:23:46Z",
@@ -19910,7 +19910,7 @@
         "last_conclusion": "success",
         "last_success_at": "2026-11-15T08:26:15Z",
         "latest_duration_seconds": 149,
-        "median_duration_seconds": 72,
+        "median_duration_seconds": 73,
         "expected_interval_hours": 2.0,
         "consecutive_failures": 0
       },
@@ -19931,8 +19931,8 @@
       },
       {
         "name": "bluesky_post_joke",
-        "runs": 122,
-        "successful": 121,
+        "runs": 121,
+        "successful": 120,
         "failed": 1,
         "cancelled": 0,
         "last_run_at": "2026-11-15T08:07:03Z",
@@ -20007,14 +20007,14 @@
       {
         "name": "codeql",
         "runs": 78,
-        "successful": 77,
+        "successful": 78,
         "failed": 0,
         "cancelled": 0,
         "last_run_at": "2026-11-15T08:28:56Z",
-        "last_status": "in_progress",
-        "last_conclusion": null,
-        "last_success_at": "2026-11-15T08:10:56Z",
-        "latest_duration_seconds": null,
+        "last_status": "completed",
+        "last_conclusion": "success",
+        "last_success_at": "2026-11-15T08:30:37Z",
+        "latest_duration_seconds": 101,
         "median_duration_seconds": 85,
         "expected_interval_hours": null,
         "consecutive_failures": 0
@@ -20052,15 +20052,15 @@
       {
         "name": "python_tests",
         "runs": 75,
-        "successful": 69,
+        "successful": 70,
         "failed": 5,
         "cancelled": 0,
         "last_run_at": "2026-11-15T08:28:56Z",
-        "last_status": "in_progress",
-        "last_conclusion": null,
-        "last_success_at": "2026-11-15T08:11:51Z",
-        "latest_duration_seconds": null,
-        "median_duration_seconds": 119,
+        "last_status": "completed",
+        "last_conclusion": "success",
+        "last_success_at": "2026-11-15T08:31:13Z",
+        "latest_duration_seconds": 137,
+        "median_duration_seconds": 120,
         "expected_interval_hours": null,
         "consecutive_failures": 0
       },
@@ -20100,31 +20100,22 @@
   "operations": {
     "workflow_runs": [
       {
+        "id": 43695092755,
+        "attempt": 1,
+        "workflow": "bluesky_dashboard",
+        "created_at": "2026-11-15T08:33:51Z",
+        "updated_at": "2026-11-15T08:33:55Z",
+        "status": "in_progress",
+        "conclusion": null
+      },
+      {
         "id": 43694701512,
         "attempt": 1,
         "workflow": "bluesky_dashboard",
         "created_at": "2026-11-15T08:28:56Z",
-        "updated_at": "2026-11-15T08:29:00Z",
-        "status": "in_progress",
-        "conclusion": null
-      },
-      {
-        "id": 43694701532,
-        "attempt": 1,
-        "workflow": "python_tests",
-        "created_at": "2026-11-15T08:28:56Z",
-        "updated_at": "2026-11-15T08:29:00Z",
-        "status": "in_progress",
-        "conclusion": null
-      },
-      {
-        "id": 43694701558,
-        "attempt": 1,
-        "workflow": "codeql",
-        "created_at": "2026-11-15T08:28:56Z",
-        "updated_at": "2026-11-15T08:29:00Z",
-        "status": "in_progress",
-        "conclusion": null
+        "updated_at": "2026-11-15T08:30:16Z",
+        "status": "completed",
+        "conclusion": "success"
       },
       {
         "id": 43694701553,
@@ -20141,6 +20132,24 @@
         "workflow": "ruff_quality",
         "created_at": "2026-11-15T08:28:56Z",
         "updated_at": "2026-11-15T08:29:23Z",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 43694701558,
+        "attempt": 1,
+        "workflow": "codeql",
+        "created_at": "2026-11-15T08:28:56Z",
+        "updated_at": "2026-11-15T08:30:37Z",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 43694701532,
+        "attempt": 1,
+        "workflow": "python_tests",
+        "created_at": "2026-11-15T08:28:56Z",
+        "updated_at": "2026-11-15T08:31:13Z",
         "status": "completed",
         "conclusion": "success"
       },
@@ -28813,24 +28822,6 @@
         "updated_at": "2026-10-24T16:45:26Z",
         "status": "completed",
         "conclusion": "success"
-      },
-      {
-        "id": 40111783590,
-        "attempt": 1,
-        "workflow": "bluesky_follows_and_likes",
-        "created_at": "2026-10-24T16:29:22Z",
-        "updated_at": "2026-10-24T16:30:24Z",
-        "status": "completed",
-        "conclusion": "success"
-      },
-      {
-        "id": 40110150648,
-        "attempt": 1,
-        "workflow": "bluesky_post_joke",
-        "created_at": "2026-10-24T16:08:11Z",
-        "updated_at": "2026-10-24T16:08:35Z",
-        "status": "completed",
-        "conclusion": "success"
       }
     ],
     "ci_workflows": [
@@ -28843,14 +28834,14 @@
     "components": [
       {
         "name": "Public account and joke feed",
-        "observed_at": "2026-11-15T08:29:30.409900+00:00",
+        "observed_at": "2026-11-15T08:34:24.759915+00:00",
         "expected_interval_hours": null,
         "overdue": false,
         "last_success_at": null
       },
       {
         "name": "GitHub workflow metadata",
-        "observed_at": "2026-11-15T08:29:30.409900+00:00",
+        "observed_at": "2026-11-15T08:34:24.759915+00:00",
         "expected_interval_hours": null,
         "overdue": false,
         "last_success_at": null
@@ -29253,38 +29244,38 @@
   },
   "api_usage": {
     "schema_version": 1,
-    "generated_at": "2026-11-15T06:32:12.897225+00:00",
+    "generated_at": "2026-11-15T08:32:05.069634+00:00",
     "warning_percent": 80,
-    "inventory_complete": false,
+    "inventory_complete": true,
     "periods": {
       "1": {
-        "workflow_runs": 101,
-        "attempts": 100,
-        "attempts_with_job_time": 99,
-        "observed_job_minutes": 98.57,
-        "attempts_with_telemetry": 9,
-        "bluesky_requests": 545,
-        "github_requests": 739,
+        "workflow_runs": 134,
+        "attempts": 133,
+        "attempts_with_job_time": 131,
+        "observed_job_minutes": 125.93,
+        "attempts_with_telemetry": 15,
+        "bluesky_requests": 1261,
+        "github_requests": 920,
         "http_429": 0
       },
       "7": {
-        "workflow_runs": 373,
-        "attempts": 320,
-        "attempts_with_job_time": 319,
-        "observed_job_minutes": 305.37,
-        "attempts_with_telemetry": 9,
-        "bluesky_requests": 545,
-        "github_requests": 739,
+        "workflow_runs": 406,
+        "attempts": 384,
+        "attempts_with_job_time": 382,
+        "observed_job_minutes": 359.0,
+        "attempts_with_telemetry": 15,
+        "bluesky_requests": 1261,
+        "github_requests": 920,
         "http_429": 0
       },
       "30": {
-        "workflow_runs": 1000,
-        "attempts": 320,
-        "attempts_with_job_time": 319,
-        "observed_job_minutes": 305.37,
-        "attempts_with_telemetry": 9,
-        "bluesky_requests": 545,
-        "github_requests": 739,
+        "workflow_runs": 1059,
+        "attempts": 384,
+        "attempts_with_job_time": 382,
+        "observed_job_minutes": 359.0,
+        "attempts_with_telemetry": 15,
+        "bluesky_requests": 1261,
+        "github_requests": 920,
         "http_429": 0
       }
     },
@@ -29294,7 +29285,7 @@
         "measure": "requests",
         "seconds": 300,
         "limit": 3000,
-        "observed_peak": 443,
+        "observed_peak": 610,
         "limit_status": "unchanged",
         "warning": false
       },
@@ -29321,7 +29312,7 @@
         "measure": "write_points",
         "seconds": 3600,
         "limit": 5000,
-        "observed_peak": 30,
+        "observed_peak": 39,
         "limit_status": "unchanged",
         "warning": false
       },
@@ -29330,7 +29321,7 @@
         "measure": "write_points",
         "seconds": 86400,
         "limit": 35000,
-        "observed_peak": 30,
+        "observed_peak": 69,
         "limit_status": "unchanged",
         "warning": false
       }
@@ -29364,17 +29355,17 @@
     "warnings": [],
     "github_quota": {
       "limit": 5000,
-      "remaining": 4090,
-      "reset_at": "2026-11-15T07:07:11+00:00",
-      "observed_at": "2026-11-15T06:33:38.392570+00:00",
+      "remaining": 4837,
+      "reset_at": "2026-11-15T09:23:58+00:00",
+      "observed_at": "2026-11-15T08:33:14.755787+00:00",
       "resource": "core",
       "expired": false,
       "warning": false
     },
     "coverage": {
-      "cached_attempts": 320,
-      "inventory_runs": 1000,
-      "telemetry_observed": 9
+      "cached_attempts": 384,
+      "inventory_runs": 1059,
+      "telemetry_observed": 15
     },
     "scope": "Observed shared Python-client HTTP attempts only; gh CLI, third-party Actions, other clients and shared-IP activity are not counted. Server quota headers include usage outside these observations. UTC minute-bucket window estimates include an extra minute to avoid understating rolling peaks. Write points are conservative attempted-operation estimates. Public AppView has no published numeric quota. Job time excludes queue time and is not billed usage; public standard-runner compute is free, but larger runners and storage may be charged."
   }
