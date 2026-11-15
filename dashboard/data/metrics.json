@@ -1,6 +1,6 @@
 {
   "schema_version": 11,
-  "generated_at": "2026-11-15T06:34:54.653479+00:00",
+  "generated_at": "2026-11-15T06:37:01.537709+00:00",
   "account": {
     "handle": "thejokebot.bsky.social",
     "display_name": "The Joke Bot",
@@ -2898,7 +2898,7 @@
     },
     {
       "period_start": "2026-11-15T06:00:00+00:00",
-      "collected_at": "2026-11-15T06:34:54.653479+00:00",
+      "collected_at": "2026-11-15T06:37:01.537709+00:00",
       "followers": 7112,
       "following": 11029,
       "profile_posts": 2854,
@@ -13715,7 +13715,7 @@
   "engagement_momentum": {
     "basis": "visible_joke_snapshot_total",
     "deltas": {
-      "7": 200,
+      "7": 198,
       "30": 716
     }
   },
@@ -19853,7 +19853,7 @@
   },
   "automation": {
     "window_days": 30,
-    "collected_at": "2026-11-15T06:34:54.653479+00:00",
+    "collected_at": "2026-11-15T06:37:01.537709+00:00",
     "runs": 963,
     "successful": 949,
     "failed": 9,
@@ -19862,16 +19862,16 @@
     "workflows": [
       {
         "name": "bluesky_dashboard",
-        "runs": 100,
-        "successful": 98,
+        "runs": 101,
+        "successful": 99,
         "failed": 0,
         "cancelled": 1,
-        "last_run_at": "2026-11-15T06:34:29Z",
+        "last_run_at": "2026-11-15T06:36:28Z",
         "last_status": "in_progress",
         "last_conclusion": null,
-        "last_success_at": "2026-11-15T06:21:26Z",
+        "last_success_at": "2026-11-15T06:35:47Z",
         "latest_duration_seconds": null,
-        "median_duration_seconds": 92,
+        "median_duration_seconds": 91,
         "expected_interval_hours": 6.0,
         "consecutive_failures": 0
       },
@@ -19892,8 +19892,8 @@
       },
       {
         "name": "bluesky_follows_and_likes",
-        "runs": 253,
-        "successful": 250,
+        "runs": 252,
+        "successful": 249,
         "failed": 3,
         "cancelled": 0,
         "last_run_at": "2026-11-15T06:29:18Z",
@@ -20091,13 +20091,22 @@
   "operations": {
     "workflow_runs": [
       {
+        "id": 43686211254,
+        "attempt": 1,
+        "workflow": "bluesky_dashboard",
+        "created_at": "2026-11-15T06:36:28Z",
+        "updated_at": "2026-11-15T06:36:32Z",
+        "status": "in_progress",
+        "conclusion": null
+      },
+      {
         "id": 43686059190,
         "attempt": 1,
         "workflow": "bluesky_dashboard",
         "created_at": "2026-11-15T06:34:29Z",
-        "updated_at": "2026-11-15T06:34:33Z",
-        "status": "in_progress",
-        "conclusion": null
+        "updated_at": "2026-11-15T06:35:47Z",
+        "status": "completed",
+        "conclusion": "success"
       },
       {
         "id": 43685708936,
@@ -28813,15 +28822,6 @@
         "updated_at": "2026-10-23T18:43:47Z",
         "status": "completed",
         "conclusion": "success"
-      },
-      {
-        "id": 40004740816,
-        "attempt": 1,
-        "workflow": "bluesky_follows_and_likes",
-        "created_at": "2026-10-23T18:36:55Z",
-        "updated_at": "2026-10-23T18:38:06Z",
-        "status": "completed",
-        "conclusion": "success"
       }
     ],
     "ci_workflows": [
@@ -28834,14 +28834,14 @@
     "components": [
       {
         "name": "Public account and joke feed",
-        "observed_at": "2026-11-15T06:34:54.653479+00:00",
+        "observed_at": "2026-11-15T06:37:01.537709+00:00",
         "expected_interval_hours": null,
         "overdue": false,
         "last_success_at": null
       },
       {
         "name": "GitHub workflow metadata",
-        "observed_at": "2026-11-15T06:34:54.653479+00:00",
+        "observed_at": "2026-11-15T06:37:01.537709+00:00",
         "expected_interval_hours": null,
         "overdue": false,
         "last_success_at": null
