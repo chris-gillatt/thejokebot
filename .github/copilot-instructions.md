@@ -21,6 +21,7 @@
 - Treat unverified or stale versions as technical debt; do not introduce them by default.
 - Before completing each non-documentation issue, sprint, or coherent batch of work, check all first-party dependency ecosystems (Python, npm, and GitHub Actions) against authoritative upstream sources or current Dependabot results. Skip dependency audits for docs-only changes.
 - Update stale dependencies in a separate focused change, or record each deliberate exception with its current version, latest stable version, reason, and review trigger in `problem-statement.md`.
+- An agreed dependency check aims to apply compatible available upgrades, not only inventory them. Use [the dependency-check skill](skills/dependency-check/SKILL.md); do not seek a second approval for routine compatible upgrades. Agree any necessary deferral with an explicit owner and a concrete review date or named work trigger.
 
 ## Git Commit Policy
 - Use Conventional Commits for every commit subject line.
