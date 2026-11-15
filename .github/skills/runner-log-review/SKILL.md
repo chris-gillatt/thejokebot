@@ -50,6 +50,15 @@ distinct from a clean result.
   returned base64 content. Check matching job/step names and `uses` references,
   including local/reusable workflows where necessary. Keep the exact pinned ref.
   A warning in a shell step belongs to that step/tool unless attribution is proven.
+- Read the [runner-log review register](../../../docs/log-review-register.md)
+  before classifying findings. Match each decision's source, scope and behaviour.
+  Expected duplicate-candidate rejection/fall-through is normal bot operation,
+  not an improvement opportunity. Keep unchanged upstream watch items and
+  accepted access limitations separate from new actionable findings; reopen
+  them only at their recorded trigger or when evidence/impact changes. Unknown
+  observations are not accepted risks. Fixed observations from older commits
+  are historical; recurrence on repaired code needs investigation. Do not
+  automatically suppress the underlying logs or invent maintainer acceptance.
 - Read `problem-statement.md`, including dependency/CodeQL/actionlint exceptions,
   and open AND recently closed issues with their comments. The issue title alone
   does not establish scope or completion. Mark known exceptions and existing work;
@@ -79,8 +88,10 @@ finding give workflow/job/step or proven Action, category, urgency, confidence,
 exact run/attempt and commit, job/step link when verified, UTC observation time,
 short safely reviewed excerpt, occurrence count, known issue/exception links,
 observed behaviour, inferred cause and a practical next step. Clearly label
-unverified suggestions. Include a short known/benign observations section only
-where it explains why apparent warnings need no new issue.
+unverified suggestions. Summarise unchanged watch items/limitations once in a
+small section or link to the register. Omit expected behaviour unless it helps
+explain another finding. Do not repeatedly propose previously accepted fixes
+or unavailable access changes. Preserve material review-coverage limitations.
 
 Offer issue drafts for actionable findings. Drafts focus on behaviour, evidence,
 impact and proposed scope; omit routine passing-validation summaries. Stop after

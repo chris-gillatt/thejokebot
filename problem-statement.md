@@ -30,6 +30,13 @@ This is the operating brief for open work and lasting decisions. See the [README
 
 ## Runner-log review proposal (#148)
 
+The [runner-log review register](docs/log-review-register.md) is the decision
+record for accepted observations, expected behaviour, upstream watch items,
+unresolved warnings and fixed findings. Future reviews must consult it before
+proposing new work. Duplicate joke candidates and successful fall-through are
+normal bot operation, explicitly accepted by the maintainer; do not present
+them as concerns or optimisation work without separate evidence of a fault.
+
 Read-only v1 implementation requested on 15 November 2026 after the separate
 dependency upgrade. The [runner-log-review skill](.github/skills/runner-log-review/SKILL.md)
 uses a bounded read-only collector and the shared archive reader, preserving
