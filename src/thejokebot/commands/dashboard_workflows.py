@@ -100,6 +100,24 @@ def fetch_workflow_run_logs(
     attempt: int = 1,
     retry_call=retry_network_call,
 ) -> str:
+    return "\n".join(
+        fetch_workflow_log_files(
+            session, repository, run_id, token, attempt=attempt, retry_call=retry_call
+        ).values()
+    )
+
+
+def fetch_workflow_log_files(
+    session,
+    repository: str,
+    run_id: int,
+    token: str | None,
+    *,
+    attempt: int = 1,
+    retry_call=retry_network_call,
+) -> dict[str, str]:
+    """Read a bounded attempt archive without discarding source filenames."""
+
     def _request():
         response = session.get(
             f"{GITHUB_API_BASE}/repos/{repository}/actions/runs/{run_id}/attempts/{attempt}/logs",
@@ -119,9 +137,10 @@ def fetch_workflow_run_logs(
         files = [item for item in archive.infolist() if not item.is_dir()]
         if sum(item.file_size for item in files) > MAX_WORKFLOW_LOG_UNCOMPRESSED_BYTES:
             raise ValueError(f"Workflow logs for run {run_id} are too large")
-        return "\n".join(
-            archive.read(item).decode("utf-8", errors="replace") for item in files
-        )
+        return {
+            item.filename: archive.read(item).decode("utf-8", errors="replace")
+            for item in files
+        }
 
 
 def _moderation_activity_counts(log_text: str) -> dict | None:

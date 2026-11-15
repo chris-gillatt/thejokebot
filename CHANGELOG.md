@@ -2,6 +2,10 @@
 
 ## 2.4.0 - 2026-11-15
 
+- Add an opt-in GitHub Actions log-review skill and bounded read-only evidence
+  collector, preserving exact attempts and source filenames, omitting potentially
+  sensitive excerpts and reporting incomplete coverage. Refs #148.
+
 - Refresh the resolved Python dependencies and upgrade the Sonar scan Action
   to 8.5.0, retaining hashed Python installs and immutable Action pins.
   Use the SDK core exception import required by the atproto update.

@@ -30,10 +30,11 @@ This is the operating brief for open work and lasting decisions. See the [README
 
 ## Runner-log review proposal (#148)
 
-Risk assessment documented on 15 November 2026; skill implementation and
-automation remain unapproved. This proposal targets this repository's GitHub
-Actions logs. The issue title says GitLab; a separate GitLab integration is
-out of scope unless explicitly requested.
+Read-only v1 implementation requested on 15 November 2026 after the separate
+dependency upgrade. The [runner-log-review skill](.github/skills/runner-log-review/SKILL.md)
+uses a bounded read-only collector and the shared archive reader, preserving
+source filenames and exact attempt identity. This targets this repository's
+GitHub Actions; GitLab integration remains out of scope.
 
 ### Benefits and trade-offs
 
@@ -84,8 +85,9 @@ establish the intended behaviour.
 
 ### Approval gates and next decision
 
-1. **Read-only scope:** the maintainer approves the v1 window, sampling limits,
-   categories and output before skill implementation.
+1. **Read-only scope:** requested by the maintainer on 15 November 2026.
+   Default to seven days and at most 20 completed attempts; report incomplete
+   inventory, missing logs, heuristic extraction and omitted attempts explicitly.
 2. **Issue creation:** approve each finding or an explicitly bounded batch after
    redaction and duplicate checks. Approval of a report is not approval to post it.
 3. **Agent work:** separately approve the issue assignment and permitted change
@@ -94,11 +96,12 @@ establish the intended behaviour.
    Any branch/PR path requires explicit agreement; merging additionally requires
    maintainer approval and all applicable gates, not merely passing tests.
 
-Owner of the next decision: the repository maintainer. Trigger: review this
-proposal in [#148](https://github.com/chris-gillatt/thejokebot/issues/148) before
-any skill implementation. Automated issue creation, assignment and merging
-remain blocked until their separate approval gates are agreed. Keep #148 open;
-this risk assessment does not deliver the requested skill.
+Remaining decision owner: the repository maintainer. Trigger: review the first
+read-only report before authorising concrete issue creation, agent assignment
+or any fix/merge chain. The skill may draft issues, but the collector and default
+review cannot create them or change repository/account state. Earlier rerun
+attempts and older runs rerun during the window are explicitly outside this
+initial sample. No automated issue/fix/merge chain is enabled.
 
 ## API call insight (#149)
 
