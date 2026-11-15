@@ -277,6 +277,7 @@ def inventory(
     session, repository: str, headers: dict, now: datetime
 ) -> tuple[list[dict], bool]:
     runs = []
+    matched = 0
     for page in range(1, MAX_PAGES + 1):
         payload = _json_get(
             session,
@@ -292,9 +293,10 @@ def inventory(
         rows = payload.get("workflow_runs")
         if not isinstance(rows, list):
             raise ValueError("GitHub usage inventory has no workflow_runs")
+        matched = max(matched, _integer(payload.get("total_count")))
         runs.extend(rows)
         if len(rows) < 100:
-            complete = len(runs) >= _integer(payload.get("total_count"))
+            complete = len(runs) >= matched
             if not complete:
                 print(
                     "Warning: GitHub capped the matched run inventory; totals are incomplete."

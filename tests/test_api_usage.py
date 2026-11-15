@@ -486,7 +486,7 @@ def test_inventory_and_job_pagination_are_bounded_and_invalid_metadata_fails(
 
     def get(session, repository, path, headers, params):
         fetched.append(params["page"])
-        return {"workflow_runs": [{}] * 100, "jobs": [{}] * 100}
+        return {"workflow_runs": [{}] * 100, "jobs": [{}] * 100, "total_count": 201}
 
     monkeypatch.setattr(report, "_json_get", get)
     monkeypatch.setattr(report, "MAX_PAGES", 2)
@@ -510,7 +510,7 @@ def test_github_filtered_search_truncation_does_not_claim_complete_inventory(
 ):
     def get(session, repository, path, headers, params):
         return {
-            "total_count": 1009,
+            "total_count": 1009 if params["page"] <= 10 else 0,
             "workflow_runs": [{}] * 100 if params["page"] <= 10 else [],
         }
 
