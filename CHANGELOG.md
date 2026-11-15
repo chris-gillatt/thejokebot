@@ -10,7 +10,9 @@
   authoritative GitHub quota snapshots, and flag changed or unavailable
   official limit documentation for manual review. Surface GitHub's filtered
   run-search truncation rather than claiming complete inventory, retaining
-  matched totals even when its final empty page reports zero. Refs #149.
+  matched totals even when its final empty page reports zero. Queued reporters
+  load the latest `main` so preceding cache updates do not cause persistence
+  conflicts. Refs #149.
 
 - Retain up to 100 waiting shared-state workflows instead of replacing older
   pending issue events. Reconcile missed review closures from authoritative

@@ -63,6 +63,9 @@ GitHub additionally caps filtered run searches at 1,000 results; compare the
 returned count with its matched total and mark truncated inventory incomplete,
 even when a following page is empty. Retain the largest matched total across
 pages: GitHub reports zero on the empty page beyond its filtered-search cap.
+Queued reporting jobs explicitly check out the latest `main` when they start,
+not the dispatch/schedule event's older commit, before reading the shared
+incremental cache. The shared writer group serialises reporting and collection.
 
 ## Reposts with review (#146)
 
