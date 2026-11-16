@@ -1,37 +1,37 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-11-16T00:42:34.586955+00:00",
+  "generated_at": "2026-11-16T06:37:55.674796+00:00",
   "warning_percent": 80,
   "inventory_complete": true,
   "periods": {
     "1": {
-      "workflow_runs": 114,
-      "attempts": 113,
-      "attempts_with_job_time": 110,
-      "observed_job_minutes": 109.98,
-      "attempts_with_telemetry": 37,
-      "bluesky_requests": 5556,
-      "github_requests": 1389,
+      "workflow_runs": 77,
+      "attempts": 76,
+      "attempts_with_job_time": 74,
+      "observed_job_minutes": 72.03,
+      "attempts_with_telemetry": 33,
+      "bluesky_requests": 6520,
+      "github_requests": 656,
       "http_429": 0
     },
     "7": {
-      "workflow_runs": 420,
-      "attempts": 419,
-      "attempts_with_job_time": 416,
-      "observed_job_minutes": 396.43,
-      "attempts_with_telemetry": 37,
-      "bluesky_requests": 5556,
-      "github_requests": 1389,
+      "workflow_runs": 401,
+      "attempts": 400,
+      "attempts_with_job_time": 397,
+      "observed_job_minutes": 382.6,
+      "attempts_with_telemetry": 45,
+      "bluesky_requests": 7099,
+      "github_requests": 1548,
       "http_429": 0
     },
     "30": {
-      "workflow_runs": 1048,
-      "attempts": 576,
-      "attempts_with_job_time": 573,
-      "observed_job_minutes": 534.92,
-      "attempts_with_telemetry": 37,
-      "bluesky_requests": 5556,
-      "github_requests": 1389,
+      "workflow_runs": 1049,
+      "attempts": 635,
+      "attempts_with_job_time": 632,
+      "observed_job_minutes": 601.73,
+      "attempts_with_telemetry": 45,
+      "bluesky_requests": 7099,
+      "github_requests": 1548,
       "http_429": 0
     }
   },
@@ -77,7 +77,7 @@
       "measure": "write_points",
       "seconds": 86400,
       "limit": 35000,
-      "observed_peak": 339,
+      "observed_peak": 438,
       "limit_status": "unchanged",
       "warning": false
     }
@@ -85,25 +85,25 @@
   "documents": {
     "bluesky": {
       "id": "bluesky",
-      "checked_at": "2026-11-15T06:09:01.657881+00:00",
+      "checked_at": "2026-11-16T06:37:55.674796+00:00",
       "status": "unchanged",
       "sha256": "ae622112560789c2a848fd6fd5660ebcdf42bbdff78559fafbe2a41e4dd615b7"
     },
     "github_api": {
       "id": "github_api",
-      "checked_at": "2026-11-15T06:09:01.657881+00:00",
+      "checked_at": "2026-11-16T06:37:55.674796+00:00",
       "status": "unchanged",
       "sha256": "830ab3f6fab2417df47dccebe7c81a1b99d181fd5a4ae45a2fecbaf40627b531"
     },
     "github_actions": {
       "id": "github_actions",
-      "checked_at": "2026-11-15T06:09:01.657881+00:00",
+      "checked_at": "2026-11-16T06:37:55.674796+00:00",
       "status": "unchanged",
       "sha256": "0a36c9381372a90997a8da2093cd0390272c9b6e9fc00ef8b0cdb0a191f20f0b"
     },
     "github_billing": {
       "id": "github_billing",
-      "checked_at": "2026-11-15T06:09:01.657881+00:00",
+      "checked_at": "2026-11-16T06:37:55.674796+00:00",
       "status": "unchanged",
       "sha256": "9b11f4660744f1eb152c970119fa49445f57bfe0ec1ed412cd277147e8f76c19"
     }
@@ -111,17 +111,17 @@
   "warnings": [],
   "github_quota": {
     "limit": 5000,
-    "remaining": 4860,
-    "reset_at": "2026-11-16T01:42:34+00:00",
-    "observed_at": "2026-11-16T00:44:04.787658+00:00",
+    "remaining": 4859,
+    "reset_at": "2026-11-16T07:37:39+00:00",
+    "observed_at": "2026-11-16T06:39:22.016833+00:00",
     "resource": "core",
     "expired": false,
     "warning": false
   },
   "coverage": {
-    "cached_attempts": 576,
-    "inventory_runs": 1048,
-    "telemetry_observed": 37
+    "cached_attempts": 635,
+    "inventory_runs": 1049,
+    "telemetry_observed": 45
   },
   "scope": "Observed shared Python-client HTTP attempts only; gh CLI, third-party Actions, other clients and shared-IP activity are not counted. Server quota headers include usage outside these observations. UTC minute-bucket window estimates include an extra minute to avoid understating rolling peaks. Write points are conservative attempted-operation estimates. Public AppView has no published numeric quota. Job time excludes queue time and is not billed usage; public standard-runner compute is free, but larger runners and storage may be charged."
 }
