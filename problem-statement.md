@@ -231,6 +231,14 @@ created five public review issues. Activation does not approve any repost;
 individual completed closures remain required. Daily inventory-only refreshes
 and dashboard statistics do not require activation.
 
+On 17 November 2026 the maintainer authorised a fresh seven-day allowance by
+crediting the five rejected initial reviews. The explicit manual reset verifies
+each rejection against GitHub and records `quota_reset_at` without deleting
+history or changing original creation dates. New suggestions retain their normal
+rolling quota and seven-day expiry. Published, pending and uncertain actions
+remain counted. Enablement continues until switched off; no trial end timer is
+required. The reset is never performed by ordinary scheduled discovery.
+
 The read-only investigation on 14 November 2026 sampled 300 recent feed entries:
 64 reposts from 27 authors, comprising 37 text posts and 27 image posts.
 Fourteen reposts were replies; 26 image posts had no alt text and 11 had no post

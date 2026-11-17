@@ -393,6 +393,16 @@ def remaining_review_budget(state: dict, now=None, *, reserve_pending=True) -> i
             continue
         if candidate.get("issue_id"):
             counted = timestamp(candidate["review_ready_at"]) > cutoff
+            exemption = candidate.get("quota_reset_at")
+            if exemption and candidate["status"] == "rejected":
+                reset_at = timestamp(exemption)
+                if (
+                    not timestamp(candidate["review_ready_at"])
+                    <= reset_at
+                    <= utc_now(now)
+                ):
+                    raise ValueError("Invalid repost quota reset time")
+                counted = False
         elif candidate.get("delivery_attempted"):
             # An unbound attempt may already have created an issue.
             counted = True

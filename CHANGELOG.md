@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.4.1 - 2026-11-17
+
+- Add an explicit manual reset for verified rejected repost suggestions, preserving
+  issue identities, rejection history and delivery receipts. Fresh suggestions
+  retain the rolling five-per-seven-days quota and individual review expiry.
+  Pending, uncertain and published actions remain charged to the normal budget.
+  Refs #146.
+
 ## 2.4.0 - 2026-11-15
 
 - Split capped API-usage inventory searches into smaller date windows within

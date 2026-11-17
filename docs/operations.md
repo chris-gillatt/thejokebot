@@ -240,6 +240,17 @@ Eligible posts are ranked by the author's retained repost count, then likes plus
 reposts, then original creation time. This is a relevance heuristic, not a humour
 or image-content classifier. At most five automatic suggestion issues may be
 created in any rolling seven days, including closed or rejected reviews.
+
+For an explicitly authorised fresh review window, manually dispatch
+`bluesky_review_reposts` with `preview=false` and `reset_rejected_budget=true`.
+This verifies rejected, bot-owned review issues against GitHub and credits only
+those rejections before discovering new suggestions. Their issue bindings,
+creation dates, rejection decisions and receipts remain intact; each credited
+record stores `quota_reset_at`. Pending, uncertain and published actions are
+not exempted. Ordinary schedules never reset the allowance. Fresh issues still
+expire seven days after creation and require individual approval; enablement
+does not automatically end after seven days.
+
 Actual issue creation times control the allowance; pending proposals reserve
 capacity and uncertain delivery attempts retain it until reconciled. The limit
 is rechecked immediately before issue creation, so retries and delayed delivery

@@ -68,6 +68,75 @@ def github(monkeypatch):
     return api
 
 
+def test_manual_reset_preserves_verified_rejection_and_is_idempotent(account, github):
+    candidate = bind(proposal(account))
+    saved = state.load_state()
+    reviews.update_review(saved, candidate["key"], status="rejected")
+    github.return_value = issue(candidate, state_reason="not_planned")
+    assert reviews.remaining_review_budget(saved, NOW) == 4
+    command.reset_rejected_budget(saved, NOW)
+    retained = saved["repost_reviews"]["candidates"][candidate["key"]]
+    assert retained["status"] == "rejected"
+    assert retained["review_ready_at"] == candidate["review_ready_at"]
+    assert retained["issue_id"] == 1234
+    assert reviews.remaining_review_budget(saved, NOW) == 5
+    command.reset_rejected_budget(saved, NOW)
+    assert github.call_count == 1
+    account.repost.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        {"state_reason": "completed"},
+        {"id": 99},
+        {"body": "changed"},
+        {"state": "open"},
+        {"user": {"id": 99}},
+    ],
+)
+def test_reset_rejects_unverified_github_state_without_writes(account, github, change):
+    candidate = bind(proposal(account))
+    saved = state.load_state()
+    reviews.update_review(saved, candidate["key"], status="rejected")
+    before = copy.deepcopy(saved)
+    github.return_value = issue(
+        candidate,
+        state_reason="not_planned",
+        **{k: v for k, v in change.items() if k != "state_reason"},
+    )
+    github.return_value.update(change)
+    with pytest.raises(ValueError, match="exact rejected"):
+        command.reset_rejected_budget(saved, NOW)
+    assert state.load_state() == before
+
+
+@pytest.mark.parametrize("mode", ["preview", "inventory", "issue"])
+def test_reset_cli_cannot_be_combined_with_non_discovery_modes(monkeypatch, mode):
+    monkeypatch.setattr(
+        "sys.argv", ["review-reposts", "--mode", mode, "--reset-rejected-budget"]
+    )
+    with pytest.raises(SystemExit):
+        command.main()
+
+
+def test_reset_cli_routes_through_live_gate_before_discovery(account, monkeypatch):
+    monkeypatch.setattr(
+        "sys.argv", ["review-reposts", "--mode", "discover", "--reset-rejected-budget"]
+    )
+    monkeypatch.setattr(command, "login_client", lambda: (account, None))
+    reset = Mock()
+    monkeypatch.setattr(command, "reset_rejected_budget", reset)
+    monkeypatch.setattr(command, "reconcile_reviews", Mock())
+    monkeypatch.setattr(command, "expire_reviews", Mock())
+    monkeypatch.setattr(command, "deliver_reviews", Mock())
+    command.main()
+    reset.assert_called_once()
+    monkeypatch.setenv("BLUESKY_REPOSTS_ENABLED", "false")
+    with pytest.raises(ValueError, match="disabled"):
+        command.main()
+
+
 def test_reconciliation_recovers_a_missed_rejection_after_issue_metadata_changes(
     account, github
 ):

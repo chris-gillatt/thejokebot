@@ -734,6 +734,39 @@ def test_removal_reviews_do_not_consume_the_suggestion_quota(account):
     assert reviews.remaining_review_budget(saved, NOW) == 5
 
 
+@pytest.mark.parametrize(
+    "status,expected",
+    [("rejected", 5), ("proposed", 4), ("published", 4), ("uncertain", 4)],
+)
+def test_reset_only_exempts_bound_rejected_reviews(account, status, expected):
+    candidate = {
+        **proposal(account),
+        "issue_id": 1,
+        "review_ready_at": NOW.isoformat(),
+        "quota_reset_at": NOW.isoformat(),
+        "status": status,
+    }
+    saved = {"repost_reviews": {"candidates": {"a": candidate}}}
+    assert reviews.remaining_review_budget(saved, NOW) == expected
+    candidate.pop("issue_id")
+    candidate["delivery_attempted"] = True
+    assert reviews.remaining_review_budget(saved, NOW) == 4
+
+
+def test_future_quota_reset_fails_closed(account):
+    candidate = {
+        **proposal(account),
+        "issue_id": 1,
+        "review_ready_at": NOW.isoformat(),
+        "quota_reset_at": (NOW + timedelta(days=1)).isoformat(),
+        "status": "rejected",
+    }
+    with pytest.raises(ValueError, match="reset time"):
+        reviews.remaining_review_budget(
+            {"repost_reviews": {"candidates": {"a": candidate}}}, NOW
+        )
+
+
 def test_uncertain_issue_creation_reserves_capacity_until_reconciled(account):
     candidate = proposal(account)
     saved = {

@@ -9,6 +9,10 @@ on:
         description: Read-only discovery; do not create review issues or change saved state
         type: boolean
         default: true
+      reset_rejected_budget:
+        description: Credit verified rejected reviews before live discovery (requires preview=false)
+        type: boolean
+        default: false
   issues:
     types: [opened, closed]
 
@@ -59,8 +63,13 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPOST_EVENT: ${{ github.event_name }}
           REPOST_PREVIEW: ${{ inputs.preview }}
+          REPOST_RESET_REJECTED_BUDGET: ${{ inputs.reset_rejected_budget }}
         run: |
-          if [[ "$REPOST_EVENT" == "issues" ]]; then
+          if [[ "$REPOST_RESET_REJECTED_BUDGET" == "true" ]]; then
+            test "$REPOST_EVENT" = "workflow_dispatch"
+            test "$REPOST_PREVIEW" = "false"
+            thejokebot-review-reposts --mode discover --reset-rejected-budget
+          elif [[ "$REPOST_EVENT" == "issues" ]]; then
             thejokebot-review-reposts --mode issue
           elif [[ "$REPOST_EVENT" == "workflow_dispatch" && "$REPOST_PREVIEW" == "true" ]]; then
             thejokebot-review-reposts --mode preview

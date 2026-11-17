@@ -206,6 +206,47 @@ def deliver_reviews(state: dict, now=None) -> None:
     print(f"Repost review delivery: {delivered} proposals delivered or recovered.")
 
 
+def reset_rejected_budget(state: dict, now=None) -> None:
+    """Explicitly credit verified rejected suggestions without deleting receipts."""
+    reviews.require_live()
+    now = reviews.utc_now(now)
+    verified = {}
+    for key, candidate in state["repost_reviews"]["candidates"].items():
+        if (
+            candidate["action"] != "repost"
+            or candidate["status"] != "rejected"
+            or not candidate.get("issue_id")
+            or candidate.get("quota_reset_at")
+        ):
+            continue
+        issue = github_api(f"/repos/{REPOSITORY}/issues/{candidate['issue_number']}")
+        if (
+            issue.get("id") != candidate["issue_id"]
+            or issue.get("number") != candidate["issue_number"]
+            or issue.get("state") != "closed"
+            or issue.get("state_reason") != "not_planned"
+            or issue.get("user", {}).get("id") != ACTIONS_BOT_ID
+            or issue.get("title") != review_title(candidate)
+            or issue.get("body") != review_body(candidate)
+        ):
+            raise ValueError("Quota reset requires an exact rejected bot review")
+        verified[key] = candidate["issue_id"]
+
+    def record(latest):
+        for key, identity in verified.items():
+            candidate = latest["repost_reviews"]["candidates"][key]
+            if (
+                candidate["status"] != "rejected"
+                or candidate.get("issue_id") != identity
+            ):
+                raise ValueError("Review changed during quota reset")
+            candidate.setdefault("quota_reset_at", now.isoformat())
+
+    if verified:
+        state_transactions.apply(state, record)
+    print(f"Repost quota reset: {len(verified)} verified rejected reviews credited.")
+
+
 def _close_expired_issue(number: int) -> None:
     github_api(
         f"/repos/{REPOSITORY}/issues/{number}",
@@ -592,7 +633,10 @@ def main() -> None:
         choices=("preview", "inventory", "discover", "issue"),
         default="preview",
     )
+    parser.add_argument("--reset-rejected-budget", action="store_true")
     args = parser.parse_args()
+    if args.reset_rejected_budget and args.mode != "discover":
+        parser.error("Quota reset is allowed only with live discovery")
     state = bot_state.load_state()
     if args.mode not in ("preview", "inventory"):
         reviews.require_live()
@@ -619,6 +663,8 @@ def main() -> None:
         return
     if args.mode == "discover":
         reconcile_reviews(client, state)
+        if args.reset_rejected_budget:
+            reset_rejected_budget(state)
     now = reviews.utc_now()
     report = reviews.discover(client, state, preview=args.mode == "preview")
     if args.mode == "preview":
