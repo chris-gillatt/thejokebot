@@ -28,6 +28,18 @@ This is the operating brief for open work and lasting decisions. See the [README
 | Ambiguous social creates | Follow and block records use stable TID keys and exact reconciliation; interaction likes use stable record keys; starter-pack upserts use a deterministic key per account and source list. Never treat a retry with a new key as confirmation of an earlier write. |
 | Content-creator protection | Completely read the bot's own likes and reposts before unfollow candidate selection, explicitly skipping valid feed likes. Retain creator DIDs permanently; incomplete reads must stop unfollows. Follow at most 10 creators per social run, respecting grace during graph lag, explicit exclusions and direct/list blocks. Count each confirmed follow before another action can fail; checkpoint failures must still stop processing. |
 
+## Mutual-follower context investigation (#156)
+
+The [investigation](docs/mutual-followers-investigation.md) establishes that the
+notification's mutual-follower count means accounts TJB follows that also follow
+the notification author. It is viewer-relative, optional and not reciprocal
+friendship or causal acquisition attribution; counts can include blocked accounts.
+Recommend a separately approved bounded aggregate-only observation pilot before
+any dashboard or follow-policy change. Existing follow-back already covers all
+actionable followers, so no overlap eligibility threshold is recommended.
+Current related schemas and existing notification-filter usage are documented.
+Research is complete; no account behaviour or implementation changed.
+
 ## Runner-log review proposal (#148)
 
 The [runner-log review register](docs/log-review-register.md) is the decision
