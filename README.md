@@ -6,21 +6,48 @@ Posts dad jokes to [Bluesky](https://bsky.app/) and looks after the account thro
 
 ## Status
 
-### Tests
+Badges cover all 19 workflows maintained in this repository. GitHub-managed Copilot,
+Dependabot update and dependency-graph jobs are also available in [Actions](https://github.com/chris-gillatt/thejokebot/actions).
 
-| CI | Quality |
+### Tests and validation
+
+| Workflow | Status |
 |---|---|
-| <a href="https://github.com/chris-gillatt/thejokebot/actions/workflows/python_tests.yml"><img src="https://github.com/chris-gillatt/thejokebot/actions/workflows/python_tests.yml/badge.svg" alt="Python tests" /></a> | <a href="https://github.com/chris-gillatt/thejokebot/actions/workflows/ruff_quality.yml"><img src="https://github.com/chris-gillatt/thejokebot/actions/workflows/ruff_quality.yml/badge.svg" alt="Ruff quality" /></a> |
-| <a href="https://github.com/chris-gillatt/thejokebot/actions/workflows/validate_runtime_config.yml"><img src="https://github.com/chris-gillatt/thejokebot/actions/workflows/validate_runtime_config.yml/badge.svg" alt="Runtime configuration" /></a> | <a href="https://github.com/chris-gillatt/thejokebot/actions/workflows/codeql.yml"><img src="https://github.com/chris-gillatt/thejokebot/actions/workflows/codeql.yml/badge.svg" alt="CodeQL" /></a> |
-| <a href="https://sonarcloud.io/summary/overall?id=chris-gillatt_thejokebot"><img src="https://sonarcloud.io/api/project_badges/measure?project=chris-gillatt_thejokebot&amp;metric=alert_status" alt="SonarCloud quality gate" /></a> | <a href="https://github.com/chris-gillatt/thejokebot/actions/workflows/dependabot-auto-merge.yml"><img src="https://github.com/chris-gillatt/thejokebot/actions/workflows/dependabot-auto-merge.yml/badge.svg" alt="Dependabot auto-merge" /></a> |
+| Python tests | <a href="https://github.com/chris-gillatt/thejokebot/actions/workflows/python_tests.yml"><img src="https://github.com/chris-gillatt/thejokebot/actions/workflows/python_tests.yml/badge.svg" alt="Python tests" /></a> |
+| Ruff quality | <a href="https://github.com/chris-gillatt/thejokebot/actions/workflows/ruff_quality.yml"><img src="https://github.com/chris-gillatt/thejokebot/actions/workflows/ruff_quality.yml/badge.svg" alt="Ruff quality" /></a> |
+| CodeQL | <a href="https://github.com/chris-gillatt/thejokebot/actions/workflows/codeql.yml"><img src="https://github.com/chris-gillatt/thejokebot/actions/workflows/codeql.yml/badge.svg" alt="CodeQL" /></a> |
+| Runtime configuration | <a href="https://github.com/chris-gillatt/thejokebot/actions/workflows/validate_runtime_config.yml"><img src="https://github.com/chris-gillatt/thejokebot/actions/workflows/validate_runtime_config.yml/badge.svg" alt="Runtime configuration" /></a> |
+| Unfollow ignore validation | <a href="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_validate_unfollow_ignore.yml"><img src="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_validate_unfollow_ignore.yml/badge.svg" alt="Unfollow ignore validation" /></a> |
+| Bluesky transport check | <a href="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_check_transport.yml"><img src="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_check_transport.yml/badge.svg" alt="Bluesky transport check" /></a> |
+| SonarCloud quality gate | <a href="https://sonarcloud.io/summary/overall?id=chris-gillatt_thejokebot"><img src="https://sonarcloud.io/api/project_badges/measure?project=chris-gillatt_thejokebot&amp;metric=alert_status" alt="SonarCloud quality gate" /></a> |
 
-### Actions
+### Publishing and community
 
-| Publishing | Community |
+| Workflow | Status |
 |---|---|
-| <a href="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_post_joke.yml"><img src="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_post_joke.yml/badge.svg" alt="Post jokes" /></a> | <a href="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_follows_and_likes.yml"><img src="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_follows_and_likes.yml/badge.svg" alt="Follows and likes" /></a> |
-| <a href="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_dashboard.yml"><img src="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_dashboard.yml/badge.svg" alt="Dashboard" /></a> | <a href="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_follow_fellows.yml"><img src="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_follow_fellows.yml/badge.svg" alt="Follow fellows" /></a> |
-| <a href="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_process_reports.yml"><img src="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_process_reports.yml/badge.svg" alt="Process reports" /></a> | <a href="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_unfollow.yml"><img src="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_unfollow.yml/badge.svg" alt="Unfollow" /></a> |
+| Post jokes | <a href="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_post_joke.yml"><img src="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_post_joke.yml/badge.svg" alt="Post jokes" /></a> |
+| Dashboard | <a href="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_dashboard.yml"><img src="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_dashboard.yml/badge.svg" alt="Dashboard" /></a> |
+| Process reports | <a href="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_process_reports.yml"><img src="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_process_reports.yml/badge.svg" alt="Process reports" /></a> |
+| Review reposts | <a href="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_review_reposts.yml"><img src="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_review_reposts.yml/badge.svg" alt="Review reposts" /></a> |
+| Follows and likes | <a href="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_follows_and_likes.yml"><img src="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_follows_and_likes.yml/badge.svg" alt="Follows and likes" /></a> |
+| Follow fellows | <a href="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_follow_fellows.yml"><img src="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_follow_fellows.yml/badge.svg" alt="Follow fellows" /></a> |
+| Unfollow | <a href="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_unfollow.yml"><img src="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_unfollow.yml/badge.svg" alt="Unfollow" /></a> |
+
+### Starter packs
+
+| Workflow | Status |
+|---|---|
+| Inspect starter packs | <a href="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_inspect_starter_packs.yml"><img src="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_inspect_starter_packs.yml/badge.svg" alt="Inspect starter packs" /></a> |
+| Manage starter pack | <a href="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_manage_starter_pack.yml"><img src="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_manage_starter_pack.yml/badge.svg" alt="Manage starter pack" /></a> |
+| Acknowledge starter packs | <a href="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_acknowledge_starter_packs.yml"><img src="https://github.com/chris-gillatt/thejokebot/actions/workflows/bluesky_acknowledge_starter_packs.yml/badge.svg" alt="Acknowledge starter packs" /></a> |
+
+### Operations and automation
+
+| Workflow | Status |
+|---|---|
+| Provider health | <a href="https://github.com/chris-gillatt/thejokebot/actions/workflows/provider_health_check.yml"><img src="https://github.com/chris-gillatt/thejokebot/actions/workflows/provider_health_check.yml/badge.svg" alt="Provider health" /></a> |
+| API usage report | <a href="https://github.com/chris-gillatt/thejokebot/actions/workflows/api_usage_report.yml"><img src="https://github.com/chris-gillatt/thejokebot/actions/workflows/api_usage_report.yml/badge.svg" alt="API usage report" /></a> |
+| Dependabot auto-merge | <a href="https://github.com/chris-gillatt/thejokebot/actions/workflows/dependabot-auto-merge.yml"><img src="https://github.com/chris-gillatt/thejokebot/actions/workflows/dependabot-auto-merge.yml/badge.svg" alt="Dependabot auto-merge" /></a> |
 
 ## What It Does
 
