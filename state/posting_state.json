@@ -1,7 +1,7 @@
 {
   "provider": {
     "last_used": "groandeck",
-    "last_used_at": 1794917318,
+    "last_used_at": 1794931631,
     "rotation_order": [
       "icanhazdadjoke",
       "jokeapi",
@@ -10,22 +10,22 @@
     ],
     "failures": {
       "icanhazdadjoke": {
-        "count": 181,
-        "last_failure_at": 1794888436,
+        "count": 182,
+        "last_failure_at": 1794931631,
         "last_error": "All 5 jokes from 'icanhazdadjoke' were rejected (5 duplicates, 0 too long)",
         "reason_counts": {
-          "duplicate": 703,
+          "duplicate": 708,
           "too_long": 2,
           "network_error": 1,
           "provider_error": 0
         }
       },
       "jokeapi": {
-        "count": 452,
-        "last_failure_at": 1794902872,
+        "count": 453,
+        "last_failure_at": 1794931631,
         "last_error": "All 5 jokes from 'jokeapi' were rejected (5 duplicates, 0 too long)",
         "reason_counts": {
-          "duplicate": 1344,
+          "duplicate": 1349,
           "too_long": 21,
           "network_error": 1,
           "provider_error": 0
@@ -43,22 +43,22 @@
         }
       },
       "syrsly": {
-        "count": 83,
-        "last_failure_at": 1794874536,
-        "last_error": "All 5 jokes from 'syrsly' were rejected (5 duplicates, 0 too long)",
+        "count": 84,
+        "last_failure_at": 1794931631,
+        "last_error": "HTTPSConnectionPool(host='www.syrsly.com', port=443): Read timed out. (read timeout=15)",
         "reason_counts": {
           "duplicate": 415,
           "too_long": 0,
-          "network_error": 0,
+          "network_error": 1,
           "provider_error": 0
         }
       }
     },
-    "last_started_primary": "groandeck",
-    "last_started_primary_at": 1794917318
+    "last_started_primary": "syrsly",
+    "last_started_primary_at": 1794931631
   },
   "posting": {
-    "tag_offset": 5
+    "tag_offset": 6
   },
   "posted_jokes": [
     {
@@ -12235,6 +12235,18 @@
         "dadjoke",
         "humor",
         "jokesky"
+      ]
+    },
+    {
+      "ts": 1794931631,
+      "b64": "VG8gdW5kZXJzdGFuZCB3aGF0IHJlY3Vyc2lvbiBpcy4uLgoKWW91IG11c3QgZmlyc3QgdW5kZXJzdGFuZCB3aGF0IHJlY3Vyc2lvbiBpcy4=",
+      "provider": "groandeck",
+      "post_uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3n2jgf6caw626",
+      "post_cid": "bafyreihg5rybbxck3757aqwjrgroo2h3iyon4gx7arlnq2g7477kvxeo24",
+      "hashtags": [
+        "dadjoke",
+        "punny",
+        "humour"
       ]
     }
   ]
