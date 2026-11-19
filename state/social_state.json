@@ -969,16 +969,17 @@
       "at://did:plc:v3op6k2udw4kgj46raz67y4h/app.bsky.feed.repost/3n2lzctaecj2v",
       "at://did:plc:v3op6k2udw4kgj46raz67y4h/app.bsky.feed.repost/3n2lzjiguw727",
       "at://did:plc:v3op6k2udw4kgj46raz67y4h/app.bsky.feed.repost/3n2lznljuiw2v",
-      "at://did:plc:v3op6k2udw4kgj46raz67y4h/app.bsky.feed.repost/3n2ml6bi6vf27"
+      "at://did:plc:v3op6k2udw4kgj46raz67y4h/app.bsky.feed.repost/3n2ml6bi6vf27",
+      "at://did:plc:n7wisujdmgtmcv2jfbbpwcop/app.bsky.feed.repost/3n2mt2gmwer27"
     ],
-    "last_checked_at": 1795040685
+    "last_checked_at": 1795049056
   },
   "joke_requests": {
     "replied_uris": [
       "at://did:plc:ea4cyvzxqvubnkpo6g2kkv6i/app.bsky.feed.post/3mwirjfd7qk2o",
       "at://did:plc:ea4cyvzxqvubnkpo6g2kkv6i/app.bsky.feed.post/3mwl4ggasjc2l"
     ],
-    "last_checked_at": 1795040684.7225316,
+    "last_checked_at": 1795049055.4633415,
     "boundary_notification_uris": []
   },
   "starter_pack_acknowledgements": {
@@ -71152,10 +71153,10 @@
     ],
     "starter_pack_attribution": {
       "coverage_started_at": "2026-08-01T14:31:28.650280Z",
-      "last_checked_at": "2026-11-18T22:24:44.422200Z",
-      "high_water_indexed_at": "2026-11-18T22:11:01.146Z",
+      "last_checked_at": "2026-11-19T00:44:15.168574Z",
+      "high_water_indexed_at": "2026-11-18T22:36:32.498Z",
       "boundary_notification_hashes": [
-        "d574b15f3cb1c666e72edae7c5750367c1f9862a54b159c57120482e76e5136b"
+        "f1cc6fb3a585eee9c64272acd5911c61c1a46e6b9b4b763b0f348f0e88747015"
       ],
       "packs": {
         "at://did:plc:ylslnx2g5q3wvnvywksuxx7g/app.bsky.graph.starterpack/3mo2gsqp54k2v": {
@@ -83125,7 +83126,10 @@
           "acquired_at": 1792448911,
           "cohort_month": "2026-10",
           "checkpoints": {
-            "30": null,
+            "30": {
+              "observed_at": 1795049004,
+              "still_following": true
+            },
             "90": null
           }
         },
@@ -83134,7 +83138,10 @@
           "acquired_at": 1792448912,
           "cohort_month": "2026-10",
           "checkpoints": {
-            "30": null,
+            "30": {
+              "observed_at": 1795049004,
+              "still_following": false
+            },
             "90": null
           }
         },
@@ -99778,6 +99785,15 @@
             "30": null,
             "90": null
           }
+        },
+        "2167a63d3d35b529f27f782989d11daed04deed0b7336f2b3790cc29a7450223": {
+          "source": "followback",
+          "acquired_at": 1795049004,
+          "cohort_month": "2026-11",
+          "checkpoints": {
+            "30": null,
+            "90": null
+          }
         }
       },
       "cohorts": {
@@ -99827,8 +99843,8 @@
             "acquired": 113,
             "checkpoints": {
               "30": {
-                "observed": 74,
-                "still_following": 32
+                "observed": 76,
+                "still_following": 33
               },
               "90": {
                 "observed": 0,
@@ -99865,7 +99881,7 @@
         },
         "2026-11": {
           "followback": {
-            "acquired": 97,
+            "acquired": 98,
             "checkpoints": {
               "30": {
                 "observed": 0,
