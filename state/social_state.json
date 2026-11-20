@@ -84550,7 +84550,10 @@
           "acquired_at": 1792607782,
           "cohort_month": "2026-10",
           "checkpoints": {
-            "30": null,
+            "30": {
+              "observed_at": 1795206225,
+              "still_following": false
+            },
             "90": null
           }
         },
@@ -84559,7 +84562,10 @@
           "acquired_at": 1792607782,
           "cohort_month": "2026-10",
           "checkpoints": {
-            "30": null,
+            "30": {
+              "observed_at": 1795206225,
+              "still_following": true
+            },
             "90": null
           }
         },
@@ -102022,6 +102028,33 @@
             "30": null,
             "90": null
           }
+        },
+        "3d5ac3a286b4a7e7eae794bc32ba9539df952ead9e9d07b26080fb27b7d788f0": {
+          "source": "followback",
+          "acquired_at": 1795206226,
+          "cohort_month": "2026-11",
+          "checkpoints": {
+            "30": null,
+            "90": null
+          }
+        },
+        "438d908971a9de0a0cb39ee62981f4821130d06610f790bd4db8722d3df959b4": {
+          "source": "followback",
+          "acquired_at": 1795206226,
+          "cohort_month": "2026-11",
+          "checkpoints": {
+            "30": null,
+            "90": null
+          }
+        },
+        "23bbeb18d7758bbab0998fe9e0ac8f16bc62994c4aaafafedb4cdbbaceaca0c1": {
+          "source": "followback",
+          "acquired_at": 1795206226,
+          "cohort_month": "2026-11",
+          "checkpoints": {
+            "30": null,
+            "90": null
+          }
         }
       },
       "cohorts": {
@@ -102071,8 +102104,8 @@
             "acquired": 113,
             "checkpoints": {
               "30": {
-                "observed": 80,
-                "still_following": 33
+                "observed": 82,
+                "still_following": 34
               },
               "90": {
                 "observed": 0,
@@ -102109,7 +102142,7 @@
         },
         "2026-11": {
           "followback": {
-            "acquired": 117,
+            "acquired": 120,
             "checkpoints": {
               "30": {
                 "observed": 0,
