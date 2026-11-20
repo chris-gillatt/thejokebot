@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.4.2 - 2026-11-20
+
+- Raise the follow-back graph pagination runtime budget from 180 to 600 seconds so
+  large follower lists no longer abort the follows-and-likes job with an
+  incomplete-pagination error.
+
 ## 2.4.1 - 2026-11-17
 
 - Add an explicit manual reset for verified rejected repost suggestions, preserving
