@@ -84574,7 +84574,10 @@
           "acquired_at": 1792651670,
           "cohort_month": "2026-10",
           "checkpoints": {
-            "30": null,
+            "30": {
+              "observed_at": 1795249518,
+              "still_following": true
+            },
             "90": null
           }
         },
@@ -102091,6 +102094,24 @@
             "30": null,
             "90": null
           }
+        },
+        "dc32be6998b4520dd9756441b7b97811ba364cf7e2549cda6b50bc895dde0aba": {
+          "source": "followback",
+          "acquired_at": 1795249518,
+          "cohort_month": "2026-11",
+          "checkpoints": {
+            "30": null,
+            "90": null
+          }
+        },
+        "366c60ff3c81231de5e7bf5ed18533e09aff48ef87972fd35338c8dfff2b0c8f": {
+          "source": "followback",
+          "acquired_at": 1795249519,
+          "cohort_month": "2026-11",
+          "checkpoints": {
+            "30": null,
+            "90": null
+          }
         }
       },
       "cohorts": {
@@ -102140,8 +102161,8 @@
             "acquired": 113,
             "checkpoints": {
               "30": {
-                "observed": 82,
-                "still_following": 34
+                "observed": 83,
+                "still_following": 35
               },
               "90": {
                 "observed": 0,
@@ -102178,7 +102199,7 @@
         },
         "2026-11": {
           "followback": {
-            "acquired": 124,
+            "acquired": 126,
             "checkpoints": {
               "30": {
                 "observed": 0,
