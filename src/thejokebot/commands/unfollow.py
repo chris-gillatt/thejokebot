@@ -8,6 +8,8 @@ from thejokebot import config as runtime_config
 from thejokebot import content_creators
 from colorama import Fore, Style
 from thejokebot.followers import (
+    FULL_GRAPH_MAX_PAGES,
+    FULL_GRAPH_MAX_RUNTIME_SECONDS,
     IncompletePaginationError,
     extract_list_member_did,
     fetch_list_member_dids,
@@ -402,10 +404,18 @@ def unfollow_users():
         )
 
         followers = fetch_paginated_data(
-            client.get_followers, user_did, require_complete=True
+            client.get_followers,
+            user_did,
+            max_pages=FULL_GRAPH_MAX_PAGES,
+            max_runtime_seconds=FULL_GRAPH_MAX_RUNTIME_SECONDS,
+            require_complete=True,
         )
         following = fetch_paginated_data(
-            client.get_follows, user_did, require_complete=True
+            client.get_follows,
+            user_did,
+            max_pages=FULL_GRAPH_MAX_PAGES,
+            max_runtime_seconds=FULL_GRAPH_MAX_RUNTIME_SECONDS,
+            require_complete=True,
         )
 
         follower_dids = {follower.did for follower in followers}

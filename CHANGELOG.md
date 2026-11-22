@@ -7,6 +7,9 @@
   Remove redundant following scans that failed above 100 pages. Report
   incomplete follow-back scans while allowing independent social stages to run.
 
+- Give monthly unfollow the same bounded pagination budget as follow-back so
+  larger graphs can be read in full before selecting any accounts to unfollow.
+
 ## 2.4.2 - 2026-11-20
 
 - Raise the follow-back graph pagination runtime budget from 180 to 600 seconds so

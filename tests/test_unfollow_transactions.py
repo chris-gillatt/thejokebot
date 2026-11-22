@@ -1,6 +1,7 @@
 """Unfollow checkpoints must preserve state written after candidate selection."""
 
 from unittest import mock
+from types import SimpleNamespace
 
 import pytest
 import requests
@@ -143,6 +144,58 @@ def test_login_failure_returns_nonzero_without_candidate_changes(
     assert unfollow.main() == 1
 
     prepare.assert_not_called()
+    assert social_file.read_bytes() == before
+
+
+@pytest.mark.parametrize("incomplete_graph", [None, "followers", "follows"])
+def test_unfollow_requires_complete_graphs_beyond_100_pages(
+    social_file, monkeypatch, incomplete_graph
+):
+    client = mock.Mock()
+    client.me.did = "did:plc:bot"
+    matching = SimpleNamespace(
+        did="did:plc:reciprocal",
+        viewer=SimpleNamespace(following="at://did:plc:bot/follow/reciprocal"),
+    )
+    for method, field in (
+        (client.get_followers, "followers"),
+        (client.get_follows, "follows"),
+    ):
+        pages = [SimpleNamespace(**{field: [], "cursor": str(i)}) for i in range(100)]
+        terminal_cursor = "99" if incomplete_graph == field else None
+        method.side_effect = [
+            *pages,
+            SimpleNamespace(**{field: [matching], "cursor": terminal_cursor}),
+        ]
+    monkeypatch.setattr(unfollow, "login_client", lambda: (client, "bot"))
+    monkeypatch.setattr(
+        unfollow,
+        "get_runtime_controls",
+        lambda: {"dry_run": True, "action_delay_seconds": 0},
+    )
+    monkeypatch.setattr(unfollow, "_resolve_ignorable_dids", lambda *args: set())
+    monkeypatch.setattr(unfollow, "_load_source_list_uri", lambda: "")
+    monkeypatch.setattr(
+        unfollow.content_creators, "sync_protections", lambda *args: set()
+    )
+    prepare = mock.Mock(wraps=unfollow._prepare_unfollow_candidates)
+    monkeypatch.setattr(unfollow, "_prepare_unfollow_candidates", prepare)
+    before = social_file.read_bytes()
+
+    assert unfollow.main() == (1 if incomplete_graph else 0)
+
+    assert client.get_followers.call_count == 101
+    assert client.get_follows.call_count == (
+        0 if incomplete_graph == "followers" else 101
+    )
+    if incomplete_graph:
+        prepare.assert_not_called()
+    else:
+        assert prepare.call_args.args[:2] == (
+            {matching.did: matching.viewer.following},
+            {matching.did},
+        )
+    client.unfollow.assert_not_called()
     assert social_file.read_bytes() == before
 
 

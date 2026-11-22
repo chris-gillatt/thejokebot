@@ -1,6 +1,9 @@
 import time
 from thejokebot.runtime import retry_network_call
 
+FULL_GRAPH_MAX_PAGES = 1000
+FULL_GRAPH_MAX_RUNTIME_SECONDS = 600
+
 
 class IncompletePaginationError(RuntimeError):
     """Raised when a caller requires a complete graph but pagination stops early."""

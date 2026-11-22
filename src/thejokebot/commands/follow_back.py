@@ -8,13 +8,13 @@ from colorama import Fore, Style
 
 from thejokebot import state as bot_state
 from thejokebot import state_transactions
+from thejokebot.followers import FULL_GRAPH_MAX_PAGES as MAX_PAGES
+from thejokebot.followers import FULL_GRAPH_MAX_RUNTIME_SECONDS as MAX_RUNTIME_SECONDS
 from thejokebot.followers import fetch_paginated_data
 from thejokebot.follow_records import follow_account, reconcile_pending_follows
 from thejokebot.runtime import mask_sensitive
 
 PAGE_LIMIT = 100
-MAX_PAGES = 1000
-MAX_RUNTIME_SECONDS = 600
 MAX_RECONCILIATION_PASSES = 3
 SETTLE_SECONDS = 5
 
