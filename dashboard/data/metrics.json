@@ -1,6 +1,6 @@
 {
   "schema_version": 11,
-  "generated_at": "2026-11-22T06:37:46.452019+00:00",
+  "generated_at": "2026-11-22T12:33:04.542913+00:00",
   "account": {
     "handle": "thejokebot.bsky.social",
     "display_name": "The Joke Bot",
@@ -8,14 +8,14 @@
     "profile_url": "https://bsky.app/profile/thejokebot.bsky.social"
   },
   "latest_joke": {
-    "uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3n2uqihatmy2v",
-    "url": "https://bsky.app/profile/thejokebot.bsky.social/post/3n2uqihatmy2v",
-    "text": "Why did the email feel lonely?\n\nIt was stuck in the outbox.\n\n#dadjoke #humour #mumjokes",
-    "created_at": "2026-11-22T04:07:15.612877+00:00",
+    "uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3n2vldtems72n",
+    "url": "https://bsky.app/profile/thejokebot.bsky.social/post/3n2vldtems72n",
+    "text": "Why was the decaf coffee so sad at the party?\n\nIt felt like nobody could get buzzed around it.\n\n#dadjoke #punny #funny",
+    "created_at": "2026-11-22T12:07:51.607227+00:00",
     "engagement": {
       "likes": 1,
       "replies": 0,
-      "reposts": 0,
+      "reposts": 1,
       "quotes": 0,
       "bookmarks": 0
     }
@@ -31,16 +31,16 @@
           30
         ],
         "coverage": {
-          "tracked": 196,
-          "observed": 153,
+          "tracked": 198,
+          "observed": 155,
           "missed": 1,
           "pending": 6,
           "before_coverage": 36,
-          "mean": 4.163,
+          "mean": 4.129,
           "median": 4,
-          "zero_share": 3.27,
+          "zero_share": 3.23,
           "engagement": {
-            "likes": 527,
+            "likes": 530,
             "replies": 41,
             "reposts": 60,
             "quotes": 3,
@@ -438,20 +438,20 @@
           174
         ],
         "coverage": {
-          "tracked": 196,
-          "observed": 153,
+          "tracked": 198,
+          "observed": 155,
           "missed": 1,
           "pending": 42,
           "before_coverage": 0,
-          "mean": 4.059,
+          "mean": 4.077,
           "median": 4,
           "zero_share": 0.65,
           "engagement": {
-            "likes": 530,
+            "likes": 540,
             "replies": 34,
             "reposts": 47,
             "quotes": 4,
-            "bookmarks": 6
+            "bookmarks": 7
           }
         },
         "periods": {
@@ -842,37 +842,20 @@
     }
   },
   "current": {
-    "followers": 7223,
-    "following": 11728,
-    "profile_posts": 2898,
-    "joke_posts": 1228,
+    "followers": 7226,
+    "following": 11730,
+    "profile_posts": 2900,
+    "joke_posts": 1230,
     "engagement": {
-      "likes": 5794,
+      "likes": 5798,
       "replies": 421,
-      "reposts": 487,
+      "reposts": 489,
       "quotes": 47,
       "bookmarks": 78
     },
     "engagement_per_joke": 5.56
   },
   "snapshots": [
-    {
-      "period_start": "2026-10-23T06:00:00+00:00",
-      "collected_at": "2026-10-23T06:52:34.335605+00:00",
-      "followers": 6942,
-      "following": 10315,
-      "profile_posts": 2711,
-      "joke_posts": 1050,
-      "engagement": {
-        "likes": 5152,
-        "replies": 377,
-        "reposts": 415,
-        "quotes": 44,
-        "bookmarks": 69
-      },
-      "engagement_total": 6057,
-      "source": "bluesky_snapshot"
-    },
     {
       "period_start": "2026-10-23T12:00:00+00:00",
       "collected_at": "2026-10-23T12:46:04.336412+00:00",
@@ -2912,6 +2895,23 @@
       },
       "engagement_total": 6827,
       "source": "bluesky_snapshot"
+    },
+    {
+      "period_start": "2026-11-22T12:00:00+00:00",
+      "collected_at": "2026-11-22T12:33:04.542913+00:00",
+      "followers": 7226,
+      "following": 11730,
+      "profile_posts": 2900,
+      "joke_posts": 1230,
+      "engagement": {
+        "likes": 5798,
+        "replies": 421,
+        "reposts": 489,
+        "quotes": 47,
+        "bookmarks": 78
+      },
+      "engagement_total": 6833,
+      "source": "bluesky_snapshot"
     }
   ],
   "daily_activity": [
@@ -3097,8 +3097,8 @@
     },
     {
       "date": "2026-11-22",
-      "joke_posts": 2,
-      "follows": 4,
+      "joke_posts": 4,
+      "follows": 6,
       "unfollows": 0
     }
   ],
@@ -3178,61 +3178,19 @@
   },
   "social_activity": {
     "window_days": 30,
-    "completed_runs": 332,
+    "completed_runs": 329,
     "follow_back_candidates": 137,
     "follow_back_added": 137,
-    "protected": 5041,
-    "interaction_candidates": 26384,
+    "protected": 5011,
+    "interaction_candidates": 26354,
     "interaction_eligible": 540,
     "interaction_added": 540,
-    "interactions_liked": 118,
+    "interactions_liked": 117,
     "joke_replies": 0,
     "starter_pack_follows": 2,
-    "starter_pack_scan_complete": 331,
+    "starter_pack_scan_complete": 328,
     "failed": 4,
     "runs": [
-      {
-        "created_at": "2026-10-23T06:46:57Z",
-        "follow_back_candidates": 0,
-        "follow_back_added": 0,
-        "protected": 9,
-        "interaction_candidates": 9,
-        "interaction_eligible": 0,
-        "interaction_added": 0,
-        "interactions_liked": 0,
-        "joke_replies": 0,
-        "starter_pack_follows": 0,
-        "starter_pack_scan_complete": 1,
-        "failed": 0
-      },
-      {
-        "created_at": "2026-10-23T08:38:03Z",
-        "follow_back_candidates": 0,
-        "follow_back_added": 0,
-        "protected": 10,
-        "interaction_candidates": 10,
-        "interaction_eligible": 0,
-        "interaction_added": 0,
-        "interactions_liked": 0,
-        "joke_replies": 0,
-        "starter_pack_follows": 0,
-        "starter_pack_scan_complete": 1,
-        "failed": 0
-      },
-      {
-        "created_at": "2026-10-23T10:29:57Z",
-        "follow_back_candidates": 0,
-        "follow_back_added": 0,
-        "protected": 11,
-        "interaction_candidates": 11,
-        "interaction_eligible": 0,
-        "interaction_added": 0,
-        "interactions_liked": 1,
-        "joke_replies": 0,
-        "starter_pack_follows": 0,
-        "starter_pack_scan_complete": 1,
-        "failed": 0
-      },
       {
         "created_at": "2026-10-23T12:40:34Z",
         "follow_back_candidates": 0,
@@ -7844,8 +7802,8 @@
   "audience_growth": {
     "window_days": 30,
     "net_followers": {
-      "7": 112,
-      "30": 285
+      "7": 111,
+      "30": 284
     },
     "sources": {
       "followback": {
@@ -7991,7 +7949,7 @@
         {
           "month": "2026-11",
           "source": "followback",
-          "acquired": 135,
+          "acquired": 137,
           "checkpoints": {
             "30": {
               "observed": 0,
@@ -8048,7 +8006,7 @@
       ]
     },
     "coverage": {
-      "social_started_at": "2026-10-23T06:46:57Z",
+      "social_started_at": "2026-10-23T12:40:34Z",
       "discovery_started_at": "2026-10-27T11:03:49Z"
     }
   },
@@ -8087,7 +8045,7 @@
     ]
   },
   "reposts": {
-    "collected_at": "2026-11-21T09:18:10.909332+00:00",
+    "collected_at": "2026-11-22T09:17:56.806778+00:00",
     "coverage": "Current retained reposts only; removed/deleted history and manual/automated provenance are not reconstructed.",
     "confirmed_publications": 2,
     "confirmed_removals": 0,
@@ -8096,20 +8054,25 @@
     "windows": {
       "7": {
         "total": 13,
-        "distinct_authors": 11,
-        "text": 6,
-        "image": 6,
+        "distinct_authors": 12,
+        "text": 5,
+        "image": 7,
         "unknown_format": 1,
-        "replies": 5,
+        "replies": 4,
         "unknown_reply": 0,
         "authors": [
           {
             "handle": "twainian.bsky.social",
-            "count": 3,
-            "share": 0.23076923076923078
+            "count": 2,
+            "share": 0.15384615384615385
           },
           {
             "handle": "dehler55.bsky.social",
+            "count": 1,
+            "share": 0.07692307692307693
+          },
+          {
+            "handle": "deonandan.bsky.social",
             "count": 1,
             "share": 0.07692307692307693
           },
@@ -8161,12 +8124,8 @@
         ],
         "daily": [
           {
-            "date": "2026-11-14",
-            "count": 0
-          },
-          {
             "date": "2026-11-15",
-            "count": 3
+            "count": 2
           },
           {
             "date": "2026-11-16",
@@ -8190,13 +8149,17 @@
           },
           {
             "date": "2026-11-21",
-            "count": 1
+            "count": 2
+          },
+          {
+            "date": "2026-11-22",
+            "count": 0
           }
         ]
       },
       "30": {
         "total": 52,
-        "distinct_authors": 27,
+        "distinct_authors": 28,
         "text": 26,
         "image": 25,
         "unknown_format": 1,
@@ -8215,8 +8178,8 @@
           },
           {
             "handle": "dehler55.bsky.social",
-            "count": 5,
-            "share": 0.09615384615384616
+            "count": 4,
+            "share": 0.07692307692307693
           },
           {
             "handle": "eurodoubt.bsky.social",
@@ -8255,6 +8218,11 @@
           },
           {
             "handle": "davidcavlovic.bsky.social",
+            "count": 1,
+            "share": 0.019230769230769232
+          },
+          {
+            "handle": "deonandan.bsky.social",
             "count": 1,
             "share": 0.019230769230769232
           },
@@ -8340,10 +8308,6 @@
           }
         ],
         "daily": [
-          {
-            "date": "2026-10-22",
-            "count": 1
-          },
           {
             "date": "2026-10-23",
             "count": 1
@@ -8462,15 +8426,19 @@
           },
           {
             "date": "2026-11-21",
-            "count": 1
+            "count": 2
+          },
+          {
+            "date": "2026-11-22",
+            "count": 0
           }
         ]
       },
       "all": {
-        "total": 517,
-        "distinct_authors": 185,
+        "total": 518,
+        "distinct_authors": 186,
         "text": 283,
-        "image": 194,
+        "image": 195,
         "unknown_format": 40,
         "replies": 67,
         "unknown_reply": 28,
@@ -8478,927 +8446,932 @@
           {
             "handle": "mariana057.bsky.social",
             "count": 35,
-            "share": 0.06769825918762089
+            "share": 0.06756756756756757
           },
           {
             "handle": "drselvarajah.bsky.social",
             "count": 34,
-            "share": 0.06576402321083172
+            "share": 0.06563706563706563
           },
           {
             "handle": "funnymichele.bsky.social",
             "count": 30,
-            "share": 0.058027079303675046
+            "share": 0.05791505791505792
           },
           {
             "handle": "docatcdi.com",
             "count": 24,
-            "share": 0.04642166344294004
+            "share": 0.04633204633204633
           },
           {
             "handle": "lairdmickd.bsky.social",
             "count": 21,
-            "share": 0.04061895551257253
+            "share": 0.04054054054054054
           },
           {
             "handle": "dadsaysjokes.com",
             "count": 20,
-            "share": 0.03868471953578337
+            "share": 0.03861003861003861
           },
           {
             "handle": "dehler55.bsky.social",
             "count": 20,
-            "share": 0.03868471953578337
+            "share": 0.03861003861003861
           },
           {
             "handle": "eurodoubt.bsky.social",
             "count": 14,
-            "share": 0.027079303675048357
+            "share": 0.02702702702702703
           },
           {
             "handle": "dadjokesean.bsky.social",
             "count": 13,
-            "share": 0.025145067698259187
+            "share": 0.025096525096525095
           },
           {
             "handle": "funhouseradio.bsky.social",
             "count": 10,
-            "share": 0.019342359767891684
+            "share": 0.019305019305019305
           },
           {
             "handle": "gbretman.bsky.social",
             "count": 9,
-            "share": 0.017408123791102514
+            "share": 0.017374517374517374
           },
           {
             "handle": "lotusflowermetal.bsky.social",
             "count": 9,
-            "share": 0.017408123791102514
+            "share": 0.017374517374517374
           },
           {
             "handle": null,
             "count": 8,
-            "share": 0.015473887814313346
+            "share": 0.015444015444015444
           },
           {
             "handle": "annethewriter1.universeodon.com.ap.brid.gy",
             "count": 6,
-            "share": 0.01160541586073501
+            "share": 0.011583011583011582
           },
           {
             "handle": "domesticgoddess67.bsky.social",
             "count": 6,
-            "share": 0.01160541586073501
+            "share": 0.011583011583011582
           },
           {
             "handle": "kevinlbedfordsr.bsky.social",
             "count": 6,
-            "share": 0.01160541586073501
+            "share": 0.011583011583011582
           },
           {
             "handle": "klaatu82.bsky.social",
             "count": 6,
-            "share": 0.01160541586073501
+            "share": 0.011583011583011582
           },
           {
             "handle": "laffgaff.com",
             "count": 6,
-            "share": 0.01160541586073501
+            "share": 0.011583011583011582
           },
           {
             "handle": "carmenharris.bsky.social",
             "count": 5,
-            "share": 0.009671179883945842
+            "share": 0.009652509652509652
           },
           {
             "handle": "guidetodadding.bsky.social",
             "count": 5,
-            "share": 0.009671179883945842
+            "share": 0.009652509652509652
           },
           {
             "handle": "hronvink.bsky.social",
             "count": 5,
-            "share": 0.009671179883945842
+            "share": 0.009652509652509652
           },
           {
             "handle": "thatericalper.com",
             "count": 5,
-            "share": 0.009671179883945842
+            "share": 0.009652509652509652
           },
           {
             "handle": "toastiepostie.bsky.social",
             "count": 5,
-            "share": 0.009671179883945842
+            "share": 0.009652509652509652
           },
           {
             "handle": "weekdayjokes.bsky.social",
             "count": 5,
-            "share": 0.009671179883945842
+            "share": 0.009652509652509652
           },
           {
             "handle": null,
             "count": 4,
-            "share": 0.007736943907156673
+            "share": 0.007722007722007722
           },
           {
             "handle": "1971miner.bsky.social",
             "count": 4,
-            "share": 0.007736943907156673
+            "share": 0.007722007722007722
           },
           {
             "handle": "davidcavlovic.bsky.social",
             "count": 4,
-            "share": 0.007736943907156673
+            "share": 0.007722007722007722
           },
           {
             "handle": "ohtaku.bsky.social",
             "count": 4,
-            "share": 0.007736943907156673
+            "share": 0.007722007722007722
           },
           {
             "handle": "thejokebot.bsky.social",
             "count": 4,
-            "share": 0.007736943907156673
+            "share": 0.007722007722007722
           },
           {
             "handle": "1andowenly.bsky.social",
             "count": 3,
-            "share": 0.005802707930367505
+            "share": 0.005791505791505791
           },
           {
             "handle": "koalatovmocktail.bsky.social",
             "count": 3,
-            "share": 0.005802707930367505
+            "share": 0.005791505791505791
           },
           {
             "handle": "rogerfoucault.bsky.social",
             "count": 3,
-            "share": 0.005802707930367505
+            "share": 0.005791505791505791
           },
           {
             "handle": "twainian.bsky.social",
             "count": 3,
-            "share": 0.005802707930367505
+            "share": 0.005791505791505791
           },
           {
             "handle": null,
             "count": 2,
-            "share": 0.0038684719535783366
+            "share": 0.003861003861003861
           },
           {
             "handle": "brian770.bsky.social",
             "count": 2,
-            "share": 0.0038684719535783366
+            "share": 0.003861003861003861
           },
           {
             "handle": "chadschultz.bsky.social",
             "count": 2,
-            "share": 0.0038684719535783366
+            "share": 0.003861003861003861
           },
           {
             "handle": "chickblaine.bsky.social",
             "count": 2,
-            "share": 0.0038684719535783366
+            "share": 0.003861003861003861
           },
           {
             "handle": "ctactual.bsky.social",
             "count": 2,
-            "share": 0.0038684719535783366
+            "share": 0.003861003861003861
           },
           {
             "handle": "finsnerd.bsky.social",
             "count": 2,
-            "share": 0.0038684719535783366
+            "share": 0.003861003861003861
           },
           {
             "handle": "fiordaliso456.wsocial.eu",
             "count": 2,
-            "share": 0.0038684719535783366
+            "share": 0.003861003861003861
           },
           {
             "handle": "fridayfun.lol",
             "count": 2,
-            "share": 0.0038684719535783366
+            "share": 0.003861003861003861
           },
           {
             "handle": "ggsdadjokes.bsky.social",
             "count": 2,
-            "share": 0.0038684719535783366
+            "share": 0.003861003861003861
           },
           {
             "handle": "grickle.bsky.social",
             "count": 2,
-            "share": 0.0038684719535783366
+            "share": 0.003861003861003861
           },
           {
             "handle": "groandeck.bsky.social",
             "count": 2,
-            "share": 0.0038684719535783366
+            "share": 0.003861003861003861
           },
           {
             "handle": "hillhighlander.bsky.social",
             "count": 2,
-            "share": 0.0038684719535783366
+            "share": 0.003861003861003861
           },
           {
             "handle": "janeespenson.bsky.social",
             "count": 2,
-            "share": 0.0038684719535783366
+            "share": 0.003861003861003861
           },
           {
             "handle": "jonathanslater.bsky.social",
             "count": 2,
-            "share": 0.0038684719535783366
+            "share": 0.003861003861003861
           },
           {
             "handle": "joustaminute.bsky.social",
             "count": 2,
-            "share": 0.0038684719535783366
+            "share": 0.003861003861003861
           },
           {
             "handle": "lexophilepleaser.bsky.social",
             "count": 2,
-            "share": 0.0038684719535783366
+            "share": 0.003861003861003861
           },
           {
             "handle": "mostlywibbly.bsky.social",
             "count": 2,
-            "share": 0.0038684719535783366
+            "share": 0.003861003861003861
           },
           {
             "handle": "neilfan12.bsky.social",
             "count": 2,
-            "share": 0.0038684719535783366
+            "share": 0.003861003861003861
           },
           {
             "handle": "rdcj87.bsky.social",
             "count": 2,
-            "share": 0.0038684719535783366
+            "share": 0.003861003861003861
           },
           {
             "handle": "sirlutesalot.bsky.social",
             "count": 2,
-            "share": 0.0038684719535783366
+            "share": 0.003861003861003861
           },
           {
             "handle": "skelton-porter.bsky.social",
             "count": 2,
-            "share": 0.0038684719535783366
+            "share": 0.003861003861003861
           },
           {
             "handle": "solstrom.bsky.social",
             "count": 2,
-            "share": 0.0038684719535783366
+            "share": 0.003861003861003861
           },
           {
             "handle": "stoopidfunnyjokes.bsky.social",
             "count": 2,
-            "share": 0.0038684719535783366
+            "share": 0.003861003861003861
           },
           {
             "handle": "straycat99.bsky.social",
             "count": 2,
-            "share": 0.0038684719535783366
+            "share": 0.003861003861003861
           },
           {
             "handle": "v200schneider.bsky.social",
             "count": 2,
-            "share": 0.0038684719535783366
+            "share": 0.003861003861003861
           },
           {
             "handle": "wayneepoo.bsky.social",
             "count": 2,
-            "share": 0.0038684719535783366
+            "share": 0.003861003861003861
           },
           {
             "handle": null,
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": null,
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": null,
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": null,
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": null,
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": null,
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": null,
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": null,
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": null,
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": null,
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": null,
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": null,
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": null,
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": null,
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "00wabisabi00.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "abratus.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "alacritysshadow.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "alexisonfibre.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "allkindsofstuff42.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "annecavicchi.mindly.social.ap.brid.gy",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "archangelsoftworks.co.uk",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "b9cc1d.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "badgerbleu2.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "ballher.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "baroncol.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "benjyhecht.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "bigorangemichael.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "bobandbrad.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "bookshelfie.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "cadamsactress.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "capt-ed.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "captainannoying.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "checkoutthisdj.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "chrissykay19.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "codfather.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "coffeeanddadjokes.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "coffeeandgiraffes.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "cristylynn.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "daddy4fun.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "dailydoseofnova.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "danihealz333.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
+          },
+          {
+            "handle": "deonandan.bsky.social",
+            "count": 1,
+            "share": 0.0019305019305019305
           },
           {
             "handle": "docketrocket9999.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "dogs100.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "donrowlett.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "durtmchurtt.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "dynamiterickybauer.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "elphabalives.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "englishkook.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "erikras.com",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "evannichols.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "extrafabulous.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "filmilton.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "flisszak.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "gettymuseum.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "glennyrodge.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "goblinmemetrader.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "gracienlucy.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "gswitzer.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "haha-bonk.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "hyocheetiburd.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "iancharles007.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "ikilledmyheroes.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "ilivedb4thefall.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "imacpun.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "johnnydcm.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "jondmaas.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "justincaouette.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "kafkaesque2024.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "karkin64.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "kierongillen.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "kimmymonte.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "kinkycurly.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "mama-rain-rod.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "mattenloe.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "mattsouva.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "mcfrontrun.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "memesfolder.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "merriam-webster.com",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "michaelcwchan.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "michaelthornley.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "michelle.sullivan.one",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "mikesatz.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "mountaingoat55.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "myerspants.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "nancycomics.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "notphillies.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "ohfaith.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "ohsoen.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "oysta.au",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "papawoof.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "paulvandermeer.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "pestilence4all.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "pfitzinger.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "pixeline.be",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "podmedic.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "punbelievabledads.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "punnyone.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "raeradford.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "realmfresh.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "sarahandco.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "scottlively.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "sethandrews.com",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "sgoodpaster.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "shamanguru.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "sharatchander.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "sheena-mck.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "softtail65.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "southerngirlraven7.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "spooky24.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "stegopaul.wsocial.eu",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "suitti.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "taggartrehnnauthor.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "taniaroxborogh.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "tatoscafe.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "the-sigh-borg.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "thefuzzydan.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "theinsaticritic.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "themysteryinc.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "tommysiegel.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "uweross.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "virgostyrant.blacksky.app",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "west-of-the-moon.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "whut.me",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "yetanothermemeacc.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "yowie212.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           },
           {
             "handle": "zargon2112.bsky.social",
             "count": 1,
-            "share": 0.0019342359767891683
+            "share": 0.0019305019305019305
           }
         ],
         "daily": [
@@ -12116,7 +12089,11 @@
           },
           {
             "date": "2026-11-21",
-            "count": 1
+            "count": 2
+          },
+          {
+            "date": "2026-11-22",
+            "count": 0
           }
         ]
       }
@@ -12130,13 +12107,6 @@
     "approved_removals": 0,
     "unresolved": 0,
     "runs": [
-      {
-        "created_at": "2026-10-23T08:50:35Z",
-        "proposals": 0,
-        "acknowledgements": 0,
-        "approved_removals": 0,
-        "unresolved": 0
-      },
       {
         "created_at": "2026-10-23T12:53:19Z",
         "proposals": 0,
@@ -13403,6 +13373,13 @@
         "acknowledgements": 0,
         "approved_removals": 0,
         "unresolved": 0
+      },
+      {
+        "created_at": "2026-11-22T08:42:43Z",
+        "proposals": 0,
+        "acknowledgements": 0,
+        "approved_removals": 0,
+        "unresolved": 0
       }
     ]
   },
@@ -13416,8 +13393,8 @@
   "engagement_momentum": {
     "basis": "visible_joke_snapshot_total",
     "deltas": {
-      "7": 236,
-      "30": 777
+      "7": 194,
+      "30": 776
     }
   },
   "provider_pressure": {
@@ -13425,22 +13402,22 @@
       "7": {
         "completed_runs": 42,
         "posted_runs": 42,
-        "provider_attempts": 99,
-        "average_attempts": 2.4,
-        "fallthroughs": 30,
-        "fallthrough_rate": 71.4,
+        "provider_attempts": 103,
+        "average_attempts": 2.5,
+        "fallthroughs": 31,
+        "fallthrough_rate": 73.8,
         "static_fallbacks": 0,
         "rejections": {
-          "duplicate": 278,
+          "duplicate": 298,
           "too_long": 2,
           "network_error": 1,
           "provider_error": 0
         },
         "starting_providers": {
-          "groandeck": 11,
-          "icanhazdadjoke": 10,
-          "jokeapi": 11,
-          "syrsly": 10
+          "groandeck": 10,
+          "icanhazdadjoke": 11,
+          "jokeapi": 10,
+          "syrsly": 11
         },
         "successful_sources": {
           "groandeck": 40,
@@ -13450,13 +13427,13 @@
       "30": {
         "completed_runs": 181,
         "posted_runs": 180,
-        "provider_attempts": 411,
+        "provider_attempts": 413,
         "average_attempts": 2.3,
-        "fallthroughs": 122,
-        "fallthrough_rate": 67.4,
+        "fallthroughs": 123,
+        "fallthrough_rate": 68.0,
         "static_fallbacks": 0,
         "rejections": {
-          "duplicate": 1126,
+          "duplicate": 1136,
           "too_long": 14,
           "network_error": 2,
           "provider_error": 0
@@ -13469,49 +13446,13 @@
         },
         "successful_sources": {
           "api_ninjas": 2,
-          "groandeck": 158,
-          "icanhazdadjoke": 12,
+          "groandeck": 159,
+          "icanhazdadjoke": 11,
           "syrsly": 8
         }
       }
     },
     "runs": [
-      {
-        "id": 39922938363,
-        "attempt": 1,
-        "workflow": "bluesky_post_joke",
-        "created_at": "2026-10-23T08:11:43Z",
-        "provider_attempts": 4,
-        "starting_provider": "syrsly",
-        "successful_source": "groandeck",
-        "fallthrough": true,
-        "static_fallback": false,
-        "posted": true,
-        "rejections": {
-          "duplicate": 15,
-          "too_long": 0,
-          "network_error": 0,
-          "provider_error": 0
-        }
-      },
-      {
-        "id": 39951574412,
-        "attempt": 1,
-        "workflow": "bluesky_post_joke",
-        "created_at": "2026-10-23T12:12:21Z",
-        "provider_attempts": 1,
-        "starting_provider": "icanhazdadjoke",
-        "successful_source": "icanhazdadjoke",
-        "fallthrough": false,
-        "static_fallback": false,
-        "posted": true,
-        "rejections": {
-          "duplicate": 0,
-          "too_long": 0,
-          "network_error": 0,
-          "provider_error": 0
-        }
-      },
       {
         "id": 39984497636,
         "attempt": 1,
@@ -20647,6 +20588,130 @@
           "network_error": 0,
           "provider_error": 0
         }
+      },
+      {
+        "id": 45001300574,
+        "attempt": 1,
+        "workflow": "bluesky_post_joke",
+        "provider_candidates": [
+          {
+            "name": "syrsly",
+            "fetches": 5,
+            "candidates": 5,
+            "selected": 0,
+            "published": 0,
+            "duplicate": 5,
+            "too_long": 0,
+            "network_error": 0,
+            "provider_error": 0,
+            "exhausted": 1
+          },
+          {
+            "name": "icanhazdadjoke",
+            "fetches": 5,
+            "candidates": 5,
+            "selected": 0,
+            "published": 0,
+            "duplicate": 5,
+            "too_long": 0,
+            "network_error": 0,
+            "provider_error": 0,
+            "exhausted": 1
+          },
+          {
+            "name": "jokeapi",
+            "fetches": 5,
+            "candidates": 5,
+            "selected": 0,
+            "published": 0,
+            "duplicate": 5,
+            "too_long": 0,
+            "network_error": 0,
+            "provider_error": 0,
+            "exhausted": 1
+          },
+          {
+            "name": "groandeck",
+            "fetches": 1,
+            "candidates": 1,
+            "selected": 1,
+            "published": 1,
+            "duplicate": 0,
+            "too_long": 0,
+            "network_error": 0,
+            "provider_error": 0,
+            "exhausted": 0
+          }
+        ],
+        "created_at": "2026-11-22T08:07:08Z",
+        "provider_attempts": 4,
+        "starting_provider": "syrsly",
+        "successful_source": "groandeck",
+        "fallthrough": true,
+        "static_fallback": false,
+        "posted": true,
+        "rejections": {
+          "duplicate": 15,
+          "too_long": 0,
+          "network_error": 0,
+          "provider_error": 0
+        }
+      },
+      {
+        "id": 45020651146,
+        "attempt": 1,
+        "workflow": "bluesky_post_joke",
+        "provider_candidates": [
+          {
+            "name": "icanhazdadjoke",
+            "fetches": 5,
+            "candidates": 5,
+            "selected": 0,
+            "published": 0,
+            "duplicate": 5,
+            "too_long": 0,
+            "network_error": 0,
+            "provider_error": 0,
+            "exhausted": 1
+          },
+          {
+            "name": "jokeapi",
+            "fetches": 5,
+            "candidates": 5,
+            "selected": 0,
+            "published": 0,
+            "duplicate": 5,
+            "too_long": 0,
+            "network_error": 0,
+            "provider_error": 0,
+            "exhausted": 1
+          },
+          {
+            "name": "groandeck",
+            "fetches": 2,
+            "candidates": 2,
+            "selected": 1,
+            "published": 1,
+            "duplicate": 1,
+            "too_long": 0,
+            "network_error": 0,
+            "provider_error": 0,
+            "exhausted": 0
+          }
+        ],
+        "created_at": "2026-11-22T12:07:20Z",
+        "provider_attempts": 3,
+        "starting_provider": "icanhazdadjoke",
+        "successful_source": "groandeck",
+        "fallthrough": true,
+        "static_fallback": false,
+        "posted": true,
+        "rejections": {
+          "duplicate": 10,
+          "too_long": 0,
+          "network_error": 0,
+          "provider_error": 0
+        }
       }
     ]
   },
@@ -20684,7 +20749,7 @@
     }
   },
   "providers": {
-    "retained_publications": 1472,
+    "retained_publications": 1474,
     "minimum_comparison_posts": 30,
     "providers": [
       {
@@ -20692,24 +20757,24 @@
         "published": 651,
         "visible_posts": 414,
         "average_interactions": 6.49,
-        "fallthroughs": 194,
+        "fallthroughs": 196,
         "rejection_counts": {
-          "duplicate": 768,
+          "duplicate": 778,
           "too_long": 2,
           "network_error": 1,
           "provider_error": 0
         },
-        "last_failure_at": 1795291524,
+        "last_failure_at": 1795349271,
         "last_failure_reason": "All 5 jokes from 'icanhazdadjoke' were rejected (5 duplicates, 0 too long)",
         "healthy": true,
         "configured": true,
-        "last_health_check_at": 1795248650,
+        "last_health_check_at": 1795335094,
         "consecutive_health_failures": 0
       },
       {
         "name": "groandeck",
-        "published": 599,
-        "visible_posts": 596,
+        "published": 601,
+        "visible_posts": 598,
         "average_interactions": 4.68,
         "fallthroughs": 2,
         "rejection_counts": {
@@ -20722,7 +20787,7 @@
         "last_failure_reason": "All 5 jokes from 'groandeck' were rejected (5 duplicates, 0 too long)",
         "healthy": true,
         "configured": true,
-        "last_health_check_at": 1795248650,
+        "last_health_check_at": 1795335095,
         "consecutive_health_failures": 0
       },
       {
@@ -20730,18 +20795,18 @@
         "published": 175,
         "visible_posts": 171,
         "average_interactions": 6.56,
-        "fallthroughs": 472,
+        "fallthroughs": 474,
         "rejection_counts": {
-          "duplicate": 1442,
+          "duplicate": 1452,
           "too_long": 23,
           "network_error": 1,
           "provider_error": 0
         },
-        "last_failure_at": 1795306606,
+        "last_failure_at": 1795349271,
         "last_failure_reason": "All 5 jokes from 'jokeapi' were rejected (5 duplicates, 0 too long)",
         "healthy": true,
         "configured": true,
-        "last_health_check_at": 1795248650,
+        "last_health_check_at": 1795335094,
         "consecutive_health_failures": 0
       },
       {
@@ -20749,18 +20814,18 @@
         "published": 45,
         "visible_posts": 45,
         "average_interactions": 4.91,
-        "fallthroughs": 90,
+        "fallthroughs": 91,
         "rejection_counts": {
-          "duplicate": 445,
+          "duplicate": 450,
           "too_long": 0,
           "network_error": 1,
           "provider_error": 0
         },
-        "last_failure_at": 1795277145,
+        "last_failure_at": 1795334859,
         "last_failure_reason": "All 5 jokes from 'syrsly' were rejected (5 duplicates, 0 too long)",
         "healthy": true,
         "configured": true,
-        "last_health_check_at": 1795248651,
+        "last_health_check_at": 1795335095,
         "consecutive_health_failures": 0
       },
       {
@@ -20779,7 +20844,7 @@
         "last_failure_reason": null,
         "healthy": true,
         "configured": true,
-        "last_health_check_at": 1795248652,
+        "last_health_check_at": 1795335095,
         "consecutive_health_failures": 0
       }
     ]
@@ -20788,7 +20853,7 @@
     "schedule": "0 0,4,8,12,16,20 * * *",
     "timezone": "UTC",
     "match_window_hours": 2,
-    "current_streak": 99,
+    "current_streak": 100,
     "windows": {
       "7": {
         "expected": 42,
@@ -20825,12 +20890,12 @@
   },
   "automation": {
     "window_days": 30,
-    "collected_at": "2026-11-22T06:37:46.452019+00:00",
-    "runs": 943,
-    "successful": 898,
-    "failed": 35,
+    "collected_at": "2026-11-22T12:33:04.542913+00:00",
+    "runs": 942,
+    "successful": 894,
+    "failed": 38,
     "cancelled": 3,
-    "success_rate": 96.2,
+    "success_rate": 95.9,
     "workflows": [
       {
         "name": "bluesky_dashboard",
@@ -20838,10 +20903,10 @@
         "successful": 92,
         "failed": 0,
         "cancelled": 1,
-        "last_run_at": "2026-11-22T06:37:14Z",
+        "last_run_at": "2026-11-22T12:32:26Z",
         "last_status": "in_progress",
         "last_conclusion": null,
-        "last_success_at": "2026-11-22T00:49:22Z",
+        "last_success_at": "2026-11-22T06:38:37Z",
         "latest_duration_seconds": null,
         "median_duration_seconds": 90,
         "expected_interval_hours": 6.0,
@@ -20865,17 +20930,17 @@
       {
         "name": "bluesky_follows_and_likes",
         "runs": 234,
-        "successful": 204,
-        "failed": 30,
+        "successful": 201,
+        "failed": 33,
         "cancelled": 0,
-        "last_run_at": "2026-11-22T06:30:49Z",
+        "last_run_at": "2026-11-22T12:26:44Z",
         "last_status": "completed",
         "last_conclusion": "failure",
         "last_success_at": "2026-11-20T00:42:15Z",
-        "latest_duration_seconds": 76,
-        "median_duration_seconds": 86,
+        "latest_duration_seconds": 62,
+        "median_duration_seconds": 87,
         "expected_interval_hours": 2.0,
-        "consecutive_failures": 27
+        "consecutive_failures": 30
       },
       {
         "name": "bluesky_manage_starter_pack",
@@ -20894,15 +20959,15 @@
       },
       {
         "name": "bluesky_post_joke",
-        "runs": 117,
-        "successful": 117,
+        "runs": 116,
+        "successful": 116,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-11-22T04:06:46Z",
+        "last_run_at": "2026-11-22T12:07:20Z",
         "last_status": "completed",
         "last_conclusion": "success",
-        "last_success_at": "2026-11-22T04:07:19Z",
-        "latest_duration_seconds": 33,
+        "last_success_at": "2026-11-22T12:07:58Z",
+        "latest_duration_seconds": 38,
         "median_duration_seconds": 31,
         "expected_interval_hours": 4.0,
         "consecutive_failures": 0
@@ -20913,26 +20978,26 @@
         "successful": 118,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-11-22T04:42:51Z",
+        "last_run_at": "2026-11-22T08:42:43Z",
         "last_status": "completed",
         "last_conclusion": "success",
-        "last_success_at": "2026-11-22T04:43:31Z",
-        "latest_duration_seconds": 40,
+        "last_success_at": "2026-11-22T08:43:20Z",
+        "latest_duration_seconds": 37,
         "median_duration_seconds": 36,
         "expected_interval_hours": 4.0,
         "consecutive_failures": 0
       },
       {
         "name": "bluesky_review_reposts",
-        "runs": 27,
-        "successful": 19,
+        "runs": 28,
+        "successful": 20,
         "failed": 0,
         "cancelled": 2,
-        "last_run_at": "2026-11-21T09:17:33Z",
+        "last_run_at": "2026-11-22T09:17:24Z",
         "last_status": "completed",
         "last_conclusion": "success",
-        "last_success_at": "2026-11-21T09:18:17Z",
-        "latest_duration_seconds": 44,
+        "last_success_at": "2026-11-22T09:18:01Z",
+        "latest_duration_seconds": 37,
         "median_duration_seconds": 40,
         "expected_interval_hours": 24.0,
         "consecutive_failures": 0
@@ -20984,15 +21049,15 @@
       },
       {
         "name": "pr_auto_merge",
-        "runs": 38,
-        "successful": 38,
+        "runs": 37,
+        "successful": 37,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-11-21T07:44:48Z",
+        "last_run_at": "2026-11-22T07:44:59Z",
         "last_status": "completed",
         "last_conclusion": "success",
-        "last_success_at": "2026-11-21T07:44:57Z",
-        "latest_duration_seconds": 9,
+        "last_success_at": "2026-11-22T07:45:06Z",
+        "latest_duration_seconds": 7,
         "median_duration_seconds": 10,
         "expected_interval_hours": null,
         "consecutive_failures": 0
@@ -21003,11 +21068,11 @@
         "successful": 20,
         "failed": 0,
         "cancelled": 0,
-        "last_run_at": "2026-11-21T08:10:23Z",
+        "last_run_at": "2026-11-22T08:11:05Z",
         "last_status": "completed",
         "last_conclusion": "success",
-        "last_success_at": "2026-11-21T08:10:57Z",
-        "latest_duration_seconds": 34,
+        "last_success_at": "2026-11-22T08:11:40Z",
+        "latest_duration_seconds": 35,
         "median_duration_seconds": 34,
         "expected_interval_hours": null,
         "consecutive_failures": 0
@@ -21068,28 +21133,7 @@
         "level": "urgent",
         "kind": "workflow_failure_streak",
         "workflow": "bluesky_follows_and_likes",
-        "count": 27
-      },
-      {
-        "level": "urgent",
-        "kind": "mutation_persistence_uncertain",
-        "workflow": "bluesky_follows_and_likes",
-        "run_id": 44884739047,
-        "attempt": 1
-      },
-      {
-        "level": "urgent",
-        "kind": "mutation_persistence_uncertain",
-        "workflow": "bluesky_follows_and_likes",
-        "run_id": 44894093537,
-        "attempt": 1
-      },
-      {
-        "level": "urgent",
-        "kind": "mutation_persistence_uncertain",
-        "workflow": "bluesky_follows_and_likes",
-        "run_id": 44903889658,
-        "attempt": 1
+        "count": 30
       },
       {
         "level": "urgent",
@@ -21127,6 +21171,20 @@
         "attempt": 1
       },
       {
+        "level": "urgent",
+        "kind": "mutation_persistence_uncertain",
+        "workflow": "bluesky_follows_and_likes",
+        "run_id": 45002715674,
+        "attempt": 1
+      },
+      {
+        "level": "urgent",
+        "kind": "mutation_persistence_uncertain",
+        "workflow": "bluesky_follows_and_likes",
+        "run_id": 45012152980,
+        "attempt": 1
+      },
+      {
         "level": "attention",
         "kind": "joke_request_checkpoint_stale"
       },
@@ -21140,13 +21198,127 @@
   "operations": {
     "workflow_runs": [
       {
+        "id": 45022805823,
+        "attempt": 1,
+        "workflow": "bluesky_dashboard",
+        "created_at": "2026-11-22T12:32:26Z",
+        "updated_at": "2026-11-22T12:32:30Z",
+        "status": "in_progress",
+        "conclusion": null
+      },
+      {
+        "id": 45022303922,
+        "attempt": 1,
+        "workflow": "bluesky_follows_and_likes",
+        "created_at": "2026-11-22T12:26:44Z",
+        "updated_at": "2026-11-22T12:27:46Z",
+        "status": "completed",
+        "conclusion": "failure",
+        "failure_metadata": "available",
+        "failed_steps": [
+          {
+            "number": 7,
+            "job_id": 137207689951,
+            "name": "Run bluesky_follows_and_likes"
+          }
+        ]
+      },
+      {
+        "id": 45020651146,
+        "attempt": 1,
+        "workflow": "bluesky_post_joke",
+        "created_at": "2026-11-22T12:07:20Z",
+        "updated_at": "2026-11-22T12:07:58Z",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 45012152980,
+        "attempt": 1,
+        "workflow": "bluesky_follows_and_likes",
+        "created_at": "2026-11-22T10:22:47Z",
+        "updated_at": "2026-11-22T10:24:39Z",
+        "status": "completed",
+        "conclusion": "failure",
+        "failure_metadata": "available",
+        "failed_steps": [
+          {
+            "number": 7,
+            "job_id": 137176599624,
+            "name": "Run bluesky_follows_and_likes"
+          }
+        ]
+      },
+      {
+        "id": 45006810006,
+        "attempt": 1,
+        "workflow": "bluesky_review_reposts",
+        "created_at": "2026-11-22T09:17:24Z",
+        "updated_at": "2026-11-22T09:18:01Z",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 45004076431,
+        "attempt": 1,
+        "workflow": "bluesky_process_reports",
+        "created_at": "2026-11-22T08:42:43Z",
+        "updated_at": "2026-11-22T08:43:20Z",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 45002715674,
+        "attempt": 1,
+        "workflow": "bluesky_follows_and_likes",
+        "created_at": "2026-11-22T08:25:09Z",
+        "updated_at": "2026-11-22T08:26:52Z",
+        "status": "completed",
+        "conclusion": "failure",
+        "failure_metadata": "available",
+        "failed_steps": [
+          {
+            "number": 7,
+            "job_id": 137147535034,
+            "name": "Run bluesky_follows_and_likes"
+          }
+        ]
+      },
+      {
+        "id": 45001605988,
+        "attempt": 1,
+        "workflow": "provider_health_check",
+        "created_at": "2026-11-22T08:11:05Z",
+        "updated_at": "2026-11-22T08:11:40Z",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 45001300574,
+        "attempt": 1,
+        "workflow": "bluesky_post_joke",
+        "created_at": "2026-11-22T08:07:08Z",
+        "updated_at": "2026-11-22T08:07:43Z",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 44999628402,
+        "attempt": 1,
+        "workflow": "pr_auto_merge",
+        "created_at": "2026-11-22T07:44:59Z",
+        "updated_at": "2026-11-22T07:45:06Z",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
         "id": 44994538516,
         "attempt": 1,
         "workflow": "bluesky_dashboard",
         "created_at": "2026-11-22T06:37:14Z",
-        "updated_at": "2026-11-22T06:37:18Z",
-        "status": "in_progress",
-        "conclusion": null
+        "updated_at": "2026-11-22T06:38:37Z",
+        "status": "completed",
+        "conclusion": "success"
       },
       {
         "id": 44994056038,
@@ -27214,87 +27386,6 @@
         "conclusion": "success"
       },
       {
-        "id": 42480174076,
-        "attempt": 1,
-        "workflow": "bluesky_follows_and_likes",
-        "created_at": "2026-11-08T12:25:22Z",
-        "updated_at": "2026-11-08T12:26:34Z",
-        "status": "completed",
-        "conclusion": "success"
-      },
-      {
-        "id": 42478750421,
-        "attempt": 1,
-        "workflow": "bluesky_post_joke",
-        "created_at": "2026-11-08T12:07:20Z",
-        "updated_at": "2026-11-08T12:07:46Z",
-        "status": "completed",
-        "conclusion": "success"
-      },
-      {
-        "id": 42471165679,
-        "attempt": 1,
-        "workflow": "bluesky_follows_and_likes",
-        "created_at": "2026-11-08T10:22:33Z",
-        "updated_at": "2026-11-08T10:23:43Z",
-        "status": "completed",
-        "conclusion": "success"
-      },
-      {
-        "id": 42464066339,
-        "attempt": 1,
-        "workflow": "bluesky_process_reports",
-        "created_at": "2026-11-08T08:42:30Z",
-        "updated_at": "2026-11-08T08:43:04Z",
-        "status": "completed",
-        "conclusion": "success"
-      },
-      {
-        "id": 42462728436,
-        "attempt": 1,
-        "workflow": "bluesky_follows_and_likes",
-        "created_at": "2026-11-08T08:23:24Z",
-        "updated_at": "2026-11-08T08:24:33Z",
-        "status": "completed",
-        "conclusion": "success"
-      },
-      {
-        "id": 42461768466,
-        "attempt": 1,
-        "workflow": "provider_health_check",
-        "created_at": "2026-11-08T08:10:16Z",
-        "updated_at": "2026-11-08T08:10:51Z",
-        "status": "completed",
-        "conclusion": "success"
-      },
-      {
-        "id": 42461528686,
-        "attempt": 1,
-        "workflow": "bluesky_post_joke",
-        "created_at": "2026-11-08T08:06:52Z",
-        "updated_at": "2026-11-08T08:07:23Z",
-        "status": "completed",
-        "conclusion": "success"
-      },
-      {
-        "id": 42460035933,
-        "attempt": 1,
-        "workflow": "pr_auto_merge",
-        "created_at": "2026-11-08T07:44:51Z",
-        "updated_at": "2026-11-08T07:44:58Z",
-        "status": "completed",
-        "conclusion": "success"
-      },
-      {
-        "id": 42455373158,
-        "attempt": 1,
-        "workflow": "bluesky_dashboard",
-        "created_at": "2026-11-08T06:35:26Z",
-        "updated_at": "2026-11-08T06:36:47Z",
-        "status": "completed",
-        "conclusion": "success"
-      },
-      {
         "id": 41089734117,
         "attempt": 1,
         "workflow": "bluesky_follows_and_likes",
@@ -29881,24 +29972,6 @@
         "updated_at": "2026-10-25T08:16:52Z",
         "status": "completed",
         "conclusion": "success"
-      },
-      {
-        "id": 40175588276,
-        "attempt": 1,
-        "workflow": "bluesky_post_joke",
-        "created_at": "2026-10-25T08:10:35Z",
-        "updated_at": "2026-10-25T08:10:59Z",
-        "status": "completed",
-        "conclusion": "success"
-      },
-      {
-        "id": 40174068237,
-        "attempt": 1,
-        "workflow": "pr_auto_merge",
-        "created_at": "2026-10-25T07:46:51Z",
-        "updated_at": "2026-10-25T07:47:04Z",
-        "status": "completed",
-        "conclusion": "success"
       }
     ],
     "ci_workflows": [
@@ -29911,14 +29984,14 @@
     "components": [
       {
         "name": "Public account and joke feed",
-        "observed_at": "2026-11-22T06:37:46.452019+00:00",
+        "observed_at": "2026-11-22T12:33:04.542913+00:00",
         "expected_interval_hours": null,
         "overdue": false,
         "last_success_at": null
       },
       {
         "name": "GitHub workflow metadata",
-        "observed_at": "2026-11-22T06:37:46.452019+00:00",
+        "observed_at": "2026-11-22T12:33:04.542913+00:00",
         "expected_interval_hours": null,
         "overdue": false,
         "last_success_at": null
@@ -29942,10 +30015,10 @@
       {
         "name": "Moderation summary",
         "workflow": "bluesky_process_reports",
-        "observed_at": "2026-11-22T04:42:51Z",
+        "observed_at": "2026-11-22T08:42:43Z",
         "expected_interval_hours": 4.0,
         "overdue": false,
-        "last_success_at": "2026-11-22T04:43:31Z"
+        "last_success_at": "2026-11-22T08:43:20Z"
       },
       {
         "name": "Maintenance review",
@@ -29958,42 +30031,42 @@
       {
         "name": "api_ninjas availability",
         "workflow": "provider_health_check",
-        "observed_at": "2026-11-21T08:10:52+00:00",
+        "observed_at": "2026-11-22T08:11:35+00:00",
         "expected_interval_hours": null,
         "overdue": false,
-        "last_success_at": "2026-11-21T08:10:57Z"
+        "last_success_at": "2026-11-22T08:11:40Z"
       },
       {
         "name": "groandeck availability",
         "workflow": "provider_health_check",
-        "observed_at": "2026-11-21T08:10:50+00:00",
+        "observed_at": "2026-11-22T08:11:35+00:00",
         "expected_interval_hours": null,
         "overdue": false,
-        "last_success_at": "2026-11-21T08:10:57Z"
+        "last_success_at": "2026-11-22T08:11:40Z"
       },
       {
         "name": "icanhazdadjoke availability",
         "workflow": "provider_health_check",
-        "observed_at": "2026-11-21T08:10:50+00:00",
+        "observed_at": "2026-11-22T08:11:34+00:00",
         "expected_interval_hours": null,
         "overdue": false,
-        "last_success_at": "2026-11-21T08:10:57Z"
+        "last_success_at": "2026-11-22T08:11:40Z"
       },
       {
         "name": "jokeapi availability",
         "workflow": "provider_health_check",
-        "observed_at": "2026-11-21T08:10:50+00:00",
+        "observed_at": "2026-11-22T08:11:34+00:00",
         "expected_interval_hours": null,
         "overdue": false,
-        "last_success_at": "2026-11-21T08:10:57Z"
+        "last_success_at": "2026-11-22T08:11:40Z"
       },
       {
         "name": "syrsly availability",
         "workflow": "provider_health_check",
-        "observed_at": "2026-11-21T08:10:51+00:00",
+        "observed_at": "2026-11-22T08:11:35+00:00",
         "expected_interval_hours": null,
         "overdue": false,
-        "last_success_at": "2026-11-21T08:10:57Z"
+        "last_success_at": "2026-11-22T08:11:40Z"
       }
     ]
   },
@@ -30321,38 +30394,38 @@
   },
   "api_usage": {
     "schema_version": 1,
-    "generated_at": "2026-11-22T06:23:09.398767+00:00",
+    "generated_at": "2026-11-22T12:20:07.822912+00:00",
     "warning_percent": 80,
     "inventory_complete": true,
     "periods": {
       "1": {
-        "workflow_runs": 35,
-        "attempts": 34,
-        "attempts_with_job_time": 34,
-        "observed_job_minutes": 34.67,
-        "attempts_with_telemetry": 32,
-        "bluesky_requests": 4940,
-        "github_requests": 680,
+        "workflow_runs": 36,
+        "attempts": 35,
+        "attempts_with_job_time": 35,
+        "observed_job_minutes": 36.73,
+        "attempts_with_telemetry": 33,
+        "bluesky_requests": 4939,
+        "github_requests": 689,
         "http_429": 0
       },
       "7": {
-        "workflow_runs": 342,
-        "attempts": 345,
-        "attempts_with_job_time": 343,
-        "observed_job_minutes": 365.22,
-        "attempts_with_telemetry": 246,
-        "bluesky_requests": 42840,
-        "github_requests": 5113,
+        "workflow_runs": 286,
+        "attempts": 289,
+        "attempts_with_job_time": 289,
+        "observed_job_minutes": 316.6,
+        "attempts_with_telemetry": 238,
+        "bluesky_requests": 42249,
+        "github_requests": 4536,
         "http_429": 0
       },
       "30": {
-        "workflow_runs": 1061,
-        "attempts": 1182,
-        "attempts_with_job_time": 1179,
-        "observed_job_minutes": 1140.65,
-        "attempts_with_telemetry": 251,
-        "bluesky_requests": 42942,
-        "github_requests": 5435,
+        "workflow_runs": 1054,
+        "attempts": 1193,
+        "attempts_with_job_time": 1190,
+        "observed_job_minutes": 1150.8,
+        "attempts_with_telemetry": 260,
+        "bluesky_requests": 44200,
+        "github_requests": 5609,
         "http_429": 0
       }
     },
@@ -30434,17 +30507,17 @@
     ],
     "github_quota": {
       "limit": 5000,
-      "remaining": 4858,
-      "reset_at": "2026-11-22T07:22:52+00:00",
-      "observed_at": "2026-11-22T06:24:12.125923+00:00",
+      "remaining": 4859,
+      "reset_at": "2026-11-22T13:20:07+00:00",
+      "observed_at": "2026-11-22T12:21:08.454848+00:00",
       "resource": "core",
       "expired": false,
       "warning": false
     },
     "coverage": {
-      "cached_attempts": 1182,
-      "inventory_runs": 1061,
-      "telemetry_observed": 251
+      "cached_attempts": 1193,
+      "inventory_runs": 1054,
+      "telemetry_observed": 260
     },
     "scope": "Observed shared Python-client HTTP attempts only; gh CLI, third-party Actions, other clients and shared-IP activity are not counted. Server quota headers include usage outside these observations. UTC minute-bucket window estimates include an extra minute to avoid understating rolling peaks. Write points are conservative attempted-operation estimates. Public AppView has no published numeric quota. Job time excludes queue time and is not billed usage; public standard-runner compute is free, but larger runners and storage may be charged."
   }
