@@ -1,6 +1,7 @@
 """Outgoing manual and automated interactions protect and follow their creators."""
 
 import copy
+from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest import mock
 
@@ -56,7 +57,6 @@ def account(tmp_path, monkeypatch):
     client = mock.Mock()
     client.me.did = BOT
     client.com.atproto.repo.list_records.return_value = {"records": []}
-    client.get_follows.return_value = SimpleNamespace(follows=[], cursor=None)
     client.get_profiles.side_effect = lambda actors: {
         "profiles": [{"did": did, "viewer": {}} for did in actors]
     }
@@ -275,15 +275,15 @@ def test_creator_follows_obey_ten_action_cap_and_existing_summary_contract(
     assert parsed["interaction_eligible"] == 12
     assert parsed["interaction_candidates"] == 15
     assert "did:" not in str(parsed)
-    client.get_follows.return_value = SimpleNamespace(
-        follows=[SimpleNamespace(did=did) for did in sorted(authors)[:10]],
-        cursor=None,
-    )
     client.com.atproto.repo.list_records.side_effect = None
     client.com.atproto.repo.list_records.return_value = {"records": []}
     assert (
-        follow_interactors.follow_content_creators(client, working, False, 0, {}) == 3
+        follow_interactors.follow_content_creators(
+            client, working, False, 0, {}, following_dids=set(sorted(authors)[:10])
+        )
+        == 3
     )
+    client.get_follows.assert_not_called()
 
 
 def test_follow_filter_respects_existing_follows_blocks_and_explicit_exclusions(
@@ -306,9 +306,6 @@ def test_follow_filter_respects_existing_follows_blocks_and_explicit_exclusions(
     ]
     state.record_unfollow(working, "did:plc:manual", reason="manual_block")
     state.record_unfollow(working, "did:plc:auto")
-    client.get_follows.return_value = SimpleNamespace(
-        follows=[SimpleNamespace(did="did:plc:existing")], cursor=None
-    )
     client.get_profiles.return_value = {
         "profiles": [
             {"did": "did:plc:blocked", "viewer": {"blocking": "at://block/key"}},
@@ -322,7 +319,10 @@ def test_follow_filter_respects_existing_follows_blocks_and_explicit_exclusions(
     follow = mock.Mock(return_value=True)
     monkeypatch.setattr(follow_interactors, "follow_account", follow)
     assert (
-        follow_interactors.follow_content_creators(client, working, False, 0, {}) == 1
+        follow_interactors.follow_content_creators(
+            client, working, False, 0, {}, following_dids={"did:plc:existing"}
+        )
+        == 1
     )
     assert follow.call_args.args[2] == "did:plc:auto"
     assert set(client.get_profiles.call_args.args[0]) == {
@@ -479,6 +479,104 @@ def test_bad_profiles_prevent_all_creator_follow_actions(
     follow.assert_not_called()
 
 
+@pytest.mark.parametrize("complete", [True, False])
+def test_social_workflow_uses_one_following_scan(
+    account, monkeypatch, capsys, complete
+):
+    client, _ = account
+    existing = "did:plc:existing"
+    interactor = "did:plc:interactor"
+    creator = "did:plc:creator"
+    client.get_followers.return_value = SimpleNamespace(
+        followers=[SimpleNamespace(did=existing)], cursor=None
+    )
+    pages = [SimpleNamespace(follows=[], cursor=str(i)) for i in range(100)]
+    pages.append(
+        SimpleNamespace(
+            follows=[SimpleNamespace(did=existing)],
+            cursor=None if complete else "99",
+        )
+    )
+    client.get_follows.side_effect = pages
+    client.app.bsky.notification.list_notifications.return_value = {
+        "notifications": [
+            {
+                "reason": "reply",
+                "indexedAt": datetime.now(timezone.utc).isoformat(),
+                "author": {"did": did},
+            }
+            for did in (existing, interactor)
+        ]
+    }
+    client.get_profiles.side_effect = lambda actors: {
+        "profiles": [
+            {
+                "did": did,
+                "viewer": {"following": "at://follow"} if did == existing else {},
+            }
+            for did in actors
+        ]
+    }
+    client.com.atproto.repo.list_records.side_effect = [
+        {"records": [interaction(existing, key="existing"), interaction(creator)]},
+        {"records": []},
+    ]
+    monkeypatch.setattr(follows_and_likes, "login_client", lambda: (client, "bot"))
+    monkeypatch.setattr(
+        follows_and_likes,
+        "get_runtime_controls",
+        lambda: {"dry_run": False, "action_delay_seconds": 0},
+    )
+    monkeypatch.setattr(
+        follows_and_likes.blocks, "reconcile_configured_blocks", lambda *a, **k: 0
+    )
+    reply = mock.Mock(return_value=0)
+    like = mock.Mock(return_value=0)
+    monkeypatch.setattr(
+        follows_and_likes, "track_starter_pack_follows", lambda *args: 0
+    )
+    monkeypatch.setattr(follows_and_likes, "reply_to_joke_requests", reply)
+    monkeypatch.setattr(follows_and_likes, "like_replies", like)
+    follow = mock.Mock(return_value=True)
+    monkeypatch.setattr(follow_interactors, "follow_account", follow)
+
+    if complete:
+        follows_and_likes.main()
+    else:
+        with pytest.raises(RuntimeError, match="1 failed action"):
+            follows_and_likes.main()
+        assert (
+            "Follow-back failed: Repeated pagination cursor" in capsys.readouterr().out
+        )
+
+    assert client.get_follows.call_count == 101
+    assert [call.args[2] for call in follow.call_args_list] == [interactor, creator]
+    assert client.get_profiles.call_args_list == (
+        [mock.call([interactor]), mock.call([creator])]
+        if complete
+        else [mock.call([existing, interactor]), mock.call([creator, existing])]
+    )
+    reply.assert_called_once()
+    like.assert_called_once()
+
+
+def test_profile_checks_batch_candidates_and_skip_missing_viewer(account):
+    client, _ = account
+    dids = [f"did:plc:actor{i:02}" for i in range(28)]
+    client.get_profiles.side_effect = [
+        {"profiles": [{"did": did, "viewer": {}} for did in dids[:25]]},
+        {"profiles": [{"did": dids[25]}, {"did": dids[26], "viewer": {}}]},
+    ]
+
+    assert follow_interactors._eligible_profiles(client, set(dids)) == set(
+        dids[:25] + [dids[26]]
+    )
+    assert client.get_profiles.call_args_list == [
+        mock.call(dids[:25]),
+        mock.call(dids[25:]),
+    ]
+
+
 def test_dry_run_changes_neither_disk_nor_account(account):
     client, social_file = account
     before = social_file.read_bytes()
@@ -535,9 +633,6 @@ def test_automated_like_is_discovered_and_followed_with_exact_receipt(account):
     )
     assert content_creators.get_protected_dids(state.load_state()) == {"did:plc:author"}
     assert state.get_follow_grace_dids(state.load_state()) == {"did:plc:author"}
-    client.get_follows.return_value = SimpleNamespace(
-        follows=[SimpleNamespace(did="did:plc:author")], cursor=None
-    )
     assert (
         follow_interactors.follow_content_creators(client, working, False, 0, {}) == 0
     )

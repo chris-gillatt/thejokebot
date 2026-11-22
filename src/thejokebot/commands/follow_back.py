@@ -63,8 +63,8 @@ def follow_back(
     action_delay_seconds: float,
     summary: dict | None = None,
     state: dict | None = None,
-) -> None:
-    """Follow every current follower that the bot is not yet following."""
+) -> set[str]:
+    """Follow actionable followers and return the last complete following snapshot."""
     if summary is None:
         summary = {}
     user_did = client.me.did
@@ -78,6 +78,7 @@ def follow_back(
 
     attempted_dids: set[str] = set()
     observed_candidate_dids: set[str] = set()
+    remaining_dids: set[str] = set()
     cohorts_reconciled = False
     summary["follow_back_candidates"] = 0
     summary["follow_back_added"] = 0
@@ -120,15 +121,10 @@ def follow_back(
                 f"followed back.{Style.RESET_ALL}"
             )
             print(f"{Fore.GREEN}Follow-back completed.{Style.RESET_ALL}")
-            return
+            return following_dids
 
         if pass_number > MAX_RECONCILIATION_PASSES:
-            summary["failed"] += len(remaining_dids)
-            raise RuntimeError(
-                "Follow-back did not converge after "
-                f"{MAX_RECONCILIATION_PASSES} reconciliation passes; "
-                f"{len(remaining_dids)} actionable follower(s) remain."
-            )
+            break
 
         candidates = sorted(remaining_dids - attempted_dids)
         print(
@@ -148,6 +144,13 @@ def follow_back(
 
         if dry_run:
             print(f"{Fore.GREEN}Follow-back dry run completed.{Style.RESET_ALL}")
-            return
+            return following_dids
 
         time.sleep(SETTLE_SECONDS)
+
+    summary["failed"] += len(remaining_dids)
+    raise RuntimeError(
+        "Follow-back did not converge after "
+        f"{MAX_RECONCILIATION_PASSES} reconciliation passes; "
+        f"{len(remaining_dids)} actionable follower(s) remain."
+    )

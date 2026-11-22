@@ -418,7 +418,7 @@ def test_existing_bot_review_is_recovered_without_creating_another(account, gith
         {"total_count": 1, "incomplete_results": False, "items": [existing]},
         existing,
     ]
-    command.deliver_reviews(state.load_state())
+    command.deliver_reviews(state.load_state(), NOW)
     assert all(call.args[1:2] in ((), ("GET",)) for call in github.call_args_list)
     assert (
         state.load_state()["repost_reviews"]["candidates"][candidate["key"]]["issue_id"]

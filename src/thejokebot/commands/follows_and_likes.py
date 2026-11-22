@@ -65,7 +65,7 @@ def follow_back(
     action_delay_seconds: float,
     summary: dict | None = None,
     state: dict | None = None,
-) -> None:
+) -> set[str]:
     """Delegate follower reconciliation to its domain module."""
     return follow_back_processing.follow_back(
         client,
@@ -82,10 +82,17 @@ def follow_interactors(
     dry_run: bool,
     action_delay_seconds: float,
     summary: dict | None = None,
+    *,
+    following_dids: set[str] | None = None,
 ) -> int:
     """Delegate interaction-follow processing to its domain module."""
     return follow_interactor_processing.follow_interactors(
-        client, state, dry_run, action_delay_seconds, summary
+        client,
+        state,
+        dry_run,
+        action_delay_seconds,
+        summary,
+        following_dids=following_dids,
     )
 
 
@@ -182,8 +189,9 @@ def main() -> None:
         "failed": 0,
     }
 
+    following_dids = None
     try:
-        follow_back(
+        following_dids = follow_back(
             client,
             dry_run,
             action_delay_seconds,
@@ -191,6 +199,7 @@ def main() -> None:
             state,
         )
     except (
+        IncompletePaginationError,
         ValueError,
         requests.RequestException,
         TimeoutError,
@@ -201,7 +210,12 @@ def main() -> None:
 
     try:
         followed = follow_interactors(
-            client, state, dry_run, action_delay_seconds, social_summary
+            client,
+            state,
+            dry_run,
+            action_delay_seconds,
+            social_summary,
+            following_dids=following_dids,
         )
         print(
             f"{Fore.GREEN}Followed {followed} new interactor"
@@ -211,7 +225,7 @@ def main() -> None:
         ValueError,
         requests.RequestException,
         TimeoutError,
-        atproto_client.exceptions.NetworkError,
+        AtProtocolError,
     ) as exc:
         social_summary["failed"] += 1
         print(f"{Fore.RED}Interaction-follow failed: {exc}{Style.RESET_ALL}")
@@ -247,7 +261,12 @@ def main() -> None:
             f"{'s' if liked != 1 else ''}.{Style.RESET_ALL}"
         )
         follow_interactor_processing.follow_content_creators(
-            client, state, dry_run, action_delay_seconds, social_summary
+            client,
+            state,
+            dry_run,
+            action_delay_seconds,
+            social_summary,
+            following_dids=following_dids,
         )
     except (
         IncompletePaginationError,

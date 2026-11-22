@@ -12,7 +12,6 @@ from thejokebot import content_creators
 from thejokebot import state as bot_state
 from thejokebot import state_transactions
 from thejokebot.follow_records import follow_account, reconcile_pending_follows
-from thejokebot.followers import fetch_paginated_data
 from thejokebot.runtime import get_nested_value, mask_sensitive, retry_network_call
 
 _CONFIG = runtime_config.get_follows_and_likes_config()
@@ -20,9 +19,7 @@ _REASONS = ("reply", "repost", "like")
 _WINDOW_SECONDS = 24 * 60 * 60
 _MAX_PAGES = _CONFIG["interaction_follow_max_pages"]
 _PAGE_LIMIT = _CONFIG["interaction_follow_page_limit"]
-_FOLLOW_PAGE_LIMIT = 100
-_FOLLOW_MAX_PAGES = 100
-_FOLLOW_MAX_RUNTIME_SECONDS = 120
+_PROFILE_BATCH_SIZE = 25
 _UTC_OFFSET = "+00:00"
 
 
@@ -153,6 +150,8 @@ def follow_interactors(
     dry_run: bool,
     action_delay_seconds: float,
     summary: dict | None = None,
+    *,
+    following_dids: set[str] | None = None,
 ) -> int:
     """Follow users who interacted with the bot's posts in the last 24 hours."""
     user_did = client.me.did
@@ -163,32 +162,17 @@ def follow_interactors(
     grace_dids = bot_state.get_follow_grace_dids(state)
     unfollowed_dids = bot_state.get_unfollowed_dids(state)
 
-    print(
-        f"{Fore.YELLOW}Fetching current follows for interaction-follow check.{Style.RESET_ALL}"
-    )
-    following = fetch_paginated_data(
-        client.get_follows,
-        actor=user_did,
-        limit=_FOLLOW_PAGE_LIMIT,
-        max_pages=_FOLLOW_MAX_PAGES,
-        max_runtime_seconds=_FOLLOW_MAX_RUNTIME_SECONDS,
-        require_complete=True,
-    )
-    already_following = {profile.did for profile in following}
-
     cutoff_epoch = time.time() - _WINDOW_SECONDS
     interactor_dids = _collect_interactor_dids(client, user_did, cutoff_epoch)
 
-    existing_skips = interactor_dids & already_following
-    remaining = interactor_dids - existing_skips
-    grace_skips = remaining & grace_dids
-    remaining -= grace_skips
-    history_skips = remaining & unfollowed_dids
-    to_follow = sorted(remaining - history_skips)
+    candidates = interactor_dids.difference(
+        following_dids or (), grace_dids, unfollowed_dids
+    )
+    to_follow = sorted(_eligible_profiles(client, candidates))
     summary["interaction_candidates"] = len(interactor_dids)
     summary["interaction_eligible"] = len(to_follow)
-    summary["protected"] = summary.get("protected", 0) + len(
-        existing_skips | grace_skips | history_skips
+    summary["protected"] = (
+        summary.get("protected", 0) + len(interactor_dids) - len(to_follow)
     )
 
     print(
@@ -204,25 +188,30 @@ def follow_interactors(
     return followed_count
 
 
-def _available_creators(client, dids: set[str]) -> set[str]:
+def _eligible_profiles(client, dids: set[str]) -> set[str]:
+    """Check candidate relationships and moderation in the authenticated view."""
     available: set[str] = set()
     ordered = sorted(dids)
-    for offset in range(0, len(ordered), 25):
-        actors = ordered[offset : offset + 25]
+    for offset in range(0, len(ordered), _PROFILE_BATCH_SIZE):
+        actors = ordered[offset : offset + _PROFILE_BATCH_SIZE]
         response = retry_network_call(
             lambda current=actors: client.get_profiles(current),
-            description="checking content-creator profiles",
+            description="checking follow candidate profiles",
         )
         profiles = get_nested_value(response, "profiles")
         if not isinstance(profiles, list):
-            raise ValueError("Unexpected content-creator profile response")
+            raise ValueError("Unexpected follow candidate profile response")
         seen: set[str] = set()
+        with_viewer = 0
         for profile in profiles:
             did = get_nested_value(profile, "did")
             if did not in actors or did in seen:
-                raise ValueError("Content-creator profile identity mismatch")
+                raise ValueError("Follow candidate profile identity mismatch")
             seen.add(did)
             viewer = get_nested_value(profile, "viewer")
+            if viewer is None:
+                continue
+            with_viewer += 1
             if not any(
                 get_nested_value(viewer, field)
                 for field in (
@@ -236,10 +225,10 @@ def _available_creators(client, dids: set[str]) -> set[str]:
                 )
             ):
                 available.add(did)
-        if set(actors) - seen:
+        if with_viewer < len(actors):
             print(
-                f"{Fore.YELLOW}Skipped {len(set(actors) - seen)} unavailable "
-                f"content-creator profile(s).{Style.RESET_ALL}"
+                f"{Fore.YELLOW}Skipped {len(actors) - with_viewer} unavailable "
+                f"follow candidate profile(s).{Style.RESET_ALL}"
             )
     return available
 
@@ -250,29 +239,22 @@ def follow_content_creators(
     dry_run: bool,
     action_delay_seconds: float,
     summary: dict,
+    *,
+    following_dids: set[str] | None = None,
 ) -> int:
     """Follow at most the configured number of liked/reposted content creators."""
     creators = content_creators.sync_protections(client, state, dry_run)
-    following = fetch_paginated_data(
-        client.get_follows,
-        actor=client.me.did,
-        limit=_FOLLOW_PAGE_LIMIT,
-        max_pages=_FOLLOW_MAX_PAGES,
-        max_runtime_seconds=_FOLLOW_MAX_RUNTIME_SECONDS,
-        require_complete=True,
-    )
     excluded = {
         entry["did"]
         for entry in state.get("unfollow_history", {}).get("entries", [])
         if entry.get("reason") != "not_following_back"
     }
     candidates = (
-        creators
-        - {profile.did for profile in following}
+        creators.difference(following_dids or (), {client.me.did})
         - bot_state.get_follow_grace_dids(state)
         - excluded
     )
-    eligible = _available_creators(client, candidates)
+    eligible = _eligible_profiles(client, candidates)
     selected = sorted(eligible)[: _CONFIG["content_follow_max_actions"]]
     summary["interaction_candidates"] = summary.get("interaction_candidates", 0) + len(
         candidates

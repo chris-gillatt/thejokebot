@@ -21,6 +21,12 @@ from thejokebot.commands import api_usage_report as report
 NOW = datetime(2026, 11, 15, 5, 30, tzinfo=UTC)
 
 
+class FixedDateTime(datetime):
+    @classmethod
+    def now(cls, tz=None):
+        return NOW.astimezone(tz)
+
+
 def test_interpreter_exit_does_not_publish_opted_out_synthetic_traffic():
     script = (
         "import io, os\n"
@@ -326,6 +332,7 @@ def test_server_quota_uses_authoritative_remaining_and_expires(monkeypatch, caps
 def test_reporter_persists_reruns_and_document_changes_without_leaking_auth(
     monkeypatch, tmp_path
 ):
+    monkeypatch.setattr(report, "datetime", FixedDateTime)
     body = "<main>" + "Published limits and usage " * 20 + "</main>"
     config = json.loads(report.CONFIG_FILE.read_text())
     config["documents"] = {key: report.document_hash(body) for key in report.DOC_URLS}

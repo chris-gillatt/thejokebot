@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.4.3 - 2026-11-22
+
+- Reuse the complete follow-back snapshot and batch authenticated profile
+  checks for remaining interaction and content-creator follow candidates.
+  Remove redundant following scans that failed above 100 pages. Report
+  incomplete follow-back scans while allowing independent social stages to run.
+
 ## 2.4.2 - 2026-11-20
 
 - Raise the follow-back graph pagination runtime budget from 180 to 600 seconds so
