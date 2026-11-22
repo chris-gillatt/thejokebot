@@ -205,6 +205,7 @@ def test_enabled_source_list_is_used_before_candidate_selection(
     client = mock.Mock()
     client.me.did = "did:plc:bot"
     client.com.atproto.repo.list_records.return_value = {"records": []}
+    pinned_did = "did:plc:pinned"
     following = [
         mock.Mock(
             did="did:plc:protected",
@@ -214,8 +215,13 @@ def test_enabled_source_list_is_used_before_candidate_selection(
             did="did:plc:eligible",
             viewer=mock.Mock(following="at://did:plc:bot/follow/eligible"),
         ),
+        mock.Mock(
+            did=pinned_did,
+            viewer=mock.Mock(following="at://did:plc:bot/follow/pinned"),
+        ),
     ]
     monkeypatch.setattr(unfollow, "DEFAULT_IGNORABLE_USERNAMES", ())
+    monkeypatch.setattr(unfollow, "DEFAULT_IGNORABLE_DIDS", frozenset({pinned_did}))
     monkeypatch.setenv("BLUESKY_UNFOLLOW_IGNORE", "")
     monkeypatch.setattr(unfollow, "login_client", lambda: (client, "bot"))
     monkeypatch.setattr(
@@ -257,10 +263,11 @@ def test_enabled_source_list_is_used_before_candidate_selection(
 
     assert unfollow.main() == 0
 
-    assert prepare.call_args.args[2] == {"did:plc:protected"}
+    assert prepare.call_args.args[2] == {"did:plc:protected", pinned_did}
     assert prepare.call_args.args[0] == {
         "did:plc:protected": "at://did:plc:bot/follow/protected",
         "did:plc:eligible": "at://did:plc:bot/follow/eligible",
+        pinned_did: "at://did:plc:bot/follow/pinned",
     }
     assert execute.call_args.args[2] == ["did:plc:eligible"]
     client.unfollow.assert_not_called()

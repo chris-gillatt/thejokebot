@@ -1,6 +1,7 @@
 import copy
 import json
 import math
+import re
 from pathlib import Path
 
 from thejokebot.paths import RESOURCES_DIR
@@ -167,12 +168,12 @@ _DEFAULT_CONFIG = {
             "thatericalper.com",
             "wholesomememe.bsky.social",
             "groandeck.bsky.social",
-            "nocontextbritss.bsky.social",
             "dehler55.bsky.social",
             "dadreplybot.bsky.social",
             "docatcdi.com",
             "chthonicionic.bsky.social",
         ],
+        "default_ignorable_dids": ["did:plc:5imc6tdrt2ale7zg6ea7bt6d"],
     },
     "follows_and_likes": {
         "like_max_pages": 5,
@@ -254,6 +255,20 @@ def _ensure_string_list(value, field_name):
             raise ValueError(f"{field_name}[{index}] must not be empty.")
         result.append(text)
     return result
+
+
+def _normalise_protected_dids(value):
+    if value == []:
+        return []
+    field_name = "unfollow.default_ignorable_dids"
+    dids = _ensure_string_list(value, field_name)
+    for did in dids:
+        if not re.fullmatch(
+            r"did:[a-z0-9]+:(?:[A-Za-z0-9._:-]|%[0-9A-Fa-f]{2})*[A-Za-z0-9._-]",
+            did,
+        ):
+            raise ValueError(f"{field_name} must contain valid DIDs")
+    return dids
 
 
 def _validate_posting_tag_field(posting: dict, field: str) -> None:
@@ -440,6 +455,9 @@ def _validate_config(payload):
     unfollow["default_ignorable_handles"] = _ensure_string_list(
         unfollow.get("default_ignorable_handles", []),
         "unfollow.default_ignorable_handles",
+    )
+    unfollow["default_ignorable_dids"] = _normalise_protected_dids(
+        unfollow.get("default_ignorable_dids", [])
     )
     cfg["unfollow"] = unfollow
 

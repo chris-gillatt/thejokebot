@@ -204,7 +204,7 @@ class RuntimeConfigTests(unittest.TestCase):
             config["unfollow"]["default_ignorable_handles"], runtime_handles
         )
 
-    def test_runtime_unfollow_ignorable_handles_match_built_in_defaults(self):
+    def test_runtime_unfollow_protections_match_built_in_defaults(self):
         runtime_config_data = json.loads(
             runtime_config._CONFIG_PATH.read_text(encoding="utf-8")
         )
@@ -213,6 +213,22 @@ class RuntimeConfigTests(unittest.TestCase):
             runtime_config_data["unfollow"]["default_ignorable_handles"],
             runtime_config._DEFAULT_CONFIG["unfollow"]["default_ignorable_handles"],
         )
+        self.assertEqual(
+            runtime_config_data["unfollow"]["default_ignorable_dids"],
+            runtime_config._DEFAULT_CONFIG["unfollow"]["default_ignorable_dids"],
+        )
+
+    def test_runtime_unfollow_rejects_invalid_protected_did(self):
+        config = copy.deepcopy(runtime_config._DEFAULT_CONFIG)
+        config["unfollow"]["default_ignorable_dids"] = ["did:plc:"]
+        with self.assertRaisesRegex(ValueError, "unfollow.default_ignorable_dids"):
+            runtime_config._validate_config(config)
+
+    def test_runtime_unfollow_accepts_an_empty_protected_did_list(self):
+        config = copy.deepcopy(runtime_config._DEFAULT_CONFIG)
+        config["unfollow"]["default_ignorable_dids"] = []
+        resolved = runtime_config._validate_config(config)
+        self.assertEqual(resolved["unfollow"]["default_ignorable_dids"], [])
 
     def test_unfollow_cap_tracks_four_weeks_of_follow_fellows_capacity(self):
         with tempfile.TemporaryDirectory() as temp_dir:

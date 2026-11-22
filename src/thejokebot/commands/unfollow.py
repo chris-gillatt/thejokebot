@@ -31,6 +31,7 @@ DEFAULT_UNFOLLOW_MAX_ACTIONS = _UNFOLLOW_CONFIG["max_actions"]
 DEFAULT_UNFOLLOW_BATCH_SIZE = _UNFOLLOW_CONFIG["batch_size"]
 DEFAULT_UNFOLLOW_BATCH_PAUSE_SECONDS = _UNFOLLOW_CONFIG["batch_pause_seconds"]
 DEFAULT_IGNORABLE_USERNAMES = tuple(_UNFOLLOW_CONFIG["default_ignorable_handles"])
+DEFAULT_IGNORABLE_DIDS = frozenset(_UNFOLLOW_CONFIG["default_ignorable_dids"])
 _STARTER_PACK_CONFIG_PATH = RESOURCES_DIR / "jokebot_starter_pack.json"
 _LIST_URI_PATTERN = re.compile(r"^at://[^/\s]+/app\.bsky\.graph\.list/[^/?#\s]+$")
 
@@ -422,6 +423,7 @@ def unfollow_users():
         following_map = {follow.did: follow.viewer.following for follow in following}
 
         ignorable_dids = _resolve_ignorable_dids(client, ignorable_usernames)
+        ignorable_dids.update(DEFAULT_IGNORABLE_DIDS)
 
         source_list_uri = _load_source_list_uri()
         if source_list_uri:
