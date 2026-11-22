@@ -1,37 +1,37 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-11-21T18:17:18.842128+00:00",
+  "generated_at": "2026-11-22T00:38:53.130853+00:00",
   "warning_percent": 80,
   "inventory_complete": true,
   "periods": {
     "1": {
-      "workflow_runs": 36,
-      "attempts": 35,
-      "attempts_with_job_time": 35,
-      "observed_job_minutes": 36.25,
-      "attempts_with_telemetry": 33,
-      "bluesky_requests": 4781,
-      "github_requests": 672,
+      "workflow_runs": 35,
+      "attempts": 34,
+      "attempts_with_job_time": 34,
+      "observed_job_minutes": 34.1,
+      "attempts_with_telemetry": 32,
+      "bluesky_requests": 4771,
+      "github_requests": 537,
       "http_429": 0
     },
     "7": {
-      "workflow_runs": 364,
-      "attempts": 367,
-      "attempts_with_job_time": 364,
-      "observed_job_minutes": 386.93,
-      "attempts_with_telemetry": 235,
-      "bluesky_requests": 40486,
-      "github_requests": 5091,
+      "workflow_runs": 365,
+      "attempts": 368,
+      "attempts_with_job_time": 365,
+      "observed_job_minutes": 388.43,
+      "attempts_with_telemetry": 243,
+      "bluesky_requests": 41712,
+      "github_requests": 5262,
       "http_429": 0
     },
     "30": {
-      "workflow_runs": 1074,
-      "attempts": 1166,
-      "attempts_with_job_time": 1163,
-      "observed_job_minutes": 1122.9,
-      "attempts_with_telemetry": 235,
-      "bluesky_requests": 40486,
-      "github_requests": 5091,
+      "workflow_runs": 1068,
+      "attempts": 1174,
+      "attempts_with_job_time": 1171,
+      "observed_job_minutes": 1131.98,
+      "attempts_with_telemetry": 243,
+      "bluesky_requests": 41712,
+      "github_requests": 5262,
       "http_429": 0
     }
   },
@@ -85,25 +85,25 @@
   "documents": {
     "bluesky": {
       "id": "bluesky",
-      "checked_at": "2026-11-21T00:36:13.254807+00:00",
+      "checked_at": "2026-11-22T00:38:53.130853+00:00",
       "status": "unchanged",
       "sha256": "ae622112560789c2a848fd6fd5660ebcdf42bbdff78559fafbe2a41e4dd615b7"
     },
     "github_api": {
       "id": "github_api",
-      "checked_at": "2026-11-21T00:36:13.254807+00:00",
+      "checked_at": "2026-11-22T00:38:53.130853+00:00",
       "status": "changed",
       "sha256": "5795dfa2ae0385b444d7a8d94dcf67c4cb165e60a00b501620f5ee489c576e8f"
     },
     "github_actions": {
       "id": "github_actions",
-      "checked_at": "2026-11-21T00:36:13.254807+00:00",
+      "checked_at": "2026-11-22T00:38:53.130853+00:00",
       "status": "unchanged",
       "sha256": "0a36c9381372a90997a8da2093cd0390272c9b6e9fc00ef8b0cdb0a191f20f0b"
     },
     "github_billing": {
       "id": "github_billing",
-      "checked_at": "2026-11-21T00:36:13.254807+00:00",
+      "checked_at": "2026-11-22T00:38:53.130853+00:00",
       "status": "unchanged",
       "sha256": "9b11f4660744f1eb152c970119fa49445f57bfe0ec1ed412cd277147e8f76c19"
     }
@@ -113,17 +113,17 @@
   ],
   "github_quota": {
     "limit": 5000,
-    "remaining": 4860,
-    "reset_at": "2026-11-21T19:17:19+00:00",
-    "observed_at": "2026-11-21T18:18:28.115534+00:00",
+    "remaining": 4858,
+    "reset_at": "2026-11-22T01:38:32+00:00",
+    "observed_at": "2026-11-22T00:39:57.361972+00:00",
     "resource": "core",
     "expired": false,
     "warning": false
   },
   "coverage": {
-    "cached_attempts": 1166,
-    "inventory_runs": 1074,
-    "telemetry_observed": 235
+    "cached_attempts": 1174,
+    "inventory_runs": 1068,
+    "telemetry_observed": 243
   },
   "scope": "Observed shared Python-client HTTP attempts only; gh CLI, third-party Actions, other clients and shared-IP activity are not counted. Server quota headers include usage outside these observations. UTC minute-bucket window estimates include an extra minute to avoid understating rolling peaks. Write points are conservative attempted-operation estimates. Public AppView has no published numeric quota. Job time excludes queue time and is not billed usage; public standard-runner compute is free, but larger runners and storage may be charged."
 }
