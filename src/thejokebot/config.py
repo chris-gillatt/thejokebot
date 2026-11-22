@@ -264,7 +264,7 @@ def _normalise_protected_dids(value):
     dids = _ensure_string_list(value, field_name)
     for did in dids:
         if not re.fullmatch(
-            r"did:[a-z0-9]+:(?:[A-Za-z0-9._:-]|%[0-9A-Fa-f]{2})*[A-Za-z0-9._-]",
+            r"did:[a-z0-9]+:[A-Za-z0-9._:%-]*[A-Za-z0-9._-]",
             did,
         ):
             raise ValueError(f"{field_name} must contain valid DIDs")

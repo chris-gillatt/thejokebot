@@ -10,7 +10,8 @@
 - Give monthly unfollow the same bounded pagination budget as follow-back so
   larger graphs can be read in full before selecting any accounts to unfollow.
 - Preserve the never-unfollow protection for No Context Brits by verified account
-  DID so the suspended profile does not block the monthly job.
+  DID so the suspended profile does not block the monthly job. Check configured
+  DIDs before applying protections.
 
 ## 2.4.2 - 2026-11-20
 
