@@ -996,14 +996,14 @@
       "at://did:plc:4rwh3mq6q7hg2px5rgqhrjkd/app.bsky.feed.post/3n327ykrlhc2h",
       "at://did:plc:ewb7glyvsxc63hxjgdmoupnk/app.bsky.feed.post/3n32b3tu3ac2z"
     ],
-    "last_checked_at": 1795523424
+    "last_checked_at": 1795530347
   },
   "joke_requests": {
     "replied_uris": [
       "at://did:plc:ea4cyvzxqvubnkpo6g2kkv6i/app.bsky.feed.post/3mwirjfd7qk2o",
       "at://did:plc:ea4cyvzxqvubnkpo6g2kkv6i/app.bsky.feed.post/3mwl4ggasjc2l"
     ],
-    "last_checked_at": 1795523424.0466855,
+    "last_checked_at": 1795530346.6718254,
     "boundary_notification_uris": []
   },
   "starter_pack_acknowledgements": {
@@ -71341,10 +71341,10 @@
     ],
     "starter_pack_attribution": {
       "coverage_started_at": "2026-08-01T14:31:28.650280Z",
-      "last_checked_at": "2026-11-24T12:30:23.823878Z",
-      "high_water_indexed_at": "2026-11-24T10:01:09.973Z",
+      "last_checked_at": "2026-11-24T14:25:46.397342Z",
+      "high_water_indexed_at": "2026-11-24T13:53:38.240Z",
       "boundary_notification_hashes": [
-        "b54084ce0df8b173cab363b56b16759549ea95410ded56258484847583b636cd"
+        "3f159c3e6bbc0ea48aa1d2ba0daf0d6cba30485e88395f8ea98335ca88f4a2a6"
       ],
       "packs": {
         "at://did:plc:ylslnx2g5q3wvnvywksuxx7g/app.bsky.graph.starterpack/3mo2gsqp54k2v": {
@@ -85062,7 +85062,10 @@
           "acquired_at": 1792931871,
           "cohort_month": "2026-10",
           "checkpoints": {
-            "30": null,
+            "30": {
+              "observed_at": 1795530308,
+              "still_following": true
+            },
             "90": null
           }
         },
@@ -102408,6 +102411,15 @@
             "30": null,
             "90": null
           }
+        },
+        "de85d13c9b8e9af69cb0194945ab6e14c5da992f718384629f0186ce2e90234f": {
+          "source": "followback",
+          "acquired_at": 1795530308,
+          "cohort_month": "2026-11",
+          "checkpoints": {
+            "30": null,
+            "90": null
+          }
         }
       },
       "cohorts": {
@@ -102457,8 +102469,8 @@
             "acquired": 113,
             "checkpoints": {
               "30": {
-                "observed": 92,
-                "still_following": 39
+                "observed": 93,
+                "still_following": 40
               },
               "90": {
                 "observed": 0,
@@ -102495,7 +102507,7 @@
         },
         "2026-11": {
           "followback": {
-            "acquired": 160,
+            "acquired": 161,
             "checkpoints": {
               "30": {
                 "observed": 0,
