@@ -144,7 +144,7 @@ def test_main_combines_sources_with_one_cap_and_preserves_exclusions(
     monkeypatch.setattr(follow_fellows, "follow_account", fake_follow)
     monkeypatch.setattr(follow_fellows, "reconcile_pending_follows", lambda *args: None)
     with (
-        mock.patch.object(follow_fellows.random, "randint", return_value=100) as draw,
+        mock.patch.object(follow_fellows.random, "randint", return_value=96) as draw,
         mock.patch.object(follow_fellows.time, "sleep") as sleep,
         mock.patch.object(
             follow_fellows.bot_state,
@@ -153,7 +153,7 @@ def test_main_combines_sources_with_one_cap_and_preserves_exclusions(
         ) as save,
     ):
         follow_fellows.main()
-    draw.assert_called_once_with(100, 161)
+    draw.assert_called_once_with(96, 161)
     client.get_follows.assert_not_called()
     client.get_profiles.assert_called_once_with(["already", "feed", "shared", "tag"])
     assert sleep.call_count == 2
@@ -221,7 +221,7 @@ def test_read_failures_prevent_all_follow_actions(monkeypatch, failure):
     save.assert_not_called()
 
 
-@pytest.mark.parametrize("target", [100, 161])
+@pytest.mark.parametrize("target", [96, 161])
 def test_run_applies_drawn_target_to_eligible_candidates(monkeypatch, target):
     client = mock.Mock()
     state = bot_state._default_state()
@@ -248,7 +248,7 @@ def test_run_applies_drawn_target_to_eligible_candidates(monkeypatch, target):
         ) as execute,
     ):
         follow_fellows.main()
-    draw.assert_called_once_with(100, 161)
+    draw.assert_called_once_with(96, 161)
     assert execute.call_args.args[1] == [("jokes", did) for did in candidates[:target]]
 
 
