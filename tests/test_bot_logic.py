@@ -187,6 +187,23 @@ class RuntimeConfigTests(unittest.TestCase):
         self.assertEqual(config["follow_fellows"]["per_tag_limit"], 4)
         self.assertEqual(config["follow_fellows"]["global_follow_limit"], 150)
 
+    def test_runtime_follow_fellows_rejects_inverted_target_range(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = pathlib.Path(temp_dir) / "runtime.json"
+            config_path.write_text(
+                json.dumps(
+                    {
+                        "follow_fellows": {
+                            "min_follow_target": 161,
+                            "global_follow_limit": 100,
+                        }
+                    }
+                ),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "min_follow_target must be"):
+                runtime_config.load_runtime_config(config_path, strict=True)
+
     def test_runtime_unfollow_ignorable_handles_override_built_in_defaults(self):
         runtime_handles = ["runtime-only.bsky.social"]
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1240,7 +1257,7 @@ class UnfollowControlTests(unittest.TestCase):
         self.assertEqual(
             controls["max_actions"], bluesky_unfollow.DEFAULT_UNFOLLOW_MAX_ACTIONS
         )
-        self.assertEqual(controls["max_actions"], 1200)
+        self.assertEqual(controls["max_actions"], 1288)
         self.assertEqual(
             controls["batch_size"], bluesky_unfollow.DEFAULT_UNFOLLOW_BATCH_SIZE
         )
@@ -6926,18 +6943,14 @@ class FollowFellowsMainTests(unittest.TestCase):
                 return_value={"dry_run": True, "action_delay_seconds": 0.0},
             ):
                 with mock.patch(
-                    "thejokebot.commands.follow_fellows.fetch_paginated_data",
-                    return_value=[],
+                    "thejokebot.commands.follow_fellows.bot_state.load_state",
+                    return_value=state,
                 ):
                     with mock.patch(
-                        "thejokebot.commands.follow_fellows.bot_state.load_state",
-                        return_value=state,
+                        "thejokebot.commands.follow_fellows.retry_network_call",
+                        side_effect=lambda fn, description: fn(),
                     ):
-                        with mock.patch(
-                            "thejokebot.commands.follow_fellows.retry_network_call",
-                            side_effect=lambda fn, description: fn(),
-                        ):
-                            bluesky_follow_fellows.main()
+                        bluesky_follow_fellows.main()
 
         client.follow.assert_not_called()
 
@@ -6947,6 +6960,9 @@ class FollowFellowsMainTests(unittest.TestCase):
         client = mock.Mock()
         client.me.did = "did:plc:bot"
         # search_posts returns one user the bot already follows
+        client.get_profiles.return_value = {
+            "profiles": [{"did": already_did, "viewer": {"following": "at://follow"}}]
+        }
         post = SimpleNamespace(author=SimpleNamespace(did=already_did))
         client.app.bsky.feed.search_posts.return_value = SimpleNamespace(posts=[post])
         state = bot_state._default_state()
@@ -6960,18 +6976,14 @@ class FollowFellowsMainTests(unittest.TestCase):
                 return_value={"dry_run": True, "action_delay_seconds": 0.0},
             ):
                 with mock.patch(
-                    "thejokebot.commands.follow_fellows.fetch_paginated_data",
-                    return_value=[SimpleNamespace(did=already_did)],
+                    "thejokebot.commands.follow_fellows.bot_state.load_state",
+                    return_value=state,
                 ):
                     with mock.patch(
-                        "thejokebot.commands.follow_fellows.bot_state.load_state",
-                        return_value=state,
+                        "thejokebot.commands.follow_fellows.retry_network_call",
+                        side_effect=lambda fn, description: fn(),
                     ):
-                        with mock.patch(
-                            "thejokebot.commands.follow_fellows.retry_network_call",
-                            side_effect=lambda fn, description: fn(),
-                        ):
-                            bluesky_follow_fellows.main()
+                        bluesky_follow_fellows.main()
 
         client.follow.assert_not_called()
 
@@ -6994,18 +7006,14 @@ class FollowFellowsMainTests(unittest.TestCase):
                 return_value={"dry_run": True, "action_delay_seconds": 0.0},
             ):
                 with mock.patch(
-                    "thejokebot.commands.follow_fellows.fetch_paginated_data",
-                    return_value=[],
+                    "thejokebot.commands.follow_fellows.bot_state.load_state",
+                    return_value=state,
                 ):
                     with mock.patch(
-                        "thejokebot.commands.follow_fellows.bot_state.load_state",
-                        return_value=state,
+                        "thejokebot.commands.follow_fellows.retry_network_call",
+                        side_effect=lambda fn, description: fn(),
                     ):
-                        with mock.patch(
-                            "thejokebot.commands.follow_fellows.retry_network_call",
-                            side_effect=lambda fn, description: fn(),
-                        ):
-                            bluesky_follow_fellows.main()
+                        bluesky_follow_fellows.main()
 
         client.follow.assert_not_called()
 
@@ -7013,6 +7021,9 @@ class FollowFellowsMainTests(unittest.TestCase):
         followed_did = "did:plc:newfollow"
         client = mock.Mock()
         client.me.did = "did:plc:bot"
+        client.get_profiles.return_value = {
+            "profiles": [{"did": followed_did, "viewer": {}}]
+        }
         post = SimpleNamespace(author=SimpleNamespace(did=followed_did))
         client.app.bsky.feed.search_posts.return_value = SimpleNamespace(posts=[post])
         state = bot_state._default_state()
@@ -7026,22 +7037,18 @@ class FollowFellowsMainTests(unittest.TestCase):
                 return_value={"dry_run": False, "action_delay_seconds": 0.0},
             ):
                 with mock.patch(
-                    "thejokebot.commands.follow_fellows.fetch_paginated_data",
-                    return_value=[],
+                    "thejokebot.commands.follow_fellows.bot_state.load_state",
+                    return_value=state,
                 ):
                     with mock.patch(
-                        "thejokebot.commands.follow_fellows.bot_state.load_state",
-                        return_value=state,
+                        "thejokebot.commands.follow_fellows.retry_network_call",
+                        side_effect=lambda fn, description: fn(),
                     ):
                         with mock.patch(
-                            "thejokebot.commands.follow_fellows.retry_network_call",
-                            side_effect=lambda fn, description: fn(),
-                        ):
-                            with mock.patch(
-                                "thejokebot.commands.follow_fellows.bot_state.update_state",
-                                side_effect=lambda mutator, **kwargs: mutator(state),
-                            ) as update_state:
-                                bluesky_follow_fellows.main()
+                            "thejokebot.commands.follow_fellows.bot_state.update_state",
+                            side_effect=lambda mutator, **kwargs: mutator(state),
+                        ) as update_state:
+                            bluesky_follow_fellows.main()
 
         self.assertEqual(
             bot_state.get_follow_grace_dids(state, cutoff_ts=0), {followed_did}

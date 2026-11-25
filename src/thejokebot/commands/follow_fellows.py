@@ -1,3 +1,4 @@
+import random
 import time
 
 import requests
@@ -6,6 +7,7 @@ import atproto_client.exceptions
 from thejokebot import config as runtime_config
 from thejokebot import state as bot_state
 from thejokebot.discovery_feeds import eligible_author_dids, fetch_saved_feed_users
+from thejokebot.follow_candidates import eligible_follow_candidate_dids
 from thejokebot.follow_records import follow_account, reconcile_pending_follows
 from thejokebot.runtime import (
     get_runtime_controls,
@@ -13,13 +15,13 @@ from thejokebot.runtime import (
     mask_sensitive,
     retry_network_call,
 )
-from thejokebot.followers import fetch_paginated_data
 
 _FOLLOW_FELLOWS_CONFIG = runtime_config.get_follow_fellows_config()
 
 # Limits
 soft_tag_limit = _FOLLOW_FELLOWS_CONFIG["per_tag_limit"]
 global_follow_limit = _FOLLOW_FELLOWS_CONFIG["global_follow_limit"]
+min_follow_target = _FOLLOW_FELLOWS_CONFIG.get("min_follow_target", global_follow_limit)
 search_limit = _FOLLOW_FELLOWS_CONFIG["search_limit"]
 hashtags = _FOLLOW_FELLOWS_CONFIG["hashtags"]
 
@@ -48,13 +50,6 @@ def fetch_users_for_tag(client, tag: str):
     ) as exc:
         print(f"Exception during search for #{tag}: {exc}")
         return []
-
-
-def get_following(client):
-    following = fetch_paginated_data(
-        client.get_follows, client.me.did, require_complete=True
-    )
-    return {follow.did for follow in following}
 
 
 def follow(client, did: str, state: dict | None = None):
@@ -105,17 +100,18 @@ def select_users(tag_users, tag_order, per_tag_limit, overall_limit):
     return selected_users[:overall_limit]
 
 
-def _build_eligible_source_users(
-    client, hashtags, already_following, unfollowed_dids, feed_offset
-):
+def _build_eligible_source_users(client, hashtags, unfollowed_dids, feed_offset):
     """Combine saved feeds and tags under the same exclusions and selection budget."""
     sources, next_feed_offset = fetch_saved_feed_users(
         client, limit=search_limit, offset=feed_offset
     )
     sources.update({tag: fetch_users_for_tag(client, tag) for tag in hashtags})
-    excluded = already_following | unfollowed_dids | {client.me.did}
+    excluded = unfollowed_dids | {client.me.did}
+    eligible_dids = eligible_follow_candidate_dids(
+        client, {did for users in sources.values() for did in users} - excluded
+    )
     candidates = {
-        source: [did for did in users if did not in excluded]
+        source: [did for did in users if did in eligible_dids]
         for source, users in sources.items()
     }
     return candidates, next_feed_offset
@@ -182,7 +178,6 @@ def main():
     state = bot_state.load_state()
     if not dry_run:
         reconcile_pending_follows(client, state)
-    already_following = get_following(client)
     unfollowed_dids = bot_state.get_unfollowed_dids(state)
     tag_offset = bot_state.get_follow_fellows_tag_offset(state)
     rotated_hashtags = hashtags[tag_offset:] + hashtags[:tag_offset]
@@ -193,7 +188,7 @@ def main():
 
     feed_offset = state["follow_fellows"].get("feed_offset", 0)
     tag_users, next_feed_offset = _build_eligible_source_users(
-        client, hashtags, already_following, unfollowed_dids, feed_offset
+        client, hashtags, unfollowed_dids, feed_offset
     )
     source_order = [source for source in tag_users if source.startswith("feed:")]
     source_order.extend(rotated_hashtags)
@@ -202,11 +197,13 @@ def main():
     for tag, users in tag_users.items():
         print(f"  {tag}: {len(users)} users")
 
+    follow_target = random.randint(min_follow_target, global_follow_limit)
+    print(f"Follow target for this run: {follow_target}")
     selected_users = select_users(
         tag_users,
         source_order,
         per_tag_limit=soft_tag_limit,
-        overall_limit=global_follow_limit,
+        overall_limit=follow_target,
     )
 
     print("\nFinal discovery-source breakdown:")

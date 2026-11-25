@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.5.0 - 2026-11-25
+
+- Draw a fellow-discovery target from 100 to 161 each run and check candidates
+  in authenticated profile batches, avoiding full following-list scans.
+
 ## 2.4.3 - 2026-11-22
 
 - Reuse the complete follow-back snapshot and batch authenticated profile

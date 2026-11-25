@@ -10,7 +10,6 @@ import requests
 from thejokebot import discovery_feeds
 from thejokebot import state as bot_state
 from thejokebot.commands import follow_fellows
-from thejokebot.followers import IncompletePaginationError
 
 FEED_URI = "at://did:plc:creator/app.bsky.feed.generator/jokes"
 
@@ -129,7 +128,12 @@ def test_main_combines_sources_with_one_cap_and_preserves_exclusions(
     monkeypatch.setattr(follow_fellows.bot_state, "load_state", lambda: state)
     monkeypatch.setattr(follow_fellows, "hashtags", ["jokes"])
     monkeypatch.setattr(follow_fellows, "soft_tag_limit", 1)
-    monkeypatch.setattr(follow_fellows, "global_follow_limit", 3)
+    client.get_profiles.return_value = {
+        "profiles": [
+            {"did": "already", "viewer": {"following": "at://follow"}},
+            *({"did": did, "viewer": {}} for did in ("feed", "shared", "tag")),
+        ]
+    }
 
     def fake_follow(client, working_state, did, source):
         client.follow(did)
@@ -140,11 +144,7 @@ def test_main_combines_sources_with_one_cap_and_preserves_exclusions(
     monkeypatch.setattr(follow_fellows, "follow_account", fake_follow)
     monkeypatch.setattr(follow_fellows, "reconcile_pending_follows", lambda *args: None)
     with (
-        mock.patch.object(
-            follow_fellows,
-            "fetch_paginated_data",
-            return_value=[SimpleNamespace(did="already")],
-        ) as graph,
+        mock.patch.object(follow_fellows.random, "randint", return_value=100) as draw,
         mock.patch.object(follow_fellows.time, "sleep") as sleep,
         mock.patch.object(
             follow_fellows.bot_state,
@@ -153,9 +153,9 @@ def test_main_combines_sources_with_one_cap_and_preserves_exclusions(
         ) as save,
     ):
         follow_fellows.main()
-    graph.assert_called_once_with(
-        client.get_follows, client.me.did, require_complete=True
-    )
+    draw.assert_called_once_with(100, 161)
+    client.get_follows.assert_not_called()
+    client.get_profiles.assert_called_once_with(["already", "feed", "shared", "tag"])
     assert sleep.call_count == 2
     if dry_run:
         client.follow.assert_not_called()
@@ -175,7 +175,7 @@ def test_main_combines_sources_with_one_cap_and_preserves_exclusions(
 
 
 @pytest.mark.parametrize(
-    "failure", ["following", "incomplete", "preferences", "feed", "second_feed"]
+    "failure", ["profiles", "malformed_profiles", "preferences", "feed", "second_feed"]
 )
 def test_read_failures_prevent_all_follow_actions(monkeypatch, failure):
     client = mock.Mock()
@@ -184,11 +184,14 @@ def test_read_failures_prevent_all_follow_actions(monkeypatch, failure):
         preferences=[_saved(("feed", FEED_URI), ("feed", FEED_URI + "2"))]
     )
     error = requests.RequestException("unavailable")
-    graph_error = None
-    if failure == "following":
-        graph_error = error
-    elif failure == "incomplete":
-        graph_error = IncompletePaginationError("truncated graph")
+    client.app.bsky.feed.search_posts.return_value = SimpleNamespace(posts=[])
+    client.app.bsky.feed.get_feed.return_value = SimpleNamespace(
+        feed=[_post("candidate")]
+    )
+    if failure == "profiles":
+        client.get_profiles.side_effect = error
+    elif failure == "malformed_profiles":
+        client.get_profiles.return_value = {"profiles": None}
     elif failure == "preferences":
         client.app.bsky.actor.get_preferences.side_effect = error
     elif failure == "feed":
@@ -206,22 +209,47 @@ def test_read_failures_prevent_all_follow_actions(monkeypatch, failure):
     )
     with (
         mock.patch.object(
-            follow_fellows,
-            "fetch_paginated_data",
-            return_value=[],
-            side_effect=graph_error,
-        ),
-        mock.patch.object(
             follow_fellows.bot_state,
             "load_state",
             return_value=bot_state._default_state(),
         ),
         mock.patch.object(follow_fellows.bot_state, "update_state") as save,
-        pytest.raises((requests.RequestException, IncompletePaginationError)),
+        pytest.raises((requests.RequestException, ValueError)),
     ):
         follow_fellows.main()
     client.follow.assert_not_called()
     save.assert_not_called()
+
+
+@pytest.mark.parametrize("target", [100, 161])
+def test_run_applies_drawn_target_to_eligible_candidates(monkeypatch, target):
+    client = mock.Mock()
+    state = bot_state._default_state()
+    candidates = [f"did:plc:candidate{i}" for i in range(170)]
+    monkeypatch.setattr(follow_fellows, "login_client", lambda: (client, "bot"))
+    monkeypatch.setattr(
+        follow_fellows,
+        "get_runtime_controls",
+        lambda: {"dry_run": True, "action_delay_seconds": 0},
+    )
+    monkeypatch.setattr(follow_fellows.bot_state, "load_state", lambda: state)
+    monkeypatch.setattr(follow_fellows, "hashtags", ["jokes"])
+    monkeypatch.setattr(
+        follow_fellows,
+        "_build_eligible_source_users",
+        lambda *args: ({"jokes": candidates}, 0),
+    )
+    with (
+        mock.patch.object(
+            follow_fellows.random, "randint", return_value=target
+        ) as draw,
+        mock.patch.object(
+            follow_fellows, "_execute_follow_loop", return_value=[]
+        ) as execute,
+    ):
+        follow_fellows.main()
+    draw.assert_called_once_with(100, 161)
+    assert execute.call_args.args[1] == [("jokes", did) for did in candidates[:target]]
 
 
 def test_zero_budget_selects_nobody():
@@ -245,7 +273,6 @@ def test_empty_scan_rotates_feeds_only_on_live_run(monkeypatch, dry_run):
     )
     monkeypatch.setattr(follow_fellows.bot_state, "load_state", lambda: state)
     with (
-        mock.patch.object(follow_fellows, "get_following", return_value=set()),
         mock.patch.object(follow_fellows, "fetch_users_for_tag", return_value=[]),
         mock.patch.object(
             follow_fellows, "fetch_saved_feed_users", return_value=({"feed:1": []}, 10)

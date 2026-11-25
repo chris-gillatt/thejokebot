@@ -568,7 +568,7 @@ def test_profile_checks_batch_candidates_and_skip_missing_viewer(account):
         {"profiles": [{"did": dids[25]}, {"did": dids[26], "viewer": {}}]},
     ]
 
-    assert follow_interactors._eligible_profiles(client, set(dids)) == set(
+    assert follow_interactors.eligible_follow_candidate_dids(client, set(dids)) == set(
         dids[:25] + [dids[26]]
     )
     assert client.get_profiles.call_args_list == [

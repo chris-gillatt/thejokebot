@@ -371,6 +371,45 @@ def _validate_joke_request_config(raw: object) -> dict:
     return raw
 
 
+def _validate_follow_fellows_config(follow_fellows):
+    follow_fellows["per_tag_limit"] = _ensure_int(
+        follow_fellows.get("per_tag_limit", 12),
+        minimum=1,
+        field_name="follow_fellows.per_tag_limit",
+    )
+    follow_fellows["global_follow_limit"] = _ensure_int(
+        follow_fellows.get("global_follow_limit", 150),
+        minimum=1,
+        field_name="follow_fellows.global_follow_limit",
+    )
+    if "min_follow_target" in follow_fellows:
+        follow_fellows["min_follow_target"] = _ensure_int(
+            follow_fellows["min_follow_target"],
+            minimum=1,
+            field_name="follow_fellows.min_follow_target",
+        )
+        if follow_fellows["min_follow_target"] > follow_fellows["global_follow_limit"]:
+            raise ValueError(
+                "follow_fellows.min_follow_target must be <= global_follow_limit."
+            )
+    follow_fellows["search_limit"] = _ensure_int(
+        follow_fellows.get("search_limit", 100),
+        minimum=1,
+        field_name="follow_fellows.search_limit",
+    )
+    if follow_fellows["search_limit"] > 100:
+        raise ValueError("follow_fellows.search_limit must be <= 100.")
+
+    follow_hashtags = _ensure_string_list(
+        follow_fellows.get("hashtags", []), "follow_fellows.hashtags"
+    )
+    normalised_follow_hashtags = []
+    for tag in follow_hashtags:
+        normalised_follow_hashtags.append(tag.lstrip("#"))
+    follow_fellows["hashtags"] = normalised_follow_hashtags
+    return follow_fellows
+
+
 def _validate_config(payload):
     if not isinstance(payload, dict):
         raise ValueError("Runtime config must be a JSON object.")
@@ -404,33 +443,9 @@ def _validate_config(payload):
     _validate_posting_tag_config(posting)
     cfg["posting"] = posting
 
-    follow_fellows = cfg.get("follow_fellows", {})
-    follow_fellows["per_tag_limit"] = _ensure_int(
-        follow_fellows.get("per_tag_limit", 12),
-        minimum=1,
-        field_name="follow_fellows.per_tag_limit",
+    cfg["follow_fellows"] = _validate_follow_fellows_config(
+        cfg.get("follow_fellows", {})
     )
-    follow_fellows["global_follow_limit"] = _ensure_int(
-        follow_fellows.get("global_follow_limit", 150),
-        minimum=1,
-        field_name="follow_fellows.global_follow_limit",
-    )
-    follow_fellows["search_limit"] = _ensure_int(
-        follow_fellows.get("search_limit", 100),
-        minimum=1,
-        field_name="follow_fellows.search_limit",
-    )
-    if follow_fellows["search_limit"] > 100:
-        raise ValueError("follow_fellows.search_limit must be <= 100.")
-
-    follow_hashtags = _ensure_string_list(
-        follow_fellows.get("hashtags", []), "follow_fellows.hashtags"
-    )
-    normalised_follow_hashtags = []
-    for tag in follow_hashtags:
-        normalised_follow_hashtags.append(tag.lstrip("#"))
-    follow_fellows["hashtags"] = normalised_follow_hashtags
-    cfg["follow_fellows"] = follow_fellows
 
     repost_reviews = cfg.get("repost_reviews", {})
     repost_reviews["max_post_age_days"] = _ensure_int(

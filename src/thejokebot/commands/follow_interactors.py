@@ -11,6 +11,7 @@ from thejokebot import config as runtime_config
 from thejokebot import content_creators
 from thejokebot import state as bot_state
 from thejokebot import state_transactions
+from thejokebot.follow_candidates import eligible_follow_candidate_dids
 from thejokebot.follow_records import follow_account, reconcile_pending_follows
 from thejokebot.runtime import get_nested_value, mask_sensitive, retry_network_call
 
@@ -19,7 +20,6 @@ _REASONS = ("reply", "repost", "like")
 _WINDOW_SECONDS = 24 * 60 * 60
 _MAX_PAGES = _CONFIG["interaction_follow_max_pages"]
 _PAGE_LIMIT = _CONFIG["interaction_follow_page_limit"]
-_PROFILE_BATCH_SIZE = 25
 _UTC_OFFSET = "+00:00"
 
 
@@ -168,7 +168,7 @@ def follow_interactors(
     candidates = interactor_dids.difference(
         following_dids or (), grace_dids, unfollowed_dids
     )
-    to_follow = sorted(_eligible_profiles(client, candidates))
+    to_follow = sorted(eligible_follow_candidate_dids(client, candidates))
     summary["interaction_candidates"] = len(interactor_dids)
     summary["interaction_eligible"] = len(to_follow)
     summary["protected"] = (
@@ -186,51 +186,6 @@ def follow_interactors(
 
     print(f"{Fore.GREEN}Interaction-follow completed.{Style.RESET_ALL}")
     return followed_count
-
-
-def _eligible_profiles(client, dids: set[str]) -> set[str]:
-    """Check candidate relationships and moderation in the authenticated view."""
-    available: set[str] = set()
-    ordered = sorted(dids)
-    for offset in range(0, len(ordered), _PROFILE_BATCH_SIZE):
-        actors = ordered[offset : offset + _PROFILE_BATCH_SIZE]
-        response = retry_network_call(
-            lambda current=actors: client.get_profiles(current),
-            description="checking follow candidate profiles",
-        )
-        profiles = get_nested_value(response, "profiles")
-        if not isinstance(profiles, list):
-            raise ValueError("Unexpected follow candidate profile response")
-        seen: set[str] = set()
-        with_viewer = 0
-        for profile in profiles:
-            did = get_nested_value(profile, "did")
-            if did not in actors or did in seen:
-                raise ValueError("Follow candidate profile identity mismatch")
-            seen.add(did)
-            viewer = get_nested_value(profile, "viewer")
-            if viewer is None:
-                continue
-            with_viewer += 1
-            if not any(
-                get_nested_value(viewer, field)
-                for field in (
-                    "blocking",
-                    "blocking_by_list",
-                    "blockingByList",
-                    "blocked_by",
-                    "blockedBy",
-                    "muted",
-                    "following",
-                )
-            ):
-                available.add(did)
-        if with_viewer < len(actors):
-            print(
-                f"{Fore.YELLOW}Skipped {len(actors) - with_viewer} unavailable "
-                f"follow candidate profile(s).{Style.RESET_ALL}"
-            )
-    return available
 
 
 def follow_content_creators(
@@ -254,7 +209,7 @@ def follow_content_creators(
         - bot_state.get_follow_grace_dids(state)
         - excluded
     )
-    eligible = _eligible_profiles(client, candidates)
+    eligible = eligible_follow_candidate_dids(client, candidates)
     selected = sorted(eligible)[: _CONFIG["content_follow_max_actions"]]
     summary["interaction_candidates"] = summary.get("interaction_candidates", 0) + len(
         candidates
