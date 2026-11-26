@@ -1,37 +1,37 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-11-26T00:35:49.864902+00:00",
+  "generated_at": "2026-11-26T06:25:56.656624+00:00",
   "warning_percent": 80,
   "inventory_complete": true,
   "periods": {
     "1": {
       "workflow_runs": 51,
       "attempts": 50,
-      "attempts_with_job_time": 50,
-      "observed_job_minutes": 52.17,
-      "attempts_with_telemetry": 40,
-      "bluesky_requests": 4329,
-      "github_requests": 685,
+      "attempts_with_job_time": 49,
+      "observed_job_minutes": 51.27,
+      "attempts_with_telemetry": 39,
+      "bluesky_requests": 4238,
+      "github_requests": 673,
       "http_429": 0
     },
     "7": {
-      "workflow_runs": 299,
-      "attempts": 302,
+      "workflow_runs": 300,
+      "attempts": 303,
       "attempts_with_job_time": 302,
-      "observed_job_minutes": 311.92,
+      "observed_job_minutes": 310.42,
       "attempts_with_telemetry": 241,
-      "bluesky_requests": 34279,
-      "github_requests": 4730,
+      "bluesky_requests": 33882,
+      "github_requests": 4729,
       "http_429": 0
     },
     "30": {
-      "workflow_runs": 924,
-      "attempts": 1333,
-      "attempts_with_job_time": 1330,
-      "observed_job_minutes": 1295.13,
-      "attempts_with_telemetry": 384,
-      "bluesky_requests": 59707,
-      "github_requests": 8028,
+      "workflow_runs": 919,
+      "attempts": 1335,
+      "attempts_with_job_time": 1331,
+      "observed_job_minutes": 1297.4,
+      "attempts_with_telemetry": 392,
+      "bluesky_requests": 60809,
+      "github_requests": 8186,
       "http_429": 0
     }
   },
@@ -113,17 +113,17 @@
   ],
   "github_quota": {
     "limit": 5000,
-    "remaining": 4876,
-    "reset_at": "2026-11-26T01:35:49+00:00",
-    "observed_at": "2026-11-26T00:36:50.430722+00:00",
+    "remaining": 4862,
+    "reset_at": "2026-11-26T07:25:56+00:00",
+    "observed_at": "2026-11-26T06:26:55.457861+00:00",
     "resource": "core",
     "expired": false,
     "warning": false
   },
   "coverage": {
-    "cached_attempts": 1333,
-    "inventory_runs": 924,
-    "telemetry_observed": 384
+    "cached_attempts": 1335,
+    "inventory_runs": 919,
+    "telemetry_observed": 392
   },
   "scope": "Observed shared Python-client HTTP attempts only; gh CLI, third-party Actions, other clients and shared-IP activity are not counted. Server quota headers include usage outside these observations. UTC minute-bucket window estimates include an extra minute to avoid understating rolling peaks. Write points are conservative attempted-operation estimates. Public AppView has no published numeric quota. Job time excludes queue time and is not billed usage; public standard-runner compute is free, but larger runners and storage may be charged."
 }
