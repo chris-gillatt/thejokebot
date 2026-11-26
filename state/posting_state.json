@@ -1,7 +1,7 @@
 {
   "provider": {
     "last_used": "groandeck",
-    "last_used_at": 1795680488,
+    "last_used_at": 1795694941,
     "rotation_order": [
       "icanhazdadjoke",
       "jokeapi",
@@ -10,23 +10,23 @@
     ],
     "failures": {
       "icanhazdadjoke": {
-        "count": 208,
-        "last_failure_at": 1795680488,
+        "count": 209,
+        "last_failure_at": 1795694941,
         "last_error": "All 5 jokes from 'icanhazdadjoke' were rejected (5 duplicates, 0 too long)",
         "reason_counts": {
-          "duplicate": 838,
+          "duplicate": 843,
           "too_long": 2,
           "network_error": 1,
           "provider_error": 0
         }
       },
       "jokeapi": {
-        "count": 491,
-        "last_failure_at": 1795680488,
-        "last_error": "All 5 jokes from 'jokeapi' were rejected (5 duplicates, 0 too long)",
+        "count": 492,
+        "last_failure_at": 1795694941,
+        "last_error": "All 5 jokes from 'jokeapi' were rejected (4 duplicates, 1 too long)",
         "reason_counts": {
-          "duplicate": 1537,
-          "too_long": 23,
+          "duplicate": 1541,
+          "too_long": 24,
           "network_error": 1,
           "provider_error": 0
         }
@@ -54,11 +54,11 @@
         }
       }
     },
-    "last_started_primary": "syrsly",
-    "last_started_primary_at": 1795680488
+    "last_started_primary": "icanhazdadjoke",
+    "last_started_primary_at": 1795694941
   },
   "posting": {
-    "tag_offset": 7
+    "tag_offset": 8
   },
   "posted_jokes": [
     {
@@ -12871,6 +12871,18 @@
         "dadjoke",
         "pun",
         "jokesky"
+      ]
+    },
+    {
+      "ts": 1795694941,
+      "b64": "V2hhdCdzIGEgcGlyYXRlJ3Mgd29yc3QgbmlnaHRtYXJlIGF0IGEgcmVzdGF1cmFudD8KCkEgc3Vua2VuIGNoZXN0IOKAlCB3aXRoIG5vIGdvbGQsIGp1c3QgdGhlIGJ1ZmZldC4=",
+      "provider": "groandeck",
+      "post_uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3n37nblhflf2x",
+      "post_cid": "bafyreig75cco5t56ayinh7m6gakvbrzvgeih5kulqma44zz5jeikdrrbhm",
+      "hashtags": [
+        "dadjoke",
+        "jokes",
+        "pun"
       ]
     }
   ]
