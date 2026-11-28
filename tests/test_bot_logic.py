@@ -3701,7 +3701,7 @@ class JokeRequestReplyTests(unittest.TestCase):
                 )
 
     def test_candidate_requires_explicit_tag_for_reply_notification(self):
-        notification = self._notification(reason="reply", text="tell me a joke")
+        notification = self._notification(reason="reply", text="joke please")
 
         candidate = bluesky_follows_and_likes._joke_request_candidate(
             notification,
@@ -3713,23 +3713,37 @@ class JokeRequestReplyTests(unittest.TestCase):
         self.assertIsNone(candidate)
 
     def test_candidate_matches_only_configured_request_phrase(self):
-        accepted = self._notification(text="Please, tell me a joke!")
+        accepted = (
+            "@thejokebot.bsky.social joke please",
+            "@thejokebot.bsky.social JOKE, PLEASE!",
+            "Please, tell me a joke!",
+            "Could you tell us a joke?",
+            "Could you give me a joke?",
+        )
         rejected = (
-            self._notification(text="give me a joke"),
-            self._notification(text="joke please"),
-            self._notification(text="that joke was funny"),
+            "@thejokebot.bsky.social Hi joke bot",
+            "Tell him a knock-knock joke.",
+            "That joke was funny!",
+            "That joke pleased everyone.",
         )
-
-        self.assertIsNotNone(
-            bluesky_follows_and_likes._joke_request_candidate(
-                accepted, "thejokebot.bsky.social", set(), 0
-            )
-        )
-        for notification in rejected:
-            with self.subTest(text=notification.record.text):
+        for text in accepted:
+            with self.subTest(text=text):
+                self.assertIsNotNone(
+                    bluesky_follows_and_likes._joke_request_candidate(
+                        self._notification(text=text),
+                        "thejokebot.bsky.social",
+                        set(),
+                        0,
+                    )
+                )
+        for text in rejected:
+            with self.subTest(text=text):
                 self.assertIsNone(
                     bluesky_follows_and_likes._joke_request_candidate(
-                        notification, "thejokebot.bsky.social", set(), 0
+                        self._notification(text=text),
+                        "thejokebot.bsky.social",
+                        set(),
+                        0,
                     )
                 )
 
@@ -3737,7 +3751,11 @@ class JokeRequestReplyTests(unittest.TestCase):
         root = SimpleNamespace(
             uri="at://did:plc:root/app.bsky.feed.post/root", cid="root-cid"
         )
-        notification = self._notification(reply=SimpleNamespace(root=root))
+        notification = self._notification(
+            reason="reply",
+            text="@thejokebot.bsky.social joke please",
+            reply=SimpleNamespace(root=root),
+        )
         response = SimpleNamespace(notifications=[notification])
         posted = SimpleNamespace(
             uri="at://did:plc:bot/app.bsky.feed.post/reply",

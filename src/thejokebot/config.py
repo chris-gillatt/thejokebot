@@ -10,6 +10,13 @@ _CONFIG_PATH = RESOURCES_DIR / "jokebot_runtime_config.json"
 DERIVED_UNFOLLOW_MAX_ACTIONS = "follow_fellows_monthly_capacity"
 FOLLOW_CAPACITY_WEEKS = 4
 _DEFAULT_POSTING_TAG = "#dadjoke"
+_DEFAULT_JOKE_REQUEST_PHRASES = (
+    "tell me a joke",
+    "tell us a joke",
+    "give me a joke",
+    "joke please",
+    "joke, please",
+)
 
 
 def _count_cron_field_values(field, minimum, maximum):
@@ -183,7 +190,7 @@ _DEFAULT_CONFIG = {
         "content_follow_max_actions": 10,
         "joke_requests": {
             "enabled": True,
-            "phrases": ["tell me a joke"],
+            "phrases": list(_DEFAULT_JOKE_REQUEST_PHRASES),
             "max_replies": 6,
             "max_replies_per_person": 2,
             "max_pages": 5,
@@ -352,7 +359,7 @@ def _validate_joke_request_config(raw: object) -> dict:
     prefix = "follows_and_likes.joke_requests"
     raw["enabled"] = _ensure_bool(raw.get("enabled", True), f"{prefix}.enabled")
     raw["phrases"] = _ensure_string_list(
-        raw.get("phrases", ["tell me a joke"]), f"{prefix}.phrases"
+        raw.get("phrases", list(_DEFAULT_JOKE_REQUEST_PHRASES)), f"{prefix}.phrases"
     )
     for field, default, minimum in (
         ("max_replies", 6, 0),

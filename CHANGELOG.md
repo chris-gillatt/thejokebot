@@ -4,6 +4,8 @@
 
 - Vary scheduled fellow-discovery start times by up to 30 minutes using GitHub
   environment timers. The wait leaves the shared state lock and runners free.
+- Recognise tagged joke requests phrased as “joke please”, “joke, please”,
+  “tell us a joke” or “give me a joke”. Refs #53.
 
 ## 2.5.0 - 2026-11-25
 
