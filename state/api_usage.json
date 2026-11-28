@@ -16886,105 +16886,6 @@
       "checked_at": "2026-11-27T12:22:59.096820+00:00"
     },
     {
-      "id": 40871105910,
-      "attempt": 1,
-      "workflow": "bluesky_post_joke",
-      "created_at": "2026-10-29T12:10:34Z",
-      "job_seconds": 19,
-      "job_status": "observed",
-      "requests": [],
-      "telemetry": "unavailable",
-      "checked_at": "2026-11-27T12:22:59.096820+00:00"
-    },
-    {
-      "id": 40857327868,
-      "attempt": 1,
-      "workflow": "bluesky_follows_and_likes",
-      "created_at": "2026-10-29T10:24:39Z",
-      "job_seconds": 59,
-      "job_status": "observed",
-      "requests": [],
-      "telemetry": "unavailable",
-      "checked_at": "2026-11-27T12:22:59.096820+00:00"
-    },
-    {
-      "id": 40844141578,
-      "attempt": 1,
-      "workflow": "bluesky_process_reports",
-      "created_at": "2026-10-29T08:43:01Z",
-      "job_seconds": 24,
-      "job_status": "observed",
-      "requests": [],
-      "telemetry": "unavailable",
-      "checked_at": "2026-11-27T12:22:59.096820+00:00"
-    },
-    {
-      "id": 40842444862,
-      "attempt": 1,
-      "workflow": "bluesky_follows_and_likes",
-      "created_at": "2026-10-29T08:29:07Z",
-      "job_seconds": 53,
-      "job_status": "observed",
-      "requests": [],
-      "telemetry": "unavailable",
-      "checked_at": "2026-11-27T12:22:59.096820+00:00"
-    },
-    {
-      "id": 40840663946,
-      "attempt": 1,
-      "workflow": "provider_health_check",
-      "created_at": "2026-10-29T08:14:03Z",
-      "job_seconds": 32,
-      "job_status": "observed",
-      "requests": [],
-      "telemetry": "unavailable",
-      "checked_at": "2026-11-27T12:22:59.096820+00:00"
-    },
-    {
-      "id": 40840087589,
-      "attempt": 1,
-      "workflow": "bluesky_post_joke",
-      "created_at": "2026-10-29T08:09:09Z",
-      "job_seconds": 23,
-      "job_status": "observed",
-      "requests": [],
-      "telemetry": "unavailable",
-      "checked_at": "2026-11-27T12:22:59.096820+00:00"
-    },
-    {
-      "id": 40837421585,
-      "attempt": 1,
-      "workflow": "pr_auto_merge",
-      "created_at": "2026-10-29T07:45:02Z",
-      "job_seconds": 3,
-      "job_status": "observed",
-      "requests": [],
-      "telemetry": "unavailable",
-      "checked_at": "2026-11-27T12:22:59.096820+00:00"
-    },
-    {
-      "id": 40830643480,
-      "attempt": 1,
-      "workflow": "bluesky_dashboard",
-      "created_at": "2026-10-29T06:40:41Z",
-      "job_seconds": 83,
-      "job_status": "observed",
-      "requests": [],
-      "telemetry": "unavailable",
-      "checked_at": "2026-11-27T12:22:59.096820+00:00"
-    },
-    {
-      "id": 40830162109,
-      "attempt": 1,
-      "workflow": "bluesky_follows_and_likes",
-      "created_at": "2026-10-29T06:35:52Z",
-      "job_seconds": 57,
-      "job_status": "observed",
-      "requests": [],
-      "telemetry": "unavailable",
-      "checked_at": "2026-11-27T12:22:59.096820+00:00"
-    },
-    {
       "id": 43986101785,
       "attempt": 1,
       "workflow": "bluesky_post_joke",
@@ -65555,7 +65456,7 @@
       "job_status": "unavailable",
       "requests": [],
       "telemetry": "not_instrumented",
-      "checked_at": "2026-11-27T06:26:10.032000+00:00"
+      "checked_at": "2026-11-28T12:20:17.542183+00:00"
     },
     {
       "id": 45756904362,
@@ -77472,6 +77373,1445 @@
       ],
       "telemetry": "observed",
       "checked_at": "2026-11-28T06:23:33.306834+00:00"
+    },
+    {
+      "id": 46143097248,
+      "attempt": 1,
+      "workflow": "bluesky_post_joke",
+      "created_at": "2026-11-28T12:07:29Z",
+      "job_seconds": 33,
+      "job_status": "observed",
+      "requests": [
+        {
+          "id": "fa49d8c89b5b42f1bf70626c513fb4e4",
+          "source": "866280b6bcd74bf99e617845d29c15f8",
+          "service": "bluesky",
+          "endpoint": "com.atproto.server.getSession",
+          "at": "2026-11-28T12:07:00+00:00",
+          "group": "pds",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2999",
+            "ratelimit-reset": "1795867975",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 1,
+          "http_429": 0,
+          "last_at": "2026-11-28T12:07:55.619070+00:00"
+        },
+        {
+          "id": "bfb917c7b5994ea8add1e9ea8e0a8768",
+          "source": "866280b6bcd74bf99e617845d29c15f8",
+          "service": "bluesky",
+          "endpoint": "com.atproto.identity.resolveHandle",
+          "at": "2026-11-28T12:07:00+00:00",
+          "group": "pds",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2998",
+            "ratelimit-reset": "1795867975",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 1,
+          "http_429": 0,
+          "last_at": "2026-11-28T12:07:55.906262+00:00"
+        },
+        {
+          "id": "991afb1d029b4b628c95dc72f48a9012",
+          "source": "866280b6bcd74bf99e617845d29c15f8",
+          "service": "bluesky",
+          "endpoint": "app.bsky.actor.getProfile",
+          "at": "2026-11-28T12:07:00+00:00",
+          "group": "pds",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2997",
+            "ratelimit-reset": "1795867975",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 1,
+          "http_429": 0,
+          "last_at": "2026-11-28T12:07:56.223958+00:00"
+        },
+        {
+          "id": "63e8170d6d3341b9961bbdfdfa37872a",
+          "source": "866280b6bcd74bf99e617845d29c15f8",
+          "service": "bluesky",
+          "endpoint": "com.atproto.repo.createRecord",
+          "at": "2026-11-28T12:07:00+00:00",
+          "group": "pds",
+          "method": "POST",
+          "write_points_upper_bound": 3,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2996",
+            "ratelimit-reset": "1795867975",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 1,
+          "http_429": 0,
+          "last_at": "2026-11-28T12:07:56.348624+00:00"
+        }
+      ],
+      "telemetry": "observed",
+      "checked_at": "2026-11-28T12:20:17.542183+00:00"
+    },
+    {
+      "id": 46134919892,
+      "attempt": 1,
+      "workflow": "bluesky_follows_and_likes",
+      "created_at": "2026-11-28T10:23:01Z",
+      "job_seconds": 83,
+      "job_status": "observed",
+      "requests": [
+        {
+          "id": "5f9e3c3a1b114d618b9b391c43609b1f",
+          "source": "b6c3eab185724a2a82fb8a3361293628",
+          "service": "bluesky",
+          "endpoint": "com.atproto.server.refreshSession",
+          "at": "2026-11-28T10:23:00+00:00",
+          "group": "pds",
+          "method": "POST",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2999",
+            "ratelimit-reset": "1795861695",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 1,
+          "http_429": 0,
+          "last_at": "2026-11-28T10:23:15.772087+00:00"
+        },
+        {
+          "id": "a9ef3cf9138249e089911b24125c396e",
+          "source": "b6c3eab185724a2a82fb8a3361293628",
+          "service": "bluesky",
+          "endpoint": "com.atproto.server.getSession",
+          "at": "2026-11-28T10:23:00+00:00",
+          "group": "pds",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2998",
+            "ratelimit-reset": "1795861695",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 1,
+          "http_429": 0,
+          "last_at": "2026-11-28T10:23:16.000874+00:00"
+        },
+        {
+          "id": "d6a66be0d5d14edc96813aa840ad49aa",
+          "source": "b6c3eab185724a2a82fb8a3361293628",
+          "service": "bluesky",
+          "endpoint": "com.atproto.identity.resolveHandle",
+          "at": "2026-11-28T10:23:00+00:00",
+          "group": "pds",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2997",
+            "ratelimit-reset": "1795861695",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 1,
+          "http_429": 0,
+          "last_at": "2026-11-28T10:23:16.310312+00:00"
+        },
+        {
+          "id": "e105ace095bd468e9e46ae50f3960ed9",
+          "source": "b6c3eab185724a2a82fb8a3361293628",
+          "service": "bluesky",
+          "endpoint": "app.bsky.actor.getProfile",
+          "at": "2026-11-28T10:23:00+00:00",
+          "group": "pds",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2996",
+            "ratelimit-reset": "1795861695",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 1,
+          "http_429": 0,
+          "last_at": "2026-11-28T10:23:16.773666+00:00"
+        },
+        {
+          "id": "dcbda95cfca94c27aa7251cc8caa1cd3",
+          "source": "b6c3eab185724a2a82fb8a3361293628",
+          "service": "bluesky",
+          "endpoint": "app.bsky.graph.getBlocks",
+          "at": "2026-11-28T10:23:00+00:00",
+          "group": "pds",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2995",
+            "ratelimit-reset": "1795861695",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 1,
+          "http_429": 0,
+          "last_at": "2026-11-28T10:23:16.909480+00:00"
+        },
+        {
+          "id": "24e3414d7c7444f5acc7e7eed052d687",
+          "source": "b6c3eab185724a2a82fb8a3361293628",
+          "service": "bluesky",
+          "endpoint": "app.bsky.graph.getFollowers",
+          "at": "2026-11-28T10:23:00+00:00",
+          "group": "pds",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2735",
+            "ratelimit-reset": "1795861695",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 140,
+          "http_429": 0,
+          "last_at": "2026-11-28T10:23:59.098321+00:00"
+        },
+        {
+          "id": "99203c8174e1424595a08bed7a1e6a9f",
+          "source": "b6c3eab185724a2a82fb8a3361293628",
+          "service": "bluesky",
+          "endpoint": "app.bsky.graph.getFollows",
+          "at": "2026-11-28T10:23:00+00:00",
+          "group": "pds",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2729",
+            "ratelimit-reset": "1795861695",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 112,
+          "http_429": 0,
+          "last_at": "2026-11-28T10:23:59.890614+00:00"
+        },
+        {
+          "id": "d6897978815b488f8bf28dbbb8664fb0",
+          "source": "b6c3eab185724a2a82fb8a3361293628",
+          "service": "bluesky",
+          "endpoint": "com.atproto.repo.getRecord",
+          "at": "2026-11-28T10:23:00+00:00",
+          "group": "pds",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 400,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2806",
+            "ratelimit-reset": "1795861695",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 7,
+          "http_429": 0,
+          "last_at": "2026-11-28T10:23:44.083130+00:00"
+        },
+        {
+          "id": "37edd65c430f408587849486752c8178",
+          "source": "b6c3eab185724a2a82fb8a3361293628",
+          "service": "bluesky",
+          "endpoint": "com.atproto.repo.createRecord",
+          "at": "2026-11-28T10:23:00+00:00",
+          "group": "pds",
+          "method": "POST",
+          "write_points_upper_bound": 21,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2805",
+            "ratelimit-reset": "1795861695",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 7,
+          "http_429": 0,
+          "last_at": "2026-11-28T10:23:44.117927+00:00"
+        },
+        {
+          "id": "440b37c202174a279c12ac141ff337b2",
+          "source": "b6c3eab185724a2a82fb8a3361293628",
+          "service": "bluesky",
+          "endpoint": "app.bsky.graph.getFollows",
+          "at": "2026-11-28T10:24:00+00:00",
+          "group": "pds",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2629",
+            "ratelimit-reset": "1795861695",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 100,
+          "http_429": 0,
+          "last_at": "2026-11-28T10:24:14.389902+00:00"
+        },
+        {
+          "id": "0faa8bd3c4044e4698c5674b24024a68",
+          "source": "b6c3eab185724a2a82fb8a3361293628",
+          "service": "bluesky",
+          "endpoint": "app.bsky.notification.listNotifications",
+          "at": "2026-11-28T10:24:00+00:00",
+          "group": "pds",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2625",
+            "ratelimit-reset": "1795861695",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 4,
+          "http_429": 0,
+          "last_at": "2026-11-28T10:24:15.216975+00:00"
+        },
+        {
+          "id": "3b13b7db47854e5291021228a60e4f80",
+          "source": "b6c3eab185724a2a82fb8a3361293628",
+          "service": "bluesky",
+          "endpoint": "com.atproto.repo.getRecord",
+          "at": "2026-11-28T10:24:00+00:00",
+          "group": "pds",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 400,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2622",
+            "ratelimit-reset": "1795861695",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 2,
+          "http_429": 0,
+          "last_at": "2026-11-28T10:24:15.484609+00:00"
+        },
+        {
+          "id": "aa8825e4a6c4444587f17d13736613c9",
+          "source": "b6c3eab185724a2a82fb8a3361293628",
+          "service": "bluesky",
+          "endpoint": "com.atproto.repo.createRecord",
+          "at": "2026-11-28T10:24:00+00:00",
+          "group": "pds",
+          "method": "POST",
+          "write_points_upper_bound": 6,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2621",
+            "ratelimit-reset": "1795861695",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 2,
+          "http_429": 0,
+          "last_at": "2026-11-28T10:24:15.520760+00:00"
+        },
+        {
+          "id": "2a935455ab80493a9397b6099948a4c6",
+          "source": "b6c3eab185724a2a82fb8a3361293628",
+          "service": "bluesky",
+          "endpoint": "com.atproto.repo.listRecords",
+          "at": "2026-11-28T10:24:00+00:00",
+          "group": "pds",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2576",
+            "ratelimit-reset": "1795861695",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 45,
+          "http_429": 0,
+          "last_at": "2026-11-28T10:24:17.666725+00:00"
+        },
+        {
+          "id": "797f55af68a4491594ec0aca4cc42a56",
+          "source": "b6c3eab185724a2a82fb8a3361293628",
+          "service": "bluesky",
+          "endpoint": "app.bsky.actor.getProfiles",
+          "at": "2026-11-28T10:24:00+00:00",
+          "group": "pds",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2571",
+            "ratelimit-reset": "1795861695",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 5,
+          "http_429": 0,
+          "last_at": "2026-11-28T10:24:18.219786+00:00"
+        }
+      ],
+      "telemetry": "observed",
+      "checked_at": "2026-11-28T12:20:17.542183+00:00"
+    },
+    {
+      "id": 46129770379,
+      "attempt": 1,
+      "workflow": "bluesky_review_reposts",
+      "created_at": "2026-11-28T09:17:29Z",
+      "job_seconds": 37,
+      "job_status": "observed",
+      "requests": [
+        {
+          "id": "5838b478c8e741239ce97985ebc560c0",
+          "source": "0df9588c6aad4309aee74a76090bb072",
+          "service": "bluesky",
+          "endpoint": "com.atproto.server.createSession",
+          "at": "2026-11-28T09:17:00+00:00",
+          "group": "pds",
+          "method": "POST",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "10",
+            "ratelimit-remaining": "9",
+            "ratelimit-reset": "1795943877",
+            "ratelimit-policy": "10;w=86400"
+          },
+          "calls": 1,
+          "http_429": 0,
+          "last_at": "2026-11-28T09:17:57.743038+00:00"
+        },
+        {
+          "id": "7eadbc1474e2403c906b10ef49350889",
+          "source": "0df9588c6aad4309aee74a76090bb072",
+          "service": "bluesky",
+          "endpoint": "app.bsky.actor.getProfile",
+          "at": "2026-11-28T09:17:00+00:00",
+          "group": "pds",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2999",
+            "ratelimit-reset": "1795857778",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 1,
+          "http_429": 0,
+          "last_at": "2026-11-28T09:17:57.993760+00:00"
+        },
+        {
+          "id": "d6d25dac91a34b43b48703fc694ebd5b",
+          "source": "0df9588c6aad4309aee74a76090bb072",
+          "service": "bluesky",
+          "endpoint": "com.atproto.repo.listRecords",
+          "at": "2026-11-28T09:17:00+00:00",
+          "group": "pds",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2992",
+            "ratelimit-reset": "1795857778",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 7,
+          "http_429": 0,
+          "last_at": "2026-11-28T09:17:58.256514+00:00"
+        },
+        {
+          "id": "3805c74f9bde4860a678445808f4a3e6",
+          "source": "0df9588c6aad4309aee74a76090bb072",
+          "service": "bluesky",
+          "endpoint": "app.bsky.feed.getPosts",
+          "at": "2026-11-28T09:17:00+00:00",
+          "group": "pds",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2972",
+            "ratelimit-reset": "1795857778",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 20,
+          "http_429": 0,
+          "last_at": "2026-11-28T09:17:59.937497+00:00"
+        },
+        {
+          "id": "4ab9b946330140288fa6b9bc583aedd3",
+          "source": "0df9588c6aad4309aee74a76090bb072",
+          "service": "bluesky",
+          "endpoint": "app.bsky.feed.getPosts",
+          "at": "2026-11-28T09:18:00+00:00",
+          "group": "pds",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2970",
+            "ratelimit-reset": "1795857778",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 2,
+          "http_429": 0,
+          "last_at": "2026-11-28T09:18:00.101455+00:00"
+        }
+      ],
+      "telemetry": "observed",
+      "checked_at": "2026-11-28T12:20:17.542183+00:00"
+    },
+    {
+      "id": 46127061752,
+      "attempt": 1,
+      "workflow": "bluesky_process_reports",
+      "created_at": "2026-11-28T08:42:27Z",
+      "job_seconds": 31,
+      "job_status": "observed",
+      "requests": [
+        {
+          "id": "3b9946518cd14ad4a582c4623eaabaef",
+          "source": "e403c4ae08384d089b4536075be3de73",
+          "service": "bluesky",
+          "endpoint": "com.atproto.server.getSession",
+          "at": "2026-11-28T08:42:00+00:00",
+          "group": "pds",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2999",
+            "ratelimit-reset": "1795855672",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 1,
+          "http_429": 0,
+          "last_at": "2026-11-28T08:42:52.211239+00:00"
+        },
+        {
+          "id": "43d3c52d04804eb6bf4862c9e08ede82",
+          "source": "e403c4ae08384d089b4536075be3de73",
+          "service": "bluesky",
+          "endpoint": "com.atproto.identity.resolveHandle",
+          "at": "2026-11-28T08:42:00+00:00",
+          "group": "pds",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2998",
+            "ratelimit-reset": "1795855672",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 1,
+          "http_429": 0,
+          "last_at": "2026-11-28T08:42:52.793832+00:00"
+        },
+        {
+          "id": "e58c538f104d4116b3622c15deeb7bfd",
+          "source": "e403c4ae08384d089b4536075be3de73",
+          "service": "bluesky",
+          "endpoint": "app.bsky.actor.getProfile",
+          "at": "2026-11-28T08:42:00+00:00",
+          "group": "pds",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2997",
+            "ratelimit-reset": "1795855672",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 1,
+          "http_429": 0,
+          "last_at": "2026-11-28T08:42:53.106773+00:00"
+        },
+        {
+          "id": "20b968153f96459f9eff4c815ad5121c",
+          "source": "e403c4ae08384d089b4536075be3de73",
+          "service": "bluesky",
+          "endpoint": "app.bsky.notification.listNotifications",
+          "at": "2026-11-28T08:42:00+00:00",
+          "group": "pds",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2994",
+            "ratelimit-reset": "1795855672",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 3,
+          "http_429": 0,
+          "last_at": "2026-11-28T08:42:53.663961+00:00"
+        }
+      ],
+      "telemetry": "observed",
+      "checked_at": "2026-11-28T12:20:17.542183+00:00"
+    },
+    {
+      "id": 46125687320,
+      "attempt": 1,
+      "workflow": "bluesky_follows_and_likes",
+      "created_at": "2026-11-28T08:24:49Z",
+      "job_seconds": 99,
+      "job_status": "observed",
+      "requests": [
+        {
+          "id": "b831e27a2f734ad789d518054debe5cf",
+          "source": "3339a304346a479abb3181659e962488",
+          "service": "bluesky",
+          "endpoint": "com.atproto.server.refreshSession",
+          "at": "2026-11-28T08:25:00+00:00",
+          "group": "pds",
+          "method": "POST",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2999",
+            "ratelimit-reset": "1795854606",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 1,
+          "http_429": 0,
+          "last_at": "2026-11-28T08:25:06.092829+00:00"
+        },
+        {
+          "id": "9835de67dbae45cabab997a52d1c797e",
+          "source": "3339a304346a479abb3181659e962488",
+          "service": "bluesky",
+          "endpoint": "com.atproto.server.getSession",
+          "at": "2026-11-28T08:25:00+00:00",
+          "group": "pds",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2998",
+            "ratelimit-reset": "1795854606",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 1,
+          "http_429": 0,
+          "last_at": "2026-11-28T08:25:06.650793+00:00"
+        },
+        {
+          "id": "5fd25f307b9a404db4bb2e5c4e00ce1d",
+          "source": "3339a304346a479abb3181659e962488",
+          "service": "bluesky",
+          "endpoint": "com.atproto.identity.resolveHandle",
+          "at": "2026-11-28T08:25:00+00:00",
+          "group": "pds",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2997",
+            "ratelimit-reset": "1795854606",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 1,
+          "http_429": 0,
+          "last_at": "2026-11-28T08:25:06.982306+00:00"
+        },
+        {
+          "id": "6c9ec34425474786bd2b395aa42f899a",
+          "source": "3339a304346a479abb3181659e962488",
+          "service": "bluesky",
+          "endpoint": "app.bsky.actor.getProfile",
+          "at": "2026-11-28T08:25:00+00:00",
+          "group": "pds",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2996",
+            "ratelimit-reset": "1795854606",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 1,
+          "http_429": 0,
+          "last_at": "2026-11-28T08:25:07.289516+00:00"
+        },
+        {
+          "id": "1845dc1f87e64ec89e80557205ce75e6",
+          "source": "3339a304346a479abb3181659e962488",
+          "service": "bluesky",
+          "endpoint": "app.bsky.graph.getBlocks",
+          "at": "2026-11-28T08:25:00+00:00",
+          "group": "pds",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2995",
+            "ratelimit-reset": "1795854606",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 1,
+          "http_429": 0,
+          "last_at": "2026-11-28T08:25:07.485043+00:00"
+        },
+        {
+          "id": "7beb5c68a7a44463a3ba7e40a5450d9b",
+          "source": "3339a304346a479abb3181659e962488",
+          "service": "bluesky",
+          "endpoint": "app.bsky.graph.getFollowers",
+          "at": "2026-11-28T08:25:00+00:00",
+          "group": "pds",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2747",
+            "ratelimit-reset": "1795854606",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 140,
+          "http_429": 0,
+          "last_at": "2026-11-28T08:25:57.647073+00:00"
+        },
+        {
+          "id": "6043ca2954e240148560def903f89a23",
+          "source": "3339a304346a479abb3181659e962488",
+          "service": "bluesky",
+          "endpoint": "app.bsky.graph.getFollows",
+          "at": "2026-11-28T08:25:00+00:00",
+          "group": "pds",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2734",
+            "ratelimit-reset": "1795854606",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 119,
+          "http_429": 0,
+          "last_at": "2026-11-28T08:25:59.892001+00:00"
+        },
+        {
+          "id": "eaa26a83a2604a9699b9356eff4ddd53",
+          "source": "3339a304346a479abb3181659e962488",
+          "service": "bluesky",
+          "endpoint": "com.atproto.repo.getRecord",
+          "at": "2026-11-28T08:25:00+00:00",
+          "group": "pds",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 400,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2818",
+            "ratelimit-reset": "1795854606",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 1,
+          "http_429": 0,
+          "last_at": "2026-11-28T08:25:39.705588+00:00"
+        },
+        {
+          "id": "58b7aeb482cb4434b8d7785479848b18",
+          "source": "3339a304346a479abb3181659e962488",
+          "service": "bluesky",
+          "endpoint": "com.atproto.repo.createRecord",
+          "at": "2026-11-28T08:25:00+00:00",
+          "group": "pds",
+          "method": "POST",
+          "write_points_upper_bound": 3,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2817",
+            "ratelimit-reset": "1795854606",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 1,
+          "http_429": 0,
+          "last_at": "2026-11-28T08:25:39.781844+00:00"
+        },
+        {
+          "id": "bfa2a6e507e44d929d24645813b3dd9b",
+          "source": "3339a304346a479abb3181659e962488",
+          "service": "bluesky",
+          "endpoint": "app.bsky.graph.getFollows",
+          "at": "2026-11-28T08:26:00+00:00",
+          "group": "pds",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2641",
+            "ratelimit-reset": "1795854606",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 93,
+          "http_429": 0,
+          "last_at": "2026-11-28T08:26:17.127989+00:00"
+        },
+        {
+          "id": "d07498791991454e87cddc6adf9f58b6",
+          "source": "3339a304346a479abb3181659e962488",
+          "service": "bluesky",
+          "endpoint": "app.bsky.notification.listNotifications",
+          "at": "2026-11-28T08:26:00+00:00",
+          "group": "pds",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2637",
+            "ratelimit-reset": "1795854606",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 4,
+          "http_429": 0,
+          "last_at": "2026-11-28T08:26:18.124505+00:00"
+        },
+        {
+          "id": "a382a75e0a6e4ff9a074bc3b0033d40b",
+          "source": "3339a304346a479abb3181659e962488",
+          "service": "bluesky",
+          "endpoint": "com.atproto.repo.listRecords",
+          "at": "2026-11-28T08:26:00+00:00",
+          "group": "pds",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2592",
+            "ratelimit-reset": "1795854606",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 45,
+          "http_429": 0,
+          "last_at": "2026-11-28T08:26:22.144679+00:00"
+        },
+        {
+          "id": "7f206c895b744a15b0c3197cea8cfab6",
+          "source": "3339a304346a479abb3181659e962488",
+          "service": "bluesky",
+          "endpoint": "app.bsky.actor.getProfiles",
+          "at": "2026-11-28T08:26:00+00:00",
+          "group": "pds",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2587",
+            "ratelimit-reset": "1795854606",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 5,
+          "http_429": 0,
+          "last_at": "2026-11-28T08:26:22.948429+00:00"
+        }
+      ],
+      "telemetry": "observed",
+      "checked_at": "2026-11-28T12:20:17.542183+00:00"
+    },
+    {
+      "id": 46124548624,
+      "attempt": 1,
+      "workflow": "provider_health_check",
+      "created_at": "2026-11-28T08:10:20Z",
+      "job_seconds": 33,
+      "job_status": "observed",
+      "requests": [],
+      "telemetry": "not_instrumented",
+      "checked_at": "2026-11-28T12:20:17.542183+00:00"
+    },
+    {
+      "id": 46124287416,
+      "attempt": 1,
+      "workflow": "bluesky_post_joke",
+      "created_at": "2026-11-28T08:06:58Z",
+      "job_seconds": 34,
+      "job_status": "observed",
+      "requests": [
+        {
+          "id": "05a739769da348829fe8dfb2f4f41505",
+          "source": "1f4e0d07163a471fa96e6260aaa75ea2",
+          "service": "bluesky",
+          "endpoint": "com.atproto.server.getSession",
+          "at": "2026-11-28T08:07:00+00:00",
+          "group": "pds",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2999",
+            "ratelimit-reset": "1795853545",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 1,
+          "http_429": 0,
+          "last_at": "2026-11-28T08:07:25.096657+00:00"
+        },
+        {
+          "id": "cc0b1d700ea94a7da875b0a6905d774b",
+          "source": "1f4e0d07163a471fa96e6260aaa75ea2",
+          "service": "bluesky",
+          "endpoint": "com.atproto.identity.resolveHandle",
+          "at": "2026-11-28T08:07:00+00:00",
+          "group": "pds",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2998",
+            "ratelimit-reset": "1795853545",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 1,
+          "http_429": 0,
+          "last_at": "2026-11-28T08:07:25.427241+00:00"
+        },
+        {
+          "id": "4f7cb17b725149899c9af258cb7ef695",
+          "source": "1f4e0d07163a471fa96e6260aaa75ea2",
+          "service": "bluesky",
+          "endpoint": "app.bsky.actor.getProfile",
+          "at": "2026-11-28T08:07:00+00:00",
+          "group": "pds",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2997",
+            "ratelimit-reset": "1795853545",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 1,
+          "http_429": 0,
+          "last_at": "2026-11-28T08:07:25.919013+00:00"
+        },
+        {
+          "id": "c9db67251d3047d492817a95002ac839",
+          "source": "1f4e0d07163a471fa96e6260aaa75ea2",
+          "service": "bluesky",
+          "endpoint": "com.atproto.repo.createRecord",
+          "at": "2026-11-28T08:07:00+00:00",
+          "group": "pds",
+          "method": "POST",
+          "write_points_upper_bound": 3,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2996",
+            "ratelimit-reset": "1795853545",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 1,
+          "http_429": 0,
+          "last_at": "2026-11-28T08:07:26.110320+00:00"
+        }
+      ],
+      "telemetry": "observed",
+      "checked_at": "2026-11-28T12:20:17.542183+00:00"
+    },
+    {
+      "id": 46122620769,
+      "attempt": 1,
+      "workflow": "pr_auto_merge",
+      "created_at": "2026-11-28T07:45:02Z",
+      "job_seconds": 7,
+      "job_status": "observed",
+      "requests": [],
+      "telemetry": "not_instrumented",
+      "checked_at": "2026-11-28T12:20:17.542183+00:00"
+    },
+    {
+      "id": 46117534960,
+      "attempt": 1,
+      "workflow": "bluesky_dashboard",
+      "created_at": "2026-11-28T06:38:27Z",
+      "job_seconds": 73,
+      "job_status": "observed",
+      "requests": [
+        {
+          "id": "1a0d2879132f42efb57d5884ba4bcdd8",
+          "source": "c93e5b28119f46448a2fccfd9b35dddf",
+          "service": "github",
+          "endpoint": "actions",
+          "at": "2026-11-28T06:38:00+00:00",
+          "group": "rest",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {
+            "x-ratelimit-limit": "5000",
+            "x-ratelimit-remaining": "4954",
+            "x-ratelimit-used": "46",
+            "x-ratelimit-reset": "1795850613",
+            "x-ratelimit-resource": "core"
+          },
+          "calls": 4,
+          "http_429": 0,
+          "last_at": "2026-11-28T06:38:59.551892+00:00"
+        },
+        {
+          "id": "53458ba9610a46c2bf44712976283ef1",
+          "source": "c93e5b28119f46448a2fccfd9b35dddf",
+          "service": "github",
+          "endpoint": "actions",
+          "at": "2026-11-28T06:39:00+00:00",
+          "group": "rest",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 302,
+          "headers": {
+            "x-ratelimit-limit": "5000",
+            "x-ratelimit-remaining": "4926",
+            "x-ratelimit-used": "74",
+            "x-ratelimit-reset": "1795850613",
+            "x-ratelimit-resource": "core"
+          },
+          "calls": 28,
+          "http_429": 0,
+          "last_at": "2026-11-28T06:39:17.223464+00:00"
+        },
+        {
+          "id": "edd39257da48443da51f029af997e34e",
+          "source": "c93e5b28119f46448a2fccfd9b35dddf",
+          "service": "bluesky",
+          "endpoint": "app.bsky.actor.getProfile",
+          "at": "2026-11-28T06:39:00+00:00",
+          "group": "appview",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {},
+          "calls": 1,
+          "http_429": 0,
+          "last_at": "2026-11-28T06:39:17.713884+00:00"
+        },
+        {
+          "id": "b48929efd1d94369836dfec354d275dc",
+          "source": "c93e5b28119f46448a2fccfd9b35dddf",
+          "service": "bluesky",
+          "endpoint": "app.bsky.feed.getPosts",
+          "at": "2026-11-28T06:39:00+00:00",
+          "group": "appview",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {},
+          "calls": 1,
+          "http_429": 0,
+          "last_at": "2026-11-28T06:39:17.945398+00:00"
+        },
+        {
+          "id": "40c97a023cc747c3a100b5c51427fb2e",
+          "source": "c93e5b28119f46448a2fccfd9b35dddf",
+          "service": "bluesky",
+          "endpoint": "app.bsky.feed.getAuthorFeed",
+          "at": "2026-11-28T06:39:00+00:00",
+          "group": "appview",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {},
+          "calls": 33,
+          "http_429": 0,
+          "last_at": "2026-11-28T06:39:23.283813+00:00"
+        }
+      ],
+      "telemetry": "observed",
+      "checked_at": "2026-11-28T12:20:17.542183+00:00"
+    },
+    {
+      "id": 46116989155,
+      "attempt": 1,
+      "workflow": "bluesky_follows_and_likes",
+      "created_at": "2026-11-28T06:31:22Z",
+      "job_seconds": 78,
+      "job_status": "observed",
+      "requests": [
+        {
+          "id": "eac3ddd698aa4f4a998d630172a270d0",
+          "source": "5b99aeb613164bc29d583c30f7d28117",
+          "service": "bluesky",
+          "endpoint": "com.atproto.server.refreshSession",
+          "at": "2026-11-28T06:31:00+00:00",
+          "group": "pds",
+          "method": "POST",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2999",
+            "ratelimit-reset": "1795847803",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 1,
+          "http_429": 0,
+          "last_at": "2026-11-28T06:31:43.384306+00:00"
+        },
+        {
+          "id": "152a197f17d5432ab4954752b21e371e",
+          "source": "5b99aeb613164bc29d583c30f7d28117",
+          "service": "bluesky",
+          "endpoint": "com.atproto.server.getSession",
+          "at": "2026-11-28T06:31:00+00:00",
+          "group": "pds",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2998",
+            "ratelimit-reset": "1795847803",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 1,
+          "http_429": 0,
+          "last_at": "2026-11-28T06:31:43.706181+00:00"
+        },
+        {
+          "id": "8b24864fa9ee4813a156a219a79c2bde",
+          "source": "5b99aeb613164bc29d583c30f7d28117",
+          "service": "bluesky",
+          "endpoint": "com.atproto.identity.resolveHandle",
+          "at": "2026-11-28T06:31:00+00:00",
+          "group": "pds",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2997",
+            "ratelimit-reset": "1795847803",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 1,
+          "http_429": 0,
+          "last_at": "2026-11-28T06:31:43.822706+00:00"
+        },
+        {
+          "id": "891bfc3798044012878e1f4d34045bb3",
+          "source": "5b99aeb613164bc29d583c30f7d28117",
+          "service": "bluesky",
+          "endpoint": "app.bsky.actor.getProfile",
+          "at": "2026-11-28T06:31:00+00:00",
+          "group": "pds",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2996",
+            "ratelimit-reset": "1795847803",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 1,
+          "http_429": 0,
+          "last_at": "2026-11-28T06:31:44.274084+00:00"
+        },
+        {
+          "id": "e2d17bf346c241b38968e874723e9cd2",
+          "source": "5b99aeb613164bc29d583c30f7d28117",
+          "service": "bluesky",
+          "endpoint": "app.bsky.graph.getBlocks",
+          "at": "2026-11-28T06:31:00+00:00",
+          "group": "pds",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2995",
+            "ratelimit-reset": "1795847803",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 1,
+          "http_429": 0,
+          "last_at": "2026-11-28T06:31:44.384577+00:00"
+        },
+        {
+          "id": "56eadb8a77c3470791023475c1d83e21",
+          "source": "5b99aeb613164bc29d583c30f7d28117",
+          "service": "bluesky",
+          "endpoint": "app.bsky.graph.getFollowers",
+          "at": "2026-11-28T06:31:00+00:00",
+          "group": "pds",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2925",
+            "ratelimit-reset": "1795847803",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 70,
+          "http_429": 0,
+          "last_at": "2026-11-28T06:31:52.272866+00:00"
+        },
+        {
+          "id": "ca0113ceed9c4b5db66952b3449e6470",
+          "source": "5b99aeb613164bc29d583c30f7d28117",
+          "service": "bluesky",
+          "endpoint": "app.bsky.graph.getFollows",
+          "at": "2026-11-28T06:31:00+00:00",
+          "group": "pds",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2860",
+            "ratelimit-reset": "1795847803",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 65,
+          "http_429": 0,
+          "last_at": "2026-11-28T06:31:59.990114+00:00"
+        },
+        {
+          "id": "1f92376423da417e8bfed6d25f276c68",
+          "source": "5b99aeb613164bc29d583c30f7d28117",
+          "service": "bluesky",
+          "endpoint": "app.bsky.graph.getFollows",
+          "at": "2026-11-28T06:32:00+00:00",
+          "group": "pds",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2639",
+            "ratelimit-reset": "1795847803",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 147,
+          "http_429": 0,
+          "last_at": "2026-11-28T06:32:31.137617+00:00"
+        },
+        {
+          "id": "5a209145d4974dcfbfa5964f1440cc35",
+          "source": "5b99aeb613164bc29d583c30f7d28117",
+          "service": "bluesky",
+          "endpoint": "com.atproto.repo.getRecord",
+          "at": "2026-11-28T06:32:00+00:00",
+          "group": "pds",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 400,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2634",
+            "ratelimit-reset": "1795847803",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 3,
+          "http_429": 0,
+          "last_at": "2026-11-28T06:32:32.126515+00:00"
+        },
+        {
+          "id": "2616047f041542659d9c644f2d000809",
+          "source": "5b99aeb613164bc29d583c30f7d28117",
+          "service": "bluesky",
+          "endpoint": "com.atproto.repo.createRecord",
+          "at": "2026-11-28T06:32:00+00:00",
+          "group": "pds",
+          "method": "POST",
+          "write_points_upper_bound": 9,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2633",
+            "ratelimit-reset": "1795847803",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 3,
+          "http_429": 0,
+          "last_at": "2026-11-28T06:32:32.140925+00:00"
+        },
+        {
+          "id": "32b328c256a84d2fb76333cf7dbe0c0d",
+          "source": "5b99aeb613164bc29d583c30f7d28117",
+          "service": "bluesky",
+          "endpoint": "app.bsky.graph.getFollowers",
+          "at": "2026-11-28T06:32:00+00:00",
+          "group": "pds",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2745",
+            "ratelimit-reset": "1795847803",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 70,
+          "http_429": 0,
+          "last_at": "2026-11-28T06:32:18.537631+00:00"
+        },
+        {
+          "id": "a23618c40d9944b5826d12bb5dff05da",
+          "source": "5b99aeb613164bc29d583c30f7d28117",
+          "service": "bluesky",
+          "endpoint": "app.bsky.notification.listNotifications",
+          "at": "2026-11-28T06:32:00+00:00",
+          "group": "pds",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2635",
+            "ratelimit-reset": "1795847803",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 4,
+          "http_429": 0,
+          "last_at": "2026-11-28T06:32:31.981275+00:00"
+        },
+        {
+          "id": "aa7e0b16953f4357a64d0f321422bcee",
+          "source": "5b99aeb613164bc29d583c30f7d28117",
+          "service": "bluesky",
+          "endpoint": "com.atproto.repo.listRecords",
+          "at": "2026-11-28T06:32:00+00:00",
+          "group": "pds",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2588",
+            "ratelimit-reset": "1795847803",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 45,
+          "http_429": 0,
+          "last_at": "2026-11-28T06:32:33.312930+00:00"
+        },
+        {
+          "id": "476b061b79494cc2b70e697f14a8a33a",
+          "source": "5b99aeb613164bc29d583c30f7d28117",
+          "service": "bluesky",
+          "endpoint": "app.bsky.actor.getProfiles",
+          "at": "2026-11-28T06:32:00+00:00",
+          "group": "pds",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 200,
+          "headers": {
+            "ratelimit-limit": "3000",
+            "ratelimit-remaining": "2583",
+            "ratelimit-reset": "1795847803",
+            "ratelimit-policy": "3000;w=300"
+          },
+          "calls": 5,
+          "http_429": 0,
+          "last_at": "2026-11-28T06:32:33.765796+00:00"
+        }
+      ],
+      "telemetry": "observed",
+      "checked_at": "2026-11-28T12:20:17.542183+00:00"
+    },
+    {
+      "id": 46116365291,
+      "attempt": 1,
+      "workflow": "api_usage_report",
+      "created_at": "2026-11-28T06:23:20Z",
+      "job_seconds": 47,
+      "job_status": "observed",
+      "requests": [
+        {
+          "id": "4f9bc7591a3f4cd18880177497ad128b",
+          "source": "cfd03666d692441aafb5e85463e7ef29",
+          "service": "github",
+          "endpoint": "actions",
+          "at": "2026-11-28T06:23:00+00:00",
+          "group": "rest",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 302,
+          "headers": {
+            "x-ratelimit-limit": "5000",
+            "x-ratelimit-remaining": "4968",
+            "x-ratelimit-used": "32",
+            "x-ratelimit-reset": "1795850613",
+            "x-ratelimit-resource": "core"
+          },
+          "calls": 32,
+          "http_429": 0,
+          "last_at": "2026-11-28T06:23:59.914120+00:00"
+        },
+        {
+          "id": "afacbc15395d41409c1666cbb46f6dab",
+          "source": "cfd03666d692441aafb5e85463e7ef29",
+          "service": "github",
+          "endpoint": "actions",
+          "at": "2026-11-28T06:24:00+00:00",
+          "group": "rest",
+          "method": "GET",
+          "write_points_upper_bound": 0,
+          "status": 302,
+          "headers": {
+            "x-ratelimit-limit": "5000",
+            "x-ratelimit-remaining": "4958",
+            "x-ratelimit-used": "42",
+            "x-ratelimit-reset": "1795850613",
+            "x-ratelimit-resource": "core"
+          },
+          "calls": 10,
+          "http_429": 0,
+          "last_at": "2026-11-28T06:24:03.894461+00:00"
+        }
+      ],
+      "telemetry": "observed",
+      "checked_at": "2026-11-28T12:20:17.542183+00:00"
     }
   ],
   "documents": {
