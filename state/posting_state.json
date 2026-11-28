@@ -1,7 +1,7 @@
 {
   "provider": {
     "last_used": "groandeck",
-    "last_used_at": 1795853246,
+    "last_used_at": 1795867676,
     "rotation_order": [
       "icanhazdadjoke",
       "jokeapi",
@@ -10,22 +10,22 @@
     ],
     "failures": {
       "icanhazdadjoke": {
-        "count": 213,
-        "last_failure_at": 1795853246,
+        "count": 214,
+        "last_failure_at": 1795867676,
         "last_error": "All 5 jokes from 'icanhazdadjoke' were rejected (5 duplicates, 0 too long)",
         "reason_counts": {
-          "duplicate": 863,
+          "duplicate": 868,
           "too_long": 2,
           "network_error": 1,
           "provider_error": 0
         }
       },
       "jokeapi": {
-        "count": 499,
-        "last_failure_at": 1795853246,
+        "count": 500,
+        "last_failure_at": 1795867676,
         "last_error": "All 5 jokes from 'jokeapi' were rejected (5 duplicates, 0 too long)",
         "reason_counts": {
-          "duplicate": 1576,
+          "duplicate": 1581,
           "too_long": 24,
           "network_error": 1,
           "provider_error": 0
@@ -54,11 +54,11 @@
         }
       }
     },
-    "last_started_primary": "syrsly",
-    "last_started_primary_at": 1795853246
+    "last_started_primary": "icanhazdadjoke",
+    "last_started_primary_at": 1795867676
   },
   "posting": {
-    "tag_offset": 3
+    "tag_offset": 4
   },
   "posted_jokes": [
     {
@@ -13015,6 +13015,18 @@
         "dadjoke",
         "pun",
         "humorsky"
+      ]
+    },
+    {
+      "ts": 1795867676,
+      "b64": "V2hhdCBkbyB5b3UgY2FsbCBhIGRpbm9zYXVyIHRoYXQncyBhIG5vaXN5IHNsZWVwZXI/CgpBIEJyb250by1zbm9ydXMu",
+      "provider": "groandeck",
+      "post_uri": "at://did:plc:kldt6xtajiyh3o26mqvmrg65/app.bsky.feed.post/3n3eo5inehq2v",
+      "post_cid": "bafyreihdz2ca2vodgftajg4gg52ekoce2pjjoubdxe2dgiwhhy55oy522u",
+      "hashtags": [
+        "dadjoke",
+        "jokesky",
+        "jokes"
       ]
     }
   ]
