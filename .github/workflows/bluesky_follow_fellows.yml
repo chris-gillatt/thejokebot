@@ -10,17 +10,53 @@ on:
         type: boolean
         default: false
 
-concurrency:
-  group: joke_and_social_state_writer
-  queue: max
-  cancel-in-progress: false
-
-permissions:
-  contents: write
+permissions: {}
 
 jobs:
-  bluesky_follow_fellows:
+  choose_delay:
+    name: Choose the scheduled delay
+    if: github.event_name == 'schedule'
     runs-on: ubuntu-latest
+    outputs:
+      minutes: ${{ steps.slot.outputs.minutes }}
+    steps:
+      - name: Choose a five-minute slot
+        id: slot
+        run: |
+          slot="$(shuf -i 0-6 -n 1)"
+          minutes=$((slot * 5))
+          echo "minutes=$minutes" >> "$GITHUB_OUTPUT"
+          echo "Selected a $minutes-minute delay."
+
+  wait_for_slot:
+    name: Release the scheduled slot
+    needs: choose_delay
+    if: needs.choose_delay.outputs.minutes != '0'
+    runs-on: ubuntu-latest
+    # GitHub holds the configured environment timer before assigning a runner.
+    # The environments follow-discovery-delay-5 through -30 hold no secrets.
+    environment: follow-discovery-delay-${{ needs.choose_delay.outputs.minutes }}
+    steps:
+      - run: echo "GitHub environment timer cleared."
+
+  bluesky_follow_fellows:
+    needs: [choose_delay, wait_for_slot]
+    # Manual dispatch and the zero-minute slot legitimately skip the timer job.
+    # Every other scheduled slot must pass it before discovery can start.
+    if: >-
+      ${{ !cancelled() && (github.event_name == 'workflow_dispatch' ||
+        (needs.choose_delay.result == 'success' &&
+          (needs.choose_delay.outputs.minutes == '0' ||
+            needs.wait_for_slot.result == 'success'))) }}
+    runs-on: ubuntu-latest
+    # Only discovery takes the shared lock, so other state writers can run
+    # while GitHub is holding the environment timer.
+    concurrency:
+      group: joke_and_social_state_writer
+      queue: max
+      cancel-in-progress: false
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout repository

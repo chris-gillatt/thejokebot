@@ -63,6 +63,7 @@ def queue_error():
         "wrong-location",
         "different-diagnostic",
         "bad-line",
+        "early-line",
         "external-file",
     ],
 )
@@ -83,6 +84,8 @@ def test_queue_exception_accepts_only_the_supported_shared_writer_block(
         error["message"] = "Another workflow syntax error"
     elif invalid == "bad-line":
         error["line"] = 99
+    elif invalid == "early-line":
+        error["line"] = 1
     elif invalid == "external-file":
         error["filepath"] = "references/external.yml"
     path = tmp_path / ".github/workflows/reviews.yml"
@@ -90,6 +93,23 @@ def test_queue_exception_accepts_only_the_supported_shared_writer_block(
     path.write_text(content)
     assert lint_action_workflows.verified_queue_diagnostic(error, tmp_path) is (
         invalid is None
+    )
+
+
+@pytest.mark.parametrize("filename", ["bluesky_follow_fellows.yml", "reviews.yml"])
+def test_queue_exception_handles_fellow_discovery_job_scope(tmp_path, filename):
+    error = queue_error()
+    error["filepath"] = f".github/workflows/{filename}"
+    error["line"] = 5
+    path = tmp_path / error["filepath"]
+    path.parent.mkdir(parents=True)
+    path.write_text(
+        "jobs:\n  discovery:\n    concurrency:\n"
+        "      group: joke_and_social_state_writer\n"
+        "      queue: max\n      cancel-in-progress: false\n"
+    )
+    assert lint_action_workflows.verified_queue_diagnostic(error, tmp_path) is (
+        filename == "bluesky_follow_fellows.yml"
     )
 
 

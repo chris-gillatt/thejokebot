@@ -63,10 +63,15 @@ class RepositoryPathTests(unittest.TestCase):
         self.assertIn("steps.post_joke.outcome == 'failure'", posting)
         self.assertIn('payload = json.loads(Path("state/posting_state.json")', posting)
 
+        shared_queue = (
+            "concurrency:\n"
+            "  group: joke_and_social_state_writer\n"
+            "  queue: max\n"
+            "  cancel-in-progress: false"
+        )
         for name in (
             "bluesky_post_joke.yml",
             "bluesky_follows_and_likes.yml",
-            "bluesky_follow_fellows.yml",
             "bluesky_unfollow.yml",
             "bluesky_review_reposts.yml",
             "bluesky_check_transport.yml",
@@ -74,13 +79,17 @@ class RepositoryPathTests(unittest.TestCase):
         ):
             with self.subTest(concurrency_workflow=name):
                 workflow = (workflow_dir / name).read_text(encoding="utf-8")
-                self.assertIn(
-                    "concurrency:\n"
-                    "  group: joke_and_social_state_writer\n"
-                    "  queue: max\n"
-                    "  cancel-in-progress: false",
-                    workflow,
-                )
+                self.assertIn(shared_queue, workflow)
+
+        discovery = workflows["bluesky_follow_fellows.yml"]
+        before_discovery, discovery_job = discovery.split(
+            "\n  bluesky_follow_fellows:\n"
+        )
+        self.assertNotIn("concurrency:", before_discovery)
+        self.assertIn(
+            "\n".join(f"    {line}" for line in shared_queue.splitlines()),
+            discovery_job,
+        )
 
     def test_first_party_code_does_not_import_deleted_root_modules(self):
         repository_root = Path(__file__).resolve().parents[1]

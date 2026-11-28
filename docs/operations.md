@@ -381,6 +381,16 @@ Each run samples one page of up to `follow_fellows.search_limit` posts (at most 
 
 Discovery requires successful saved-preference, saved-feed and batched profile reads before following anyone. A failed prerequisite read aborts the run without follow actions. No saved custom feeds is a valid result and leaves hashtag discovery active. Dispatch `bluesky_follow_fellows` with `dry_run=true` to preview candidates without following accounts or changing social state. Local runs can use `BLUESKY_DRY_RUN=true`.
 
+On Wednesdays and Fridays, the 09:10 Singapore time trigger selects one of
+seven equally likely slots from 09:10 to 09:40. GitHub queueing can delay the
+actual start. The nonzero slots use repository environments named
+`follow-discovery-delay-5`, `-10`, `-15`, `-20`, `-25` and `-30`, each with
+the matching wait timer in minutes and no environment secrets. Configure
+these timers before enabling the workflow in a new repository. GitHub holds
+the timer before assigning a runner to the release job. Discovery takes the
+shared state lock after the timer clears. Manual runs skip slot selection and
+the timer.
+
 Both social and unfollow runs completely read the authenticated account's
 `app.bsky.feed.like` and `app.bsky.feed.repost` repository collections. This
 covers manual actions in Bluesky as well as automated actions, including

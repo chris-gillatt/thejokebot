@@ -23,13 +23,21 @@ def verified_queue_diagnostic(error: dict, root: Path) -> bool:
         return False
     lines = path.read_text(encoding="utf-8").splitlines()
     index = error["line"] - 1
+    if index < 2:
+        return False
     # Only this exact supported block may bypass the upstream parser gap.
-    return index >= 2 and lines[index - 2 : index + 2] == [
+    block = lines[index - 2 : index + 2]
+    shared_queue = [
         "concurrency:",
         "  group: joke_and_social_state_writer",
         "  queue: max",
         "  cancel-in-progress: false",
     ]
+    # Fellow discovery acquires the same queue at job scope after its timer.
+    return block == shared_queue or (
+        path == root / ".github/workflows/bluesky_follow_fellows.yml"
+        and block == [f"    {line}" for line in shared_queue]
+    )
 
 
 def main(arguments: Sequence[str] | None = None) -> int:

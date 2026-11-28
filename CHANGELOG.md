@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.5.1 - 2026-11-28
+
+- Vary scheduled fellow-discovery start times by up to 30 minutes using GitHub
+  environment timers. The wait leaves the shared state lock and runners free.
+
 ## 2.5.0 - 2026-11-25
 
 - Draw a fellow-discovery target from 96 to 161 each run and check candidates
